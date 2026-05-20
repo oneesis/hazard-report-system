@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hazard Report ONE-SAP</title>
+<link rel="stylesheet" href="home.css">
+</head>
+<body>
+<div class="container">
+<header class="hero">
+    <div class="hero-top">
+    <div id="userProfile" class="user-menu"></div>
+    </div>
+
+  <!-- USER PROFILE DI POJOK KANAN ATAS -->
+  <div class="hero-top">
+    <div id="userProfile" class="user-profile"></div>
+  </div>
+
+  <!-- LOGO -->
+  <div class="logos">
+    <img src="assets/Logo Hasnur.png" alt="Hasnur Group" class="logo" />
+    <img src="assets/Nilai Inti - Indonesia.png" alt="Core Value" class="logo" />
+  </div>
+
+  <h1>🛡️ Hazard Report ONE-SAP</h1>
+  <p>Safety Observation and Action Program</p>
+
+  <div class="actions">
+    <a href="index.html" class="btn primary">📝 Buat Hazard Report</a>
+    <a href="dashboard.html" class="btn secondary">📊 Dashboard Monitoring</a>
+  </div>
+
+</header>
+
+<section class="kpi-grid">
+<div class="kpi-card"><span>Total Report</span><strong id="kpiTotal">0</strong></div>
+<div class="kpi-card"><span>Open</span><strong id="kpiOpen">0</strong></div>
+<div class="kpi-card"><span>Progress</span><strong id="kpiProgress">0</strong></div>
+<div class="kpi-card"><span>Closed</span><strong id="kpiClosed">0</strong></div>
+</section>
+
+<section class="card">
+<h2>⚠️ High Risk Alert</h2>
+<ul id="highRiskList"><li>Memuat data...</li></ul>
+</section>
+
+<footer class="footer">Developed by Andre Anantama Irawan © 2026</footer>
+</div>
+<script src="home.js"></script>
+<script src="auth.js"></script>
+<script src="auth.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener("DOMContentLoaded", renderUserProfile);
+</script>
+<script src="script.js"></script>
+</body>
+</html>

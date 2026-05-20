@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAZARD REPORT ONE-SAP</title>
+
+  <!-- CSS utama -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Choices.js CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"
+  />
+</head>
+<body>
+
+  <div class="container">
+    <div class="card">
+
+        <div class="header-top">
+        <a href="index-home.html" class="nav-home-btn">🏠 Home</a>
+
+        <div class="hero-top">
+            <div id="userProfile" class="user-menu"></div>
+        </div>
+        </div>
+
+        <!-- LOGO PERUSAHAAN -->
+        <div class="header-logos">
+        <img
+            src="./assets/Logo Hasnur.png"
+            alt="Logo Hasnur"
+            class="logo"
+        />
+
+        <img
+            src="./assets/Nilai Inti - Indonesia.png"
+            alt="Nilai Inti Indonesia"
+            class="logo nilai-inti"
+        />
+</div>
+        <h1 class="main-title">HAZARD REPORT ONE-SAP</h1>
+        <p class="main-subtitle">Safety Accountability Program</p>
+
+      <!-- STEP PROGRESS -->
+      <div class="step-progress">
+        <div class="step active" data-step="1">
+          <div class="step-circle">1</div>
+          <div class="step-label">Data Pelapor</div>
+        </div>
+
+        <div class="step" data-step="2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Detail Kejadian</div>
+        </div>
+
+        <div class="step" data-step="3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Identifikasi Bahaya</div>
+        </div>
+
+        <div class="step" data-step="4">
+          <div class="step-circle">4</div>
+          <div class="step-label">Tindakan Perbaikan</div>
+        </div>
+
+        <div class="step" data-step="5">
+          <div class="step-circle">5</div>
+          <div class="step-label">Data PIC</div>
+        </div>
+
+        <div class="step" data-step="6">
+          <div class="step-circle">6</div>
+          <div class="step-label">Verifikasi</div>
+        </div>
+      </div>
+
+      <!-- ALERT ERROR -->
+      <div id="alertError" class="alert-error" style="display:none;">
+        Semua field yang bertanda (*) wajib diisi.
+      </div>
+
+      <!-- ===================================== -->
+      <!-- STEP 1 - DATA PELAPOR -->
+      <!-- ===================================== -->
+      <div class="form-step active" id="step1">
+
+        <h2 class="section-title">
+          <span class="section-icon">👤</span>
+          Section 1 - Data Pelapor
+        </h2>
+
+        <!-- PERUSAHAAN -->
+        <div class="form-group">
+          <label>PERUSAHAAN <span class="required">*</span></label>
+          <select id="perusahaan">
+            <option value="">Pilih Perusahaan</option>
+          </select>
+        </div>
+
+        <!-- SUBCONT -->
+        <div class="form-group">
+          <label>PERUSAHAAN SUBCONT(1) <span class="required">*</span></label>
+          <select id="subcont1">
+            <option value="">Pilih Subcont</option>
+          </select>
+        </div>
+
+        <!-- NAMA -->
+        <div class="form-group">
+          <label>NAMA <span class="required">*</span></label>
+          <select id="nama">
+            <option value="">Pilih Nama</option>
+          </select>
+        </div>
+
+        <!-- AUTO FILL -->
+        <div class="form-group">
+          <label>NIK</label>
+          <input type="text" id="nik" readonly />
+        </div>
+
+        <div class="form-group">
+          <label>JABATAN</label>
+          <input type="text" id="jabatan" readonly />
+        </div>
+
+        <div class="form-group">
+          <label>DEPARTEMEN</label>
+          <input type="text" id="departemen" readonly />
+        </div>
+
+        <div class="form-group">
+          <label>NO WHATSAPP</label>
+          <input type="tel" id="no_whatsapp" readonly />
+        </div>
+
+        <button type="button" id="btnNext1" class="btn-primary">
+          Next →
+        </button>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- STEP 2 - DETAIL KEJADIAN -->
+      <!-- ===================================== -->
+      <div class="form-step" id="step2">
+
+        <h2 class="section-title">
+          <span class="section-icon">📍</span>
+          Section 2 - Detail Kejadian
+        </h2>
+
+        <div class="form-group">
+          <label>TANGGAL KEJADIAN <span class="required">*</span></label>
+          <input type="date" id="tanggal_kejadian" />
+        </div>
+
+        <div class="form-group">
+          <label>SHIFT KEJADIAN <span class="required">*</span></label>
+          <select id="shift_kejadian">
+            <option value="">Pilih Shift</option>
+            <option>Shift 1</option>
+            <option>Shift 2</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>LOKASI BAHAYA <span class="required">*</span></label>
+          <select id="lokasi_bahaya">
+            <option value="">Pilih Lokasi Bahaya</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>
+            DETAIL LOKASI BAHAYA
+            <span class="required">*</span>
+          </label>
+          <textarea
+            id="detail_lokasi_bahaya"
+            rows="4"
+            placeholder="Contoh: Dekat panel listrik sebelah utara."
+          ></textarea>
+        </div>
+
+        <div class="button-group">
+          <button type="button" id="btnBack2" class="btn-secondary">
+            ← Back
+          </button>
+
+          <button type="button" id="btnNext2" class="btn-primary">
+            Next →
+          </button>
+        </div>
+      </div>
+            <!-- ===================================== -->
+        <!-- STEP 3 - IDENTIFIKASI BAHAYA -->
+        <!-- ===================================== -->
+        <div class="form-step" id="step3">
+
+        <h2 class="section-title">
+            <span class="section-icon">⚠️</span>
+            Section 3 - Identifikasi Bahaya
+        </h2>
+
+        <!-- JENIS BAHAYA -->
+        <div class="form-group">
+            <label>JENIS BAHAYA <span class="required">*</span></label>
+            <select id="jenis_bahaya">
+            <option value="">Pilih Jenis Bahaya</option>
+            <option value="Kondisi Tidak Aman">Kondisi Tidak Aman</option>
+            <option value="Tindakan Tidak Aman">Tindakan Tidak Aman</option>
+            </select>
+        </div>
+
+        <!-- KETIDAKSESUAIAN BAHAYA -->
+        <div class="form-group">
+            <label>KETIDAKSESUAIAN BAHAYA <span class="required">*</span></label>
+            <select id="ketidaksesuaian_bahaya">
+            <option value="">Pilih Ketidaksesuaian Bahaya</option>
+            </select>
+        </div>
+
+        <!-- SUB KETIDAKSESUAIAN -->
+        <div class="form-group">
+            <label>SUB KETIDAKSESUAIAN <span class="required">*</span></label>
+            <select id="sub_ketidaksesuaian">
+            <option value="">Pilih Sub Ketidaksesuaian</option>
+            </select>
+        </div>
+
+        <!-- DESKRIPSI BAHAYA -->
+        <div class="form-group">
+            <label>DESKRIPSI BAHAYA <span class="required">*</span></label>
+            <textarea
+            id="deskripsi_bahaya"
+            rows="5"
+            placeholder="Jelaskan secara detail kondisi atau tindakan tidak aman yang ditemukan."
+            ></textarea>
+        </div>
+
+        <!-- TINGKAT RISIKO -->
+        <div class="form-group">
+            <label>TINGKAT RISIKO</label>
+            <input
+            type="text"
+            id="tingkat_risiko"
+            readonly
+            placeholder="Akan terisi otomatis"
+            />
+        </div>
+
+                    <!-- UPLOAD FOTO BAHAYA -->
+            <div class="form-group">
+            <label>
+                UPLOAD FOTO BAHAYA
+                <span class="required">*</span>
+            </label>
+
+            <input
+                type="file"
+                id="upload_foto_bahaya"
+                accept="image/*"
+                onchange="previewFotoBahaya(event)"
+            >
+
+            <!-- PREVIEW FOTO -->
+            <div id="previewFotoBahaya" style="display:none; margin-top:15px;">
+                <img
+                id="imgPreviewBahaya"
+                alt="Preview Foto Bahaya"
+                style="
+                    width: 100%;
+                    max-height: 320px;
+                    object-fit: contain;
+                    border-radius: 12px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+                "
+                >
+            </div>
+            </div>
+
+        <!-- BUTTONS -->
+        <div class="button-group">
+            <button type="button" id="btnBack3" class="btn-secondary">
+            ← Back
+            </button>
+
+            <button type="button" id="btnNext3" class="btn-primary">
+            Next →
+            </button>
+        </div>
+        </div>
+            <!-- ===================================== -->
+        <!-- STEP 4 - TINDAKAN PERBAIKAN -->
+        <!-- ===================================== -->
+        <div class="form-step" id="step4">
+
+        <h2 class="section-title">
+            <span class="section-icon">🛠️</span>
+            Section 4 - Tindakan Perbaikan
+        </h2>
+
+        <!-- TINDAKAN LANGSUNG -->
+        <div class="form-group">
+            <label>
+            TINDAKAN PERBAIKAN YANG LANGSUNG DILAKUKAN
+            <span class="required">*</span>
+            </label>
+            <textarea
+            id="tindakan_langsung"
+            rows="5"
+            placeholder="Jelaskan tindakan langsung yang telah dilakukan di lapangan."
+            ></textarea>
+        </div>
+
+        <!-- TINDAKAN USULAN KE PIC -->
+        <div class="form-group">
+            <label>
+            TINDAKAN PERBAIKAN YANG DIUSULKAN KEPADA PENANGGUNGJAWAB (PIC)
+            <span class="required">*</span>
+            </label>
+            <textarea
+            id="tindakan_usulan_pic"
+            rows="5"
+            placeholder="Jelaskan usulan tindakan perbaikan kepada PIC."
+            ></textarea>
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="button-group">
+            <button type="button" id="btnBack4" class="btn-secondary">
+            ← Back
+            </button>
+
+            <button type="button" id="btnNext4" class="btn-primary">
+            Next →
+            </button>
+        </div>
+        </div>
+        <!-- ===================================== -->
+        <!-- STEP 5 - DATA PIC -->
+        <!-- ===================================== -->
+        <div class="form-step" id="step5">
+
+        <h2 class="section-title">
+            <span class="section-icon">👥</span>
+            Section 5 - Data PIC
+        </h2>
+
+        <!-- PERUSAHAAN PIC -->
+        <div class="form-group">
+            <label>PERUSAHAAN PIC <span class="required">*</span></label>
+            <select id="perusahaan_pic">
+            <option value="">Pilih Perusahaan PIC</option>
+            </select>
+        </div>
+
+        <!-- SUBCONT PIC -->
+        <div class="form-group">
+            <label>PERUSAHAAN SUBCONT(2) <span class="required">*</span></label>
+            <select id="subcont2">
+            <option value="">Pilih Subcont PIC</option>
+            </select>
+        </div>
+
+        <!-- NAMA PIC -->
+        <div class="form-group">
+            <label>NAMA PIC <span class="required">*</span></label>
+            <select id="nama_pic">
+            <option value="">Pilih Nama PIC</option>
+            </select>
+        </div>
+
+        <!-- AUTO FILL PIC -->
+        <div class="form-group">
+            <label>JABATAN PIC</label>
+            <input type="text" id="jabatan_pic" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>DEPARTEMEN PIC</label>
+            <input type="text" id="departemen_pic" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>NO WHATSAPP PIC</label>
+            <input type="tel" id="no_whatsapp_pic" readonly />
+        </div>
+
+        <!-- BATAS WAKTU -->
+        <div class="form-group">
+            <label>BATAS WAKTU <span class="required">*</span></label>
+            <input type="date" id="batas_waktu" />
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="button-group">
+            <button type="button" id="btnBack5" class="btn-secondary">
+            ← Back
+            </button>
+
+            <button type="button" id="btnNext5" class="btn-primary">
+            Next →
+            </button>
+        </div>
+        </div>
+            
+
+    </div>
+    <!-- ===================================== -->
+    <!-- STEP 6 - VERIFIKASI -->
+    <!-- ===================================== -->
+    <div class="form-step" id="step6">
+
+    <h2 class="section-title">
+        <span class="section-icon">✍️</span>
+        Section 6 - Verifikasi
+    </h2>
+
+    <!-- PERNYATAAN -->
+    <div class="form-group">
+        <label>PERNYATAAN <span class="required">*</span></label>
+
+        <div class="statement-box">
+        Saya menyatakan bahwa data yang saya sampaikan adalah benar dan dapat
+        dipertanggungjawabkan.
+        </div>
+
+        <label class="checkbox-label">
+        <input type="checkbox" id="pernyataan" />
+        Saya setuju dengan pernyataan di atas.
+        </label>
+    </div>
+
+    <!-- TANDA TANGAN -->
+    <div class="form-group">
+        <label>TANDA TANGAN <span class="required">*</span></label>
+
+        <canvas
+        id="signaturePad"
+        width="600"
+        height="220"
+        style="
+            width: 100%;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #ffffff;
+        "
+        ></canvas>
+
+        <div class="button-group" style="margin-top: 10px;">
+        <button
+            type="button"
+            id="btnClearSignature"
+            class="btn-secondary"
+        >
+            Hapus Tanda Tangan
+        </button>
+
+        <button
+            type="button"
+            id="btnSubmit"
+            class="btn-primary"
+        >
+            Submit Report
+        </button>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="button-group">
+        <button type="button" id="btnBack6" class="btn-secondary">
+        ← Back
+        </button>
+    </div>
+    </div>
+  </div>
+
+  <!-- Choices.js -->
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <!-- JavaScript utama -->
+  <script src="script.js"></script>
+
+  <!-- ========================================
+     LOADING OVERLAY
+======================================== -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-card">
+    <div class="loading-title">⏳ Menyimpan Hazard Report</div>
+    <div class="loading-text">
+      Mohon tunggu, sistem sedang mengunggah foto dan menyimpan data...
+    </div>
+
+    <div class="loading-bar">
+      <div
+        id="loadingProgress"
+        class="loading-progress"
+      ></div>
+    </div>
+
+    <div
+      id="loadingPercent"
+      style="
+        margin-top: 12px;
+        font-weight: 700;
+        color: #2563eb;
+      "
+    >
+      0%
+    </div>
+  </div>
+</div>
+
+    <div id="loadingAutofill" class="loading-overlay loading-autofill-overlay" style="display:none;">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Sedang mengisi data Section 1...</p>
+      </div>
+    </div>
+<!-- ========================================
+     CARA IDEAL MEMANGGIL AUTOFILL
+     Ganti bagian script di bawah index.html
+======================================== -->
+<script src="auth.js"></script>
+<script src="script.js"></script>
+
+<script>
+  requireLogin();
+
+  window.addEventListener("DOMContentLoaded", () => {
+    renderUserProfile();
+    autofillDataPelapor();
+  });
+</script>
+<script src="script.js"></script>
+</div>
+</body>
+</html>
