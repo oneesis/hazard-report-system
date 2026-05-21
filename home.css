@@ -145,3 +145,97 @@ h1{margin:0 0 12px;font-size:56px;font-weight:900}.hero p{margin:0 0 32px;font-s
 .btn-logout:hover {
   background: #dc2626;
 }
+/* ========================================
+   MOBILE RESPONSIVE FIX
+======================================== */
+@media (max-width: 768px) {
+
+  .container {
+    width: calc(100% - 24px);
+    margin: 12px auto;
+  }
+
+  .hero {
+    padding:
+      110px 20px 28px;
+    border-radius: 24px;
+  }
+
+  /* USER MENU */
+  .hero-top {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    display: flex;
+    justify-content: center;
+  }
+
+  .user-menu-button {
+    width: 100%;
+    justify-content: center;
+    border-radius: 16px;
+    padding: 14px 18px;
+    font-size: 15px;
+  }
+
+  .user-menu-dropdown {
+    width: 100%;
+    max-width: 100%;
+    right: auto;
+    left: 0;
+  }
+
+  /* LOGO */
+  .logos {
+    margin-top: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    height: 48px;
+  }
+
+  /* TITLE */
+  h1 {
+    font-size: 34px;
+    line-height: 1.2;
+    margin-top: 10px;
+  }
+
+  .hero p {
+    font-size: 17px;
+    line-height: 1.5;
+    margin-bottom: 26px;
+  }
+
+  /* BUTTON */
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+    text-align: center;
+    padding: 18px;
+    font-size: 16px;
+  }
+
+  /* KPI */
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .kpi-card {
+    padding: 24px;
+  }
+
+  .kpi-card strong {
+    font-size: 36px;
+  }
+
+}
