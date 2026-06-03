@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hazard Report ONE-SAP</title>
+<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
 </head>
 <body>
 <div class="container">
@@ -19,14 +21,37 @@
     <img src="assets/Nilai Inti - Indonesia.png" alt="Core Value" class="logo" />
   </div>
 
-  <h1>🛡️ Hazard Report ONE-SAP</h1>
+  <h1><span class="home-title-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>Hazard Report ONE-SAP</h1>
   <p>Safety Observation and Action Program</p>
 
   <div class="actions">
-    <a href="index.html" class="btn primary">📝 Buat Hazard Report</a>
-    <a href="dashboard.html" class="btn secondary">📊 Dashboard Monitoring</a>
+    <a href="index.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span>Buat Hazard Report</a>
+    <a href="dashboard.html" class="btn secondary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>Dashboard Monitoring</a>
   </div>
 
+  <div class="hero-cards">
+    <div class="feature-card">
+      <div class="feature-icon" aria-hidden="true">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
+      <h3>Pelaporan Cepat</h3>
+      <p>Lapor hazard dengan proses sederhana dan tampilan yang nyaman.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" aria-hidden="true">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+      <h3>Monitoring Real-time</h3>
+      <p>Dashboard ringkas mudah dipantau untuk status laporan hari ini.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" aria-hidden="true">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h3>Akses Aman</h3>
+      <p>Login dan laporan dikelola dengan tampilan profesional dan jelas.</p>
+    </div>
+  </div>
 </header>
 
 <section class="kpi-grid">
@@ -37,19 +62,19 @@
 </section>
 
 <section class="card">
-<h2>⚠️ High Risk Alert</h2>
-<ul id="highRiskList"><li>Memuat data...</li></ul>
+<h2><span class="icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>High Risk Alert</h2>
+<ul id="highRiskList" class="high-risk-list">
+<li>Memuat data...</li>
+</ul>
 </section>
 
-<footer class="footer">Developed by Andre Anantama Irawan © 2026</footer>
+<footer class="footer">Developed by Andre Anantama Irawan &copy; 2026</footer>
 </div>
-<script src="home.js"></script>
-<script src="auth.js"></script>
 <script src="auth.js"></script>
 <script>
   requireLogin();
   window.addEventListener("DOMContentLoaded", renderUserProfile);
 </script>
-<script src="script.js"></script>
+<script src="home.js"></script>
 </body>
 </html>

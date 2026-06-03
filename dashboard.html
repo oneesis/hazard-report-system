@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Hazard Report</title>
 
+  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 <body>
 
@@ -21,7 +25,8 @@
     <!-- LEFT: HOME BUTTON -->
     <div class="dashboard-left">
       <a href="index-home.html" class="nav-home-btn">
-        🏠 Home
+        <span class="icon" aria-hidden="true"><i class="fa-solid fa-house"></i></span>
+        Home
       </a>
     </div>
 
@@ -51,9 +56,9 @@
   <!-- TITLE -->
   <div class="dashboard-title-wrap">
     <h1 class="dashboard-title">
-      📊 Dashboard Hazard Report
+      <span aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>
+      Dashboard Hazard Report
     </h1>
-
     <p class="dashboard-subtitle">
       Monitoring, Tracking, dan Closing Hazard Report
     </p>
@@ -80,11 +85,33 @@
 
     <!-- FILTER -->
     <section class="filter-bar">
-      <input
-        type="text"
-        id="searchInput"
-        placeholder="Cari ID, Pelapor, PIC, atau Lokasi..."
-      >
+      <div class="date-range">
+        <label class="date-range-label">
+          <span class="sr-only">Filter Tanggal (opsional)</span>
+        </label>
+        <div class="date-inputs">
+          <i class="fa-solid fa-calendar-days calendar-icon" aria-hidden="true"></i>
+          <input
+            type="text"
+            id="dateRange"
+            class="date-input"
+            aria-label="Rentang tanggal"
+            placeholder="Dari - Sampai"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Cari ID, Pelapor, PIC, atau Lokasi..."
+          aria-label="Cari ID, Pelapor, PIC, atau Lokasi"
+        />
+      </div>
 
       <select id="statusFilter">
         <option value="">Semua Status</option>
@@ -93,8 +120,14 @@
         <option value="CLOSED">CLOSED</option>
       </select>
 
-      <button id="btnRefresh" class="btn-primary">
-        🔄 Refresh
+      <button id="btnRefresh" class="btn-primary" title="Refresh data">
+        <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+        <span>Refresh</span>
+      </button>
+
+      <button id="btnExportCsv" class="btn-secondary" aria-label="Export CSV">
+        <i class="fa-solid fa-file-csv" aria-hidden="true"></i>
+        <span>Export CSV</span>
       </button>
     </section>
 
@@ -132,7 +165,9 @@
             <p class="modal-tag">Preview Laporan Hazard</p>
             <h2 id="modalTitle">Detail Hazard Report</h2>
           </div>
-          <button id="modalClose" class="btn-icon" aria-label="Close preview">✕</button>
+          <button id="modalClose" class="btn-icon" aria-label="Close review">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
 
         <div class="modal-status-row">
@@ -241,9 +276,18 @@
         </div>
 
         <div class="modal-actions">
-          <button id="btnSubmitClosing" class="btn-primary">📝 Submit Closing</button>
-          <button id="btnDownloadPdf" class="btn-primary">📄 Download PDF</button> 
-          <button id="modalEdit" class="btn-secondary hidden">✏️ Edit</button>
+          <button id="btnSubmitClosing" class="btn-primary">
+            <i class="fa-solid fa-paper-plane"></i>
+            Submit Closing
+          </button>
+          <button id="btnDownloadPdf" class="btn-secondary">
+            <i class="fa-solid fa-file-arrow-down"></i>
+            Print PDF
+          </button>
+          <button id="modalEdit" class="btn-secondary hidden">
+            <i class="fa-solid fa-pen"></i>
+            Edit
+          </button>
         </div>
       </div>
     </div>
@@ -252,6 +296,19 @@
 
   <script src="auth.js"></script>
   <script src="dashboard.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.flatpickr) {
+        flatpickr('#dateRange', {
+          mode: 'range',
+          dateFormat: 'm/d/Y',
+          allowInput: true,
+          altInput: true,
+          altFormat: 'd F Y'
+        });
+      }
+    });
+  </script>
   <div id="toast" class="toast"></div>
   <script>
     requireLogin();

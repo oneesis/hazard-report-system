@@ -31,6 +31,14 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("change", renderTable);
 
   document
+    .getElementById("dateRange")
+    ?.addEventListener("change", renderTable);
+
+  document
+    .getElementById("btnExportCsv")
+    ?.addEventListener("click", exportCsv);
+
+  document
     .getElementById("reportTableBody")
     ?.addEventListener("click", event => {
       const button = event.target.closest(".btn-view");
@@ -74,9 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("modalInputAfterPhoto")
     ?.addEventListener("change", handleAfterPhotoChange);
 
-  document
-    .getElementById("btnPrint")
-    ?.addEventListener("click", printReport);
 
   document
     .getElementById("modalPhotoBefore")
@@ -109,9 +114,10 @@ async function loadReports() {
       </tr>
     `;
 
-    const response = await fetch(
-      `${BASE_URL}?action=getHazardReports`
-    );
+    const response = await fetch(`${BASE_URL}?action=getHazardReports`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
 
     const result = await response.json();
 
@@ -134,7 +140,7 @@ async function loadReports() {
     ).innerHTML = `
       <tr>
         <td colspan="9" class="loading-row">
-          Gagal memuat data.
+            Gagal memuat data. ${error && error.message ? '- ' + error.message : ''}
         </td>
       </tr>
     `;
@@ -226,6 +232,21 @@ function renderTable() {
     document.getElementById("statusFilter")
       .value;
 
+  const dateRangeValue = (document.getElementById("dateRange")?.value || "").trim();
+  let startDate = null;
+  let endDate = null;
+  if (dateRangeValue) {
+    const parts = dateRangeValue.split(/\s*(?:to|\-|sampai)\s*/i);
+    if (parts.length >= 2) {
+      startDate = new Date(parts[0]);
+      endDate = new Date(parts[1]);
+    } else {
+      startDate = new Date(parts[0]);
+      endDate = new Date(parts[0]);
+    }
+    if (endDate) endDate.setHours(23, 59, 59, 999);
+  }
+
   const visibleReports = getVisibleReports();
   const filtered = visibleReports.filter(report => {
     const status =
@@ -250,7 +271,12 @@ function renderTable() {
       !statusFilter ||
       status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const reportDate = parseReportDate(report);
+    const matchesDate =
+      (!startDate || (reportDate && reportDate >= startDate)) &&
+      (!endDate || (reportDate && reportDate <= endDate));
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   filteredReports = filtered;
@@ -293,8 +319,9 @@ function renderTable() {
             </span>
           </td>
           <td>
-            <button class="btn-primary btn-view" data-report-index="${index}">
-              👁 View
+            <button class="btn-view" data-report-index="${index}" aria-label="Lihat detail laporan">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7 0-10 6.3-10 7s3 7 10 7 10-6.3 10-7-3-7-10-7zm0 12c-3.9 0-6.7-2.7-8-5 1.3-2.3 4.1-5 8-5s6.7 2.7 8 5c-1.3 2.3-4.1 5-8 5zm0-9a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+              View
             </button>
           </td>
         </tr>
@@ -341,6 +368,100 @@ function normalizeImageUrl(url) {
   }
 
   return trimmed;
+}
+
+function parseReportDate(report) {
+  const rawValue = getReportValue(report, [
+    "timestamp",
+    "tanggal_laporan",
+    "tgl_laporan",
+    "tanggal_laporan_hazard",
+    "tanggal",
+    "date"
+  ], "");
+
+  if (!rawValue) return null;
+
+  const value = String(rawValue).trim();
+  let parsed = new Date(value);
+  if (!isNaN(parsed)) {
+    return parsed;
+  }
+
+  const parts = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (parts) {
+    const day = parts[1].padStart(2, "0");
+    const month = parts[2].padStart(2, "0");
+    const year = parts[3];
+    parsed = new Date(`${year}-${month}-${day}`);
+    return isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
+function getReportDateString(report) {
+  return getReportValue(report, [
+    "timestamp",
+    "tanggal_laporan",
+    "tgl_laporan",
+    "tanggal_laporan_hazard",
+    "tanggal",
+    "date"
+  ], "");
+}
+
+function escapeCsv(value) {
+  return `"${String(value || "").replace(/"/g, '""')}"`;
+}
+
+function exportCsv() {
+  if (!filteredReports || filteredReports.length === 0) {
+    showToast("Tidak ada data untuk diekspor.", "error");
+    return;
+  }
+
+  const header = [
+    "ID",
+    "Tanggal",
+    "Pelapor",
+    "Lokasi",
+    "Deskripsi Temuan",
+    "Risiko",
+    "PIC",
+    "Status"
+  ];
+
+  const rows = filteredReports.map(report => {
+    const status = report.status_perbaikan || "OPEN";
+    return [
+      escapeCsv(getReportValue(report, ["id", "nomor_hazard", "no_hazard"], "")),
+      escapeCsv(formatDate(getReportDateString(report))),
+      escapeCsv(getReportValue(report, ["nama", "pelapor"], "")),
+      escapeCsv(getReportValue(report, ["lokasi_bahaya", "lokasi", "location"], "")),
+      escapeCsv(getReportValue(report, ["deskripsi_bahaya", "deskripsi", "description"], "")),
+      escapeCsv(getReportValue(report, ["tingkat_resiko", "tingkat_risiko", "risiko", "risk_level"], "")),
+      escapeCsv(getReportValue(report, ["nama_pic", "pic", "penanggung_jawab"], "")),
+      escapeCsv(status)
+    ].join(",");
+  });
+
+  const csvContent = [header.join(","), ...rows].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `hazard_report_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showToast("Data berhasil diekspor ke CSV.");
+}
+
+function downloadReportPDF() {
+  window.print();
 }
 
 function openReportModal(report) {
@@ -522,7 +643,7 @@ async function submitClosingNote() {
   const submitButton = document.getElementById("btnSubmitClosing");
   const originalText = submitButton.innerHTML;
   submitButton.disabled = true;
-  submitButton.innerHTML = "⏳ Menyimpan...";
+  submitButton.innerHTML = "Menyimpan...";
 
   const closingDate = new Date().toISOString();
 

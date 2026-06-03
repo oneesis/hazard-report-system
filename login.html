@@ -1,1 +1,102 @@
-<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Login</title><link rel="stylesheet" href="login.css"></head><body><div class="login-card"><h1>🔐 Login</h1><p>Hazard Report ONE-SAP</p><form id="loginForm"><label>NIK / ID Karyawan</label><input id="nik" required><label>Password</label><input id="password" type="password" required><button id="btnLogin" type="submit">Masuk</button></form><div id="errorMessage" class="error"></div></div><script src="auth.js"></script><script src="login.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main class="login-page">
+    <section class="brand-panel" aria-label="Informasi aplikasi">
+      <div class="brand-logos">
+        <img src="assets/Logo Hasnur.png" alt="Logo Hasnur" class="brand-logo">
+        <img src="assets/Nilai Inti - Indonesia.png" alt="Nilai Inti Indonesia" class="brand-logo nilai-inti">
+      </div>
+
+      <div class="brand-copy">
+        <p class="eyebrow">Safety Accountability Program</p>
+        <h1>Hazard Report ONE-SAP</h1>
+        <p class="brand-description">
+          Kanal pelaporan hazard untuk membantu tim mencatat temuan, memantau tindak lanjut, dan menutup risiko dengan lebih tertib.
+        </p>
+      </div>
+
+      <div class="brand-highlights">
+        <div class="highlight-item">
+          <span class="highlight-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <div>
+            <strong>Pelaporan Cepat</strong>
+            <span>Data pelapor, lokasi, foto, dan PIC dalam satu alur.</span>
+          </div>
+        </div>
+        <div class="highlight-item">
+          <span class="highlight-icon" aria-hidden="true"><i class="fa-solid fa-chart-line"></i></span>
+          <div>
+            <strong>Monitoring Status</strong>
+            <span>Laporan dapat dipantau dari OPEN sampai CLOSED.</span>
+          </div>
+        </div>
+        <div class="highlight-item">
+          <span class="highlight-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
+          <div>
+            <strong>Akses Terarah</strong>
+            <span>Masuk sesuai NIK dan peran pengguna.</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="brand-footer">Developed by Andre Anantama Irawan</p>
+    </section>
+
+    <section class="login-card" aria-label="Form login">
+      <div class="login-header">
+        <span class="icon" aria-hidden="true">
+          <i class="fa-solid fa-user-lock"></i>
+        </span>
+        <div>
+          <p class="login-kicker">Masuk ke sistem</p>
+          <h2>Login</h2>
+          <p>Gunakan NIK atau ID karyawan yang terdaftar.</p>
+        </div>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="form-field">
+          <label for="nik">NIK / ID Karyawan</label>
+          <div class="input-shell">
+            <span class="field-icon" aria-hidden="true"><i class="fa-solid fa-id-card"></i></span>
+            <input id="nik" name="nik" type="text" autocomplete="username" placeholder="Masukkan NIK atau ID" required>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="password">Password</label>
+          <div class="input-group input-shell">
+            <span class="field-icon" aria-hidden="true"><i class="fa-solid fa-key"></i></span>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Masukkan password" required>
+            <button id="passwordToggle" type="button" class="password-toggle" aria-label="Tampilkan password">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <p class="help-text">Klik ikon mata untuk melihat password.</p>
+        </div>
+
+        <button id="btnLogin" type="submit" class="btn-primary"><i class="fa-solid fa-right-to-bracket"></i><span>Masuk</span></button>
+      </form>
+
+      <div id="errorMessage" class="login-error" role="alert" aria-live="polite"></div>
+
+      <div class="login-note">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>Hubungi admin HSE jika NIK belum terdaftar atau akses belum aktif.</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>

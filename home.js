@@ -11,6 +11,7 @@ async function loadDashboard(){
   document.getElementById("kpiProgress").textContent=data.filter(r=>r.status_perbaikan==="PROGRESS").length;
   document.getElementById("kpiClosed").textContent=data.filter(r=>r.status_perbaikan==="CLOSED").length;
   const list=document.getElementById("highRiskList");
+  if(!list) return;
   const highRisk=data.filter(r=>{
     const risk=(r.tingkat_risiko||r.tingkat_resiko||"").toUpperCase();
     return risk.includes("HIGH")||risk.includes("EXTREME");

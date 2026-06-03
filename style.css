@@ -218,6 +218,10 @@ input[readonly] {
    BUTTON
 ======================================== */
 .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
   margin-top: 12px;
   padding: 15px 24px;
@@ -228,13 +232,54 @@ input[readonly] {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+}
+
+.btn-primary svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
+}
+
+/* Aliases for existing button classes used in other pages */
+.btn, .btn.primary, .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn.primary, .primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+}
+
+.btn.secondary, .secondary {
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.btn.primary:hover, .primary:hover {
+  transform: translateY(-2px);
+}
+
+.btn.secondary:hover, .secondary:hover {
+  transform: translateY(-1px);
+  background: #f1f5f9;
 }
 
 /* ========================================
@@ -396,6 +441,22 @@ input[readonly] {
   color: #1e293b;
 }
 
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
+.icon svg,
+.section-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: #ffffff;
+}
 .section-icon {
   width: 48px;
   height: 48px;
@@ -440,13 +501,24 @@ input[readonly] {
 /* Grup tombol Back dan Next */
 .button-group {
   display: flex;
-  gap: 12px;
-  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  align-items: center;
+}
+
+.button-group .btn-secondary,
+.button-group .btn-primary {
+  flex: 1;
+  min-width: 140px;
 }
 
 /* Tombol sekunder (Back) */
 .btn-secondary {
-  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   padding: 15px 24px;
   border: 1px solid #dbe2ea;
   border-radius: 14px;
@@ -455,10 +527,18 @@ input[readonly] {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.btn-secondary svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
 }
 
 .btn-secondary:hover {
+  transform: translateY(-1px);
   background: #f8fafc;
   border-color: #cbd5e1;
 }
@@ -519,8 +599,18 @@ textarea {
 }
 
 .field-error::before {
-  content: "⚠️";
+  content: "!";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  border-radius: 50%;
   font-size: 12px;
+  font-weight: 700;
 }
 /* ========================================
    INPUT ERROR STYLE
@@ -1062,5 +1152,219 @@ textarea {
   .btn-logout {
     font-size: 10px;
     padding: 8px 10px;
+  }
+}
+
+/* ========================================
+   UI/UX REFINEMENT - FORM REPORT
+======================================== */
+.container {
+  max-width: 980px;
+}
+
+.card {
+  overflow: visible;
+}
+
+.header-top {
+  gap: 16px;
+}
+
+.header-logos {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.header-logos .logo {
+  max-width: 220px;
+}
+
+.header-logos .nilai-inti {
+  max-width: 260px;
+}
+
+.main-title {
+  font-size: clamp(2.2rem, 7vw, 4rem);
+}
+
+.main-subtitle {
+  margin-bottom: 32px;
+}
+
+.step-progress {
+  gap: 8px;
+  padding: 0;
+}
+
+.step-label {
+  word-break: normal;
+}
+
+.form-step.active {
+  min-height: 360px;
+}
+
+.section-title {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.form-group {
+  position: relative;
+}
+
+input,
+select,
+textarea,
+.choices__inner {
+  min-height: 52px;
+}
+
+textarea {
+  line-height: 1.6;
+}
+
+input[type="file"] {
+  min-height: auto;
+  padding: 12px;
+  border-style: dashed;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+input[type="file"]:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+#previewFotoBahaya {
+  background: #ffffff;
+}
+
+#imgPreviewBahaya {
+  display: block;
+}
+
+#step6 {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#step6 .section-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+#step6 .section-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
+.statement-box {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.checkbox-label {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+#signaturePad {
+  height: 240px !important;
+}
+
+#btnClearSignature::before {
+  content: "×";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+#btnSubmit::before {
+  content: "✓";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-weight: 900;
+}
+
+.loading-card {
+  border: 1px solid #e2e8f0;
+}
+
+@media (min-width: 760px) {
+  #step1.active,
+  #step2.active,
+  #step3.active,
+  #step4.active,
+  #step5.active {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+    align-items: start;
+  }
+
+  .form-step.active .section-title,
+  .form-step.active .button-group,
+  #step3.active .form-group:has(textarea),
+  #step3.active .form-group:has(input[type="file"]),
+  #step4.active .form-group,
+  #step6.active .form-group,
+  #step6.active .button-group {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-home-btn,
+  .user-menu,
+  .user-menu-button {
+    width: 100%;
+  }
+
+  .header-logos .logo {
+    height: 56px;
+    width: auto;
+  }
+
+  .step-progress {
+    overflow-x: auto;
+    padding-bottom: 10px;
+    justify-content: flex-start;
+    scrollbar-width: thin;
+  }
+
+  .step-progress::before {
+    display: none;
+  }
+
+  .step {
+    min-width: 82px;
+  }
+
+  .step-label {
+    font-size: 10px;
+  }
+
+  #step6 .section-title {
+    font-size: 20px;
   }
 }
