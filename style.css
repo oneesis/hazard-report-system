@@ -1053,6 +1053,24 @@ textarea {
   text-align: center;        /* Teks rata tengah */
 }
 
+.user-menu-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu-chevron {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.user-menu.open .user-menu-chevron {
+  color: #2563eb;
+  transform: rotate(180deg);
+}
+
 /* Sembunyikan dropdown */
 .user-menu .user-menu-dropdown {
   display: none !important;

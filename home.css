@@ -350,3 +350,21 @@ h1{margin:0 0 12px;font-size:56px;font-weight:900}.hero p{margin:0 0 32px;font-s
     height: auto;
   }
 }
+
+.user-menu-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu-chevron {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.user-menu.open .user-menu-chevron {
+  color: #2563eb;
+  transform: rotate(180deg);
+}

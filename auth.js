@@ -13,7 +13,8 @@ function renderUserProfile() {
   container.innerHTML = `
     <div class="user-menu-button" onclick="toggleUserMenu()">
       <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm6 7c0-1.66-3.33-2.5-6-2.5S6 17.34 6 19v1h12v-1z"/></svg></span>
-      ${user.nama || "-"} v
+      <span class="user-menu-label">${user.nama || "-"}</span>
+      <i class="fa-solid fa-chevron-down user-menu-chevron" aria-hidden="true"></i>
     </div>
 
     <div class="user-menu-dropdown">
