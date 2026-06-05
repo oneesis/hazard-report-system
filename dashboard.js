@@ -1,10 +1,3 @@
-// ========================================
-// KONFIGURASI
-// ========================================
-// Gunakan URL Web App Google Apps Script yang sama
-const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbxyxWUQuFddbDxsqq3TNB_K6SBzdDbAFPgrf0DZr38niuOy0dgkqTkfFUeZevudvS8c/exec";
-
 // Data laporan
 let reports = [];
 let filteredReports = [];
@@ -128,9 +121,11 @@ async function loadReports() {
     }
 
     reports = result.data || [];
+    window.__hazardReportsCache = reports;
 
     updateKPI();
     renderTable();
+    handleOpenReportQuery();
 
   } catch (error) {
     console.error(error);
@@ -147,48 +142,28 @@ async function loadReports() {
   }
 }
 
-function normalizeString(value) {
-  return String(value || "").trim().toLowerCase();
+function getVisibleReportsFromCache() {
+  return getVisibleReports(reports);
 }
 
-function isReportVisible(report) {
-  const user = getCurrentUser();
-  if (!user) return false;
-  if (String(user.role || "").toUpperCase() === "ADMIN") {
-    return true;
+function handleOpenReportQuery() {
+  const openId = new URLSearchParams(window.location.search).get("open");
+  if (!openId) return;
+
+  const report = reports.find(r => getReportId(r) === openId);
+  if (!report || !isReportVisible(report)) return;
+
+  openReportModal(report);
+  if (typeof markNotificationRead === "function") {
+    markNotificationRead(openId);
   }
-
-  const userName = normalizeString(user.nama || user.name || "");
-  const userNik = normalizeString(user.nik || user.NIK || "");
-
-  const reporterName = normalizeString(
-    getReportValue(report, ["nama", "pelapor", "reporter", "reporter_name"], "")
-  );
-  const reporterNik = normalizeString(
-    getReportValue(report, ["nik", "NIK", "reporter_nik"], "")
-  );
-  const picName = normalizeString(
-    getReportValue(report, ["nama_pic", "pic", "penanggung_jawab"], "")
-  );
-  const picNik = normalizeString(
-    getReportValue(report, ["nik_pic", "nip_pic", "pic_nik"], "")
-  );
-
-  return (
-    (userName && (reporterName === userName || picName === userName)) ||
-    (userNik && (reporterNik === userNik || picNik === userNik))
-  );
-}
-
-function getVisibleReports() {
-  return reports.filter(isReportVisible);
 }
 
 // ========================================
 // UPDATE KPI
 // ========================================
 function updateKPI() {
-  const visibleReports = getVisibleReports();
+  const visibleReports = getVisibleReportsFromCache();
 
   const openCount =
     visibleReports.filter(
@@ -247,7 +222,7 @@ function renderTable() {
     if (endDate) endDate.setHours(23, 59, 59, 999);
   }
 
-  const visibleReports = getVisibleReports();
+  const visibleReports = getVisibleReportsFromCache();
   const filtered = visibleReports.filter(report => {
     const status =
       report.status_perbaikan || "OPEN";
@@ -333,16 +308,6 @@ function renderTable() {
 // ========================================
 // MODAL DETAIL
 // ========================================
-function getReportValue(report, keys = [], fallback = "-") {
-  for (const key of keys) {
-    const value = report[key];
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      return value;
-    }
-  }
-  return fallback;
-}
-
 function getReportImage(report, keys = []) {
   const rawValue = getReportValue(report, keys, "");
   return rawValue ? normalizeImageUrl(rawValue) : "";

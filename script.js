@@ -1,7 +1,4 @@
 // HAZARD REPORT ONE-SAP
-// STEP 1 - DATA PELAPOR
-// STEP 2 - DETAIL KEJADIAN
-// STEP 3 - IDENTIFIKASI BAHAYA
 
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxyxWUQuFddbDxsqq3TNB_K6SBzdDbAFPgrf0DZr38niuOy0dgkqTkfFUeZevudvS8c/exec";
@@ -10,226 +7,15 @@ let masterKaryawan = [];
 let masterLokasi = [];
 let masterTemuan = [];
 
-
 let namaChoices;
 let lokasiChoices;
 let ketidaksesuaianChoices;
 let subKetidaksesuaianChoices;
 let namaPicChoices;
 let signaturePad;
+let autosaveTimer;
 
 let currentStep = 1;
-
-// ========================================
-// INITIALIZE
-// ========================================
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    // Load master data PARALLEL (bukan sequential)
-    await Promise.all([
-      loadMasterKaryawan(),
-      loadMasterLokasi(),
-      loadMasterTemuan()
-    ]);
-
-    // Populate dropdowns
-    loadPerusahaanOptions();
-    loadLokasiOptions();
-    loadKetidaksesuaianOptions();
-    loadPerusahaanPicOptions();
-
-    // Initialize Choices.js
-    initializeNamaChoices();
-    initializeLokasiChoices();
-    initializeKetidaksesuaianChoices();
-    initializeSubKetidaksesuaianChoices();
-    initializeNamaPicChoices();
-    initializeSignaturePad();
-
-    // Default tanggal kejadian = hari ini
-    const tanggalInput = document.getElementById("tanggal_kejadian");
-    if (tanggalInput) {
-      tanggalInput.value = new Date().toISOString().split("T")[0];
-    }
-
-    // ========================================
-    // EVENT LISTENERS STEP 1
-    // ========================================
-    document
-      .getElementById("perusahaan")
-      ?.addEventListener("change", loadSubcontOptions);
-
-    document
-      .getElementById("subcont1")
-      ?.addEventListener("change", loadNamaOptions);
-
-    document
-      .getElementById("nama")
-      ?.addEventListener("change", autoFillData);
-
-    // ========================================
-    // EVENT LISTENERS STEP 3
-    // ========================================
-    document
-      .getElementById("ketidaksesuaian_bahaya")
-      ?.addEventListener("change", loadSubKetidaksesuaianOptions);
-
-    document
-      .getElementById("sub_ketidaksesuaian")
-      ?.addEventListener("change", autoFillRisiko);
-
-    document
-    .getElementById("upload_foto_bahaya")
-    ?.addEventListener("change", function () {
-        const file = this.files[0];
-        if (!file) return;
-
-        // Validasi sederhana (opsional)
-        if (!file.type.startsWith("image/")) {
-        alert("File harus berupa gambar.");
-        this.value = "";
-        return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
-        // Simpan Base64 agar bisa dikirim saat submit
-        this.dataset.base64 = e.target.result;
-
-        // Tampilkan preview
-        const preview =
-            document.getElementById("previewFotoBahaya");
-
-        if (preview) {
-            preview.src = e.target.result;
-            preview.style.display = "block";
-        }
-        };
-
-        reader.readAsDataURL(file);
-    });
-
-     // ========================================
-        // NAVIGATION STEP 4
-        // ========================================
-        document
-        .getElementById("btnNext3")
-        ?.addEventListener("click", () => {
-            if (validateSection3()) {
-            showStep(4);
-            }
-        });
-
-        document
-        .getElementById("btnBack4")
-        ?.addEventListener("click", () => {
-            showStep(3);
-        });
-
-        document
-        .getElementById("btnNext4")
-        ?.addEventListener("click", () => {
-            if (validateSection4()) {
-            showStep(5);
-            }
-        }); 
-    // ========================================
-    // NAVIGATION
-    // ========================================
-    document
-      .getElementById("btnNext1")
-      ?.addEventListener("click", () => {
-        if (validateSection1()) showStep(2);
-      });
-
-    document
-      .getElementById("btnBack2")
-      ?.addEventListener("click", () => showStep(1));
-
-    document
-      .getElementById("btnNext2")
-      ?.addEventListener("click", () => {
-        if (validateSection2()) showStep(3);
-      });
-
-    document
-      .getElementById("btnBack3")
-      ?.addEventListener("click", () => showStep(2));
-
-    document
-      .getElementById("btnNext3")
-      ?.addEventListener("click", () => {
-        if (validateSection3()) showStep(4);
-      });
-    document
-    .getElementById("perusahaan_pic")
-    ?.addEventListener("change", loadSubcontPicOptions);
-
-    document
-    .getElementById("subcont2")
-    ?.addEventListener("change", loadNamaPicOptions);
-
-    document
-    .getElementById("nama_pic")
-    ?.addEventListener("change", autoFillDataPic);
-    document
-    .getElementById("btnNext4")
-    ?.addEventListener("click", () => {
-        if (validateSection4()) {
-        showStep(5);
-        }
-    });
-
-    document
-    .getElementById("btnBack5")
-    ?.addEventListener("click", () => {
-        showStep(4);
-    });
-
-    document
-    .getElementById("btnNext5")
-    ?.addEventListener("click", () => {
-        if (validateSection5()) {
-        showStep(6);
-        }
-    });
-
-    // Tampilkan step pertama
-    showStep(1);
-
-    if (!isAdmin()) {
-      setSection1Editable(false);
-    }
-
-    autofillDataPelapor();
-  } catch (error) {
-    console.error(error);
-    console.error("Terjadi kesalahan saat memuat data:", error);
-// alert di-nonaktifkan agar tidak mengganggu user
-  }
-});
-document
-  .getElementById("btnNext5")
-  ?.addEventListener("click", () => {
-    if (validateSection5()) {
-      showStep(6);
-    }
-  });
-
-document
-  .getElementById("btnBack6")
-  ?.addEventListener("click", () => {
-    showStep(5);
-  });
-
-document
-  .getElementById("btnSubmit")
-  ?.addEventListener("click", async () => {
-    if (validateSection6()) {
-      await submitForm();
-    }
-  });
 
 // ========================================
 // FETCH DATA
@@ -241,38 +27,27 @@ async function fetchJSON(url) {
 }
 
 async function loadMasterKaryawan() {
-  masterKaryawan = await fetchJSON(
-    `${BASE_URL}?action=masterKaryawan`
-  );
+  masterKaryawan = await fetchJSON(`${BASE_URL}?action=masterKaryawan`);
 }
 
 async function loadMasterLokasi() {
-  masterLokasi = await fetchJSON(
-    `${BASE_URL}?action=masterLokasi`
-  );
+  masterLokasi = await fetchJSON(`${BASE_URL}?action=masterLokasi`);
 }
 
 async function loadMasterTemuan() {
-  masterTemuan = await fetchJSON(
-    `${BASE_URL}?action=masterTemuan`
-  );
+  masterTemuan = await fetchJSON(`${BASE_URL}?action=masterTemuan`);
 }
+
 // ========================================
-// HELPER - AMBIL NILAI DARI BERBAGAI HEADER
+// HELPER - GET VALUE FROM VARIOUS HEADERS
 // ========================================
 function getValue(obj, possibleKeys) {
   for (const key of possibleKeys) {
     const value = obj[key];
-
-    if (
-      value !== undefined &&
-      value !== null &&
-      String(value).trim() !== ""
-    ) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
       return String(value).trim();
     }
   }
-
   return "";
 }
 
@@ -283,60 +58,36 @@ function loadPerusahaanOptions() {
   const select = document.getElementById("perusahaan");
   if (!select) return;
 
-  select.innerHTML =
-    '<option value="">Pilih Perusahaan</option>';
+  select.innerHTML = '<option value="">Pilih Perusahaan</option>';
 
-  const list = [
-    ...new Set(
-      masterKaryawan
-        .map(item => item["PERUSAHAAN"])
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(masterKaryawan.map(item => item["PERUSAHAAN"]).filter(Boolean))].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 }
 
 function loadSubcontOptions() {
-  const perusahaan =
-    document.getElementById("perusahaan").value;
+  const perusahaan = document.getElementById("perusahaan").value;
   const select = document.getElementById("subcont1");
 
-  select.innerHTML =
-    '<option value="">Pilih Subcont</option>';
+  select.innerHTML = '<option value="">Pilih Subcont</option>';
 
   clearAutoFill();
   resetNamaDropdown();
 
   if (!perusahaan) return;
 
-  const list = [
-    ...new Set(
-      masterKaryawan
-        .filter(
-          item => item["PERUSAHAAN"] === perusahaan
-        )
-        .map(item => item["SUBCONT"])
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan)
+      .map(item => item["SUBCONT"]).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 }
 
 function loadNamaOptions() {
-  const perusahaan =
-    document.getElementById("perusahaan").value;
-  const subcont =
-    document.getElementById("subcont1").value;
+  const perusahaan = document.getElementById("perusahaan").value;
+  const subcont = document.getElementById("subcont1").value;
   const select = document.getElementById("nama");
 
-  select.innerHTML =
-    '<option value="">Pilih Nama</option>';
+  select.innerHTML = '<option value="">Pilih Nama</option>';
 
   clearAutoFill();
 
@@ -345,76 +96,51 @@ function loadNamaOptions() {
     return;
   }
 
-  const list = [
-    ...new Set(
-      masterKaryawan
-        .filter(
-          item =>
-            item["PERUSAHAAN"] === perusahaan &&
-            item["SUBCONT"] === subcont
-        )
-        .map(item => item["NAMA"])
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont)
+      .map(item => item["NAMA"]).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 
   initializeNamaChoices();
 }
 
 function setSection1Editable(editable) {
-  const section1Ids = ["perusahaan", "subcont1", "nama"];
-  section1Ids.forEach(id => {
+  ["perusahaan", "subcont1", "nama"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !editable;
   });
 }
 
 function autoFillData() {
-  const perusahaan =
-    document.getElementById("perusahaan").value;
-  const subcont =
-    document.getElementById("subcont1").value;
-  const nama =
-    document.getElementById("nama").value;
+  const perusahaan = document.getElementById("perusahaan").value;
+  const subcont = document.getElementById("subcont1").value;
+  const nama = document.getElementById("nama").value;
 
   const selected = masterKaryawan.find(
-    item =>
-      item["PERUSAHAAN"] === perusahaan &&
-      item["SUBCONT"] === subcont &&
-      item["NAMA"] === nama
+    item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont && item["NAMA"] === nama
   );
 
   if (!selected) return;
 
-  document.getElementById("nik").value =
-    selected["NIK"] || "";
-  document.getElementById("jabatan").value =
-    selected["JABATAN"] || "";
-  document.getElementById("departemen").value =
-    selected["DEPARTEMEN"] || "";
-  document.getElementById("no_whatsapp").value =
-    selected["NO WHATSAPP"] || "";
+  document.getElementById("nik").value = selected["NIK"] || "";
+  document.getElementById("jabatan").value = selected["JABATAN"] || "";
+  document.getElementById("departemen").value = selected["DEPARTEMEN"] || "";
+  document.getElementById("no_whatsapp").value = selected["NO WHATSAPP"] || "";
 }
 
 function clearAutoFill() {
-  ["nik", "jabatan", "departemen", "no_whatsapp"]
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
+  ["nik", "jabatan", "departemen", "no_whatsapp"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
 }
 
 function resetNamaDropdown() {
   const select = document.getElementById("nama");
   if (!select) return;
 
-  select.innerHTML =
-    '<option value="">Pilih Nama</option>';
-
+  select.innerHTML = '<option value="">Pilih Nama</option>';
   initializeNamaChoices();
 }
 
@@ -422,75 +148,43 @@ function resetNamaDropdown() {
 // STEP 2 - DETAIL KEJADIAN
 // ========================================
 function loadLokasiOptions() {
-  const select =
-    document.getElementById("lokasi_bahaya");
+  const select = document.getElementById("lokasi_bahaya");
   if (!select) return;
 
-  select.innerHTML =
-    '<option value="">Pilih Lokasi Bahaya</option>';
+  select.innerHTML = '<option value="">Pilih Lokasi Bahaya</option>';
 
-  const list = [
-    ...new Set(
-      masterLokasi
-        .map(item => {
-          const key = Object.keys(item)[0];
-          return item[key];
-        })
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterLokasi.map(item => {
+      const key = Object.keys(item)[0];
+      return item[key];
+    }).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 }
 
 // ========================================
 // STEP 3 - IDENTIFIKASI BAHAYA
 // ========================================
 function loadKetidaksesuaianOptions() {
-  const select =
-    document.getElementById("ketidaksesuaian_bahaya");
-
+  const select = document.getElementById("ketidaksesuaian_bahaya");
   if (!select) return;
 
-  select.innerHTML =
-    '<option value="">Pilih Ketidaksesuaian Bahaya</option>';
+  select.innerHTML = '<option value="">Pilih Ketidaksesuaian Bahaya</option>';
 
-  const list = [
-    ...new Set(
-      masterTemuan
-        .map(item =>
-          getValue(item, [
-            "KETIDAKSESUAIAN",
-            "KETIDAKSESUAIAN BAHAYA",
-            "KETIDAKSESUAIAN_BAHAYA"
-          ])
-        )
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterTemuan.map(item => getValue(item, ["KETIDAKSESUAIAN", "KETIDAKSESUAIAN BAHAYA", "KETIDAKSESUAIAN_BAHAYA"])).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 
   initializeKetidaksesuaianChoices();
 }
+
 function loadSubKetidaksesuaianOptions() {
-  const ketidaksesuaian =
-    document.getElementById(
-      "ketidaksesuaian_bahaya"
-    ).value;
+  const ketidaksesuaian = document.getElementById("ketidaksesuaian_bahaya").value;
+  const select = document.getElementById("sub_ketidaksesuaian");
+  const risiko = document.getElementById("tingkat_risiko");
 
-  const select =
-    document.getElementById("sub_ketidaksesuaian");
-  const risiko =
-    document.getElementById("tingkat_risiko");
-
-  select.innerHTML =
-    '<option value="">Pilih Sub Ketidaksesuaian</option>';
-
+  select.innerHTML = '<option value="">Pilih Sub Ketidaksesuaian</option>';
   if (risiko) risiko.value = "";
 
   if (!ketidaksesuaian) {
@@ -498,155 +192,68 @@ function loadSubKetidaksesuaianOptions() {
     return;
   }
 
-  const list = [
-    ...new Set(
-      masterTemuan
-        .filter(item => {
-          const kategori =
-            item["KETIDAKSESUAIAN"] ||
-            item["KETIDAKSESUAIAN BAHAYA"];
-
-          return kategori === ketidaksesuaian;
-        })
-        .map(item =>
-          item["SUB KETIDAKSESUAIAN"]
-        )
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterTemuan.filter(item => {
+      const kategori = item["KETIDAKSESUAIAN"] || item["KETIDAKSESUAIAN BAHAYA"];
+      return kategori === ketidaksesuaian;
+    }).map(item => item["SUB KETIDAKSESUAIAN"]).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 
   initializeSubKetidaksesuaianChoices();
 }
 
 function autoFillRisiko() {
-  const ketidaksesuaian =
-    document.getElementById(
-      "ketidaksesuaian_bahaya"
-    ).value;
-
-  const sub =
-    document.getElementById(
-      "sub_ketidaksesuaian"
-    ).value;
+  const ketidaksesuaian = document.getElementById("ketidaksesuaian_bahaya").value;
+  const sub = document.getElementById("sub_ketidaksesuaian").value;
 
   const selected = masterTemuan.find(item => {
-    const kategori =
-      item["KETIDAKSESUAIAN"] ||
-      item["KETIDAKSESUAIAN BAHAYA"];
-
-    return (
-      kategori === ketidaksesuaian &&
-      item["SUB KETIDAKSESUAIAN"] === sub
-    );
+    const kategori = item["KETIDAKSESUAIAN"] || item["KETIDAKSESUAIAN BAHAYA"];
+    return kategori === ketidaksesuaian && item["SUB KETIDAKSESUAIAN"] === sub;
   });
 
   if (!selected) return;
 
-  document.getElementById("tingkat_risiko").value =
-    selected["RESIKO"] ||
-    selected["TINGKAT RESIKO"] ||
-    "";
+  document.getElementById("tingkat_risiko").value = selected["RESIKO"] || selected["TINGKAT RESIKO"] || "";
 }
 
-function previewFotoBahaya(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  // Validasi file gambar
-  if (!file.type.startsWith("image/")) {
-    alert("File harus berupa gambar.");
-    event.target.value = "";
-    return;
-  }
-
-  // Ambil elemen preview
-  const preview = document.getElementById("previewFotoBahaya");
-  const img = document.getElementById("imgPreviewBahaya");
-
-  // Pastikan elemen ditemukan
-  if (!preview || !img) {
-    console.error("Elemen preview foto tidak ditemukan.");
-    return;
-  }
-
-  // Baca file
-  const reader = new FileReader();
-
-  reader.onload = function (e) {
-    const base64 = e.target.result;
-
-    // Simpan Base64 untuk submit ke Google Apps Script
-    event.target.dataset.base64 = base64;
-
-    // Tampilkan preview
-    img.src = base64;
-    preview.style.display = "block";
-
-    console.log("Preview foto berhasil ditampilkan.");
-  };
-
-  reader.readAsDataURL(file);
-}
+// ========================================
+// STEP 5 - DATA PIC
+// ========================================
 function loadPerusahaanPicOptions() {
   const select = document.getElementById("perusahaan_pic");
   if (!select) return;
 
-  select.innerHTML =
-    '<option value="">Pilih Perusahaan PIC</option>';
+  select.innerHTML = '<option value="">Pilih Perusahaan PIC</option>';
 
-  const list = [
-    ...new Set(
-      masterKaryawan
-        .map(item => item["PERUSAHAAN"])
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(masterKaryawan.map(item => item["PERUSAHAAN"]).filter(Boolean))].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 }
+
 function loadSubcontPicOptions() {
-  const perusahaan =
-    document.getElementById("perusahaan_pic").value;
+  const perusahaan = document.getElementById("perusahaan_pic").value;
   const select = document.getElementById("subcont2");
 
-  select.innerHTML =
-    '<option value="">Pilih Subcont PIC</option>';
+  select.innerHTML = '<option value="">Pilih Subcont PIC</option>';
 
   clearAutoFillPic();
   resetNamaPicDropdown();
 
   if (!perusahaan) return;
 
-  const list = [
-    ...new Set(
-      masterKaryawan
-        .filter(
-          item => item["PERUSAHAAN"] === perusahaan
-        )
-        .map(item => item["SUBCONT"])
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan)
+      .map(item => item["SUBCONT"]).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 }
+
 function loadNamaPicOptions() {
-  const perusahaan =
-    document.getElementById("perusahaan_pic").value;
-  const subcont =
-    document.getElementById("subcont2").value;
+  const perusahaan = document.getElementById("perusahaan_pic").value;
+  const subcont = document.getElementById("subcont2").value;
   const select = document.getElementById("nama_pic");
 
-  select.innerHTML =
-    '<option value="">Pilih Nama PIC</option>';
+  select.innerHTML = '<option value="">Pilih Nama PIC</option>';
 
   clearAutoFillPic();
 
@@ -655,57 +262,33 @@ function loadNamaPicOptions() {
     return;
   }
 
-  const list = [
-    ...new Set(
-      masterKaryawan
-        .filter(
-          item =>
-            item["PERUSAHAAN"] === perusahaan &&
-            item["SUBCONT"] === subcont
-        )
-        .map(item => item["NAMA"])
-        .filter(Boolean)
-    )
-  ].sort();
-
-  list.forEach(item => {
-    select.add(new Option(item, item));
-  });
+  const list = [...new Set(
+    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont)
+      .map(item => item["NAMA"]).filter(Boolean)
+  )].sort();
+  list.forEach(item => select.add(new Option(item, item)));
 
   initializeNamaPicChoices();
 }
+
 function autoFillDataPic() {
-  const perusahaan =
-    document.getElementById("perusahaan_pic").value;
-  const subcont =
-    document.getElementById("subcont2").value;
-  const nama =
-    document.getElementById("nama_pic").value;
+  const perusahaan = document.getElementById("perusahaan_pic").value;
+  const subcont = document.getElementById("subcont2").value;
+  const nama = document.getElementById("nama_pic").value;
 
   const selected = masterKaryawan.find(
-    item =>
-      item["PERUSAHAAN"] === perusahaan &&
-      item["SUBCONT"] === subcont &&
-      item["NAMA"] === nama
+    item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont && item["NAMA"] === nama
   );
 
   if (!selected) return;
 
-  document.getElementById("jabatan_pic").value =
-    selected["JABATAN"] || "";
-
-  document.getElementById("departemen_pic").value =
-    selected["DEPARTEMEN"] || "";
-
-  document.getElementById("no_whatsapp_pic").value =
-    selected["NO WHATSAPP"] || "";
+  document.getElementById("jabatan_pic").value = selected["JABATAN"] || "";
+  document.getElementById("departemen_pic").value = selected["DEPARTEMEN"] || "";
+  document.getElementById("no_whatsapp_pic").value = selected["NO WHATSAPP"] || "";
 }
+
 function clearAutoFillPic() {
-  [
-    "jabatan_pic",
-    "departemen_pic",
-    "no_whatsapp_pic"
-  ].forEach(id => {
+  ["jabatan_pic", "departemen_pic", "no_whatsapp_pic"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -715,9 +298,7 @@ function resetNamaPicDropdown() {
   const select = document.getElementById("nama_pic");
   if (!select) return;
 
-  select.innerHTML =
-    '<option value="">Pilih Nama PIC</option>';
-
+  select.innerHTML = '<option value="">Pilih Nama PIC</option>';
   initializeNamaPicChoices();
 }
 
@@ -739,49 +320,29 @@ function createChoices(selector, placeholder) {
 
 function initializeNamaChoices() {
   if (namaChoices) namaChoices.destroy();
-  namaChoices = createChoices(
-    "#nama",
-    "Cari dan pilih nama"
-  );
+  namaChoices = createChoices("#nama", "Cari dan pilih nama");
 }
 
 function initializeLokasiChoices() {
   if (lokasiChoices) lokasiChoices.destroy();
-  lokasiChoices = createChoices(
-    "#lokasi_bahaya",
-    "Cari lokasi bahaya"
-  );
+  lokasiChoices = createChoices("#lokasi_bahaya", "Cari lokasi bahaya");
 }
 
 function initializeKetidaksesuaianChoices() {
-  if (ketidaksesuaianChoices)
-    ketidaksesuaianChoices.destroy();
-
-  ketidaksesuaianChoices = createChoices(
-    "#ketidaksesuaian_bahaya",
-    "Cari ketidaksesuaian"
-  );
+  if (ketidaksesuaianChoices) ketidaksesuaianChoices.destroy();
+  ketidaksesuaianChoices = createChoices("#ketidaksesuaian_bahaya", "Cari ketidaksesuaian");
 }
 
 function initializeSubKetidaksesuaianChoices() {
-  if (subKetidaksesuaianChoices)
-    subKetidaksesuaianChoices.destroy();
-
-  subKetidaksesuaianChoices = createChoices(
-    "#sub_ketidaksesuaian",
-    "Cari sub ketidaksesuaian"
-  );
+  if (subKetidaksesuaianChoices) subKetidaksesuaianChoices.destroy();
+  subKetidaksesuaianChoices = createChoices("#sub_ketidaksesuaian", "Cari sub ketidaksesuaian");
 }
+
 function initializeNamaPicChoices() {
-  if (namaPicChoices) {
-    namaPicChoices.destroy();
-  }
-
-  namaPicChoices = createChoices(
-    "#nama_pic",
-    "Cari dan pilih nama PIC"
-  );
+  if (namaPicChoices) namaPicChoices.destroy();
+  namaPicChoices = createChoices("#nama_pic", "Cari dan pilih nama PIC");
 }
+
 function initializeSignaturePad() {
   const canvas = document.getElementById("signaturePad");
   if (!canvas) return;
@@ -791,101 +352,274 @@ function initializeSignaturePad() {
     maxWidth: 3
   });
 
-  // Tombol hapus tanda tangan
-  document
-    .getElementById("btnClearSignature")
-    ?.addEventListener("click", () => {
-      signaturePad.clear();
-    });
+  document.getElementById("btnClearSignature")?.addEventListener("click", () => {
+    signaturePad.clear();
+  });
 }
+
+// ========================================
+// AUTO-SAVE DRAFT
+// ========================================
+const AUTOSAVE_KEY = "hazard_draft";
+const AUTOSAVE_DELAY = 2000;
+
+function saveDraft() {
+  const data = getFormData();
+  localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+  showAutoSaveIndicator();
+}
+
+function loadDraft() {
+  const saved = localStorage.getItem(AUTOSAVE_KEY);
+  if (!saved) return;
+
+  try {
+    const data = JSON.parse(saved);
+    Object.keys(data).forEach(key => {
+      const el = document.getElementById(key);
+      if (el) {
+        if (el.type === "checkbox") {
+          el.checked = data[key] === "Ya";
+        } else {
+          el.value = data[key];
+        }
+      }
+    });
+
+    const fileInput = document.getElementById("upload_foto_bahaya");
+    if (fileInput && data.upload_foto_bahaya) {
+      const preview = document.getElementById("previewFotoBahaya");
+      const img = document.getElementById("imgPreviewBahaya");
+      if (preview && img) {
+        img.src = data.upload_foto_bahaya;
+        fileInput.dataset.base64 = data.upload_foto_bahaya;
+        preview.style.display = "block";
+      }
+    }
+
+    if (data.tanda_tangan && signaturePad) {
+      const img = new Image();
+      img.onload = () => signaturePad.fromDataURL(data.tanda_tangan);
+      img.src = data.tanda_tangan;
+    }
+  } catch (e) {
+    console.error("Failed to load draft:", e);
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(AUTOSAVE_KEY);
+}
+
+function showAutoSaveIndicator() {
+  const indicator = document.getElementById("autoSaveIndicator");
+  if (indicator) {
+    indicator.classList.add("show");
+    setTimeout(() => indicator.classList.remove("show"), 2000);
+  }
+}
+
+// ========================================
+// CHARACTER COUNTER
+// ========================================
+function setupCharCounter(textareaId, maxLength = 500) {
+  const textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+
+  const formGroup = textarea.closest(".form-group");
+  if (!formGroup) return;
+
+  const counter = document.createElement("div");
+  counter.className = "char-counter";
+  counter.textContent = `0/${maxLength}`;
+  formGroup.appendChild(counter);
+
+  textarea.addEventListener("input", () => {
+    const length = textarea.value.length;
+    counter.textContent = `${length}/${maxLength}`;
+    counter.classList.toggle("warning", length > maxLength * 0.8 && length <= maxLength);
+    counter.classList.toggle("danger", length > maxLength);
+  });
+}
+
+// ========================================
+// OFFLINE DETECTION
+// ========================================
+function initOfflineDetection() {
+  const offlineEl = document.getElementById("offlineNotification");
+
+  function updateOnlineStatus() {
+    if (navigator.onLine) {
+      if (offlineEl) offlineEl.classList.remove("show");
+    } else {
+      if (offlineEl) offlineEl.classList.add("show");
+    }
+  }
+
+  window.addEventListener("online", updateOnlineStatus);
+  window.addEventListener("offline", updateOnlineStatus);
+  updateOnlineStatus();
+}
+
+// ========================================
+// CONFIRMATION DIALOG
+// ========================================
+function showConfirmationDialog() {
+  return new Promise((resolve) => {
+    const dialog = document.getElementById("confirmationDialog");
+    const overlay = document.getElementById("confirmationOverlay");
+    if (!dialog || !overlay) {
+      resolve(true);
+      return;
+    }
+
+    dialog.classList.add("show");
+    overlay.classList.add("show");
+
+    const confirmBtn = document.getElementById("confirmSubmit");
+    const cancelBtn = document.getElementById("cancelSubmit");
+
+    const cleanup = () => {
+      dialog.classList.remove("show");
+      overlay.classList.remove("show");
+      confirmBtn?.removeEventListener("click", onConfirm);
+      cancelBtn?.removeEventListener("click", onCancel);
+    };
+
+    const onConfirm = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+
+    confirmBtn?.addEventListener("click", onConfirm);
+    cancelBtn?.addEventListener("click", onCancel);
+    overlay?.addEventListener("click", onCancel);
+  });
+}
+
+// ========================================
+// PHOTO ZOOM
+// ========================================
+function setupPhotoZoom() {
+  const preview = document.getElementById("previewFotoBahaya");
+  if (!preview) return;
+
+  preview.addEventListener("click", () => {
+    const overlay = document.getElementById("photoZoomOverlay");
+    const zoomImg = document.getElementById("zoomedPhoto");
+    const img = document.getElementById("imgPreviewBahaya");
+
+    if (overlay && zoomImg && img && img.src) {
+      zoomImg.src = img.src;
+      overlay.classList.add("active");
+    }
+  });
+}
+
+// ========================================
+// PHOTO PREVIEW (for inline onchange in HTML)
+// ========================================
+function previewFotoBahaya(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("File harus berupa gambar.");
+    event.target.value = "";
+    return;
+  }
+
+  const preview = document.getElementById("previewFotoBahaya");
+  const img = document.getElementById("imgPreviewBahaya");
+
+  if (!preview || !img) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    event.target.dataset.base64 = e.target.result;
+    img.src = e.target.result;
+    preview.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+// ========================================
+// KEYBOARD NAVIGATION
+// ========================================
+function setupKeyboardNavigation() {
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === "Enter") {
+      e.preventDefault();
+      const nextBtn = document.getElementById(`btnNext${currentStep}`);
+      if (nextBtn) nextBtn.click();
+    }
+
+    if (e.key === "Escape" && currentStep > 1) {
+      const backBtn = document.getElementById(`btnBack${currentStep}`);
+      if (backBtn) backBtn.click();
+    }
+  });
+}
+
+// ========================================
+// DARK MODE
+// ========================================
+function initDarkMode() {
+  const saved = localStorage.getItem("darkMode");
+  if (saved === "enabled") {
+    document.body.classList.add("dark-mode");
+  }
+
+  const toggle = document.getElementById("darkModeToggle");
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode") ? "enabled" : "disabled");
+    });
+  }
+}
+
 // ========================================
 // MULTI STEP
 // ========================================
 function showStep(stepNumber) {
   currentStep = stepNumber;
 
-  document
-    .querySelectorAll(".form-step")
-    .forEach(step =>
-      step.classList.remove("active")
-    );
+  document.querySelectorAll(".form-step").forEach(step => step.classList.remove("active"));
+  document.getElementById(`step${stepNumber}`)?.classList.add("active");
 
-  document
-    .getElementById(`step${stepNumber}`)
-    ?.classList.add("active");
-
-  document
-    .querySelectorAll(".step-progress .step")
-    .forEach(step => {
-      const value = Number(step.dataset.step);
-
-      step.classList.remove(
-        "active",
-        "completed"
-      );
-
-      if (value < stepNumber) {
-        step.classList.add("completed");
-      } else if (value === stepNumber) {
-        step.classList.add("active");
-      }
-    });
+  document.querySelectorAll(".step-progress .step").forEach(step => {
+    const value = Number(step.dataset.step);
+    step.classList.remove("active", "completed");
+    if (value < stepNumber) step.classList.add("completed");
+    else if (value === stepNumber) step.classList.add("active");
+  });
 
   hideAlert();
   clearFieldErrors();
 
-  document.querySelector(".card")?.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
+  document.querySelector(".card")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ========================================
-// VALIDATION
-// ========================================
 // ========================================
 // VALIDATION
 // ========================================
 function validateSection1() {
-  return validateRequiredFields([
-    "perusahaan",
-    "subcont1",
-    "nama"
-  ]);
+  return validateRequiredFields(["perusahaan", "subcont1", "nama"]);
 }
 
 function validateSection2() {
-  return validateRequiredFields([
-    "tanggal_kejadian",
-    "shift_kejadian",
-    "lokasi_bahaya",
-    "detail_lokasi_bahaya"
-  ]);
+  return validateRequiredFields(["tanggal_kejadian", "shift_kejadian", "lokasi_bahaya", "detail_lokasi_bahaya"]);
 }
 
 function validateSection3() {
-  return validateRequiredFields([
-    "jenis_bahaya",
-    "ketidaksesuaian_bahaya",
-    "sub_ketidaksesuaian",
-    "deskripsi_bahaya"
-  ]);
+  return validateRequiredFields(["jenis_bahaya", "ketidaksesuaian_bahaya", "sub_ketidaksesuaian", "deskripsi_bahaya"]);
 }
 
 function validateSection4() {
-  return validateRequiredFields([
-    "tindakan_langsung",
-    "tindakan_usulan_pic"
-  ]);
+  return validateRequiredFields(["tindakan_langsung", "tindakan_usulan_pic"]);
 }
 
 function validateSection5() {
-  return validateRequiredFields([
-    "perusahaan_pic",
-    "subcont2",
-    "nama_pic",
-    "batas_waktu"
-  ]);
+  return validateRequiredFields(["perusahaan_pic", "subcont2", "nama_pic", "batas_waktu"]);
 }
 
 function validateSection6() {
@@ -895,67 +629,36 @@ function validateSection6() {
   let isValid = true;
   let firstInvalid = null;
 
-  // Validasi checkbox pernyataan
   const pernyataan = document.getElementById("pernyataan");
-
   if (!pernyataan || !pernyataan.checked) {
     isValid = false;
-
-    const checkboxLabel =
-      pernyataan?.closest(".checkbox-label");
-
+    const checkboxLabel = pernyataan?.closest(".checkbox-label");
     if (checkboxLabel) {
       checkboxLabel.classList.add("error");
-
       const error = document.createElement("div");
       error.className = "field-error";
       error.textContent = "Pernyataan wajib disetujui.";
-
-      const formGroup =
-        checkboxLabel.closest(".form-group");
-
-      formGroup?.appendChild(error);
+      checkboxLabel.closest(".form-group")?.appendChild(error);
     }
-
-    if (!firstInvalid) {
-      firstInvalid =
-        checkboxLabel || pernyataan;
-    }
+    if (!firstInvalid) firstInvalid = checkboxLabel || pernyataan;
   }
 
-  // Validasi tanda tangan
-  const canvas =
-    document.getElementById("signaturePad");
-
+  const canvas = document.getElementById("signaturePad");
   if (!signaturePad || signaturePad.isEmpty()) {
     isValid = false;
-
     if (canvas) {
       canvas.classList.add("error");
-
       const error = document.createElement("div");
       error.className = "field-error";
       error.textContent = "Tanda tangan wajib diisi.";
-
-      const formGroup =
-        canvas.closest(".form-group");
-
-      formGroup?.appendChild(error);
+      canvas.closest(".form-group")?.appendChild(error);
     }
-
-    if (!firstInvalid) {
-      firstInvalid = canvas;
-    }
+    if (!firstInvalid) firstInvalid = canvas;
   }
 
-  // Jika tidak valid
   if (!isValid && firstInvalid) {
     showAlert();
-
-    firstInvalid.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
+    firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   return isValid;
@@ -972,27 +675,18 @@ function validateRequiredFields(fieldIds) {
     const field = document.getElementById(id);
     if (!field) return;
 
-    const value =
-      (field.value || "").trim();
-
+    const value = (field.value || "").trim();
     if (!value) {
       isValid = false;
-
-      if (!firstInvalid) {
-        firstInvalid = field;
-      }
+      if (!firstInvalid) firstInvalid = field;
 
       addFieldError(field);
 
-      const formGroup =
-        field.closest(".form-group");
-
+      const formGroup = field.closest(".form-group");
       if (formGroup) {
-        const error =
-          document.createElement("div");
+        const error = document.createElement("div");
         error.className = "field-error";
-        error.textContent =
-          "Field ini wajib diisi.";
+        error.textContent = "Field ini wajib diisi.";
         formGroup.appendChild(error);
       }
     }
@@ -1000,62 +694,34 @@ function validateRequiredFields(fieldIds) {
 
   if (!isValid && firstInvalid) {
     showAlert();
-
-    const group =
-      firstInvalid.closest(".form-group");
-
-    group?.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-
-    setTimeout(() => {
-      firstInvalid.focus?.();
-    }, 400);
+    firstInvalid.closest(".form-group")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => firstInvalid.focus?.(), 400);
   }
 
   return isValid;
 }
 
 function addFieldError(field) {
-  const choicesInner =
-    field.closest(".form-group")
-      ?.querySelector(".choices__inner");
-
-  if (choicesInner) {
-    choicesInner.classList.add("error");
-  } else {
-    field.classList.add("error");
-  }
+  const choicesInner = field.closest(".form-group")?.querySelector(".choices__inner");
+  if (choicesInner) choicesInner.classList.add("error");
+  else field.classList.add("error");
 }
 
 function clearFieldErrors() {
-  document
-    .querySelectorAll(".error")
-    .forEach(el =>
-      el.classList.remove("error")
-    );
-
-  document
-    .querySelectorAll(".field-error")
-    .forEach(el => el.remove());
+  document.querySelectorAll(".error").forEach(el => el.classList.remove("error"));
+  document.querySelectorAll(".field-error").forEach(el => el.remove());
 }
 
 function showAlert() {
-  const alertBox =
-    document.getElementById("alertError");
-  if (alertBox) {
-    alertBox.style.display = "block";
-  }
+  const alertBox = document.getElementById("alertError");
+  if (alertBox) alertBox.style.display = "block";
 }
 
 function hideAlert() {
-  const alertBox =
-    document.getElementById("alertError");
-  if (alertBox) {
-    alertBox.style.display = "none";
-  }
+  const alertBox = document.getElementById("alertError");
+  if (alertBox) alertBox.style.display = "none";
 }
+
 // ========================================
 // LOADING OVERLAY
 // ========================================
@@ -1064,19 +730,11 @@ function showLoading() {
   const progress = document.getElementById("loadingProgress");
   const percent = document.getElementById("loadingPercent");
 
-  if (overlay) {
-    overlay.style.display = "flex";
-  }
+  if (overlay) overlay.style.display = "flex";
 
-  if (progress) {
-    progress.style.width = "0%";
-  }
+  if (progress) progress.style.width = "0%";
+  if (percent) percent.textContent = "0%";
 
-  if (percent) {
-    percent.textContent = "0%";
-  }
-
-  // Animasi progress bertahap
   setTimeout(() => updateLoading(20), 200);
   setTimeout(() => updateLoading(45), 800);
   setTimeout(() => updateLoading(70), 1500);
@@ -1086,100 +744,59 @@ function showLoading() {
 function updateLoading(value) {
   const progress = document.getElementById("loadingProgress");
   const percent = document.getElementById("loadingPercent");
-
-  if (progress) {
-    progress.style.width = value + "%";
-  }
-
-  if (percent) {
-    percent.textContent = value + "%";
-  }
+  if (progress) progress.style.width = value + "%";
+  if (percent) percent.textContent = value + "%";
 }
 
 function hideLoading() {
   updateLoading(100);
-
   setTimeout(() => {
     const overlay = document.getElementById("loadingOverlay");
-    if (overlay) {
-      overlay.style.display = "none";
-    }
+    if (overlay) overlay.style.display = "none";
   }, 500);
 }
+
 // ========================================
 // COLLECT FORM DATA
 // ========================================
 function getFormData() {
   return {
-    // Section 1
     perusahaan: document.getElementById("perusahaan")?.value || "",
     subcont1: document.getElementById("subcont1")?.value || "",
     nama: document.getElementById("nama")?.value || "",
     nik: document.getElementById("nik")?.value || "",
     jabatan: document.getElementById("jabatan")?.value || "",
     departemen: document.getElementById("departemen")?.value || "",
-    no_whatsapp:
-      document.getElementById("no_whatsapp")?.value || "",
+    no_whatsapp: document.getElementById("no_whatsapp")?.value || "",
 
-    // Section 2
-    tanggal_kejadian:
-      document.getElementById("tanggal_kejadian")?.value || "",
-    shift_kejadian:
-      document.getElementById("shift_kejadian")?.value || "",
-    lokasi_bahaya:
-      document.getElementById("lokasi_bahaya")?.value || "",
-    detail_lokasi_bahaya:
-      document.getElementById("detail_lokasi_bahaya")?.value || "",
+    tanggal_kejadian: document.getElementById("tanggal_kejadian")?.value || "",
+    shift_kejadian: document.getElementById("shift_kejadian")?.value || "",
+    lokasi_bahaya: document.getElementById("lokasi_bahaya")?.value || "",
+    detail_lokasi_bahaya: document.getElementById("detail_lokasi_bahaya")?.value || "",
 
-        // Section 3
-    jenis_bahaya:
-    document.getElementById("jenis_bahaya")?.value || "",
-    ketidaksesuaian_bahaya:
-    document.getElementById("ketidaksesuaian_bahaya")?.value || "",
-    sub_ketidaksesuaian:
-    document.getElementById("sub_ketidaksesuaian")?.value || "",
-    deskripsi_bahaya:
-    document.getElementById("deskripsi_bahaya")?.value || "",
-    tingkat_risiko:
-    document.getElementById("tingkat_risiko")?.value || "",
-    upload_foto_bahaya:
-    document.getElementById("upload_foto_bahaya")
-    ?.dataset?.base64 || "",
+    jenis_bahaya: document.getElementById("jenis_bahaya")?.value || "",
+    ketidaksesuaian_bahaya: document.getElementById("ketidaksesuaian_bahaya")?.value || "",
+    sub_ketidaksesuaian: document.getElementById("sub_ketidaksesuaian")?.value || "",
+    deskripsi_bahaya: document.getElementById("deskripsi_bahaya")?.value || "",
+    tingkat_risiko: document.getElementById("tingkat_risiko")?.value || "",
+    upload_foto_bahaya: document.getElementById("upload_foto_bahaya")?.dataset?.base64 || "",
 
-    // Section 4
-    tindakan_langsung:
-      document.getElementById("tindakan_langsung")?.value || "",
-    tindakan_usulan_pic:
-      document.getElementById("tindakan_usulan_pic")?.value || "",
+    tindakan_langsung: document.getElementById("tindakan_langsung")?.value || "",
+    tindakan_usulan_pic: document.getElementById("tindakan_usulan_pic")?.value || "",
 
-    // Section 5
-    perusahaan_pic:
-      document.getElementById("perusahaan_pic")?.value || "",
-    subcont2:
-      document.getElementById("subcont2")?.value || "",
-    nama_pic:
-      document.getElementById("nama_pic")?.value || "",
-    jabatan_pic:
-      document.getElementById("jabatan_pic")?.value || "",
-    departemen_pic:
-      document.getElementById("departemen_pic")?.value || "",
-    no_whatsapp_pic:
-      document.getElementById("no_whatsapp_pic")?.value || "",
-    batas_waktu:
-      document.getElementById("batas_waktu")?.value || "",
+    perusahaan_pic: document.getElementById("perusahaan_pic")?.value || "",
+    subcont2: document.getElementById("subcont2")?.value || "",
+    nama_pic: document.getElementById("nama_pic")?.value || "",
+    jabatan_pic: document.getElementById("jabatan_pic")?.value || "",
+    departemen_pic: document.getElementById("departemen_pic")?.value || "",
+    no_whatsapp_pic: document.getElementById("no_whatsapp_pic")?.value || "",
+    batas_waktu: document.getElementById("batas_waktu")?.value || "",
 
-    // Section 6
-    pernyataan:
-      document.getElementById("pernyataan")?.checked
-        ? "Ya"
-        : "Tidak",
-
-    tanda_tangan:
-      signaturePad && !signaturePad.isEmpty()
-        ? signaturePad.toDataURL("image/png")
-        : ""
+    pernyataan: document.getElementById("pernyataan")?.checked ? "Ya" : "Tidak",
+    tanda_tangan: signaturePad && !signaturePad.isEmpty() ? signaturePad.toDataURL("image/png") : ""
   };
 }
+
 // ========================================
 // SUBMIT FORM DATA
 // ========================================
@@ -1187,90 +804,64 @@ async function submitForm() {
   try {
     const data = getFormData();
     showLoading();
-    const btnSubmit =
-      document.getElementById("btnSubmit");
 
-    // Disable tombol
+    const btnSubmit = document.getElementById("btnSubmit");
     if (btnSubmit) {
       btnSubmit.disabled = true;
       btnSubmit.textContent = "Submitting...";
     }
 
-    console.log("Submitting data:", data);
-
     const response = await fetch(BASE_URL, {
       method: "POST",
-      headers: {
-        "Content-Type":
-          "text/plain;charset=utf-8"
-      },
-      body: JSON.stringify({
-        action: "submitHazardReport",
-        data: data
-      })
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "submitHazardReport", data: data })
     });
 
     const text = await response.text();
-    console.log("Raw Response:", text);
-
     let result;
     try {
       result = JSON.parse(text);
     } catch (err) {
-      throw new Error(
-        "Response bukan JSON valid: " + text
-      );
+      throw new Error("Response bukan JSON valid: " + text);
     }
 
     if (result.status === "success") {
-      alert(
-        "Hazard Report berhasil disimpan!\n\nID: " +
-        result.id
-      );
+      alert("Hazard Report berhasil disimpan!\n\nID: " + result.id);
+      window.location.href = "index-home.html";
     } else {
-      throw new Error(
-        result.message ||
-        "Gagal menyimpan data."
-      );
+      throw new Error(result.message || "Gagal menyimpan data.");
     }
   } catch (error) {
-    console.error("Submit Error:", error);
-    alert(
-      "Terjadi kesalahan saat submit:\n\n" +
-      error.message
-    );
+    alert("Terjadi kesalahan saat submit:\n\n" + error.message);
   } finally {
     hideLoading();
-    const btnSubmit =
-      document.getElementById("btnSubmit");
-
+    const btnSubmit = document.getElementById("btnSubmit");
     if (btnSubmit) {
       btnSubmit.disabled = false;
-      btnSubmit.textContent =
-        "Submit Report";
+      btnSubmit.textContent = "Submit Report";
     }
   }
 }
+
+// ========================================
+// AUTO-FILL DATA PELAPOR
+// ========================================
 async function autofillDataPelapor() {
   const user = getCurrentUser();
   if (!user || !masterKaryawan || masterKaryawan.length === 0) return;
 
-  // Show loading
   const loadingAutofillOverlay = document.getElementById("loadingAutofill");
   if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "flex";
 
   try {
-    // Master data sudah pasti siap, langsung cari user record
     const userRecord = masterKaryawan.find(item => {
       const itemNik = String(item["NIK"] || "").trim();
       const itemNama = String(item["NAMA"] || "").trim();
       const userNik = String(user.nik || "").trim();
       const userNama = String(user.nama || "").trim();
 
-      return (
-        (userNik && itemNik.toUpperCase() === userNik.toUpperCase()) ||
-        (userNama && itemNama.toUpperCase() === userNama.toUpperCase())
-      );
+      return (userNik && itemNik.toUpperCase() === userNik.toUpperCase()) ||
+             (userNama && itemNama.toUpperCase() === userNama.toUpperCase());
     });
 
     if (!userRecord) {
@@ -1286,11 +877,9 @@ async function autofillDataPelapor() {
     const departemanField = document.getElementById("departemen");
     const noWaField = document.getElementById("no_whatsapp");
 
-    // 1. SET PERUSAHAAN
     if (perusahaan && userRecord["PERUSAHAAN"]) {
       const opt = Array.from(perusahaan.options).find(o =>
-        String(o.value).trim().toUpperCase() === 
-        String(userRecord["PERUSAHAAN"]).trim().toUpperCase()
+        String(o.value).trim().toUpperCase() === String(userRecord["PERUSAHAAN"]).trim().toUpperCase()
       );
       if (opt) {
         perusahaan.value = opt.value;
@@ -1298,12 +887,10 @@ async function autofillDataPelapor() {
       }
     }
 
-    // 2. SET SUBCONT (very short wait)
     await new Promise(r => setTimeout(r, 50));
     if (subcont && userRecord["SUBCONT"]) {
       const opt = Array.from(subcont.options).find(o =>
-        String(o.value).trim().toUpperCase() === 
-        String(userRecord["SUBCONT"]).trim().toUpperCase()
+        String(o.value).trim().toUpperCase() === String(userRecord["SUBCONT"]).trim().toUpperCase()
       );
       if (opt) {
         subcont.value = opt.value;
@@ -1311,29 +898,23 @@ async function autofillDataPelapor() {
       }
     }
 
-    // 3. SET NAMA (very short wait)
     await new Promise(r => setTimeout(r, 50));
     if (nama && userRecord["NAMA"]) {
       const opt = Array.from(nama.options).find(o =>
-        String(o.value).trim().toUpperCase() === 
-        String(userRecord["NAMA"]).trim().toUpperCase()
+        String(o.value).trim().toUpperCase() === String(userRecord["NAMA"]).trim().toUpperCase()
       );
       if (opt) {
         nama.value = opt.value;
-        if (namaChoices) {
-          namaChoices.setChoiceByValue(opt.value);
-        }
+        if (namaChoices) namaChoices.setChoiceByValue(opt.value);
         nama.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
 
-    // 4. FILL DATA TURUNAN
     if (nikField) nikField.value = userRecord["NIK"] || "";
     if (jabatanField) jabatanField.value = userRecord["JABATAN"] || "";
     if (departemanField) departemanField.value = userRecord["DEPARTEMEN"] || "";
     if (noWaField) noWaField.value = userRecord["NO WHATSAPP"] || "";
 
-    // 5. LOCK SEMUA FIELD
     [nikField, jabatanField, departemanField, noWaField].forEach(el => {
       if (el) el.readOnly = true;
     });
@@ -1348,7 +929,6 @@ async function autofillDataPelapor() {
       }, true);
     }
 
-    // Hide loading dengan delay kecil agar animasi terlihat
     await new Promise(r => setTimeout(r, 300));
     if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "none";
 
@@ -1357,29 +937,113 @@ async function autofillDataPelapor() {
     if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "none";
   }
 }
-/* ========================================
-   INITIALIZE FORM WITH AUTOFILL
-======================================== */
-async function initializeFormWithAutofill() {
+
+// ========================================
+// INITIALIZE
+// ========================================
+document.addEventListener("DOMContentLoaded", async () => {
   try {
-    // Jika ada fungsi loadMasterData, tunggu sampai selesai
-    if (typeof loadMasterData === "function") {
-      await loadMasterData();
-    }
+    await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadMasterTemuan()]);
 
-    // Jika ada fungsi initializeForm lama, jalankan juga
-    if (typeof initializeForm === "function") {
-      await initializeForm();
-    }
+    loadPerusahaanOptions();
+    loadLokasiOptions();
+    loadKetidaksesuaianOptions();
+    loadPerusahaanPicOptions();
 
-    // Setelah semua dropdown siap, isi otomatis data pelapor
+    initializeNamaChoices();
+    initializeLokasiChoices();
+    initializeKetidaksesuaianChoices();
+    initializeSubKetidaksesuaianChoices();
+    initializeNamaPicChoices();
+    initializeSignaturePad();
+
+    const tanggalInput = document.getElementById("tanggal_kejadian");
+    if (tanggalInput) tanggalInput.value = new Date().toISOString().split("T")[0];
+
+    // Event listeners
+    document.getElementById("perusahaan")?.addEventListener("change", loadSubcontOptions);
+    document.getElementById("subcont1")?.addEventListener("change", loadNamaOptions);
+    document.getElementById("nama")?.addEventListener("change", autoFillData);
+
+    // Photo upload preview
+    document.getElementById("upload_foto_bahaya")?.addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        alert("File harus berupa gambar.");
+        e.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        e.target.dataset.base64 = ev.target.result;
+        const preview = document.getElementById("previewFotoBahaya");
+        const img = document.getElementById("imgPreviewBahaya");
+        if (preview && img) {
+          img.src = ev.target.result;
+          preview.style.display = "block";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById("ketidaksesuaian_bahaya")?.addEventListener("change", loadSubKetidaksesuaianOptions);
+    document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", autoFillRisiko);
+
+    document.getElementById("perusahaan_pic")?.addEventListener("change", loadSubcontPicOptions);
+    document.getElementById("subcont2")?.addEventListener("change", loadNamaPicOptions);
+    document.getElementById("nama_pic")?.addEventListener("change", autoFillDataPic);
+
+    // Navigation buttons
+    document.getElementById("btnNext1")?.addEventListener("click", () => { if (validateSection1()) showStep(2); });
+    document.getElementById("btnBack2")?.addEventListener("click", () => showStep(1));
+    document.getElementById("btnNext2")?.addEventListener("click", () => { if (validateSection2()) showStep(3); });
+    document.getElementById("btnBack3")?.addEventListener("click", () => showStep(2));
+    document.getElementById("btnNext3")?.addEventListener("click", () => { if (validateSection3()) showStep(4); });
+    document.getElementById("btnBack4")?.addEventListener("click", () => showStep(3));
+    document.getElementById("btnNext4")?.addEventListener("click", () => { if (validateSection4()) showStep(5); });
+    document.getElementById("btnBack5")?.addEventListener("click", () => showStep(4));
+    document.getElementById("btnNext5")?.addEventListener("click", () => { if (validateSection5()) showStep(6); });
+    document.getElementById("btnBack6")?.addEventListener("click", () => showStep(5));
+    document.getElementById("btnSubmit")?.addEventListener("click", async () => {
+      if (validateSection6()) {
+        const confirmed = await showConfirmationDialog();
+        if (confirmed) {
+          await submitForm();
+          clearDraft();
+        }
+      }
+    });
+
+// Photo zoom close
+    document.getElementById("photoZoomClose")?.addEventListener("click", () => {
+      document.getElementById("photoZoomOverlay")?.classList.remove("active");
+    });
+
+    showStep(1);
+
+    if (!isAdmin()) setSection1Editable(false);
     autofillDataPelapor();
-  } catch (error) {
-    console.error("Gagal inisialisasi form:", error);
 
-    // Fallback: tetap coba autofill
-    setTimeout(() => {
-      autofillDataPelapor();
-    }, 1000);
-  }
-}
+    // Initialize enhancements
+    loadDraft();
+    setupCharCounter("deskripsi_bahaya");
+    setupCharCounter("detail_lokasi_bahaya");
+    setupCharCounter("tindakan_langsung");
+    setupCharCounter("tindakan_usulan_pic", 600);
+    setupPhotoZoom();
+    setupKeyboardNavigation();
+    initDarkMode();
+    initOfflineDetection();
+
+    // Auto-save on input changes
+    document.querySelectorAll("input, select, textarea").forEach(el => {
+      el.addEventListener("input", () => {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(saveDraft, AUTOSAVE_DELAY);
+      });
+    });
+   } catch (error) {
+     console.error("Terjadi kesalahan saat memuat data:", error);
+   }
+ });

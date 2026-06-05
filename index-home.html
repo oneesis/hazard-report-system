@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hazard Report ONE-SAP</title>
+<link rel="icon" href="assets/Logo EBL.png" type="image/png" />
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="home.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,7 +13,8 @@
 <div class="container">
 <header class="hero">
     <div class="hero-top">
-    <div id="userProfile" class="user-menu"></div>
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
     </div>
 
   <!-- LOGO -->
@@ -71,6 +73,8 @@
 <footer class="footer">Developed by Andre Anantama Irawan &copy; 2026</footer>
 </div>
 <script src="auth.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
 <script>
   requireLogin();
   window.addEventListener("DOMContentLoaded", renderUserProfile);

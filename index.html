@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HAZARD REPORT ONE-SAP</title>
+  <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
 
   <!-- CSS utama -->
   <link rel="stylesheet" href="style.css" />
@@ -544,6 +545,40 @@
         <p>Sedang mengisi data Section 1...</p>
       </div>
     </div>
+<!-- CONFIRMATION DIALOG -->
+<div id="confirmationOverlay" class="confirmation-overlay"></div>
+<div id="confirmationDialog" class="confirmation-dialog">
+  <div class="confirmation-content">
+    <h3>Konfirmasi Submit</h3>
+    <p>Apakah Anda yakin ingin mengirim Hazard Report ini?</p>
+    <div class="confirmation-buttons">
+      <button id="cancelSubmit" class="btn-secondary">Batal</button>
+      <button id="confirmSubmit" class="btn-primary">Ya, Kirim</button>
+    </div>
+  </div>
+</div>
+
+<!-- OFFLINE NOTIFICATION -->
+<div id="offlineNotification" class="offline-notification">
+  <span class="offline-icon">⚠</span>
+  <span>Anda sedang offline. Form akan disimpan otomatis saat kembali online.</span>
+</div>
+
+<!-- PHOTO ZOOM OVERLAY -->
+<div id="photoZoomOverlay" class="photo-zoom-overlay">
+  <button id="photoZoomClose" class="photo-zoom-close" aria-label="Close">&times;</button>
+  <img id="zoomedPhoto" alt="Zoomed photo">
+</div>
+
+<!-- AUTO-SAVE INDICATOR -->
+<div id="autoSaveIndicator" class="auto-save-indicator">Draft tersimpan</div>
+
+<!-- DARK MODE TOGGLE -->
+<button id="darkModeToggle" class="dark-mode-toggle">
+  <span class="toggle-icon">🌙</span>
+  <span>Dark Mode</span>
+</button>
+
 <script src="auth.js"></script>
 
 <script>
