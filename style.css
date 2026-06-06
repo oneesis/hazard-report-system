@@ -1711,3 +1711,103 @@ input[type="file"]:hover {
     font-size: 20px;
   }
 }
+
+/* ========================================
+   MOBILE BOTTOM NAVIGATION
+======================================== */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5000;
+    display: grid;
+    grid-template-columns: 1fr 92px 1fr;
+    align-items: end;
+    min-height: calc(76px + env(safe-area-inset-bottom));
+    padding: 10px 22px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 24px 24px 0 0;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 -16px 40px rgba(15, 23, 42, 0.16);
+  }
+
+  .mobile-bottom-link,
+  .mobile-bottom-action {
+    -webkit-tap-highlight-color: transparent;
+    text-decoration: none;
+  }
+
+  .mobile-bottom-link {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    min-height: 56px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .mobile-bottom-link.active {
+    color: #2563eb;
+  }
+
+  .mobile-bottom-icon {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-bottom-icon svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .mobile-bottom-action {
+    justify-self: center;
+    align-self: start;
+    width: 72px;
+    height: 72px;
+    margin-top: -34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+    border: 5px solid #ffffff;
+    box-shadow:
+      0 16px 30px rgba(37, 99, 235, 0.32),
+      0 0 0 1px rgba(226, 232, 240, 0.9);
+  }
+
+  .mobile-bottom-action svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .mobile-bottom-action.active {
+    background: linear-gradient(135deg, #0ea5e9, #1d4ed8);
+  }
+
+  .dark-mode-toggle {
+    bottom: calc(94px + env(safe-area-inset-bottom));
+    right: 14px;
+    padding: 10px 12px;
+  }
+}

@@ -384,7 +384,11 @@ h1{margin:0 0 12px;font-size:56px;font-weight:900}.hero p{margin:0 0 32px;font-s
 
   .container {
     width: calc(100% - 24px);
-    margin: 12px auto;
+    margin: 12px auto 0;
+  }
+
+  body {
+    padding: 0 0 calc(108px + env(safe-area-inset-bottom));
   }
 
   .hero {
@@ -408,9 +412,22 @@ h1{margin:0 0 12px;font-size:56px;font-weight:900}.hero p{margin:0 0 32px;font-s
   }
 
   .notification-dropdown {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
+    top: 82px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 190px);
+    transform: none;
+    border-radius: 20px;
+  }
+
+  .notification-list {
+    max-height: min(360px, calc(100vh - 310px));
+  }
+
+  .notification-list.expanded {
+    max-height: min(460px, calc(100vh - 260px));
   }
 
   .user-menu-button {

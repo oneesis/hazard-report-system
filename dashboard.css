@@ -1633,7 +1633,7 @@ tbody td:first-child {
 
 @media (max-width: 640px) {
   body {
-    padding: 12px;
+    padding: 12px 12px calc(108px + env(safe-area-inset-bottom));
   }
 
   .dashboard-title {
