@@ -1,5 +1,5 @@
 const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbxyxWUQuFddbDxsqq3TNB_K6SBzdDbAFPgrf0DZr38niuOy0dgkqTkfFUeZevudvS8c/exec";
+  "https://script.google.com/macros/s/AKfycbyc9zRsm-QBK0Zv1yNvWWnJEBlZ002aR7qaZE9_Kkm9l_R9S0GCntg9tWF2bessctdG/exec";
 
 function normalizeString(value) {
   return String(value || "").trim().toLowerCase();
@@ -25,6 +25,14 @@ function getReportStatus(report) {
   return report.status_perbaikan || "OPEN";
 }
 
+function getReportType(report) {
+  return String(report.report_type || "HAZARD").trim().toUpperCase();
+}
+
+function getReportTypeLabel(report) {
+  return getReportType(report) === "INSPECTION" ? "Inspeksi" : "Hazard";
+}
+
 function getUserRelation(report) {
   const user = getCurrentUser();
   if (!user) return null;
@@ -36,17 +44,56 @@ function getUserRelation(report) {
   const userName = normalizeString(user.nama || user.name || "");
   const userNik = normalizeString(user.nik || user.NIK || "");
 
+  // Robust aliasing because backend key normalization may differ.
   const reporterName = normalizeString(
-    getReportValue(report, ["nama", "pelapor", "reporter", "reporter_name"], "")
+    getReportValue(
+      report,
+      [
+        "nama",
+        "pelapor",
+        "reporter",
+        "reporter_name",
+        // aliases that might appear due to sheet/header mismatch
+        "nama_pelapor",
+        "nama_pelapor_laporan"
+      ],
+      ""
+    )
   );
   const reporterNik = normalizeString(
-    getReportValue(report, ["nik", "NIK", "reporter_nik"], "")
+    getReportValue(
+      report,
+      ["nik", "reporter_nik", "nik_reporter", "NIK"],
+      ""
+    )
   );
+
   const picName = normalizeString(
-    getReportValue(report, ["nama_pic", "pic", "penanggung_jawab"], "")
+    getReportValue(
+      report,
+      [
+        "nama_pic",
+        "pic",
+        "penanggung_jawab",
+        "pic_name",
+        "nama_pic_laporan"
+      ],
+      ""
+    )
   );
   const picNik = normalizeString(
-    getReportValue(report, ["nik_pic", "nip_pic", "pic_nik"], "")
+    getReportValue(
+      report,
+      [
+        "nik_pic",
+        "nip_pic",
+        "pic_nik",
+        // possible variations
+        "nikpic",
+        "nik_pic_pic"
+      ],
+      ""
+    )
   );
 
   const isPic =
@@ -58,33 +105,70 @@ function getUserRelation(report) {
 
   if (isPic) return "pic";
   if (isReporter) return "reporter";
+
+  // Fallback: if we cannot map relation but the report contains any user-identifying field,
+  // treat as visible to avoid empty dashboard due to key/header mismatch.
+  if (userNik) {
+    const maybeNik = normalizeString(getReportValue(report, ["nik", "nik_pic", "nik_pic_pic"], ""));
+    if (maybeNik && maybeNik === userNik) return "reporter";
+  }
+  if (userName) {
+    const maybeName = normalizeString(getReportValue(report, ["nama", "nama_pic"], ""));
+    if (maybeName && maybeName === userName) return "reporter";
+  }
+
   return null;
 }
+
+
+
 
 function isReportVisible(report) {
   const user = getCurrentUser();
   if (!user) return false;
+
   if (String(user.role || "").toUpperCase() === "ADMIN") {
     return true;
   }
+
+  // Untuk non-admin: hanya terlihat jika user adalah pelapor atau PIC
   return getUserRelation(report) !== null;
 }
+
 
 function getVisibleReports(reports) {
   return (reports || []).filter(isReportVisible);
 }
 
 async function fetchHazardReports() {
-  const response = await fetch(`${BASE_URL}?action=getHazardReports`);
+  return fetchAllReports();
+}
+
+async function fetchAllReports() {
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}?action=getAllReports`);
+  } catch (err) {
+    throw new Error('Network error saat memanggil API: ' + (err && err.message ? err.message : err));
+  }
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
 
-  const result = await response.json();
+  const text = await response.text();
+  let result;
+  try {
+    result = JSON.parse(text);
+  } catch (err) {
+    throw new Error('Response API bukan JSON valid: ' + text);
+  }
+
   if (result.status !== "success") {
     throw new Error(result.message || "Gagal memuat data.");
   }
 
+  console.log('fetchAllReports: menerima', (result.data || []).length, 'laporan dari server');
   return result.data || [];
 }
 

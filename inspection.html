@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pilih Inspeksi - ONE-SAP</title>
+<link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="home.css" />
+<link rel="manifest" href="manifest.json" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="inspection-list-page">
+<div class="container">
+<header class="hero">
+    <div class="hero-top-left">
+      <a href="index-home.html" class="btn-home-back" title="Kembali ke Home">
+        <i class="fa-solid fa-house"></i> <span class="btn-home-text">Home</span>
+      </a>
+    </div>
+    <div class="hero-top">
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+  <div class="logos">
+    <img src="assets/Logo Hasnur.png" alt="Hasnur Group" class="logo" />
+    <img src="assets/Nilai Inti - Indonesia.png" alt="Core Value" class="logo" />
+  </div>
+
+  <h1><span class="home-title-icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>Pilih Form Inspeksi</h1>
+  <p>Pilih jenis inspeksi yang akan diinput. Setiap inspeksi punya formulir tersendiri.</p>
+
+  <section id="inspectionDraftsSection" class="inspection-drafts-section" style="display:none;">
+    <h2 class="drafts-section-title"><i class="fa-solid fa-pen-to-square"></i> Draft Inspeksi</h2>
+    <p class="drafts-section-subtitle">Lanjutkan inspeksi yang belum selesai</p>
+    <div id="inspectionDraftsList" class="inspection-drafts-list"></div>
+  </section>
+
+  <section class="card card-grid inspections-grid">
+    <a href="inspection-form.html?type=INS_CB" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span>
+      <h3>Inspeksi Conveyor Belt</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_JA" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-road"></i></span>
+      <h3>Inspeksi Jalan Angkut</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_MD" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-utensils"></i></span>
+      <h3>Inspeksi Mess dan Dapur</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_KG" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+      <h3>Inspeksi Kantor dan Gudang</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_SP" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-water"></i></span>
+      <h3>Inspeksi Settling Pond</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_T" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-mountain"></i></span>
+      <h3>Inspeksi Tambang</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_TB" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-oil-can"></i></span>
+      <h3>Inspeksi Tangki BBM</h3>
+    </a>
+    <a href="inspection-form.html?type=INS_WS" class="inspector-card">
+      <span class="icon" aria-hidden="true"><i class="fa-solid fa-hammer"></i></span>
+      <h3>Inspeksi Workshop</h3>
+    </a>
+  </section>
+</header>
+</div>
+<nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
+  <a href="index-home.html" class="mobile-bottom-link">
+    <span class="mobile-bottom-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/></svg>
+    </span>
+    <span>Home</span>
+  </a>
+  <a href="inspection.html" class="mobile-bottom-action active" aria-label="Pilih inspeksi" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 5h11v2H9V5zm0 6h11v2H9v-2zm0 6h11v2H9v-2zM4 4h2v4H4V4zm0 6h2v4H4v-4zm0 6h2v4H4v-4z"/></svg>
+  </a>
+  <a href="dashboard.html" class="mobile-bottom-link">
+    <span class="mobile-bottom-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10H5V9zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v14h-4V5zm5 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h-4v-7z"/></svg>
+    </span>
+    <span>Dashboard</span>
+  </a>
+</nav>
+<script src="auth.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
+<script>
+  requireLogin();
+
+  const INSPECTION_DRAFT_PREFIX = "inspection_draft_";
+  const INSPECTION_TYPE_LABELS = {
+    INS_CB: "Inspeksi Conveyor Belt",
+    INS_JA: "Inspeksi Jalan Angkut",
+    INS_MD: "Inspeksi Mess dan Dapur",
+    INS_KG: "Inspeksi Kantor dan Gudang",
+    INS_SP: "Inspeksi Settling Pond",
+    INS_T: "Inspeksi Tambang",
+    INS_TB: "Inspeksi Tangki BBM",
+    INS_WS: "Inspeksi Workshop"
+  };
+  const INSPECTION_TYPE_ICONS = {
+    INS_CB: "fa-gear",
+    INS_JA: "fa-road",
+    INS_MD: "fa-utensils",
+    INS_KG: "fa-building",
+    INS_SP: "fa-water",
+    INS_T: "fa-mountain",
+    INS_TB: "fa-oil-can",
+    INS_WS: "fa-hammer"
+  };
+
+  function formatDateIndo(dateStr) {
+    if (!dateStr) return "";
+    try {
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  function loadDraftsList() {
+    const section = document.getElementById("inspectionDraftsSection");
+    const list = document.getElementById("inspectionDraftsList");
+    if (!section || !list) return;
+
+    const drafts = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(INSPECTION_DRAFT_PREFIX)) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          const typeCode = key.replace(INSPECTION_DRAFT_PREFIX, "").toUpperCase();
+          drafts.push({
+            key,
+            typeCode,
+            label: INSPECTION_TYPE_LABELS[typeCode] || typeCode,
+            icon: INSPECTION_TYPE_ICONS[typeCode] || "fa-clipboard-check",
+            savedAt: data._savedAt || null,
+            step: data._currentStep || 1,
+            lokasi: data.lokasi_inspeksi || "",
+            tanggal: data.tanggal_inspeksi || ""
+          });
+        } catch (e) {
+          console.warn("Failed to parse draft:", key, e);
+        }
+      }
+    }
+
+    if (drafts.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+
+    section.style.display = "block";
+    list.innerHTML = "";
+
+    drafts.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+
+    drafts.forEach(draft => {
+      const card = document.createElement("a");
+      card.href = `inspection-form.html?type=${draft.typeCode}`;
+      card.className = "draft-card";
+
+      const timeAgo = draft.savedAt ? formatTimeAgo(draft.savedAt) : "";
+      const infoLine = [formatDateIndo(draft.tanggal), draft.lokasi].filter(Boolean).join(" · ");
+
+      card.innerHTML = `
+        <div class="draft-card-icon"><i class="fa-solid ${draft.icon}"></i></div>
+        <div class="draft-card-content">
+          <div class="draft-card-title">${draft.label}</div>
+          <div class="draft-card-meta">
+            ${infoLine ? `<span>${infoLine}</span>` : ""}
+            <span>Step ${draft.step}/5</span>
+            ${timeAgo ? `<span>${timeAgo}</span>` : ""}
+          </div>
+        </div>
+        <div class="draft-card-badge">Lanjutkan <i class="fa-solid fa-arrow-right"></i></div>
+        <button type="button" class="draft-delete-btn" title="Hapus draft" data-key="${draft.key}">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      `;
+
+      // Prevent delete button from navigating
+      card.querySelector(".draft-delete-btn").addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm("Hapus draft inspeksi ini?")) {
+          localStorage.removeItem(draft.key);
+          loadDraftsList();
+        }
+      });
+
+      list.appendChild(card);
+    });
+  }
+
+  function formatTimeAgo(dateStr) {
+    try {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return "Baru saja";
+      if (mins < 60) return `${mins} menit lalu`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours} jam lalu`;
+      const days = Math.floor(hours / 24);
+      return `${days} hari lalu`;
+    } catch (e) {
+      return "";
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    renderUserProfile();
+    initNotificationBell();
+    refreshNotifications().catch(console.error);
+    loadDraftsList();
+  });
+</script>
+</body>
+</html>

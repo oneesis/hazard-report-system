@@ -1,7 +1,7 @@
 // HAZARD REPORT ONE-SAP
 
 const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbxyxWUQuFddbDxsqq3TNB_K6SBzdDbAFPgrf0DZr38niuOy0dgkqTkfFUeZevudvS8c/exec";
+  "https://script.google.com/macros/s/AKfycbyw_rFrWax6FBdlc0FYeJAvl511YT5MCXToXf-RYsFhds-gapAr0w8vkXNKc2zZ9h5X/exec";
 
 let masterKaryawan = [];
 let masterLokasi = [];
@@ -23,19 +23,66 @@ let currentStep = 1;
 async function fetchJSON(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return await response.json();
+  const text = await response.text();
+  return JSON.parse(text);
 }
 
 async function loadMasterKaryawan() {
-  masterKaryawan = await fetchJSON(`${BASE_URL}?action=masterKaryawan`);
+  try {
+    const data = await fetchJSON(`${BASE_URL}?action=masterKaryawan`);
+    masterKaryawan = Array.isArray(data) ? data : (data.data || []);
+    console.log('✓ script: masterKaryawan loaded, count=', masterKaryawan.length);
+    console.log('  First employee:', masterKaryawan[0]);
+    window.masterKaryawan = masterKaryawan; // Ensure global access
+  } catch (err) {
+    console.error('✗ script: gagal load masterKaryawan', err);
+    masterKaryawan = [];
+    // Fallback: jika user sudah login, buat satu record sementara dari profil
+    try {
+      const user = getCurrentUser();
+      if (user && user.nik) {
+        masterKaryawan = [{
+          'NIK': user.nik,
+          'NAMA': user.nama || '',
+          'PERUSAHAAN': user.perusahaan || '',
+          'SUBCONT': user.subcont || '',
+          'JABATAN': user.jabatan || '',
+          'DEPARTEMEN': user.departemen || '',
+          'NO WHATSAPP': user.no_whatsapp || ''
+        }];
+        console.log('✓ script: menggunakan fallback masterKaryawan dari profil user');
+        window.masterKaryawan = masterKaryawan; // Ensure global access
+      }
+    } catch (e) {
+      console.error('✗ script: fallback masterKaryawan gagal', e);
+    }
+  }
 }
 
 async function loadMasterLokasi() {
-  masterLokasi = await fetchJSON(`${BASE_URL}?action=masterLokasi`);
+  try {
+    const data = await fetchJSON(`${BASE_URL}?action=masterLokasi`);
+    masterLokasi = Array.isArray(data) ? data : (data.data || []);
+    console.log('✓ script: masterLokasi loaded, count=', masterLokasi.length);
+    window.masterLokasi = masterLokasi; // Ensure global access
+  } catch (err) {
+    console.error('✗ script: gagal load masterLokasi', err);
+    masterLokasi = [];
+    window.masterLokasi = masterLokasi;
+  }
 }
 
 async function loadMasterTemuan() {
-  masterTemuan = await fetchJSON(`${BASE_URL}?action=masterTemuan`);
+  try {
+    const data = await fetchJSON(`${BASE_URL}?action=masterTemuan`);
+    masterTemuan = Array.isArray(data) ? data : (data.data || []);
+    console.log('✓ script: masterTemuan loaded, count=', masterTemuan.length);
+    window.masterTemuan = masterTemuan; // Ensure global access
+  } catch (err) {
+    console.error('✗ script: gagal load masterTemuan', err);
+    masterTemuan = [];
+    window.masterTemuan = masterTemuan;
+  }
 }
 
 // ========================================
@@ -64,14 +111,15 @@ function loadPerusahaanOptions() {
   list.forEach(item => select.add(new Option(item, item)));
 }
 
-function loadSubcontOptions() {
+function loadSubcontOptions(skipClear = false) {
   const perusahaan = document.getElementById("perusahaan").value;
   const select = document.getElementById("subcont1");
 
   select.innerHTML = '<option value="">Pilih Subcont</option>';
-
-  clearAutoFill();
-  resetNamaDropdown();
+  if (!skipClear) {
+    clearAutoFill();
+    resetNamaDropdown();
+  }
 
   if (!perusahaan) return;
 
@@ -82,14 +130,15 @@ function loadSubcontOptions() {
   list.forEach(item => select.add(new Option(item, item)));
 }
 
-function loadNamaOptions() {
+function loadNamaOptions(skipClear = false) {
   const perusahaan = document.getElementById("perusahaan").value;
   const subcont = document.getElementById("subcont1").value;
   const select = document.getElementById("nama");
 
   select.innerHTML = '<option value="">Pilih Nama</option>';
-
-  clearAutoFill();
+  if (!skipClear) {
+    clearAutoFill();
+  }
 
   if (!perusahaan || !subcont) {
     initializeNamaChoices();
@@ -811,11 +860,33 @@ async function submitForm() {
       btnSubmit.textContent = "Submitting...";
     }
 
-    const response = await fetch(BASE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "submitHazardReport", data: data })
-    });
+    // Intercept explicitly offline state
+    if (!navigator.onLine) {
+      if (typeof OneSapOfflineSync !== "undefined") {
+        await OneSapOfflineSync.queueHazardReport(data);
+        alert("Koneksi internet tidak tersedia.\n\nHazard Report Anda disimpan secara lokal (antrean offline) dan akan dikirim otomatis ketika perangkat mendapat sinyal.");
+        window.location.href = "index-home.html";
+        return;
+      }
+    }
+
+    let response;
+    try {
+      response = await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "submitHazardReport", data: data })
+      });
+    } catch (fetchError) {
+      // Intercept network failure (connection drop) during fetch
+      if (typeof OneSapOfflineSync !== "undefined") {
+        await OneSapOfflineSync.queueHazardReport(data);
+        alert("Gagal terhubung ke server.\n\nHazard Report Anda disimpan secara lokal (antrean offline) dan akan dikirim otomatis ketika sinyal terhubung kembali.");
+        window.location.href = "index-home.html";
+        return;
+      }
+      throw fetchError;
+    }
 
     const text = await response.text();
     let result;
@@ -877,36 +948,38 @@ async function autofillDataPelapor() {
     const departemanField = document.getElementById("departemen");
     const noWaField = document.getElementById("no_whatsapp");
 
+    // Set dropdown values without triggering clearAutoFill
     if (perusahaan && userRecord["PERUSAHAAN"]) {
       const opt = Array.from(perusahaan.options).find(o =>
         String(o.value).trim().toUpperCase() === String(userRecord["PERUSAHAAN"]).trim().toUpperCase()
       );
       if (opt) {
         perusahaan.value = opt.value;
-        perusahaan.dispatchEvent(new Event("change", { bubbles: true }));
+        perusahaan.disabled = true;
+        loadSubcontOptions(true);
       }
     }
 
-    await new Promise(r => setTimeout(r, 50));
     if (subcont && userRecord["SUBCONT"]) {
       const opt = Array.from(subcont.options).find(o =>
         String(o.value).trim().toUpperCase() === String(userRecord["SUBCONT"]).trim().toUpperCase()
       );
       if (opt) {
         subcont.value = opt.value;
-        subcont.dispatchEvent(new Event("change", { bubbles: true }));
+        subcont.disabled = true;
+        loadNamaOptions(true);
       }
     }
 
-    await new Promise(r => setTimeout(r, 50));
     if (nama && userRecord["NAMA"]) {
       const opt = Array.from(nama.options).find(o =>
         String(o.value).trim().toUpperCase() === String(userRecord["NAMA"]).trim().toUpperCase()
       );
       if (opt) {
         nama.value = opt.value;
+        nama.disabled = true;
         if (namaChoices) namaChoices.setChoiceByValue(opt.value);
-        nama.dispatchEvent(new Event("change", { bubbles: true }));
+        autoFillData();
       }
     }
 
@@ -929,7 +1002,6 @@ async function autofillDataPelapor() {
       }, true);
     }
 
-    await new Promise(r => setTimeout(r, 300));
     if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "none";
 
   } catch (error) {
@@ -942,9 +1014,16 @@ async function autofillDataPelapor() {
 // INITIALIZE
 // ========================================
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("🔄 [script.js] DOMContentLoaded fired - starting initialization");
   try {
+    console.log("⏳ Loading master data...");
     await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadMasterTemuan()]);
+    console.log("✅ Master data loaded successfully");
+    console.log("   masterKaryawan:", masterKaryawan?.length || 0, "records");
+    console.log("   masterLokasi:", masterLokasi?.length || 0, "records");
+    console.log("   masterTemuan:", masterTemuan?.length || 0, "records");
 
+    console.log("⏳ Initializing UI...");
     loadPerusahaanOptions();
     loadLokasiOptions();
     loadKetidaksesuaianOptions();

@@ -1,4 +1,4 @@
-const BASE_URL = "https://script.google.com/macros/s/AKfycbxyxWUQuFddbDxsqq3TNB_K6SBzdDbAFPgrf0DZr38niuOy0dgkqTkfFUeZevudvS8c/exec";
+const BASE_URL = "https://script.google.com/macros/s/AKfycbyw_rFrWax6FBdlc0FYeJAvl511YT5MCXToXf-RYsFhds-gapAr0w8vkXNKc2zZ9h5X/exec";
 
 const loginForm = document.getElementById("loginForm");
 const passwordToggle = document.getElementById("passwordToggle");

@@ -1,0 +1,22 @@
+{
+  "name": "ONE-SAP Safety Report",
+  "short_name": "ONE-SAP",
+  "description": "Safety Observation and Action Program - Hazard & Inspection System",
+  "start_url": "./index-home.html",
+  "display": "standalone",
+  "background_color": "#0f2a6b",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./assets/Logo EBL.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/Logo EBL.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

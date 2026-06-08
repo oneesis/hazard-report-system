@@ -7,6 +7,7 @@
 <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="home.css">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -26,8 +27,9 @@
   <h1><span class="home-title-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>Hazard Report ONE-SAP</h1>
   <p>Safety Observation and Action Program</p>
 
-  <div class="actions">
+  <div class="actions actions-grid">
     <a href="index.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span>Buat Hazard Report</a>
+    <a href="inspection.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>Buat Inspeksi</a>
     <a href="dashboard.html" class="btn secondary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>Dashboard Monitoring</a>
   </div>
 
@@ -55,13 +57,6 @@
     </div>
   </div>
 </header>
-
-<section class="kpi-grid">
-<div class="kpi-card"><span>Total Report</span><strong id="kpiTotal">0</strong></div>
-<div class="kpi-card"><span>Open</span><strong id="kpiOpen">0</strong></div>
-<div class="kpi-card"><span>Progress</span><strong id="kpiProgress">0</strong></div>
-<div class="kpi-card"><span>Closed</span><strong id="kpiClosed">0</strong></div>
-</section>
 
 <section class="card">
 <h2><span class="icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>High Risk Alert</h2>
@@ -92,6 +87,7 @@
 <script src="auth.js"></script>
 <script src="reports-utils.js"></script>
 <script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
 <script>
   requireLogin();
   window.addEventListener("DOMContentLoaded", renderUserProfile);

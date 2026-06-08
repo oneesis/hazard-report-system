@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Hazard Report</title>
+  <title>Dashboard Laporan - ONE-SAP</title>
   <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
 
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="home.css">
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -49,6 +51,7 @@
 
     <!-- RIGHT: USER PROFILE -->
     <div class="dashboard-right">
+      <div id="notificationBell"></div>
       <div id="userProfile" class="user-menu"></div>
     </div>
 
@@ -58,10 +61,10 @@
   <div class="dashboard-title-wrap">
     <h1 class="dashboard-title">
       <span aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>
-      Dashboard Hazard Report
+      Dashboard Laporan
     </h1>
     <p class="dashboard-subtitle">
-      Monitoring, Tracking, dan Closing Hazard Report
+      Monitoring, tracking, dan closing Hazard Report serta Inspeksi
     </p>
   </div>
 
@@ -121,6 +124,12 @@
         <option value="CLOSED">CLOSED</option>
       </select>
 
+      <select id="typeFilter" aria-label="Filter jenis laporan">
+        <option value="">Semua Jenis</option>
+        <option value="HAZARD">Hazard</option>
+        <option value="INSPECTION">Inspeksi</option>
+      </select>
+
       <button id="btnRefresh" class="btn-primary" title="Refresh data">
         <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
         <span>Refresh</span>
@@ -138,11 +147,11 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Jenis</th>
             <th>Tanggal</th>
             <th>Pelapor</th>
             <th>Lokasi</th>
             <th>Deskripsi Temuan</th>
-            <th>Risiko</th>
             <th>PIC</th>
             <th>Status</th>
             <th>Action</th>
@@ -163,8 +172,8 @@
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-header">
           <div>
-            <p class="modal-tag">Preview Laporan Hazard</p>
-            <h2 id="modalTitle">Detail Hazard Report</h2>
+            <p id="modalReportTag" class="modal-tag">Preview Laporan</p>
+            <h2 id="modalTitle">Detail Laporan</h2>
           </div>
           <button id="modalClose" class="btn-icon" aria-label="Close review">
             <i class="fa-solid fa-xmark"></i>
@@ -179,7 +188,7 @@
         <div class="modal-grid">
           <div class="modal-card-section">
             <div class="field-row">
-              <span>Nomor Hazard</span>
+              <span id="modalNumberLabel">Nomor Laporan</span>
               <strong id="modalFieldHazardNumber">-</strong>
             </div>
             <div class="field-row">
@@ -199,11 +208,11 @@
               <strong id="modalFieldLocation">-</strong>
             </div>
             <div class="field-row">
-              <span>Kategori Hazard</span>
+              <span id="modalCategoryLabel">Kategori</span>
               <strong id="modalFieldCategory">-</strong>
             </div>
             <div class="field-row">
-              <span>Tingkat Risiko</span>
+              <span id="modalRiskLabel">Tingkat Risiko</span>
               <strong id="modalFieldRisk">-</strong>
             </div>
           </div>
@@ -245,13 +254,19 @@
         </div>
 
         <div class="modal-section modal-card-section">
-          <h3>Deskripsi Hazard</h3>
+          <h3 id="modalDescriptionTitle">Deskripsi Temuan</h3>
           <p id="modalFieldDescription">-</p>
         </div>
 
         <div class="modal-section modal-card-section">
           <h3>Rekomendasi Perbaikan</h3>
           <p id="modalFieldRecommendation">-</p>
+        </div>
+
+        <div class="modal-section modal-card-section reporter-declaration">
+          <h3>Pernyataan Pelapor</h3>
+          <p id="modalFieldStatement">-</p>
+          <img id="modalReporterSignature" class="reporter-signature hidden" alt="Tanda tangan pelapor" />
         </div>
 
         <div class="modal-section modal-card-section modal-photos-section">
@@ -298,6 +313,7 @@
   <script src="auth.js"></script>
   <script src="reports-utils.js"></script>
   <script src="notifications.js"></script>
+  <script src="offline-sync.js"></script>
   <script src="dashboard.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {

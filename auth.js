@@ -83,3 +83,12 @@ document.addEventListener("keydown", function (e) {
     closeUserMenu();
   }
 });
+
+// Register Service Worker for PWA offline capability
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js")
+      .then((reg) => console.log("Service Worker registered successfully:", reg.scope))
+      .catch((err) => console.warn("Service Worker registration failed:", err));
+  });
+}

@@ -237,8 +237,8 @@ body {
 @media (min-width: 900px) {
   .filter-bar {
     display: grid;
-    /* date | search | status | refresh | export */
-    grid-template-columns: minmax(200px,260px) minmax(360px,1fr) 160px 120px 120px;
+    /* date | search | status | type | refresh | export */
+    grid-template-columns: minmax(190px,230px) minmax(260px,1fr) 130px 130px 110px 110px;
     align-items: center;
     column-gap: 20px;
   }
@@ -1179,7 +1179,7 @@ tbody tr:hover {
 ======================================== */
 .dashboard-topbar {
   display: grid;
-  grid-template-columns: 220px 1fr 260px;
+  grid-template-columns: 220px 1fr 330px;
   align-items: start;
   gap: 20px;
   margin-bottom: 35px;
@@ -1498,6 +1498,28 @@ tbody tr:hover {
   }
 }
 
+.dashboard-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.reporter-declaration {
+  display: grid;
+  gap: 14px;
+}
+
+.reporter-signature {
+  width: min(100%, 420px);
+  max-height: 180px;
+  object-fit: contain;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
 /* ========================================
    UI/UX REFINEMENT - DASHBOARD
 ======================================== */
@@ -1734,4 +1756,24 @@ tbody td:first-child {
 
 .btn-logout i {
   font-size: 12px;
+}
+.report-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.report-type-badge.hazard {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.report-type-badge.inspection {
+  background: #eff6ff;
+  color: #1d4ed8;
 }

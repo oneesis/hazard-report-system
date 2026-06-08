@@ -9,6 +9,8 @@ let selectedStatus = "OPEN";
 // INITIALIZE
 // ========================================
 document.addEventListener("DOMContentLoaded", () => {
+  initNotificationBell();
+  refreshNotifications().catch(console.error);
   loadReports();
 
   document
@@ -21,6 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document
     .getElementById("statusFilter")
+    ?.addEventListener("change", renderTable);
+
+  document
+    .getElementById("typeFilter")
     ?.addEventListener("change", renderTable);
 
   document
@@ -107,21 +113,44 @@ async function loadReports() {
       </tr>
     `;
 
-    const response = await fetch(`${BASE_URL}?action=getHazardReports`);
+    const response = await fetch(`${BASE_URL}?action=getAllReports`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const text = await response.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (err) {
+      throw new Error('Response API bukan JSON valid: ' + text);
+    }
 
     if (result.status !== "success") {
       throw new Error(
         result.message || "Gagal memuat data."
       );
     }
-
     reports = result.data || [];
-    window.__hazardReportsCache = reports;
+    console.log('loadReports: total fetched reports =', reports.length);
+
+    // Jika ada data di server tetapi pengguna tidak melihatnya karena visibilitas,
+    // tampilkan pesan informatif di tabel agar mudah didiagnosis.
+    const visible = getVisibleReports(reports) || [];
+    if (reports.length > 0 && visible.length === 0) {
+document.getElementById('reportTableBody').innerHTML = `
+        <tr>
+          <td colspan="9" class="loading-row">
+            Ditemukan ${reports.length} laporan di server, tetapi tidak ada yang terlihat untuk akun ini.
+            Periksa: user login, peran (role), dan kesesuaian 'nama'/'nik' pada laporan.
+          </td>
+        </tr>
+      `;
+      // Tetap update KPI dengan nol agar tidak keliru
+      updateKPI();
+      return;
+    }
+    window.__reportsCache = reports;
 
     updateKPI();
     renderTable();
@@ -206,6 +235,9 @@ function renderTable() {
   const statusFilter =
     document.getElementById("statusFilter")
       .value;
+  const typeFilter =
+    document.getElementById("typeFilter")
+      ?.value || "";
 
   const dateRangeValue = (document.getElementById("dateRange")?.value || "").trim();
   let startDate = null;
@@ -238,20 +270,23 @@ function renderTable() {
       (report.nama_pic || "")
         .toLowerCase()
         .includes(search) ||
-      (report.lokasi_bahaya || "")
+      getDashboardLocation(report)
         .toLowerCase()
         .includes(search);
 
     const matchesStatus =
       !statusFilter ||
       status === statusFilter;
+    const matchesType =
+      !typeFilter ||
+      getReportType(report) === typeFilter;
 
     const reportDate = parseReportDate(report);
     const matchesDate =
       (!startDate || (reportDate && reportDate >= startDate)) &&
       (!endDate || (reportDate && reportDate <= endDate));
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
   filteredReports = filtered;
@@ -282,11 +317,11 @@ function renderTable() {
       return `
         <tr>
           <td><strong>${report.id || ""}</strong></td>
+          <td><span class="report-type-badge ${getReportType(report).toLowerCase()}">${getReportTypeLabel(report)}</span></td>
           <td>${formatDate(report.timestamp)}</td>
           <td>${report.nama || ""}</td>
-          <td>${report.lokasi_bahaya || ""}</td>
-          <td>${report.deskripsi_bahaya || ""}</td>
-          <td>${getReportValue(report, ["tingkat_resiko", "tingkat_risiko", "risiko", "risk_level"], "-")}</td>
+          <td>${getDashboardLocation(report)}</td>
+          <td>${getDashboardDescription(report)}</td>
           <td>${report.nama_pic || ""}</td>
           <td>
             <span class="status-badge ${badgeClass}">
@@ -311,6 +346,37 @@ function renderTable() {
 function getReportImage(report, keys = []) {
   const rawValue = getReportValue(report, keys, "");
   return rawValue ? normalizeImageUrl(rawValue) : "";
+}
+
+function isInspectionReport(report) {
+  return getReportType(report) === "INSPECTION";
+}
+
+function getDashboardLocation(report) {
+  return String(getReportValue(report, [
+    "lokasi_bahaya",
+    "lokasi_inspeksi",
+    "lokasi",
+    "location"
+  ], ""));
+}
+
+function getDashboardDescription(report) {
+  return String(getReportValue(report, [
+    "deskripsi_bahaya",
+    "temuan_inspeksi",
+    "deskripsi",
+    "description"
+  ], ""));
+}
+
+function getDashboardCategory(report) {
+  return getReportValue(report, [
+    "jenis_bahaya",
+    "jenis_inspeksi",
+    "kategori_hazard",
+    "kategori"
+  ], "-");
 }
 
 function normalizeImageUrl(url) {
@@ -341,6 +407,8 @@ function parseReportDate(report) {
     "tanggal_laporan",
     "tgl_laporan",
     "tanggal_laporan_hazard",
+    "tanggal_inspeksi",
+    "tanggal_kejadian",
     "tanggal",
     "date"
   ], "");
@@ -371,6 +439,8 @@ function getReportDateString(report) {
     "tanggal_laporan",
     "tgl_laporan",
     "tanggal_laporan_hazard",
+    "tanggal_inspeksi",
+    "tanggal_kejadian",
     "tanggal",
     "date"
   ], "");
@@ -388,11 +458,11 @@ function exportCsv() {
 
   const header = [
     "ID",
+    "Jenis",
     "Tanggal",
     "Pelapor",
     "Lokasi",
     "Deskripsi Temuan",
-    "Risiko",
     "PIC",
     "Status"
   ];
@@ -401,11 +471,11 @@ function exportCsv() {
     const status = report.status_perbaikan || "OPEN";
     return [
       escapeCsv(getReportValue(report, ["id", "nomor_hazard", "no_hazard"], "")),
+      escapeCsv(getReportTypeLabel(report)),
       escapeCsv(formatDate(getReportDateString(report))),
       escapeCsv(getReportValue(report, ["nama", "pelapor"], "")),
-      escapeCsv(getReportValue(report, ["lokasi_bahaya", "lokasi", "location"], "")),
-      escapeCsv(getReportValue(report, ["deskripsi_bahaya", "deskripsi", "description"], "")),
-      escapeCsv(getReportValue(report, ["tingkat_resiko", "tingkat_risiko", "risiko", "risk_level"], "")),
+      escapeCsv(getDashboardLocation(report)),
+      escapeCsv(getDashboardDescription(report)),
       escapeCsv(getReportValue(report, ["nama_pic", "pic", "penanggung_jawab"], "")),
       escapeCsv(status)
     ].join(",");
@@ -416,7 +486,7 @@ function exportCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `hazard_report_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `one_sap_reports_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -430,6 +500,7 @@ function downloadReportPDF() {
 }
 
 function openReportModal(report) {
+  const inspection = isInspectionReport(report);
   const status = report.status_perbaikan || "OPEN";
   selectedStatus = status;
   const badgeClass =
@@ -442,7 +513,7 @@ function openReportModal(report) {
   const hazardNumber = getReportValue(report, ["id", "nomor_hazard", "no_hazard"], "-");
   currentReport = report;
   selectedAfterPhotoFile = null;
-  const beforePhoto = getReportImage(report, ["upload_foto_bahaya", "upload_foto_bahaya_pic", "foto_temuan", "foto_before", "foto_before_url", "foto_bahaya"]);
+  const beforePhoto = getReportImage(report, ["upload_foto_bahaya", "upload_foto_inspeksi", "upload_foto_bahaya_pic", "foto_temuan", "foto_before", "foto_before_url", "foto_bahaya"]);
   const afterPhoto = getReportImage(report, ["upload_foto_perbaikan_pic", "upload_foto_perbaikan", "foto_perbaikan", "foto_after", "foto_after_url", "after_photo"]);
 
   document.getElementById("modalStatusBadge").textContent = status;
@@ -451,23 +522,31 @@ function openReportModal(report) {
   document.querySelectorAll(".status-button").forEach(button => {
     button.classList.toggle("selected", button.dataset.status === status);
   });
-  document.getElementById("modalHazardNumber").textContent = `Hazard #${hazardNumber}`;
+  document.getElementById("modalReportTag").textContent = `Preview Laporan ${getReportTypeLabel(report)}`;
+  document.getElementById("modalTitle").textContent = `Detail Laporan ${getReportTypeLabel(report)}`;
+  document.getElementById("modalHazardNumber").textContent = `${getReportTypeLabel(report)} #${hazardNumber}`;
+  document.getElementById("modalNumberLabel").textContent = inspection ? "Nomor Inspeksi" : "Nomor Hazard";
+  document.getElementById("modalCategoryLabel").textContent = inspection ? "Jenis Inspeksi" : "Kategori Hazard";
+  document.getElementById("modalRiskLabel").textContent = inspection ? "Shift Inspeksi" : "Tingkat Risiko";
+  document.getElementById("modalDescriptionTitle").textContent = inspection ? "Temuan Inspeksi" : "Deskripsi Hazard";
   document.getElementById("modalFieldHazardNumber").textContent = hazardNumber;
   document.getElementById("modalFieldDate").textContent = formatDate(
-    getReportValue(report, ["timestamp", "tanggal_laporan", "tgl_laporan", "tanggal_laporan_hazard"], "-")
+    getReportValue(report, ["timestamp", "tanggal_laporan", "tgl_laporan", "tanggal_laporan_hazard", "tanggal_inspeksi", "tanggal_kejadian"], "-")
   );
   document.getElementById("modalFieldReporter").textContent =
     getReportValue(report, ["nama", "pelapor"], "-");
   document.getElementById("modalFieldDepartment").textContent =
     getReportValue(report, ["departemen", "department", "bagian"], "-");
   document.getElementById("modalFieldLocation").textContent =
-    getReportValue(report, ["lokasi_bahaya", "lokasi", "location"], "-");
+    getDashboardLocation(report) || "-";
   document.getElementById("modalFieldCategory").textContent =
-    getReportValue(report, ["jenis_bahaya", "kategori_hazard", "kategori", "hazard_category"], "-");
+    getDashboardCategory(report);
   document.getElementById("modalFieldRisk").textContent =
-    getReportValue(report, ["tingkat_resiko", "tingkat_risiko", "risiko", "risk_level"], "-");
+    inspection
+      ? getReportValue(report, ["shift_inspeksi", "shift_kejadian"], "-")
+      : getReportValue(report, ["tingkat_resiko", "tingkat_risiko", "risiko", "risk_level"], "-");
   document.getElementById("modalFieldDescription").textContent =
-    getReportValue(report, ["deskripsi_bahaya", "deskripsi", "description"], "-");
+    getDashboardDescription(report) || "-";
   document.getElementById("modalFieldRecommendation").textContent =
     getReportValue(report, [
       "tindakan_perbaikan_yang_diusulkan_kepada_penanggungjawab_pic",
@@ -479,6 +558,10 @@ function openReportModal(report) {
       "tindakan_perbaikan",
     ],
     "-");
+  document.getElementById("modalFieldStatement").textContent =
+    getReportValue(report, ["pernyataan"], "-") === "Ya"
+      ? "Pelapor telah menyetujui pernyataan laporan."
+      : getReportValue(report, ["pernyataan"], "-");
   document.getElementById("modalFieldPic").textContent =
     getReportValue(report, ["nama_pic", "pic", "penanggung_jawab"], "-");
   document.getElementById("modalFieldDueDate").textContent = formatDate(
@@ -496,10 +579,12 @@ function openReportModal(report) {
   const afterImage = document.getElementById("modalPhotoAfter");
   const afterPlaceholder = document.getElementById("modalPhotoAfterPlaceholder");
   const afterPhotoInput = document.getElementById("modalInputAfterPhoto");
+  const reporterSignature = document.getElementById("modalReporterSignature");
+  const signatureValue = getReportValue(report, ["tanda_tangan", "signature"], "");
 
   if (beforePhoto) {
     beforeImage.src = beforePhoto;
-    beforeImage.alt = `Foto temuan hazard ${hazardNumber}`;
+    beforeImage.alt = `Foto temuan ${getReportTypeLabel(report)} ${hazardNumber}`;
     beforeImage.classList.remove("hidden", "zoomed");
     beforePlaceholder.style.display = "none";
   } else {
@@ -522,11 +607,27 @@ function openReportModal(report) {
   if (afterPhotoInput) {
     afterPhotoInput.value = "";
   }
+  if (signatureValue) {
+    reporterSignature.src = signatureValue;
+    reporterSignature.classList.remove("hidden");
+  } else {
+    reporterSignature.removeAttribute("src");
+    reporterSignature.classList.add("hidden");
+  }
 
   document.body.classList.add("no-scroll");
   const modal = document.getElementById("reportModal");
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
+}
+
+function handleStatusButtonClick(event) {
+  const button = event.currentTarget;
+  selectedStatus = button.dataset.status || "OPEN";
+  document.getElementById("modalFieldStatus").textContent = selectedStatus;
+  document.querySelectorAll(".status-button").forEach(btn => {
+    btn.classList.toggle("selected", btn === button);
+  });
 }
 
 function closeReportModal() {
@@ -541,69 +642,61 @@ function closeReportModal() {
   afterImage.classList.remove("zoomed");
 }
 
-function downloadReportPDF() {
-  window.print();
-}
-
 async function submitClosingNote() {
   if (!currentReport) return;
 
   const noteField = document.getElementById("modalInputClosingNote");
-    const note = noteField.value.trim();
+  const note = noteField.value.trim();
 
-    const noteRow = document.querySelector(
-    ".field-row.field-row-textarea"
-    );
+  const noteRow = document.querySelector(".field-row.field-row-textarea");
 
-    const photoInput = document.getElementById(
-    "modalInputAfterPhoto"
-    );
+  const photoInput = document.getElementById("modalInputAfterPhoto");
 
-    // ========================================
-    // VALIDASI KHUSUS JIKA STATUS = CLOSED
-    // ========================================
-    if (selectedStatus === "CLOSED") {
+  // ========================================
+  // VALIDASI KHUSUS JIKA STATUS = CLOSED
+  // ========================================
+  if (selectedStatus === "CLOSED") {
     // Validasi catatan closing
     if (!note) {
-        noteRow?.classList.add("error");
-        noteRow?.scrollIntoView({
+      noteRow?.classList.add("error");
+      noteRow?.scrollIntoView({
         behavior: "smooth",
         block: "center"
-        });
-        noteField.focus();
-        showToast(
+      });
+      noteField.focus();
+      showToast(
         "Catatan Closing wajib diisi jika status CLOSED.",
         "error"
-        );
-        return;
+      );
+      return;
     }
 
     // Validasi foto perbaikan:
     // wajib jika belum ada foto lama dan user belum memilih foto baru
     const existingAfterPhoto =
-        currentReport?.upload_foto_perbaikan_pic ||
-        currentReport?.upload_foto_perbaikan ||
-        currentReport?.foto_perbaikan ||
-        "";
+      currentReport?.upload_foto_perbaikan_pic ||
+      currentReport?.upload_foto_perbaikan ||
+      currentReport?.foto_perbaikan ||
+      "";
 
     const hasNewPhoto = !!selectedAfterPhotoFile;
     const hasExistingPhoto = !!existingAfterPhoto;
 
     if (!hasNewPhoto && !hasExistingPhoto) {
-        photoInput?.scrollIntoView({
+      photoInput?.scrollIntoView({
         behavior: "smooth",
         block: "center"
-        });
+      });
 
-        showToast(
+      showToast(
         "Upload Foto Perbaikan wajib diisi jika status CLOSED.",
         "error"
-        );
+      );
 
-        photoInput?.focus();
-        return;
+      photoInput?.focus();
+      return;
     }
-    }
+  }
 
   const submitButton = document.getElementById("btnSubmitClosing");
   const originalText = submitButton.innerHTML;
@@ -615,6 +708,7 @@ async function submitClosingNote() {
   try {
     const updateData = {
       id: currentReport.id,
+      inspection_sheet: currentReport.inspection_sheet || "",
       catatan_closing: note,
       tanggal_closing: closingDate,
       status_perbaikan: selectedStatus
@@ -626,11 +720,13 @@ async function submitClosingNote() {
     }
 
     const response = await fetch(BASE_URL, {
-    method: "POST",
-    body: JSON.stringify({
-        action: "updateHazardReport",
+      method: "POST",
+      body: JSON.stringify({
+        action: isInspectionReport(currentReport)
+          ? "updateInspectionReport"
+          : "updateHazardReport",
         data: updateData
-    })
+      })
     });
 
     const text = await response.text();
@@ -650,8 +746,7 @@ async function submitClosingNote() {
     currentReport.tanggal_closing = closingDate;
     currentReport.status_perbaikan = selectedStatus;
     if (result.foto_perbaikan_url) {
-    currentReport.upload_foto_perbaikan_pic =
-    result.foto_perbaikan_url;
+      currentReport.upload_foto_perbaikan_pic = result.foto_perbaikan_url;
     }
     document.getElementById("modalFieldClosingDate").textContent = formatDate(closingDate);
     document.getElementById("modalFieldStatus").textContent = selectedStatus;
@@ -660,25 +755,16 @@ async function submitClosingNote() {
     });
     showToast("Catatan closing berhasil disimpan.");
     renderTable();
-  } catch (error) {
+} catch (error) {
     console.error("Update closing note error:", error);
     showToast(
-  "Terjadi kesalahan: " + error.message,
-  "error"
-);
+      "Terjadi kesalahan: " + error.message,
+      "error"
+    );
   } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalText;
+    submitButton.disabled = false;
+    submitButton.innerHTML = originalText;
   }
-}
-
-function handleStatusButtonClick(event) {
-  const button = event.currentTarget;
-  selectedStatus = button.dataset.status || "OPEN";
-  document.getElementById("modalFieldStatus").textContent = selectedStatus;
-  document.querySelectorAll(".status-button").forEach(btn => {
-    btn.classList.toggle("selected", btn === button);
-  });
 }
 
 function printReport() {
@@ -714,15 +800,6 @@ function readFileAsDataURL(file) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
-  });
-}
-
-function handleStatusButtonClick(event) {
-  const button = event.currentTarget;
-  selectedStatus = button.dataset.status || "OPEN";
-  document.getElementById("modalFieldStatus").textContent = selectedStatus;
-  document.querySelectorAll(".status-button").forEach(btn => {
-    btn.classList.toggle("selected", btn === button);
   });
 }
 

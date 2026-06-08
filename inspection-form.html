@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Form Inspeksi - ONE-SAP</title>
+<link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="home.css" />
+<link rel="manifest" href="manifest.json" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="inspection-form-page">
+<div class="container">
+  <div class="card">
+    <div class="header-top">
+      <a href="inspection.html" class="nav-home-btn">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 7l-5 5 5 5V7z"/></svg>
+        </span>
+        Kembali
+      </a>
+      <div class="header-actions">
+        <div id="notificationBell"></div>
+        <div id="userProfile" class="user-menu"></div>
+      </div>
+    </div>
+
+    <div class="header-logos">
+      <img src="assets/Logo Hasnur.png" alt="Logo Hasnur" class="logo" />
+      <img src="assets/Nilai Inti - Indonesia.png" alt="Nilai Inti Indonesia" class="logo nilai-inti" />
+    </div>
+
+    <h1 class="main-title">Form Inspeksi</h1>
+    <p class="main-subtitle" id="inspectionDescription">Memuat jenis inspeksi...</p>
+
+
+    <div id="alertError" class="alert-error" style="display:none;">Semua field yang bertanda (*) wajib diisi.</div>
+    <div id="autoSaveIndicator" class="auto-save-indicator">Draft tersimpan</div>
+
+    <div class="step-indicator" id="inspectionStepIndicator">
+      <div class="step active" data-step="1">
+        <div class="step-circle">1</div>
+        <div>
+          <div class="step-label">Data Pelapor</div>
+          <div class="step-subtitle">Isi data pelapor sebelum lanjut</div>
+        </div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="step-circle">2</div>
+        <div>
+          <div class="step-label">Detail Inspeksi</div>
+          <div class="step-subtitle">Atur tanggal, shift, dan lokasi</div>
+        </div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="step-circle">3</div>
+        <div>
+          <div class="step-label">Temuan</div>
+          <div class="step-subtitle">Jelaskan temuan dan dokumentasi</div>
+        </div>
+      </div>
+      <div class="step" data-step="4">
+        <div class="step-circle">4</div>
+        <div>
+          <div class="step-label">Data PIC</div>
+          <div class="step-subtitle">Lengkapi PIC dan batas waktu</div>
+        </div>
+      </div>
+      <div class="step" data-step="5">
+        <div class="step-circle">5</div>
+        <div>
+          <div class="step-label">Pernyataan</div>
+          <div class="step-subtitle">Konfirmasi dan tanda tangan</div>
+        </div>
+      </div>
+    </div>
+
+    <form id="inspectionForm">
+<div class="form-step active" id="step1">
+        <h2 class="section-title">
+          <span class="section-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"/></svg>
+          </span>
+          Section 1 - Data Pelapor
+        </h2>
+
+
+        <div id="pelaporSelectGroup" class="form-grid">
+          <div class="form-group">
+            <label>PERUSAHAAN <span class="required">*</span></label>
+            <select id="perusahaan">
+              <option value="">Pilih Perusahaan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>PERUSAHAAN SUBCONT(1) <span class="required">*</span></label>
+            <select id="subcont1">
+              <option value="">Pilih Subcont</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>NAMA <span class="required">*</span></label>
+            <select id="nama">
+              <option value="">Pilih Nama</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>NIK <span class="required">*</span></label>
+            <input type="text" id="nik" readonly />
+          </div>
+          <div class="form-group">
+            <label>JABATAN <span class="required">*</span></label>
+            <input type="text" id="jabatan" readonly />
+          </div>
+          <div class="form-group">
+            <label>DEPARTEMEN <span class="required">*</span></label>
+            <input type="text" id="departemen" readonly />
+          </div>
+          <div class="form-group">
+            <label>NO WHATSAPP <span class="required">*</span></label>
+            <input type="tel" id="no_whatsapp" readonly />
+          </div>
+        </div>
+
+        <!-- Data pelapor akan selalu terisi otomatis dari profil pengguna.
+             Opsi pengisian manual dihilangkan untuk mencegah input manual. -->
+
+        <div class="button-group">
+          <button type="button" id="btnNext1" class="btn-primary">
+            <span>Selanjutnya</span>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 17l5-5-5-5v10z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-step" id="step2">
+        <h2 class="section-title">Section 2 - Detail Inspeksi</h2>
+        <div class="form-group">
+          <label>JENIS INSPEKSI</label>
+          <input type="text" id="jenis_inspeksi" readonly />
+        </div>
+        <div class="form-group">
+          <label>TANGGAL INSPEKSI <span class="required">*</span></label>
+          <input type="date" id="tanggal_inspeksi" />
+        </div>
+        <div class="form-group">
+          <label>SHIFT INSPEKSI <span class="required">*</span></label>
+          <select id="shift_inspeksi">
+            <option value="">Pilih Shift</option>
+            <option>Shift 1</option>
+            <option>Shift 2</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>LOKASI <span class="required">*</span></label>
+          <select id="lokasi_inspeksi">
+            <option value="">Pilih Lokasi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>DETAIL LOKASI</label>
+          <textarea id="detail_lokasi_inspeksi" rows="4" placeholder="Misal: Area A dekat panel listrik."></textarea>
+        </div>
+        <div class="button-group">
+          <button type="button" id="btnPrev2" class="btn-secondary"><span>Sebelumnya</span></button>
+          <button type="button" id="btnNext2" class="btn-primary"><span>Selanjutnya</span></button>
+        </div>
+      </div>
+
+      <div class="form-step" id="step3">
+        <h2 class="section-title">Section 3 - Temuan Inspeksi</h2>
+        <div id="inspectionChecklist" class="inspection-checklist">
+          <div id="inspectionChecklistItems"></div>
+        </div>
+
+        <h2 class="section-title">Dokumentasi</h2>
+        <div class="form-group">
+          <label>UPLOAD FOTO INSPEKSI <span class="required">*</span></label>
+          <input type="file" id="upload_foto_inspeksi" accept="image/*" />
+          <div id="previewFotoInspeksi" style="display:none; margin-top:15px;">
+            <img id="imgPreviewInspeksi" alt="Preview Foto Inspeksi" style="width:100%; max-height:320px; object-fit:contain; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 10px 20px rgba(0,0,0,0.08);" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>TINDAKAN PERBAIKAN YANG DIUSULKAN KEPADA PIC</label>
+          <textarea id="tindakan_usulan_pic" rows="4" placeholder="Jelaskan usulan tindakan perbaikan."></textarea>
+        </div>
+        <div class="button-group">
+          <button type="button" id="btnPrev3" class="btn-secondary"><span>Sebelumnya</span></button>
+          <button type="button" id="btnNext3" class="btn-primary"><span>Selanjutnya</span></button>
+        </div>
+      </div>
+
+      <div class="form-step" id="step4">
+        <h2 class="section-title">Section 4 - Data PIC</h2>
+        <div class="form-group">
+          <label>PERUSAHAAN PIC</label>
+          <select id="perusahaan_pic">
+            <option value="">Pilih Perusahaan PIC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>PERUSAHAAN SUBCONT(2)</label>
+          <select id="subcont2">
+            <option value="">Pilih Subcont PIC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>NAMA PIC</label>
+          <select id="nama_pic">
+            <option value="">Pilih Nama PIC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>JABATAN PIC</label>
+          <input type="text" id="jabatan_pic" readonly />
+        </div>
+        <div class="form-group">
+          <label>DEPARTEMEN PIC</label>
+          <input type="text" id="departemen_pic" readonly />
+        </div>
+        <div class="form-group">
+          <label>NO WHATSAPP PIC</label>
+          <input type="tel" id="no_whatsapp_pic" readonly />
+        </div>
+        <div class="form-group">
+          <label>BATAS WAKTU</label>
+          <input type="date" id="batas_waktu" />
+        </div>
+        <div class="button-group">
+          <button type="button" id="btnPrev4" class="btn-secondary"><span>Sebelumnya</span></button>
+          <button type="button" id="btnNext4" class="btn-primary"><span>Selanjutnya</span></button>
+        </div>
+      </div>
+
+      <div class="form-step" id="step5">
+        <h2 class="section-title">Section 5 - Pernyataan Pelapor</h2>
+        <div class="form-group declaration-group">
+          <div class="statement-box inspection-statement">
+            Saya menyatakan bahwa data dan temuan inspeksi yang saya laporkan adalah benar,
+            sesuai kondisi yang saya lihat, dan dapat dipertanggungjawabkan.
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="pernyataan" />
+            Saya menyetujui pernyataan di atas.
+          </label>
+        </div>
+        <div class="form-group signature-group">
+          <label>TANDA TANGAN PELAPOR <span class="required">*</span></label>
+          <canvas id="signaturePad" width="760" height="240" aria-label="Area tanda tangan pelapor"></canvas>
+          <button type="button" id="btnClearSignature" class="btn-secondary signature-clear">
+            Hapus Tanda Tangan
+          </button>
+        </div>
+        <div class="button-group">
+          <button type="button" id="btnPrev5" class="btn-secondary"><span>Sebelumnya</span></button>
+          <button type="button" id="btnSubmit" class="btn-primary"><span>Kirim Inspeksi</span></button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
+  <a href="index-home.html" class="mobile-bottom-link">
+    <span class="mobile-bottom-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/></svg>
+    </span>
+    <span>Home</span>
+  </a>
+  <a href="inspection.html" class="mobile-bottom-action" aria-label="Pilih inspeksi">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5v14m7-7H5"/></svg>
+  </a>
+  <a href="dashboard.html" class="mobile-bottom-link">
+    <span class="mobile-bottom-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10H5V9zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v14h-4V5zm5 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h-4v-7z"/></svg>
+    </span>
+    <span>Dashboard</span>
+  </a>
+</nav>
+<script src="auth.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="inspection-form.js"></script>
+</body>
+</html>

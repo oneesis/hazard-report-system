@@ -6,7 +6,7 @@ function getNotificationUserKey() {
 }
 
 function storageKey(suffix) {
-  return `hazard_notification_${suffix}_v2_${getNotificationUserKey()}`;
+  return `report_notification_${suffix}_v3_${getNotificationUserKey()}`;
 }
 
 function loadReadIds() {
@@ -156,7 +156,7 @@ function markNotificationRead(reportId) {
   saveReadIds(readIds);
 
   const snapshot = loadSnapshot();
-  const report = (window.__hazardReportsCache || []).find(
+  const report = (window.__reportsCache || []).find(
     r => getReportId(r) === reportId
   );
   if (report) {
@@ -170,7 +170,7 @@ function buildNotificationMessage(report, kind, relation) {
   const status = getReportStatus(report);
   const desc = getReportValue(
     report,
-    ["deskripsi_bahaya", "deskripsi", "description"],
+    ["deskripsi_bahaya", "temuan_inspeksi", "deskripsi", "description"],
     ""
   );
   const shortDesc =
@@ -180,13 +180,14 @@ function buildNotificationMessage(report, kind, relation) {
     return `Status laporan ${id} diperbarui menjadi ${status}`;
   }
 
+  const typeLabel = getReportTypeLabel(report);
   if (relation === "pic") {
-    return `Anda ditugaskan sebagai PIC — ${id}: ${shortDesc}`;
+    return `Anda ditugaskan sebagai PIC ${typeLabel} — ${id}: ${shortDesc}`;
   }
   if (relation === "reporter") {
-    return `Laporan Anda tercatat — ${id}: ${shortDesc}`;
+    return `Laporan ${typeLabel} Anda tercatat — ${id}: ${shortDesc}`;
   }
-  return `Laporan baru — ${id}: ${shortDesc}`;
+  return `Laporan ${typeLabel} baru — ${id}: ${shortDesc}`;
 }
 
 function buildNotificationItems(reports) {
@@ -199,6 +200,9 @@ function buildNotificationItems(reports) {
     .map(entry => {
       const report = reports.find(r => getReportId(r) === entry.id);
       if (!report) return null;
+
+      // Only show notifications that match current user's visibility/role
+      if (!isReportVisible(report)) return null;
 
       const relation = getUserRelation(report) || entry.relation || "admin";
       const status = getReportStatus(report);
@@ -434,8 +438,8 @@ function initNotificationBell() {
 }
 
 async function refreshNotifications() {
-  const reports = await fetchHazardReports();
-  window.__hazardReportsCache = reports;
+  const reports = await fetchAllReports();
+  window.__reportsCache = reports;
 
   ensureNotificationsInitialized(reports);
   notificationItems = buildNotificationItems(reports);
