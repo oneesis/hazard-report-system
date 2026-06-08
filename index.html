@@ -15,8 +15,9 @@
     href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"
   />
   <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body>
+<body class="hazard-report-page">
 
   <div class="container">
     <div class="card">
@@ -279,23 +280,11 @@
                 type="file"
                 id="upload_foto_bahaya"
                 accept="image/*"
-                onchange="previewFotoBahaya(event)"
+                multiple
             >
 
             <!-- PREVIEW FOTO -->
             <div id="previewFotoBahaya" style="display:none; margin-top:15px;">
-                <img
-                id="imgPreviewBahaya"
-                alt="Preview Foto Bahaya"
-                style="
-                    width: 100%;
-                    max-height: 320px;
-                    object-fit: contain;
-                    border-radius: 12px;
-                    border: 1px solid #e2e8f0;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-                "
-                >
             </div>
             </div>
 
@@ -580,23 +569,6 @@
   <span>Dark Mode</span>
 </button>
 
-<nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
-  <a href="index-home.html" class="mobile-bottom-link">
-    <span class="mobile-bottom-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/></svg>
-    </span>
-    <span>Home</span>
-  </a>
-  <a href="index.html" class="mobile-bottom-action active" aria-label="Buat laporan" aria-current="page">
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
-  </a>
-  <a href="dashboard.html" class="mobile-bottom-link">
-    <span class="mobile-bottom-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10H5V9zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v14h-4V5zm5 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h-4v-7z"/></svg>
-    </span>
-    <span>Dashboard</span>
-  </a>
-</nav>
 
 <script src="auth.js"></script>
 <script src="offline-sync.js"></script>

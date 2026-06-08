@@ -15,7 +15,7 @@ console.log("masterTemuan length:", masterTemuan?.length || 'NOT DEFINED');
 if (!masterKaryawan || masterKaryawan.length === 0) {
   console.log("\n⚠️ Master data not loaded! Attempting manual load...");
   
-  const BASE_URL = "https://script.google.com/macros/s/AKfycbyw_rFrWax6FBdlc0FYeJAvl511YT5MCXToXf-RYsFhds-gapAr0w8vkXNKc2zZ9h5X/exec";
+  const BASE_URL = "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
   
   async function loadMaster() {
     try {

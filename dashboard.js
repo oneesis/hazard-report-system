@@ -2,7 +2,7 @@
 let reports = [];
 let filteredReports = [];
 let currentReport = null;
-let selectedAfterPhotoFile = null;
+let selectedAfterPhotoBase64List = [];
 let selectedStatus = "OPEN";
 
 // ========================================
@@ -94,6 +94,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.key === "Escape") {
       closeReportModal();
     }
+  });
+
+  // Photo zoom close
+  document.getElementById("photoZoomClose")?.addEventListener("click", () => {
+    document.getElementById("photoZoomOverlay")?.classList.remove("active");
   });
 });
 
@@ -343,13 +348,77 @@ function renderTable() {
 // ========================================
 // MODAL DETAIL
 // ========================================
-function getReportImage(report, keys = []) {
+function getReportImages(report, keys = []) {
   const rawValue = getReportValue(report, keys, "");
-  return rawValue ? normalizeImageUrl(rawValue) : "";
+  if (!rawValue) return [];
+  const urls = String(rawValue).split(/[\n,;]+/).map(u => u.trim()).filter(Boolean);
+  return urls.map(normalizeImageUrl);
 }
 
 function isInspectionReport(report) {
   return getReportType(report) === "INSPECTION";
+}
+
+function renderPhotosIntoContainer(containerId, placeholderText, imageUrls, altText) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = ""; // clear
+
+  if (!imageUrls || imageUrls.length === 0) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "photo-placeholder";
+    placeholder.textContent = placeholderText;
+    container.appendChild(placeholder);
+    return;
+  }
+
+  // Set container layout based on count
+  container.style.display = "grid";
+  if (imageUrls.length === 1) {
+    container.style.gridTemplateColumns = "1fr";
+  } else if (imageUrls.length === 2) {
+    container.style.gridTemplateColumns = "1fr 1fr";
+  } else {
+    container.style.gridTemplateColumns = "repeat(auto-fit, minmax(120px, 1fr))";
+  }
+  container.style.gap = "10px";
+  container.style.padding = "10px";
+  container.style.width = "100%";
+  container.style.boxSizing = "border-box";
+
+  imageUrls.forEach((url, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.aspectRatio = "4 / 3";
+    wrapper.style.overflow = "hidden";
+    wrapper.style.borderRadius = "12px";
+    wrapper.style.background = "#f1f5f9";
+    wrapper.style.border = "1px solid #cbd5e1";
+    wrapper.style.display = "flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = `${altText} - ${index + 1}`;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    img.style.cursor = "pointer";
+
+    img.addEventListener("click", () => {
+      const overlay = document.getElementById("photoZoomOverlay");
+      const zoomImg = document.getElementById("zoomedPhoto");
+      if (overlay && zoomImg) {
+        zoomImg.src = url;
+        overlay.classList.add("active");
+      }
+    });
+
+    wrapper.appendChild(img);
+    container.appendChild(wrapper);
+  });
 }
 
 function getDashboardLocation(report) {
@@ -512,9 +581,9 @@ function openReportModal(report) {
 
   const hazardNumber = getReportValue(report, ["id", "nomor_hazard", "no_hazard"], "-");
   currentReport = report;
-  selectedAfterPhotoFile = null;
-  const beforePhoto = getReportImage(report, ["upload_foto_bahaya", "upload_foto_inspeksi", "upload_foto_bahaya_pic", "foto_temuan", "foto_before", "foto_before_url", "foto_bahaya"]);
-  const afterPhoto = getReportImage(report, ["upload_foto_perbaikan_pic", "upload_foto_perbaikan", "foto_perbaikan", "foto_after", "foto_after_url", "after_photo"]);
+  selectedAfterPhotoBase64List = [];
+  const beforePhotos = getReportImages(report, ["upload_foto_bahaya", "upload_foto_inspeksi", "upload_foto_bahaya_pic", "foto_temuan", "foto_before", "foto_before_url", "foto_bahaya"]);
+  const afterPhotos = getReportImages(report, ["upload_foto_perbaikan_pic", "upload_foto_perbaikan", "foto_perbaikan", "foto_after", "foto_after_url", "after_photo"]);
 
   document.getElementById("modalStatusBadge").textContent = status;
   document.getElementById("modalStatusBadge").className = `status-badge ${badgeClass}`;
@@ -574,35 +643,12 @@ function openReportModal(report) {
     getReportValue(report, ["tanggal_closing", "closing_date", "tgl_closing", "tanggal_selesai", "tgl_selesai"], "-")
   );
 
-  const beforeImage = document.getElementById("modalPhotoBefore");
-  const beforePlaceholder = document.getElementById("modalPhotoBeforePlaceholder");
-  const afterImage = document.getElementById("modalPhotoAfter");
-  const afterPlaceholder = document.getElementById("modalPhotoAfterPlaceholder");
   const afterPhotoInput = document.getElementById("modalInputAfterPhoto");
   const reporterSignature = document.getElementById("modalReporterSignature");
   const signatureValue = getReportValue(report, ["tanda_tangan", "signature"], "");
 
-  if (beforePhoto) {
-    beforeImage.src = beforePhoto;
-    beforeImage.alt = `Foto temuan ${getReportTypeLabel(report)} ${hazardNumber}`;
-    beforeImage.classList.remove("hidden", "zoomed");
-    beforePlaceholder.style.display = "none";
-  } else {
-    beforeImage.removeAttribute("src");
-    beforeImage.classList.add("hidden");
-    beforePlaceholder.style.display = "block";
-  }
-
-  if (afterPhoto) {
-    afterImage.src = afterPhoto;
-    afterImage.alt = `Foto perbaikan hazard ${hazardNumber}`;
-    afterImage.classList.remove("hidden", "zoomed");
-    afterPlaceholder.style.display = "none";
-  } else {
-    afterImage.removeAttribute("src");
-    afterImage.classList.add("hidden");
-    afterPlaceholder.style.display = "block";
-  }
+  renderPhotosIntoContainer("modalPhotoBeforeContainer", "Tidak ada foto temuan", beforePhotos, `Foto temuan ${getReportTypeLabel(report)}`);
+  renderPhotosIntoContainer("modalPhotoAfterContainer", "Belum ada foto perbaikan", afterPhotos, `Foto perbaikan hazard`);
 
   if (afterPhotoInput) {
     afterPhotoInput.value = "";
@@ -636,10 +682,6 @@ function closeReportModal() {
   modal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("no-scroll");
 
-  const beforeImage = document.getElementById("modalPhotoBefore");
-  const afterImage = document.getElementById("modalPhotoAfter");
-  beforeImage.classList.remove("zoomed");
-  afterImage.classList.remove("zoomed");
 }
 
 async function submitClosingNote() {
@@ -679,7 +721,7 @@ async function submitClosingNote() {
       currentReport?.foto_perbaikan ||
       "";
 
-    const hasNewPhoto = !!selectedAfterPhotoFile;
+    const hasNewPhoto = selectedAfterPhotoBase64List && selectedAfterPhotoBase64List.length > 0;
     const hasExistingPhoto = !!existingAfterPhoto;
 
     if (!hasNewPhoto && !hasExistingPhoto) {
@@ -714,9 +756,8 @@ async function submitClosingNote() {
       status_perbaikan: selectedStatus
     };
 
-    if (selectedAfterPhotoFile) {
-      const base64 = await readFileAsDataURL(selectedAfterPhotoFile);
-      updateData.upload_foto_perbaikan_pic = base64;
+    if (selectedAfterPhotoBase64List && selectedAfterPhotoBase64List.length > 0) {
+      updateData.upload_foto_perbaikan_pic = JSON.stringify(selectedAfterPhotoBase64List);
     }
 
     const response = await fetch(BASE_URL, {
@@ -771,27 +812,165 @@ function printReport() {
   window.print();
 }
 
-function handleAfterPhotoChange(event) {
-  const file = event.target.files?.[0];
-  selectedAfterPhotoFile = file || null;
+function renderAfterPhotosPreview() {
+  const container = document.getElementById("modalPhotoAfterContainer");
+  const fileInput = document.getElementById("modalInputAfterPhoto");
+  if (!container || !fileInput) return;
 
-  const afterImage = document.getElementById("modalPhotoAfter");
-  const afterPlaceholder = document.getElementById("modalPhotoAfterPlaceholder");
+  container.innerHTML = "";
 
-  if (file && afterImage) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      afterImage.src = reader.result;
-      afterImage.alt = `Foto perbaikan dipilih`;
-      afterImage.classList.remove("hidden", "zoomed");
-      afterPlaceholder.style.display = "none";
-    };
-    reader.readAsDataURL(file);
-  } else if (afterImage) {
-    afterImage.removeAttribute("src");
-    afterImage.classList.add("hidden");
-    afterPlaceholder.style.display = "block";
+  if (selectedAfterPhotoBase64List.length === 0) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "photo-placeholder";
+    placeholder.id = "modalPhotoAfterPlaceholder";
+    placeholder.textContent = "Belum ada foto perbaikan";
+    container.appendChild(placeholder);
+    return;
   }
+
+  container.style.display = "grid";
+  const totalItems = selectedAfterPhotoBase64List.length + 1; // +1 for the add button card
+  if (totalItems === 1) {
+    container.style.gridTemplateColumns = "1fr";
+  } else if (totalItems === 2) {
+    container.style.gridTemplateColumns = "1fr 1fr";
+  } else {
+    container.style.gridTemplateColumns = "repeat(auto-fit, minmax(120px, 1fr))";
+  }
+  container.style.gap = "10px";
+  container.style.padding = "10px";
+
+  selectedAfterPhotoBase64List.forEach((base64, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.aspectRatio = "4 / 3";
+    wrapper.style.overflow = "hidden";
+    wrapper.style.borderRadius = "12px";
+    wrapper.style.background = "#f1f5f9";
+    wrapper.style.border = "1px solid #cbd5e1";
+    wrapper.style.display = "flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.src = base64;
+    img.alt = `Foto perbaikan dipilih - ${index + 1}`;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    img.style.cursor = "pointer";
+
+    img.addEventListener("click", () => {
+      const overlay = document.getElementById("photoZoomOverlay");
+      const zoomImg = document.getElementById("zoomedPhoto");
+      if (overlay && zoomImg) {
+        zoomImg.src = base64;
+        overlay.classList.add("active");
+      }
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+    deleteBtn.style.position = "absolute";
+    deleteBtn.style.top = "6px";
+    deleteBtn.style.right = "6px";
+    deleteBtn.style.width = "28px";
+    deleteBtn.style.height = "28px";
+    deleteBtn.style.borderRadius = "50%";
+    deleteBtn.style.background = "rgba(239, 68, 68, 0.9)";
+    deleteBtn.style.color = "#ffffff";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.cursor = "pointer";
+    deleteBtn.style.display = "flex";
+    deleteBtn.style.alignItems = "center";
+    deleteBtn.style.justifyContent = "center";
+    deleteBtn.style.fontSize = "12px";
+    deleteBtn.style.zIndex = "10";
+    deleteBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+    deleteBtn.title = "Hapus foto";
+
+    deleteBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectedAfterPhotoBase64List.splice(index, 1);
+      renderAfterPhotosPreview();
+    });
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(deleteBtn);
+    container.appendChild(wrapper);
+  });
+
+  const addCard = document.createElement("div");
+  addCard.style.position = "relative";
+  addCard.style.aspectRatio = "4 / 3";
+  addCard.style.overflow = "hidden";
+  addCard.style.borderRadius = "12px";
+  addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%)";
+  addCard.style.border = "2px dashed rgba(37, 99, 235, 0.4)";
+  addCard.style.display = "flex";
+  addCard.style.flexDirection = "column";
+  addCard.style.alignItems = "center";
+  addCard.style.justifyContent = "center";
+  addCard.style.cursor = "pointer";
+  addCard.style.color = "#2563eb";
+  addCard.style.transition = "all 0.2s ease";
+
+  addCard.addEventListener("mouseenter", () => {
+    addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0.06) 100%)";
+    addCard.style.borderColor = "#2563eb";
+  });
+  addCard.addEventListener("mouseleave", () => {
+    addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%)";
+    addCard.style.borderColor = "rgba(37, 99, 235, 0.4)";
+  });
+
+  addCard.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  const plusIcon = document.createElement("i");
+  plusIcon.className = "fa-solid fa-plus";
+  plusIcon.style.fontSize = "20px";
+  plusIcon.style.marginBottom = "4px";
+
+  const addText = document.createElement("span");
+  addText.textContent = "Tambah Foto";
+  addText.style.fontSize = "11px";
+  addText.style.fontWeight = "600";
+
+  addCard.appendChild(plusIcon);
+  addCard.appendChild(addText);
+  container.appendChild(addCard);
+}
+
+function handleAfterPhotoChange(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+
+  const invalidFile = files.find(file => !file.type.startsWith("image/"));
+  if (invalidFile) {
+    alert("Semua file harus berupa gambar.");
+    event.target.value = "";
+    return;
+  }
+
+  const base64Promises = files.map(file => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        resolve(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  Promise.all(base64Promises).then(base64Array => {
+    selectedAfterPhotoBase64List = selectedAfterPhotoBase64List.concat(base64Array);
+    renderAfterPhotosPreview();
+    event.target.value = "";
+  });
 }
 
 function readFileAsDataURL(file) {

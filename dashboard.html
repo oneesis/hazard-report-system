@@ -29,7 +29,7 @@
     <div class="dashboard-left">
       <a href="index-home.html" class="nav-home-btn">
         <span class="icon" aria-hidden="true"><i class="fa-solid fa-house"></i></span>
-        Home
+        <span class="nav-home-text">Home</span>
       </a>
     </div>
 
@@ -274,19 +274,17 @@
           <div class="photo-grid">
             <div class="photo-card">
               <p class="photo-title">Foto Temuan (Before)</p>
-              <div class="photo-frame">
-                <img id="modalPhotoBefore" alt="Foto Temuan" />
+              <div class="photo-frame" id="modalPhotoBeforeContainer">
                 <div id="modalPhotoBeforePlaceholder" class="photo-placeholder">Tidak ada foto temuan</div>
               </div>
             </div>
             <div class="photo-card">
               <p class="photo-title">Foto Perbaikan (After)</p>
-              <div class="photo-frame">
-                <img id="modalPhotoAfter" alt="Foto Perbaikan" />
+              <div class="photo-frame" id="modalPhotoAfterContainer">
                 <div id="modalPhotoAfterPlaceholder" class="photo-placeholder">Belum ada foto perbaikan</div>
               </div>
               <label class="file-input-label" for="modalInputAfterPhoto">Upload Foto Perbaikan</label>
-              <input id="modalInputAfterPhoto" type="file" accept="image/*" />
+              <input id="modalInputAfterPhoto" type="file" accept="image/*" multiple />
             </div>
           </div>
         </div>
@@ -350,5 +348,10 @@
       <span>Dashboard</span>
     </a>
   </nav>
+  <!-- PHOTO ZOOM OVERLAY -->
+  <div id="photoZoomOverlay" class="photo-zoom-overlay">
+    <button id="photoZoomClose" class="photo-zoom-close" aria-label="Close">&times;</button>
+    <img id="zoomedPhoto" alt="Zoomed photo">
+  </div>
 </body>
 </html>

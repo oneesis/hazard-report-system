@@ -1,5 +1,5 @@
 const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbyc9zRsm-QBK0Zv1yNvWWnJEBlZ002aR7qaZE9_Kkm9l_R9S0GCntg9tWF2bessctdG/exec";
+  "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
 
 function normalizeString(value) {
   return String(value || "").trim().toLowerCase();
@@ -147,7 +147,14 @@ async function fetchHazardReports() {
 async function fetchAllReports() {
   let response;
   try {
-    response = await fetch(`${BASE_URL}?action=getAllReports`);
+    const user = getCurrentUser();
+    const params = new URLSearchParams({ action: "getAllReports" });
+    if (user) {
+      if (user.nik) params.append("nik", user.nik);
+      if (user.nama) params.append("nama", user.nama);
+      if (user.role) params.append("role", user.role);
+    }
+    response = await fetch(`${BASE_URL}?${params.toString()}`);
   } catch (err) {
     throw new Error('Network error saat memanggil API: ' + (err && err.message ? err.message : err));
   }

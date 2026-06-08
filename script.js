@@ -1,7 +1,7 @@
 // HAZARD REPORT ONE-SAP
 
 const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbyw_rFrWax6FBdlc0FYeJAvl511YT5MCXToXf-RYsFhds-gapAr0w8vkXNKc2zZ9h5X/exec";
+  "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
 
 let masterKaryawan = [];
 let masterLokasi = [];
@@ -14,6 +14,7 @@ let subKetidaksesuaianChoices;
 let namaPicChoices;
 let signaturePad;
 let autosaveTimer;
+let selectedBahayaPhotos = [];
 
 let currentStep = 1;
 
@@ -401,9 +402,42 @@ function initializeSignaturePad() {
     maxWidth: 3
   });
 
+  signaturePad.addEventListener("endStroke", () => {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveDraft, AUTOSAVE_DELAY);
+  });
+
   document.getElementById("btnClearSignature")?.addEventListener("click", () => {
     signaturePad.clear();
+    canvas.dataset.sized = "";
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveDraft, AUTOSAVE_DELAY);
   });
+}
+
+function resizeSignaturePad() {
+  const canvas = document.getElementById("signaturePad");
+  if (!canvas || !signaturePad || !canvas.offsetWidth) return;
+  if (canvas.dataset.sized === "1") return;
+
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  const empty = signaturePad.isEmpty();
+  let dataUrl = "";
+  if (!empty) {
+    dataUrl = signaturePad.toDataURL("image/png");
+  }
+
+  canvas.width = canvas.offsetWidth * ratio;
+  canvas.height = 220 * ratio;
+  canvas.getContext("2d").scale(ratio, ratio);
+  canvas.dataset.sized = "1";
+
+  signaturePad.clear();
+  if (!empty && dataUrl) {
+    const img = new Image();
+    img.onload = () => signaturePad.fromDataURL(dataUrl);
+    img.src = dataUrl;
+  }
 }
 
 // ========================================
@@ -414,6 +448,7 @@ const AUTOSAVE_DELAY = 2000;
 
 function saveDraft() {
   const data = getFormData();
+  data._currentStep = currentStep;
   localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
   showAutoSaveIndicator();
 }
@@ -424,32 +459,137 @@ function loadDraft() {
 
   try {
     const data = JSON.parse(saved);
-    Object.keys(data).forEach(key => {
-      const el = document.getElementById(key);
-      if (el) {
-        if (el.type === "checkbox") {
-          el.checked = data[key] === "Ya";
-        } else {
+    
+    // Restore basic inputs
+    const basicKeys = [
+      "perusahaan", "subcont1", "tanggal_kejadian", "shift_kejadian", 
+      "detail_lokasi_bahaya", "deskripsi_bahaya", "tingkat_risiko", 
+      "tindakan_langsung", "tindakan_usulan_pic", "perusahaan_pic",
+      "subcont2", "batas_waktu", "no_whatsapp", "jabatan", "departemen", "nik",
+      "jabatan_pic", "departemen_pic", "no_whatsapp_pic"
+    ];
+    
+    basicKeys.forEach(key => {
+      if (data[key] !== undefined) {
+        const el = document.getElementById(key);
+        if (el) {
           el.value = data[key];
         }
       }
     });
 
-    const fileInput = document.getElementById("upload_foto_bahaya");
-    if (fileInput && data.upload_foto_bahaya) {
-      const preview = document.getElementById("previewFotoBahaya");
-      const img = document.getElementById("imgPreviewBahaya");
-      if (preview && img) {
-        img.src = data.upload_foto_bahaya;
-        fileInput.dataset.base64 = data.upload_foto_bahaya;
-        preview.style.display = "block";
+    if (data.pernyataan !== undefined) {
+      const el = document.getElementById("pernyataan");
+      if (el) el.checked = (data.pernyataan === "Ya");
+    }
+
+    // Restore dependent selects and choices.js
+    if (data.perusahaan) {
+      loadSubcontOptions(true);
+      if (data.subcont1) {
+        const subcontEl = document.getElementById("subcont1");
+        if (subcontEl) subcontEl.value = data.subcont1;
+        loadNamaOptions(true);
+        if (data.nama) {
+          const namaEl = document.getElementById("nama");
+          if (namaEl) {
+            namaEl.value = data.nama;
+            if (namaChoices) {
+              try {
+                namaChoices.setChoiceByValue(data.nama);
+              } catch(e) {}
+            }
+          }
+          autoFillData();
+        }
       }
     }
 
+    if (data.lokasi_bahaya) {
+      const el = document.getElementById("lokasi_bahaya");
+      if (el) {
+        el.value = data.lokasi_bahaya;
+        if (lokasiChoices) {
+          try {
+            lokasiChoices.setChoiceByValue(data.lokasi_bahaya);
+          } catch(e) {}
+        }
+      }
+    }
+
+    if (data.ketidaksesuaian_bahaya) {
+      const el = document.getElementById("ketidaksesuaian_bahaya");
+      if (el) {
+        el.value = data.ketidaksesuaian_bahaya;
+        if (ketidaksesuaianChoices) {
+          try {
+            ketidaksesuaianChoices.setChoiceByValue(data.ketidaksesuaian_bahaya);
+          } catch(e) {}
+        }
+      }
+      loadSubKetidaksesuaianOptions();
+      
+      if (data.sub_ketidaksesuaian) {
+        const subEl = document.getElementById("sub_ketidaksesuaian");
+        if (subEl) {
+          subEl.value = data.sub_ketidaksesuaian;
+          if (subKetidaksesuaianChoices) {
+            try {
+              subKetidaksesuaianChoices.setChoiceByValue(data.sub_ketidaksesuaian);
+            } catch(e) {}
+          }
+        }
+        autoFillRisiko();
+      }
+    }
+
+    if (data.perusahaan_pic) {
+      loadSubcontPicOptions();
+      if (data.subcont2) {
+        const sub2El = document.getElementById("subcont2");
+        if (sub2El) sub2El.value = data.subcont2;
+        loadNamaPicOptions();
+        
+        if (data.nama_pic) {
+          const picEl = document.getElementById("nama_pic");
+          if (picEl) {
+            picEl.value = data.nama_pic;
+            if (namaPicChoices) {
+              try {
+                namaPicChoices.setChoiceByValue(data.nama_pic);
+              } catch(e) {}
+            }
+          }
+          autoFillDataPic();
+        }
+      }
+    }
+
+    // Restore photos
+    const fileInput = document.getElementById("upload_foto_bahaya");
+    if (fileInput && data.upload_foto_bahaya) {
+      try {
+        if (data.upload_foto_bahaya.indexOf("[") === 0) {
+          selectedBahayaPhotos = JSON.parse(data.upload_foto_bahaya);
+        } else {
+          selectedBahayaPhotos = [data.upload_foto_bahaya];
+        }
+      } catch (e) {
+        selectedBahayaPhotos = [data.upload_foto_bahaya];
+      }
+      renderBahayaPhotosPreview();
+    }
+
+    // Restore signature
     if (data.tanda_tangan && signaturePad) {
       const img = new Image();
       img.onload = () => signaturePad.fromDataURL(data.tanda_tangan);
       img.src = data.tanda_tangan;
+    }
+
+    // Restore step
+    if (data._currentStep && data._currentStep > 1) {
+      showStep(data._currentStep);
     }
   } catch (e) {
     console.error("Failed to load draft:", e);
@@ -458,6 +598,12 @@ function loadDraft() {
 
 function clearDraft() {
   localStorage.removeItem(AUTOSAVE_KEY);
+  selectedBahayaPhotos = [];
+  const preview = document.getElementById("previewFotoBahaya");
+  if (preview) {
+    preview.innerHTML = "";
+    preview.style.display = "none";
+  }
 }
 
 function showAutoSaveIndicator() {
@@ -566,28 +712,166 @@ function setupPhotoZoom() {
 // ========================================
 // PHOTO PREVIEW (for inline onchange in HTML)
 // ========================================
-function previewFotoBahaya(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+function renderBahayaPhotosPreview() {
+  const preview = document.getElementById("previewFotoBahaya");
+  const fileInput = document.getElementById("upload_foto_bahaya");
+  if (!preview || !fileInput) return;
 
-  if (!file.type.startsWith("image/")) {
-    alert("File harus berupa gambar.");
+  preview.innerHTML = "";
+  
+  if (selectedBahayaPhotos.length === 0) {
+    preview.style.display = "none";
+    fileInput.dataset.base64 = "";
+    return;
+  }
+
+  preview.style.display = "grid";
+  const totalItems = selectedBahayaPhotos.length + 1; // +1 for the add button card
+  if (totalItems === 1) {
+    preview.style.gridTemplateColumns = "1fr";
+  } else if (totalItems === 2) {
+    preview.style.gridTemplateColumns = "1fr 1fr";
+  } else {
+    preview.style.gridTemplateColumns = "repeat(auto-fit, minmax(120px, 1fr))";
+  }
+  preview.style.gap = "10px";
+
+  selectedBahayaPhotos.forEach((base64, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.aspectRatio = "4 / 3";
+    wrapper.style.overflow = "hidden";
+    wrapper.style.borderRadius = "12px";
+    wrapper.style.background = "#f1f5f9";
+    wrapper.style.border = "1px solid #cbd5e1";
+    wrapper.style.display = "flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.src = base64;
+    img.alt = `Preview Foto Bahaya - ${index + 1}`;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    img.style.cursor = "pointer";
+
+    img.addEventListener("click", () => {
+      const overlay = document.getElementById("photoZoomOverlay");
+      const zoomImg = document.getElementById("zoomedPhoto");
+      if (overlay && zoomImg) {
+        zoomImg.src = base64;
+        overlay.classList.add("active");
+      }
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+    deleteBtn.style.position = "absolute";
+    deleteBtn.style.top = "6px";
+    deleteBtn.style.right = "6px";
+    deleteBtn.style.width = "28px";
+    deleteBtn.style.height = "28px";
+    deleteBtn.style.borderRadius = "50%";
+    deleteBtn.style.background = "rgba(239, 68, 68, 0.9)";
+    deleteBtn.style.color = "#ffffff";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.cursor = "pointer";
+    deleteBtn.style.display = "flex";
+    deleteBtn.style.alignItems = "center";
+    deleteBtn.style.justifyContent = "center";
+    deleteBtn.style.fontSize = "12px";
+    deleteBtn.style.zIndex = "10";
+    deleteBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+    deleteBtn.title = "Hapus foto";
+
+    deleteBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectedBahayaPhotos.splice(index, 1);
+      fileInput.dataset.base64 = JSON.stringify(selectedBahayaPhotos);
+      renderBahayaPhotosPreview();
+      saveDraft();
+    });
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(deleteBtn);
+    preview.appendChild(wrapper);
+  });
+
+  const addCard = document.createElement("div");
+  addCard.style.position = "relative";
+  addCard.style.aspectRatio = "4 / 3";
+  addCard.style.overflow = "hidden";
+  addCard.style.borderRadius = "12px";
+  addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%)";
+  addCard.style.border = "2px dashed rgba(37, 99, 235, 0.4)";
+  addCard.style.display = "flex";
+  addCard.style.flexDirection = "column";
+  addCard.style.alignItems = "center";
+  addCard.style.justifyContent = "center";
+  addCard.style.cursor = "pointer";
+  addCard.style.color = "#2563eb";
+  addCard.style.transition = "all 0.2s ease";
+
+  addCard.addEventListener("mouseenter", () => {
+    addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0.06) 100%)";
+    addCard.style.borderColor = "#2563eb";
+  });
+  addCard.addEventListener("mouseleave", () => {
+    addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%)";
+    addCard.style.borderColor = "rgba(37, 99, 235, 0.4)";
+  });
+
+  addCard.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  const plusIcon = document.createElement("i");
+  plusIcon.className = "fa-solid fa-plus";
+  plusIcon.style.fontSize = "20px";
+  plusIcon.style.marginBottom = "4px";
+
+  const addText = document.createElement("span");
+  addText.textContent = "Tambah Foto";
+  addText.style.fontSize = "11px";
+  addText.style.fontWeight = "600";
+
+  addCard.appendChild(plusIcon);
+  addCard.appendChild(addText);
+  preview.appendChild(addCard);
+
+  fileInput.dataset.base64 = JSON.stringify(selectedBahayaPhotos);
+}
+
+function previewFotoBahaya(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+
+  const invalidFile = files.find(file => !file.type.startsWith("image/"));
+  if (invalidFile) {
+    alert("Semua file harus berupa gambar.");
     event.target.value = "";
     return;
   }
 
-  const preview = document.getElementById("previewFotoBahaya");
-  const img = document.getElementById("imgPreviewBahaya");
+  const base64Promises = files.map(file => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        resolve(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
 
-  if (!preview || !img) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    event.target.dataset.base64 = e.target.result;
-    img.src = e.target.result;
-    preview.style.display = "block";
-  };
-  reader.readAsDataURL(file);
+  Promise.all(base64Promises).then(base64Array => {
+    selectedBahayaPhotos = selectedBahayaPhotos.concat(base64Array);
+    renderBahayaPhotosPreview();
+    saveDraft();
+    event.target.value = "";
+  });
 }
 
 // ========================================
@@ -634,6 +918,10 @@ function showStep(stepNumber) {
 
   document.querySelectorAll(".form-step").forEach(step => step.classList.remove("active"));
   document.getElementById(`step${stepNumber}`)?.classList.add("active");
+
+  if (stepNumber === 6) {
+    requestAnimationFrame(resizeSignaturePad);
+  }
 
   document.querySelectorAll(".step-progress .step").forEach(step => {
     const value = Number(step.dataset.step);
@@ -1045,26 +1333,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("nama")?.addEventListener("change", autoFillData);
 
     // Photo upload preview
-    document.getElementById("upload_foto_bahaya")?.addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (!file.type.startsWith("image/")) {
-        alert("File harus berupa gambar.");
-        e.target.value = "";
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        e.target.dataset.base64 = ev.target.result;
-        const preview = document.getElementById("previewFotoBahaya");
-        const img = document.getElementById("imgPreviewBahaya");
-        if (preview && img) {
-          img.src = ev.target.result;
-          preview.style.display = "block";
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    document.getElementById("upload_foto_bahaya")?.addEventListener("change", previewFotoBahaya);
 
     document.getElementById("ketidaksesuaian_bahaya")?.addEventListener("change", loadSubKetidaksesuaianOptions);
     document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", autoFillRisiko);
@@ -1115,13 +1384,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     initDarkMode();
     initOfflineDetection();
 
-    // Auto-save on input changes
-    document.querySelectorAll("input, select, textarea").forEach(el => {
-      el.addEventListener("input", () => {
+    // Auto-save on input/change events inside the card
+    const cardEl = document.querySelector(".card");
+    if (cardEl) {
+      cardEl.addEventListener("input", () => {
         clearTimeout(autosaveTimer);
         autosaveTimer = setTimeout(saveDraft, AUTOSAVE_DELAY);
       });
-    });
+      cardEl.addEventListener("change", () => {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(saveDraft, AUTOSAVE_DELAY);
+      });
+    }
    } catch (error) {
      console.error("Terjadi kesalahan saat memuat data:", error);
    }

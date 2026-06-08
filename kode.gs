@@ -53,6 +53,36 @@ function saveBase64ImageToDrive(base64Data, folderId, fileName) {
   return file.getUrl();
 }
 
+function saveMultipleImagesToDrive(base64DataField, folderId, idPrefix) {
+  if (!base64DataField) return "";
+
+  var base64List = [];
+  var trimmedField = String(base64DataField).trim();
+  if (trimmedField.indexOf('[') === 0) {
+    try {
+      base64List = JSON.parse(trimmedField);
+    } catch (e) {
+      base64List = [base64DataField];
+    }
+  } else {
+    base64List = [base64DataField];
+  }
+
+  var urls = [];
+  for (var i = 0; i < base64List.length; i++) {
+    var base64Data = base64List[i];
+    if (base64Data) {
+      var fileName = idPrefix + '-' + (i + 1) + '-' + new Date().getTime() + '.jpg';
+      var url = saveBase64ImageToDrive(base64Data, folderId, fileName);
+      if (url) {
+        urls.push(url);
+      }
+    }
+  }
+
+  return urls.join(", ");
+}
+
 // ========================================
 // FUNGSI GENERIK MEMBACA SHEET
 // ========================================
@@ -210,8 +240,6 @@ function normalizeHeader(header) {
   return String(header || '').trim().toUpperCase();
 }
 
-}
-
 // ========================================
 // API ENDPOINT
 // ========================================
@@ -268,7 +296,7 @@ function doGet(e) {
       break;
 
     case 'getAllReports':
-      result = getAllReports();
+      result = getAllReports(e.parameter.nik, e.parameter.nama, e.parameter.role);
       break;
 
     default:
@@ -376,7 +404,7 @@ function submitInspectionReport(data) {
   let fotoInspeksiUrl = '';
 
   if (data.upload_foto_inspeksi) {
-    fotoInspeksiUrl = saveBase64ImageToDrive(data.upload_foto_inspeksi, FOLDER_INSPECTION_ID, id + '-Inspection.jpg');
+    fotoInspeksiUrl = saveMultipleImagesToDrive(data.upload_foto_inspeksi, FOLDER_INSPECTION_ID, id + '-Inspection');
   }
 
   const rowData = Object.assign({}, data, {
@@ -409,7 +437,7 @@ function submitHazardReport(data) {
   let fotoBahayaUrl = '';
 
   if (data.upload_foto_bahaya) {
-    fotoBahayaUrl = saveBase64ImageToDrive(data.upload_foto_bahaya, FOLDER_HAZARD_ID, id + '-Hazard.jpg');
+    fotoBahayaUrl = saveMultipleImagesToDrive(data.upload_foto_bahaya, FOLDER_HAZARD_ID, id + '-Hazard');
   }
 
   const row = [
@@ -520,10 +548,57 @@ function getInspectionReports() {
   return { status: 'success', data: data };
 }
 
-function getAllReports() {
-  const hazard = getHazardReports().data || [];
-  const inspection = getInspectionReports().data || [];
-  return { status: 'success', data: hazard.concat(inspection) };
+function getAllReports(nik, nama, role) {
+  var hazard = getHazardReports().data || [];
+  var inspection = getInspectionReports().data || [];
+  var combined = hazard.concat(inspection);
+
+  var userNik = String(nik || '').trim().toLowerCase();
+  var userName = String(nama || '').trim().toLowerCase();
+  var userRole = String(role || '').trim().toUpperCase();
+
+  if (userRole !== 'ADMIN' && (userNik || userName)) {
+    combined = combined.filter(function(report) {
+      return isReportVisibleForUser(report, userNik, userName, userRole);
+    });
+  }
+
+  return { status: 'success', data: combined };
+}
+
+function isReportVisibleForUser(report, userNik, userName, userRole) {
+  if (userRole === 'ADMIN') return true;
+
+  var getVal = function(keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var val = report[keys[i]];
+      if (val !== undefined && val !== null && String(val).trim() !== '') {
+        return String(val).trim().toLowerCase();
+      }
+    }
+    return '';
+  };
+
+  var reporterNik = getVal(['nik', 'reporter_nik', 'nik_reporter', 'NIK']);
+  var reporterName = getVal(['nama', 'pelapor', 'reporter', 'reporter_name', 'nama_pelapor', 'nama_pelapor_laporan']);
+  var picNik = getVal(['nik_pic', 'nip_pic', 'pic_nik', 'nikpic', 'nik_pic_pic']);
+  var picName = getVal(['nama_pic', 'pic', 'penanggung_jawab', 'pic_name', 'nama_pic_laporan']);
+
+  var isReporter = (userNik && reporterNik === userNik) || (userName && reporterName === userName);
+  var isPic = (userNik && picNik === userNik) || (userName && picName === userName);
+
+  if (isReporter || isPic) return true;
+
+  if (userNik) {
+    var maybeNik = getVal(['nik', 'nik_pic', 'nik_pic_pic']);
+    if (maybeNik && maybeNik === userNik) return true;
+  }
+  if (userName) {
+    var maybeName = getVal(['nama', 'nama_pic']);
+    if (maybeName && maybeName === userName) return true;
+  }
+
+  return false;
 }
 
 function normalizeHeader(header) {
@@ -575,7 +650,7 @@ function updateHazardReport(data) {
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic) {
-    fotoPerbaikanUrl = saveBase64ImageToDrive(data.upload_foto_perbaikan_pic, FOLDER_CLOSING_ID, data.id + '-Closing-' + new Date().getTime() + '.jpg');
+    fotoPerbaikanUrl = saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, FOLDER_CLOSING_ID, data.id + '-Closing');
   }
 
   setCell('STATUS PERBAIKAN', data.status_perbaikan || 'OPEN');
@@ -642,10 +717,10 @@ function updateInspectionReport(data) {
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic) {
-    fotoPerbaikanUrl = saveBase64ImageToDrive(
+    fotoPerbaikanUrl = saveMultipleImagesToDrive(
       data.upload_foto_perbaikan_pic,
       FOLDER_CLOSING_ID,
-      data.id + '-Inspection-Closing-' + new Date().getTime() + '.jpg'
+      data.id + '-Inspection-Closing'
     );
   }
 

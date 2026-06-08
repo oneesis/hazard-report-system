@@ -1465,21 +1465,223 @@ tbody tr:hover {
   cursor: pointer;
   transition: all 0.25s ease;
 }
+}
+
+/* Dropdown lebar sama dengan tombol */
+.dashboard-right .user-menu-dropdown {
+  width: 260px;
+  border-radius: 18px;
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.15),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+/* ========================================
+   TITLE
+======================================== */
+.dashboard-title-wrap {
+  text-align: center;
+}
+
+.dashboard-title {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  color: #0b1635;
+}
+
+.dashboard-subtitle {
+  margin: 14px 0 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+@media (max-width: 992px) {
+  .dashboard-topbar {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .dashboard-left,
+  .dashboard-center,
+  .dashboard-right {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .dashboard-logo {
+    height: 56px;
+  }
+
+  .dashboard-title {
+    font-size: 2.8rem;
+    letter-spacing: -1px;
+  }
+
+  .dashboard-subtitle {
+    font-size: 1.05rem;
+  }
+
+  .dashboard-right .user-menu,
+  .dashboard-right .user-menu-button,
+  .dashboard-right .user-menu-dropdown {
+    width: 220px;
+  }
+}
+/* ========================================
+   USER MENU DROPDOWN - FINAL CLEAN VERSION
+   Ganti seluruh CSS .user-menu-button,
+   .user-menu-dropdown, .user-name, dst.
+======================================== */
+
+/* Container */
+.user-menu {
+  position: relative;
+  display: inline-block;
+}
+
+/* Tombol profile */
+.user-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  width: 260px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.10),
+    0 4px 10px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  white-space: nowrap;
+
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+/* Hover */
+.user-menu-button:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 36px rgba(15, 23, 42, 0.14),
+    0 6px 14px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Dropdown disembunyikan */
+.user-menu .user-menu-dropdown {
+  display: none !important;
+}
+
+/* Dropdown tampil saat diklik */
+.user-menu.open .user-menu-dropdown {
+  display: block !important;
+}
+
+/* Panel dropdown */
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);   /* Jarak dekat ke tombol */
+  right: 0;
+
+  width: 260px;            /* Sama persis dengan tombol */
+  box-sizing: border-box;
+  padding: 18px 16px;
+
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.15),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+
+  text-align: center;
+  z-index: 1000;
+}
+
+/* Nama user */
+.user-name {
+  font-size: 13px;
+  font-weight: 800;        /* Bold */
+  color: #0f172a;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* Detail user */
+.user-title,
+.user-company,
+.user-role {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.55;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* Divider */
+.user-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 14px 0;
+}
+
+/* Tombol logout */
+.btn-logout {
+  width: 100%;
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
 
 .btn-logout:hover {
   background: #dc2626;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
-  .user-menu-button,
-  .user-menu-dropdown {
-    width: 220px;
+  .user-menu-button {
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 14px !important;
+    justify-content: center !important;
   }
 
-  .user-menu-button {
-    font-size: 11px;
-    padding: 10px 14px;
+  .user-menu-dropdown {
+    width: 280px !important;
+    max-width: calc(100vw - 32px) !important;
+    right: 0 !important;
+    left: auto !important;
+    top: calc(100% + 8px) !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
   }
 
   .user-name {
@@ -1776,4 +1978,112 @@ tbody td:first-child {
 .report-type-badge.inspection {
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+/* ========================================
+   MOBILE HEADER ADJUSTMENTS
+======================================== */
+@media (max-width: 768px) {
+  /* Layout: 2 rows (Home & Profile/Notif on row 1, Logos centered on row 2) */
+  .dashboard-topbar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-areas: 
+      "left right"
+      "center center" !important;
+    gap: 16px !important;
+    align-items: center !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+  }
+
+  .dashboard-left {
+    grid-area: left !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    width: auto !important;
+    padding: 0 !important;
+  }
+
+  .dashboard-right {
+    grid-area: right !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    width: auto !important;
+    gap: 10px !important;
+    padding: 0 !important;
+  }
+
+  .dashboard-center {
+    grid-area: center !important;
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+    margin: 8px 0 0 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Home button: Collapse to 52x52px circle/square icon button on mobile */
+  .nav-home-btn {
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+  
+  .nav-home-text {
+    display: none !important;
+  }
+
+  /* User profile: Collapse to 52x52px icon button on mobile */
+  .dashboard-right .user-menu-button {
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-right .user-menu-label,
+  .dashboard-right .user-menu-chevron {
+    display: none !important;
+  }
+
+  /* Dropdown positioning on mobile */
+  .dashboard-right .user-menu-dropdown {
+    width: 280px !important;
+    max-width: calc(100vw - 32px) !important;
+    right: 0 !important;
+    left: auto !important;
+    top: calc(100% + 8px) !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+  }
+
+  /* Brand logos */
+  .dashboard-brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    justify-content: center !important;
+    width: auto !important;
+  }
+
+  .dashboard-logo {
+    height: 48px !important;
+    max-width: 130px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
+    background: #ffffff !important;
+  }
 }

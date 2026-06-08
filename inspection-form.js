@@ -1,4 +1,4 @@
-window.__inspectionFormBaseUrl = window.__inspectionFormBaseUrl || "https://script.google.com/macros/s/AKfycbyw_rFrWax6FBdlc0FYeJAvl511YT5MCXToXf-RYsFhds-gapAr0w8vkXNKc2zZ9h5X/exec";
+window.__inspectionFormBaseUrl = window.__inspectionFormBaseUrl || "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
 var __INSPECTION_BASE_URL = window.__inspectionFormBaseUrl;
 
 const INSPECTION_TYPE_LABELS = {
@@ -20,6 +20,7 @@ const TOTAL_STEPS = 5;
 let inspectionChecklist = [];
 let inspectionAutosaveTimer = null;
 const INSPECTION_AUTOSAVE_DELAY = 2000;
+let selectedInspeksiPhotos = [];
 
 function getQueryParams() {
   return Object.fromEntries(new URLSearchParams(window.location.search));
@@ -778,28 +779,169 @@ async function submitForm() {
   }
 }
 
+function renderInspeksiPhotosPreview() {
+  const preview = document.getElementById("previewFotoInspeksi");
+  const fileInput = document.getElementById("upload_foto_inspeksi");
+  if (!preview || !fileInput) return;
+
+  preview.innerHTML = "";
+  
+  if (selectedInspeksiPhotos.length === 0) {
+    preview.style.display = "none";
+    fileInput.dataset.base64 = "";
+    return;
+  }
+
+  preview.style.display = "grid";
+  const totalItems = selectedInspeksiPhotos.length + 1; // +1 for the add button card
+  if (totalItems === 1) {
+    preview.style.gridTemplateColumns = "1fr";
+  } else if (totalItems === 2) {
+    preview.style.gridTemplateColumns = "1fr 1fr";
+  } else {
+    preview.style.gridTemplateColumns = "repeat(auto-fit, minmax(120px, 1fr))";
+  }
+  preview.style.gap = "10px";
+
+  selectedInspeksiPhotos.forEach((base64, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.aspectRatio = "4 / 3";
+    wrapper.style.overflow = "hidden";
+    wrapper.style.borderRadius = "12px";
+    wrapper.style.background = "#f1f5f9";
+    wrapper.style.border = "1px solid #cbd5e1";
+    wrapper.style.display = "flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.src = base64;
+    img.alt = `Preview Foto Inspeksi - ${index + 1}`;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    img.style.cursor = "pointer";
+
+    img.addEventListener("click", () => {
+      const overlay = document.getElementById("photoZoomOverlay");
+      const zoomImg = document.getElementById("zoomedPhoto");
+      if (overlay && zoomImg) {
+        zoomImg.src = base64;
+        overlay.classList.add("active");
+      }
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+    deleteBtn.style.position = "absolute";
+    deleteBtn.style.top = "6px";
+    deleteBtn.style.right = "6px";
+    deleteBtn.style.width = "28px";
+    deleteBtn.style.height = "28px";
+    deleteBtn.style.borderRadius = "50%";
+    deleteBtn.style.background = "rgba(239, 68, 68, 0.9)";
+    deleteBtn.style.color = "#ffffff";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.cursor = "pointer";
+    deleteBtn.style.display = "flex";
+    deleteBtn.style.alignItems = "center";
+    deleteBtn.style.justifyContent = "center";
+    deleteBtn.style.fontSize = "12px";
+    deleteBtn.style.zIndex = "10";
+    deleteBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+    deleteBtn.title = "Hapus foto";
+
+    deleteBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectedInspeksiPhotos.splice(index, 1);
+      fileInput.dataset.base64 = JSON.stringify(selectedInspeksiPhotos);
+      renderInspeksiPhotosPreview();
+      saveInspectionDraft();
+    });
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(deleteBtn);
+    preview.appendChild(wrapper);
+  });
+
+  const addCard = document.createElement("div");
+  addCard.style.position = "relative";
+  addCard.style.aspectRatio = "4 / 3";
+  addCard.style.overflow = "hidden";
+  addCard.style.borderRadius = "12px";
+  addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%)";
+  addCard.style.border = "2px dashed rgba(37, 99, 235, 0.4)";
+  addCard.style.display = "flex";
+  addCard.style.flexDirection = "column";
+  addCard.style.alignItems = "center";
+  addCard.style.justifyContent = "center";
+  addCard.style.cursor = "pointer";
+  addCard.style.color = "#2563eb";
+  addCard.style.transition = "all 0.2s ease";
+
+  addCard.addEventListener("mouseenter", () => {
+    addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0.06) 100%)";
+    addCard.style.borderColor = "#2563eb";
+  });
+  addCard.addEventListener("mouseleave", () => {
+    addCard.style.background = "linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%)";
+    addCard.style.borderColor = "rgba(37, 99, 235, 0.4)";
+  });
+
+  addCard.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  const plusIcon = document.createElement("i");
+  plusIcon.className = "fa-solid fa-plus";
+  plusIcon.style.fontSize = "20px";
+  plusIcon.style.marginBottom = "4px";
+
+  const addText = document.createElement("span");
+  addText.textContent = "Tambah Foto";
+  addText.style.fontSize = "11px";
+  addText.style.fontWeight = "600";
+
+  addCard.appendChild(plusIcon);
+  addCard.appendChild(addText);
+  preview.appendChild(addCard);
+
+  fileInput.dataset.base64 = JSON.stringify(selectedInspeksiPhotos);
+}
+
 function setupPhotoPreview() {
   const input = document.getElementById("upload_foto_inspeksi");
   if (!input) return;
   input.addEventListener("change", event => {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      alert("File harus berupa gambar.");
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const invalidFile = files.find(file => !file.type.startsWith("image/"));
+    if (invalidFile) {
+      alert("Semua file harus berupa gambar.");
       event.target.value = "";
       return;
     }
-    const reader = new FileReader();
-    reader.onload = e => {
-      event.target.dataset.base64 = e.target.result;
-      const preview = document.getElementById("previewFotoInspeksi");
-      const img = document.getElementById("imgPreviewInspeksi");
-      if (preview && img) {
-        img.src = e.target.result;
-        preview.style.display = "block";
-      }
-    };
-    reader.readAsDataURL(file);
+
+    const base64Promises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          resolve(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(base64Promises).then(base64Array => {
+      selectedInspeksiPhotos = selectedInspeksiPhotos.concat(base64Array);
+      renderInspeksiPhotosPreview();
+      saveInspectionDraft();
+      event.target.value = "";
+    });
   });
 }
 
@@ -807,9 +949,17 @@ function initializeSignaturePad() {
   const canvas = document.getElementById("signaturePad");
   if (!canvas || typeof SignaturePad === "undefined") return;
   signaturePad = new SignaturePad(canvas, { minWidth: 1, maxWidth: 3 });
+  
+  signaturePad.addEventListener("endStroke", () => {
+    clearTimeout(inspectionAutosaveTimer);
+    inspectionAutosaveTimer = setTimeout(saveInspectionDraft, INSPECTION_AUTOSAVE_DELAY);
+  });
+  
   document.getElementById("btnClearSignature")?.addEventListener("click", () => {
     signaturePad.clear();
     canvas.classList.remove("error");
+    clearTimeout(inspectionAutosaveTimer);
+    inspectionAutosaveTimer = setTimeout(saveInspectionDraft, INSPECTION_AUTOSAVE_DELAY);
   });
 }
 
@@ -994,12 +1144,17 @@ function loadInspectionDraft() {
     // Restore photo
     if (data.upload_foto_inspeksi_base64) {
       const photoInput = document.getElementById('upload_foto_inspeksi');
-      const preview = document.getElementById('previewFotoInspeksi');
-      const img = document.getElementById('imgPreviewInspeksi');
-      if (photoInput && preview && img) {
-        photoInput.dataset.base64 = data.upload_foto_inspeksi_base64;
-        img.src = data.upload_foto_inspeksi_base64;
-        preview.style.display = 'block';
+      if (photoInput) {
+        try {
+          if (data.upload_foto_inspeksi_base64.indexOf("[") === 0) {
+            selectedInspeksiPhotos = JSON.parse(data.upload_foto_inspeksi_base64);
+          } else {
+            selectedInspeksiPhotos = [data.upload_foto_inspeksi_base64];
+          }
+        } catch (e) {
+          selectedInspeksiPhotos = [data.upload_foto_inspeksi_base64];
+        }
+        renderInspeksiPhotosPreview();
       }
     }
     
@@ -1031,6 +1186,12 @@ function loadInspectionDraft() {
 function clearInspectionDraft() {
   const key = getInspectionDraftKey();
   localStorage.removeItem(key);
+  selectedInspeksiPhotos = [];
+  const preview = document.getElementById("previewFotoInspeksi");
+  if (preview) {
+    preview.innerHTML = "";
+    preview.style.display = "none";
+  }
 }
 
 function showInspectionAutoSaveIndicator() {
@@ -1127,6 +1288,11 @@ window.addEventListener("DOMContentLoaded", () => {
     renderUserProfile();
     initNotificationBell();
     refreshNotifications().catch(console.error);
+
+    // Photo zoom close
+    document.getElementById("photoZoomClose")?.addEventListener("click", () => {
+      document.getElementById("photoZoomOverlay")?.classList.remove("active");
+    });
   } catch (e) {
     console.error('inspection-form early init error:', e);
   }

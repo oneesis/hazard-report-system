@@ -1070,7 +1070,7 @@ body.dark-mode .statement-box {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 16px;
+  margin-top: 36px;
   align-items: center;
 }
 
@@ -2020,14 +2020,14 @@ input[type="file"]:hover {
 
 @media (max-width: 768px) {
   .header-top {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .nav-home-btn,
-  .user-menu,
-  .user-menu-button {
-    width: 100%;
+  .user-menu {
+    width: auto;
   }
 
   .header-logos .logo {
@@ -2515,7 +2515,7 @@ input[type="file"]:hover {
 
   .inspection-form-page .button-group {
     position: sticky;
-    bottom: calc(82px + env(safe-area-inset-bottom));
+    bottom: calc(12px + env(safe-area-inset-bottom));
     z-index: 20;
     padding: 12px;
     margin: 20px -6px 0;
@@ -2786,5 +2786,42 @@ input[type="file"]:hover {
     left: auto;
     transform: none;
     width: auto;
+  }
+}
+
+/* ========================================
+   RESPONSIVE USER PROFILE MENU & PADDING OVERRIDES
+======================================== */
+@media (max-width: 768px) {
+  /* Collapse username and chevron into a clean avatar icon on mobile to prevent header overlaps */
+  .user-menu-label,
+  .user-menu-chevron {
+    display: none !important;
+  }
+  
+  .user-menu-button {
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 14px !important;
+    justify-content: center !important;
+  }
+
+  /* Fix the dropdown profile layout when clicked on mobile screens */
+  .user-menu-dropdown {
+    width: 280px !important;
+    max-width: calc(100vw - 32px) !important;
+    right: 0 !important;
+    left: auto !important;
+    top: calc(100% + 8px) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 15px 35px rgba(15, 23, 42, 0.2) !important;
+    padding: 16px !important;
+  }
+
+  /* Adjust body padding on form pages since bottom navigation is removed */
+  body.inspection-form-page,
+  body.hazard-report-page {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
   }
 }

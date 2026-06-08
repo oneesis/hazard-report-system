@@ -177,9 +177,8 @@
         <h2 class="section-title">Dokumentasi</h2>
         <div class="form-group">
           <label>UPLOAD FOTO INSPEKSI <span class="required">*</span></label>
-          <input type="file" id="upload_foto_inspeksi" accept="image/*" />
+          <input type="file" id="upload_foto_inspeksi" accept="image/*" multiple />
           <div id="previewFotoInspeksi" style="display:none; margin-top:15px;">
-            <img id="imgPreviewInspeksi" alt="Preview Foto Inspeksi" style="width:100%; max-height:320px; object-fit:contain; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 10px 20px rgba(0,0,0,0.08);" />
           </div>
         </div>
         <div class="form-group">
@@ -261,23 +260,13 @@
     </form>
   </div>
 </div>
-<nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
-  <a href="index-home.html" class="mobile-bottom-link">
-    <span class="mobile-bottom-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/></svg>
-    </span>
-    <span>Home</span>
-  </a>
-  <a href="inspection.html" class="mobile-bottom-action" aria-label="Pilih inspeksi">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5v14m7-7H5"/></svg>
-  </a>
-  <a href="dashboard.html" class="mobile-bottom-link">
-    <span class="mobile-bottom-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10H5V9zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v14h-4V5zm5 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h-4v-7z"/></svg>
-    </span>
-    <span>Dashboard</span>
-  </a>
-</nav>
+
+<!-- PHOTO ZOOM OVERLAY -->
+<div id="photoZoomOverlay" class="photo-zoom-overlay">
+  <button id="photoZoomClose" class="photo-zoom-close" aria-label="Close">&times;</button>
+  <img id="zoomedPhoto" alt="Zoomed photo">
+</div>
+
 <script src="auth.js"></script>
 <script src="reports-utils.js"></script>
 <script src="notifications.js"></script>
