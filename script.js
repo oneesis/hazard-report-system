@@ -845,6 +845,42 @@ function renderBahayaPhotosPreview() {
   fileInput.dataset.base64 = JSON.stringify(selectedBahayaPhotos);
 }
 
+function compressImage(base64Str, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+      resolve(compressedBase64);
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+}
+
 function previewFotoBahaya(event) {
   const files = Array.from(event.target.files || []);
   if (files.length === 0) return;
@@ -866,8 +902,11 @@ function previewFotoBahaya(event) {
     });
   });
 
-  Promise.all(base64Promises).then(base64Array => {
-    selectedBahayaPhotos = selectedBahayaPhotos.concat(base64Array);
+  Promise.all(base64Promises).then(async base64Array => {
+    const compressedPromises = base64Array.map(base64 => compressImage(base64));
+    const compressedArray = await Promise.all(compressedPromises);
+
+    selectedBahayaPhotos = selectedBahayaPhotos.concat(compressedArray);
     renderBahayaPhotosPreview();
     saveDraft();
     event.target.value = "";

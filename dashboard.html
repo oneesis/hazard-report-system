@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -84,6 +85,22 @@
       <div class="kpi-card closed">
         <div class="kpi-title">CLOSED</div>
         <div id="kpiClosed" class="kpi-value">0</div>
+      </div>
+    </section>
+
+    <!-- CHARTS SECTION -->
+    <section class="charts-section" id="dashboardChartsSection">
+      <div class="chart-card">
+        <h3 class="chart-title">Distribusi Status Laporan</h3>
+        <div class="chart-container">
+          <canvas id="chartStatus"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">Temuan Bahaya Berdasarkan Lokasi (Top 5)</h3>
+        <div class="chart-container">
+          <canvas id="chartLokasi"></canvas>
+        </div>
       </div>
     </section>
 

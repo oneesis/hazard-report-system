@@ -1,4 +1,4 @@
-const CACHE_NAME = "onesap-cache-v9";
+const CACHE_NAME = "onesap-cache-v12";
 const ASSETS_TO_CACHE = [
   "./",
   "./index-home.html",
@@ -23,7 +23,9 @@ const ASSETS_TO_CACHE = [
   "./assets/Logo EBL.png",
   "./assets/Logo Hasnur.png",
   "./assets/Nilai Inti - Indonesia.png",
-  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+  "https://cdn.jsdelivr.net/npm/chart.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"
 ];
 
 // Install Event

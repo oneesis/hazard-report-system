@@ -1,3 +1,27 @@
+let deferredPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const installBtn = document.getElementById("btnInstallPwa");
+  if (installBtn) {
+    installBtn.style.display = "flex";
+  }
+});
+
+function installPwaApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === "accepted") {
+      console.log("User accepted the install prompt");
+    }
+    deferredPrompt = null;
+    const installBtn = document.getElementById("btnInstallPwa");
+    if (installBtn) installBtn.style.display = "none";
+  });
+}
+
 function saveUserSession(user){localStorage.setItem("hazard_user",JSON.stringify(user));}
 function getCurrentUser(){const d=localStorage.getItem("hazard_user");return d?JSON.parse(d):null;}
 function requireLogin(){if(!getCurrentUser()) window.location.href="login.html";}
@@ -29,6 +53,8 @@ function renderUserProfile() {
   const userRole = escapeHTML(String(user.role || "USER").toUpperCase());
   const userInitials = escapeHTML(getUserInitials(user.nama));
 
+  const installStyle = deferredPrompt ? "display: flex;" : "display: none;";
+
   container.innerHTML = `
     <button class="user-menu-button" type="button" onclick="toggleUserMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="userMenuDropdown">
       <span class="user-avatar" aria-hidden="true">${userInitials}</span>
@@ -43,6 +69,11 @@ function renderUserProfile() {
       <div class="user-company">${userCompany}</div>
 
       <div class="user-divider"></div>
+
+      <button id="btnInstallPwa" class="btn-install-pwa" type="button" onclick="installPwaApp()" role="menuitem" style="${installStyle}">
+        <i class="fa-solid fa-download" aria-hidden="true"></i>
+        <span>Instal Aplikasi</span>
+      </button>
 
       <button class="btn-logout" type="button" onclick="logout()" role="menuitem">
         <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
@@ -88,7 +119,20 @@ document.addEventListener("keydown", function (e) {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js")
-      .then((reg) => console.log("Service Worker registered successfully:", reg.scope))
+      .then((reg) => {
+        console.log("Service Worker registered successfully:", reg.scope);
+        // Force update check on load to detect new version immediately
+        reg.update();
+      })
       .catch((err) => console.warn("Service Worker registration failed:", err));
+  });
+
+  // Reload page when new service worker takes control (via skipWaiting)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 }

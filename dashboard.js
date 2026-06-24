@@ -4,6 +4,8 @@ let filteredReports = [];
 let currentReport = null;
 let selectedAfterPhotoBase64List = [];
 let selectedStatus = "OPEN";
+let statusChartInstance = null;
+let lokasiChartInstance = null;
 
 // ========================================
 // INITIALIZE
@@ -304,6 +306,7 @@ function renderTable() {
         </td>
       </tr>
     `;
+    renderDashboardCharts([]);
     return;
   }
 
@@ -343,6 +346,154 @@ function renderTable() {
       `;
     })
     .join("");
+  renderDashboardCharts(filtered);
+}
+
+function renderDashboardCharts(reportsList) {
+  if (typeof Chart === "undefined") {
+    console.warn("Chart.js is not loaded yet.");
+    return;
+  }
+
+  // 1. Process Status Data
+  let statusCounts = { OPEN: 0, PROGRESS: 0, CLOSED: 0 };
+  reportsList.forEach(r => {
+    const status = r.status_perbaikan || "OPEN";
+    if (statusCounts[status] !== undefined) {
+      statusCounts[status]++;
+    }
+  });
+
+  // 2. Process Location Data
+  let locationCounts = {};
+  reportsList.forEach(r => {
+    const loc = getDashboardLocation(r) || "Tidak Diketahui";
+    const normalizedLoc = loc.trim();
+    locationCounts[normalizedLoc] = (locationCounts[normalizedLoc] || 0) + 1;
+  });
+
+  let sortedLocations = Object.entries(locationCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  let locationLabels = sortedLocations.map(item => item[0]);
+  let locationData = sortedLocations.map(item => item[1]);
+
+  if (locationLabels.length === 0) {
+    locationLabels = ["Tidak Ada Data"];
+    locationData = [0];
+  }
+
+  // --- Render Status Chart (Doughnut) ---
+  const ctxStatus = document.getElementById("chartStatus")?.getContext("2d");
+  if (ctxStatus) {
+    if (statusChartInstance) {
+      statusChartInstance.destroy();
+    }
+
+    statusChartInstance = new Chart(ctxStatus, {
+      type: "doughnut",
+      data: {
+        labels: ["OPEN", "PROGRESS", "CLOSED"],
+        datasets: [{
+          data: [statusCounts.OPEN, statusCounts.PROGRESS, statusCounts.CLOSED],
+          backgroundColor: ["#dc2626", "#d97706", "#16a34a"],
+          borderWidth: 1,
+          borderColor: "#ffffff"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              font: {
+                family: "Inter, system-ui, sans-serif",
+                weight: "bold",
+                size: 11
+              },
+              color: "#475569"
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const value = context.raw;
+                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                return ` ${context.label}: ${value} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        cutout: "70%"
+      }
+    });
+  }
+
+  // --- Render Location Chart (Horizontal Bar) ---
+  const ctxLokasi = document.getElementById("chartLokasi")?.getContext("2d");
+  if (ctxLokasi) {
+    if (lokasiChartInstance) {
+      lokasiChartInstance.destroy();
+    }
+
+    lokasiChartInstance = new Chart(ctxLokasi, {
+      type: "bar",
+      data: {
+        labels: locationLabels,
+        datasets: [{
+          label: "Jumlah Temuan",
+          data: locationData,
+          backgroundColor: "rgba(37, 99, 235, 0.8)",
+          hoverBackgroundColor: "#2563eb",
+          borderRadius: 8,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: "y",
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+              color: "#64748b",
+              font: {
+                family: "Inter, system-ui, sans-serif",
+                size: 10
+              }
+            },
+            grid: {
+              color: "#f1f5f9"
+            }
+          },
+          y: {
+            ticks: {
+              color: "#475569",
+              font: {
+                family: "Inter, system-ui, sans-serif",
+                weight: "bold",
+                size: 10
+              }
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 // ========================================
@@ -945,6 +1096,42 @@ function renderAfterPhotosPreview() {
   container.appendChild(addCard);
 }
 
+function compressImage(base64Str, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+      resolve(compressedBase64);
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+}
+
 function handleAfterPhotoChange(event) {
   const files = Array.from(event.target.files || []);
   if (files.length === 0) return;
@@ -966,8 +1153,11 @@ function handleAfterPhotoChange(event) {
     });
   });
 
-  Promise.all(base64Promises).then(base64Array => {
-    selectedAfterPhotoBase64List = selectedAfterPhotoBase64List.concat(base64Array);
+  Promise.all(base64Promises).then(async base64Array => {
+    const compressedPromises = base64Array.map(base64 => compressImage(base64));
+    const compressedArray = await Promise.all(compressedPromises);
+
+    selectedAfterPhotoBase64List = selectedAfterPhotoBase64List.concat(compressedArray);
     renderAfterPhotosPreview();
     event.target.value = "";
   });

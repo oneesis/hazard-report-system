@@ -3,6 +3,93 @@ document.addEventListener("DOMContentLoaded", initHomePage);
 async function initHomePage() {
   initNotificationBell();
 
+  // Trigger GSAP entrance animations synchronously and instantly to avoid element hiding during network delays
+  if (typeof gsap !== "undefined") {
+    try {
+      // Temporarily disable CSS transitions during animation setup to avoid conflicts
+      const animatedSelectors = [".hero-top", ".logos .logo", "h1", ".hero > p", ".actions .btn", ".feature-card", ".card"];
+      animatedSelectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => el.classList.add("no-transition"));
+      });
+
+      gsap.from(".hero-top", { 
+        opacity: 0, 
+        y: -20, 
+        duration: 0.8, 
+        ease: "power2.out", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll(".hero-top").forEach(el => el.classList.remove("no-transition"))
+      });
+      
+      gsap.from(".logos .logo", { 
+        opacity: 0, 
+        scale: 0.9, 
+        duration: 0.8, 
+        delay: 0.2, 
+        stagger: 0.15, 
+        ease: "back.out(1.7)", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll(".logos .logo").forEach(el => el.classList.remove("no-transition"))
+      });
+      
+      gsap.from("h1", { 
+        opacity: 0, 
+        y: 20, 
+        duration: 0.8, 
+        delay: 0.3, 
+        ease: "power3.out", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll("h1").forEach(el => el.classList.remove("no-transition"))
+      });
+      
+      gsap.from(".hero > p", { 
+        opacity: 0, 
+        y: 15, 
+        duration: 0.8, 
+        delay: 0.4, 
+        ease: "power3.out", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll(".hero > p").forEach(el => el.classList.remove("no-transition"))
+      });
+      
+      gsap.from(".actions .btn", { 
+        opacity: 0, 
+        y: 20, 
+        duration: 0.6, 
+        delay: 0.5, 
+        stagger: 0.1, 
+        ease: "back.out(1.2)", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll(".actions .btn").forEach(el => el.classList.remove("no-transition"))
+      });
+      
+      gsap.from(".feature-card", { 
+        opacity: 0, 
+        y: 30, 
+        duration: 0.8, 
+        delay: 0.7, 
+        stagger: 0.15, 
+        ease: "power2.out", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll(".feature-card").forEach(el => el.classList.remove("no-transition"))
+      });
+      
+      gsap.from(".card", { 
+        opacity: 0, 
+        y: 30, 
+        duration: 0.8, 
+        delay: 0.9, 
+        ease: "power2.out", 
+        clearProps: "all",
+        onComplete: () => document.querySelectorAll(".card").forEach(el => el.classList.remove("no-transition"))
+      });
+    } catch (e) {
+      console.warn("GSAP animation error, falling back to static layout:", e);
+      // Clean up classes if error occurs
+      document.querySelectorAll(".no-transition").forEach(el => el.classList.remove("no-transition"));
+    }
+  }
+
   try {
     const reports = await refreshNotifications();
     updateHomeKpis(reports);
@@ -14,26 +101,6 @@ async function initHomePage() {
       list.innerHTML = "<li>Gagal memuat data.</li>";
     }
   }
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") return;
-    refreshNotifications()
-      .then(reports => {
-        updateHomeKpis(reports);
-        updateHighRiskList(reports);
-      })
-      .catch(console.error);
-  });
-
-  setInterval(() => {
-    if (document.visibilityState !== "visible") return;
-    refreshNotifications()
-      .then(reports => {
-        updateHomeKpis(reports);
-        updateHighRiskList(reports);
-      })
-      .catch(console.error);
-  }, 120000);
 }
 
 function updateHomeKpis(reports) {
