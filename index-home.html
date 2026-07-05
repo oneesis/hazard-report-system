@@ -3,19 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hazard Report ONE-SAP</title>
+<title>Beranda - ONE-SAP</title>
 <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="layout.css">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-<div class="container">
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <!-- Mobile topbar -->
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Beranda</span>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <div class="container">
 <header class="hero">
     <div class="hero-top">
       <div id="notificationBell"></div>
-      <div id="userProfile" class="user-menu"></div>
     </div>
 
   <!-- LOGO -->
@@ -60,25 +72,31 @@
 </header>
 
 <footer class="footer">Developed by Andre Anantama Irawan &copy; 2026</footer>
-</div>
-<nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
-  <a href="index-home.html" class="mobile-bottom-link active" aria-current="page">
-    <span class="mobile-bottom-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/></svg>
-    </span>
-    <span>Home</span>
-  </a>
-  <a href="index.html" class="mobile-bottom-action" aria-label="Buat laporan">
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
-  </a>
-  <a href="dashboard.html" class="mobile-bottom-link">
-    <span class="mobile-bottom-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10H5V9zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v14h-4V5zm5 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h-4v-7z"/></svg>
-    </span>
-    <span>Dashboard</span>
-  </a>
-</nav>
+</div><!-- end .container -->
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
+      <a href="index-home.html" class="mobile-bottom-link active" aria-current="page">
+        <i class="fa-solid fa-house"></i>
+        <span>Beranda</span>
+      </a>
+      <a href="index.html" class="mobile-bottom-link">
+        <div class="mobile-bottom-action-icon"><i class="fa-solid fa-plus"></i></div>
+        <span style="color:#00205B;margin-top:2px">Lapor</span>
+      </a>
+      <a href="dashboard.html" class="mobile-bottom-link">
+        <i class="fa-solid fa-chart-simple"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="mobile-bottom-link" onclick="event.preventDefault();toggleUserMenu()">
+        <i class="fa-solid fa-user"></i>
+        <span>Profil</span>
+      </a>
+    </nav>
+  </div><!-- end .app-main -->
+</div><!-- end .app-layout -->
 <script src="auth.js"></script>
+<script src="layout.js"></script>
 <script src="reports-utils.js"></script>
 <script src="notifications.js"></script>
 <script src="offline-sync.js"></script>
