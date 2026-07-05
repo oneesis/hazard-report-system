@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
+const https = require('https');
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const FOLDER_HAZARD_ID = process.env.FOLDER_HAZARD_ID;
@@ -204,6 +205,22 @@ function mapInspectionValue(header, data) {
   return '';
 }
 
+async function sendWaNotification(target, message) {
+  const token = process.env.FONNTE_TOKEN;
+  if (!token || !target) return;
+  const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
+  const payload = JSON.stringify({ target: phone, message });
+  return new Promise(resolve => {
+    const req = https.request({
+      hostname: 'api.fonnte.com', path: '/send', method: 'POST',
+      headers: { 'Authorization': token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+    }, res => { res.resume(); resolve(); });
+    req.on('error', () => resolve());
+    req.write(payload);
+    req.end();
+  });
+}
+
 async function submitHazardReport(sheets, drive, data) {
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
@@ -225,6 +242,17 @@ async function submitHazardReport(sheets, drive, data) {
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] }
   });
+
+  if (data.no_whatsapp_pic && data.nama_pic) {
+    const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan hazard baru.\n\n` +
+      `📋 *${id}*\n` +
+      `📍 Lokasi: ${data.lokasi_bahaya}${data.detail_lokasi_bahaya ? ' - ' + data.detail_lokasi_bahaya : ''}\n` +
+      `⚠️ Temuan: ${data.jenis_bahaya}\n` +
+      `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
+      `Silakan buka aplikasi untuk melihat detail laporan.`;
+    sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
+  }
+
   return { status: 'success', message: 'Hazard Report berhasil disimpan.', id };
 }
 
