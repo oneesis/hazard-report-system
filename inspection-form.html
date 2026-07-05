@@ -21,7 +21,6 @@
         Kembali
       </a>
       <div class="header-actions">
-        <div id="notificationBell"></div>
         <div id="userProfile" class="user-menu"></div>
       </div>
     </div>
@@ -35,7 +34,7 @@
     <p class="main-subtitle" id="inspectionDescription">Memuat jenis inspeksi...</p>
 
 
-    <div id="alertError" class="alert-error" style="display:none;">Semua field yang bertanda (*) wajib diisi.</div>
+    <div id="alertError" class="alert-error" style="display:none;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Masih ada field yang belum diisi. Lihat highlight merah di bawah.</div>
     <div id="autoSaveIndicator" class="auto-save-indicator">Draft tersimpan</div>
 
     <div class="step-indicator" id="inspectionStepIndicator">
@@ -75,6 +74,7 @@
         </div>
       </div>
     </div>
+    <div id="inspectionStepSummary" class="step-summary"></div>
 
     <form id="inspectionForm">
 <div class="form-step active" id="step1">

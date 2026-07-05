@@ -48,19 +48,31 @@
         <!-- LEFT: main -->
         <div class="home-main">
 
-          <!-- HAZARD REPORT BANNER -->
-          <a href="index.html" class="hazard-banner">
-            <div class="hazard-banner-icon">
-              <i class="fa-solid fa-triangle-exclamation"></i>
+          <!-- HAZARD REPORT PANEL -->
+          <div class="hazard-panel">
+            <div class="hazard-panel-head">
+              <div class="hazard-panel-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <div class="hazard-panel-info">
+                <h2 class="hazard-panel-title">Hazard Report</h2>
+                <p class="hazard-panel-sub">Laporkan potensi bahaya di area kerja.</p>
+              </div>
+              <a href="index.html" class="hazard-panel-btn">
+                <i class="fa-solid fa-plus"></i> Buat Laporan
+              </a>
             </div>
-            <div class="hazard-banner-body">
-              <h2>Hazard Report</h2>
-              <p>Laporkan potensi bahaya di area kerja segera.</p>
+
+            <!-- Draft hazard (dari localStorage) -->
+            <div id="hazardDraftSection" style="display:none">
+              <div class="hazard-draft-label"><i class="fa-solid fa-pen-to-square"></i> Draft Tersimpan</div>
+              <div id="hazardDraftCard"></div>
             </div>
-            <div class="hazard-banner-arrow">
-              <i class="fa-solid fa-chevron-right"></i>
+
+            <!-- Riwayat hazard saya -->
+            <div class="hazard-panel-history">
+              <div class="hazard-history-label">Riwayat Laporan Saya</div>
+              <div id="hazardHistoryList"><p class="reports-loading" style="font-size:.8rem;padding:8px 0">Memuat...</p></div>
             </div>
-          </a>
+          </div>
 
           <!-- INSPEKSI SECTION -->
           <div class="home-section">

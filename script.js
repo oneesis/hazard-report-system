@@ -442,6 +442,7 @@ const AUTOSAVE_DELAY = 2000;
 function saveDraft() {
   const data = getFormData();
   data._currentStep = currentStep;
+  data._savedAt = new Date().toISOString();
   localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
   showAutoSaveIndicator();
 }
