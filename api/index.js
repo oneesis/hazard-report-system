@@ -256,6 +256,13 @@ async function submitHazardReport(sheets, drive, data) {
   return { status: 'success', message: 'Hazard Report berhasil disimpan.', id };
 }
 
+const INSPECTION_NAMES = {
+  INS_CB: 'Inspeksi Conveyor Belt', INS_JA: 'Inspeksi Jalan Angkut',
+  INS_MD: 'Inspeksi Mess dan Dapur', INS_KG: 'Inspeksi Kantor dan Gudang',
+  INS_SP: 'Inspeksi Settling Pond', INS_T: 'Inspeksi Tambang',
+  INS_TB: 'Inspeksi Tangki BBM', INS_WS: 'Inspeksi Workshop'
+};
+
 async function submitInspectionReport(sheets, drive, data) {
   const sheetName = String(data.inspection_code || data.jenis_inspeksi || '').trim().toUpperCase();
   if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Jenis inspeksi tidak valid: ' + sheetName);
@@ -277,9 +284,10 @@ async function submitInspectionReport(sheets, drive, data) {
   });
 
   if (data.no_whatsapp_pic && data.nama_pic) {
+    const namaInspeksi = INSPECTION_NAMES[sheetName] || sheetName;
     const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan inspeksi baru.\n\n` +
       `📋 *${id}*\n` +
-      `🔍 Jenis: ${data.jenis_inspeksi}\n` +
+      `🔍 Jenis: ${namaInspeksi}\n` +
       `📍 Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
       `Silakan buka aplikasi untuk melihat detail laporan.`;
