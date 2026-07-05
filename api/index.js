@@ -214,12 +214,8 @@ async function sendWaNotification(target, message) {
     const req = https.request({
       hostname: 'api.fonnte.com', path: '/send', method: 'POST',
       headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
-    }, res => {
-      let body = '';
-      res.on('data', d => body += d);
-      res.on('end', () => { console.log('[Fonnte]', res.statusCode, body); resolve(); });
-    });
-    req.on('error', e => { console.error('[Fonnte error]', e.message); resolve(); });
+    }, res => { res.resume(); resolve(); });
+    req.on('error', () => resolve());
     req.write(payload);
     req.end();
   });
@@ -347,25 +343,6 @@ module.exports = async (req, res) => {
           } else {
             result = await getSheetData(sheets, 'Master_Temuan');
           }
-          break;
-        }
-        case 'testFonnte': {
-          const token = process.env.FONNTE_TOKEN;
-          if (!token) { result = { status: 'error', message: 'FONNTE_TOKEN tidak ada di env' }; break; }
-          const testResult = await new Promise(resolve => {
-            const payload = new URLSearchParams({ target: '6289692045980', message: 'Test dari debug endpoint' }).toString();
-            const req = https.request({
-              hostname: 'api.fonnte.com', path: '/send', method: 'POST',
-              headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
-            }, res => {
-              let body = '';
-              res.on('data', d => body += d);
-              res.on('end', () => resolve({ statusCode: res.statusCode, body, tokenLength: token.length }));
-            });
-            req.on('error', e => resolve({ error: e.message }));
-            req.write(payload); req.end();
-          });
-          result = { status: 'success', fonnte: testResult };
           break;
         }
         case 'login':               result = await login(sheets, nik, password); break;
