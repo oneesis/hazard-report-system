@@ -275,6 +275,17 @@ async function submitInspectionReport(sheets, drive, data) {
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] }
   });
+
+  if (data.no_whatsapp_pic && data.nama_pic) {
+    const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan inspeksi baru.\n\n` +
+      `📋 *${id}*\n` +
+      `🔍 Jenis: ${data.jenis_inspeksi}\n` +
+      `📍 Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}\n` +
+      `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
+      `Silakan buka aplikasi untuk melihat detail laporan.`;
+    sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
+  }
+
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id };
 }
 
