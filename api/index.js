@@ -321,6 +321,19 @@ module.exports = async (req, res) => {
         case 'getHazardReports':    result = await getHazardReports(sheets); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets); break;
         case 'getAllReports':        result = await getAllReports(sheets, nik, nama, role); break;
+        case 'debug': {
+          let saEmail = 'PARSE_ERROR', saProject = 'PARSE_ERROR';
+          try { const c = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON); saEmail = c.client_email; saProject = c.project_id; } catch {}
+          result = {
+            status: 'ok',
+            spreadsheet_id: SPREADSHEET_ID ? SPREADSHEET_ID.slice(0,6)+'...' : 'NOT_SET',
+            folder_hazard: FOLDER_HAZARD_ID ? FOLDER_HAZARD_ID.slice(0,6)+'...' : 'NOT_SET',
+            has_sa_json: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+            sa_email: saEmail,
+            sa_project: saProject
+          };
+          break;
+        }
         default: result = { status: 'success', message: 'HAZARD REPORT ONE-SAP API is running' };
       }
       return res.status(200).json(result);
