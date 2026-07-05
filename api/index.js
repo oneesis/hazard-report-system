@@ -209,13 +209,17 @@ async function sendWaNotification(target, message) {
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
-  const payload = JSON.stringify({ target: phone, message });
+  const payload = new URLSearchParams({ target: phone, message }).toString();
   return new Promise(resolve => {
     const req = https.request({
       hostname: 'api.fonnte.com', path: '/send', method: 'POST',
-      headers: { 'Authorization': token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-    }, res => { res.resume(); resolve(); });
-    req.on('error', () => resolve());
+      headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
+    }, res => {
+      let body = '';
+      res.on('data', d => body += d);
+      res.on('end', () => { console.log('[Fonnte]', res.statusCode, body); resolve(); });
+    });
+    req.on('error', e => { console.error('[Fonnte error]', e.message); resolve(); });
     req.write(payload);
     req.end();
   });
