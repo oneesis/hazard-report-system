@@ -2047,48 +2047,7 @@ textarea {
   .btn-logout { font-size: 10px; padding: 8px 10px; }
 }
 
-/* Di dalam app-topbar: cukup tampilkan avatar saja, tanpa teks dan lebar besar */
-.app-topbar .user-menu-button {
-  width: auto;
-  background: none;
-  box-shadow: none;
-  padding: 2px;
-  border: none;
-  border-radius: 50%;
-  gap: 0;
-}
-.app-topbar .user-menu-label,
-.app-topbar .user-menu-chevron { display: none; }
-.app-topbar .user-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  font-size: 12px;
-}
-.app-topbar .user-menu-dropdown {
-  width: 190px;
-  right: 0;
-  top: calc(100% + 10px);
-  text-align: left;
-  padding: 10px;
-}
-.app-topbar .user-menu-dropdown .btn-change-password,
-.app-topbar .user-menu-dropdown .btn-logout,
-.app-topbar .user-menu-dropdown .btn-install-pwa {
-  width: 100%;
-  border-radius: 8px;
-  font-size: .82rem;
-  padding: 8px 10px;
-  text-align: left;
-  justify-content: flex-start;
-}
-.app-topbar .user-menu-dropdown .btn-logout {
-  background: none;
-  color: #ef4444;
-  border: none;
-  margin-top: 2px;
-}
-.app-topbar .user-menu-dropdown .btn-logout:hover { background: #fee2e2; }
+/* app-topbar user-menu styles moved to layout.css (universal) */
 
 /* ========================================
    UI/UX REFINEMENT - FORM REPORT
