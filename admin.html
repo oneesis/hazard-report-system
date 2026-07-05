@@ -18,15 +18,14 @@
   <aside id="appSidebar" class="app-sidebar"></aside>
   <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-  <main class="app-main admin-main">
+  <div class="app-main admin-main">
 
-    <header class="admin-topbar">
-      <button class="app-topbar-toggle sidebar-toggle" onclick="toggleSidebar()">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-      <h1 class="admin-page-title" id="adminPageTitle">Manajemen User</h1>
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Manajemen User</span>
+      <div id="notificationBell"></div>
       <div id="userProfile" class="user-menu"></div>
-    </header>
+    </div>
 
     <!-- Sub-nav tabs -->
     <div class="admin-subnav" id="adminSubnav">
@@ -114,11 +113,15 @@
     <!-- hidden file input for CSV import -->
     <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvFile(this)">
 
-  </main>
+    <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
+
+  </div>
 </div>
 
 <script src="auth.js"></script>
 <script src="layout.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
 <script src="user-management.js"></script>
 <script>
   requireLogin();
@@ -149,7 +152,7 @@
       sectionHistory: 'Riwayat Pengajuan',
       sectionPending: 'Pending Approval',
     };
-    document.getElementById('adminPageTitle').textContent = titles[sectionId] || '';
+    document.getElementById('appTopbarTitle').textContent = titles[sectionId] || '';
     if (sectionId === 'sectionPending') loadPendingChanges();
     if (sectionId === 'sectionHistory') loadMyHistory();
   }

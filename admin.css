@@ -103,25 +103,6 @@
   flex-direction: column;
 }
 
-.admin-topbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.admin-page-title {
-  flex: 1;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
 .sidebar-toggle {
   background: none;
   border: none;
