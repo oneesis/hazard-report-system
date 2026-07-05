@@ -122,7 +122,7 @@ async function login(sheets, nik, password) {
   const data = await getSheetData(sheets, 'Master_Karyawan');
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
   // Pesan error disamakan agar tidak membocorkan NIK mana yang terdaftar
-  if (!user || !verifyPassword(password, user['PASSWORD']))
+  if (!user || String(user['ROLE'] || '').toUpperCase() === 'DELETED' || !verifyPassword(password, user['PASSWORD']))
     return { status: 'error', message: 'NIK atau password salah.' };
   return {
     status: 'success',
@@ -171,10 +171,145 @@ async function changePassword(sheets, nik, oldPassword, newPassword) {
 
 function issueToken(user) {
   return jwt.sign(
-    { nik: user.nik, nama: user.nama, role: user.role },
+    { nik: user.nik, nama: user.nama, role: user.role, perusahaan: user.perusahaan },
     JWT_SECRET,
     { expiresIn: TOKEN_TTL }
   );
+}
+
+function isSuperAdmin(role) { return String(role || '').toUpperCase() === 'SUPER_ADMIN'; }
+function isAdminOrAbove(role) { const r = String(role || '').toUpperCase(); return r === 'ADMIN' || r === 'SUPER_ADMIN'; }
+
+const KARYAWAN_HEADERS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','ROLE','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
+const PENDING_HEADERS  = ['ID','TIMESTAMP','ACTION','PROPOSED_BY_NIK','PROPOSED_BY_NAMA','PERUSAHAAN','TARGET_NIK','DATA','STATUS','REVIEWED_BY','REVIEWED_AT','REJECTION_REASON'];
+
+async function ensurePendingHeaders(sheets) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Pending_Changes!1:1' });
+  if (!(res.data.values?.[0]?.length)) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID, range: 'Pending_Changes!A1',
+      valueInputOption: 'RAW', requestBody: { values: [PENDING_HEADERS] }
+    });
+  }
+}
+
+async function getKaryawan(sheets, auth) {
+  if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+  const rows = await getSheetData(sheets, 'Master_Karyawan');
+  const visible = isSuperAdmin(auth.role) ? rows
+    : rows.filter(r => String(r['PERUSAHAAN'] || '').trim().toUpperCase() === String(auth.perusahaan || '').trim().toUpperCase());
+  return { status: 'success', data: stripSensitiveKaryawan(visible) };
+}
+
+async function proposeChange(sheets, auth, action, data) {
+  if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+  await ensurePendingHeaders(sheets);
+  const id = 'PC-' + Date.now();
+  const row = [
+    id, new Date().toISOString(), action.toUpperCase(),
+    auth.nik, auth.nama, auth.perusahaan || '',
+    data.NIK || '', JSON.stringify(data), 'PENDING', '', '', ''
+  ];
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID, range: 'Pending_Changes',
+    valueInputOption: 'USER_ENTERED', requestBody: { values: [row] }
+  });
+  // WA ke semua SUPER_ADMIN
+  const karyawan = await getSheetData(sheets, 'Master_Karyawan');
+  karyawan.filter(r => isSuperAdmin(r['ROLE'])).forEach(sa => {
+    if (sa['NO WHATSAPP']) {
+      const msg = `Halo ${sa['NAMA']}, ada permohonan *${action.toUpperCase()}* data karyawan dari *${auth.nama}* (${auth.perusahaan}).\n\n👤 User: ${data.NAMA || data.NIK || '-'}\n\nSilakan buka dashboard untuk review dan approval.`;
+      sendWaNotification(sa['NO WHATSAPP'], msg).catch(() => {});
+    }
+  });
+  return { status: 'success', message: 'Permohonan dikirim, menunggu persetujuan SUPER ADMIN.', id };
+}
+
+async function getPendingChanges(sheets, auth) {
+  if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+  await ensurePendingHeaders(sheets);
+  const data = await getSheetData(sheets, 'Pending_Changes');
+  const result = isSuperAdmin(auth.role) ? data
+    : data.filter(r => String(r['PROPOSED_BY_NIK'] || '') === String(auth.nik || ''));
+  return { status: 'success', data: result };
+}
+
+async function applyUserChange(sheets, action, data) {
+  if (action === 'ADD') {
+    if (data.PASSWORD && !/^\$2[aby]\$/.test(data.PASSWORD))
+      data.PASSWORD = bcrypt.hashSync(data.PASSWORD, 10);
+    const row = KARYAWAN_HEADERS.map(h => data[h] ?? '');
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan',
+      valueInputOption: 'USER_ENTERED', requestBody: { values: [row] }
+    });
+  } else if (action === 'EDIT' || action === 'DELETE') {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
+    const rows = res.data.values || [];
+    const headers = rows[0].map(h => String(h).trim().toUpperCase());
+    const nikCol = headers.indexOf('NIK');
+    const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(data.NIK || '').trim());
+    if (rowIdx === -1) throw new Error('User tidak ditemukan.');
+    if (action === 'DELETE') {
+      // Tandai ROLE=DELETED, login akan otomatis gagal
+      const roleCol = headers.indexOf('ROLE');
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID, range: `Master_Karyawan!${colIndexToLetter(roleCol)}${rowIdx + 1}`,
+        valueInputOption: 'RAW', requestBody: { values: [['DELETED']] }
+      });
+    } else {
+      const updates = Object.entries(data)
+        .filter(([k]) => k.toUpperCase() !== 'PASSWORD')
+        .map(([k, v]) => ({ col: headers.indexOf(k.toUpperCase()), val: v }))
+        .filter(({ col }) => col !== -1)
+        .map(({ col, val }) => ({ range: `Master_Karyawan!${colIndexToLetter(col)}${rowIdx + 1}`, values: [[val]] }));
+      if (updates.length)
+        await sheets.spreadsheets.values.batchUpdate({
+          spreadsheetId: SPREADSHEET_ID,
+          requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
+        });
+    }
+  }
+}
+
+async function reviewChange(sheets, auth, changeId, decision, reason) {
+  if (!isSuperAdmin(auth.role)) throw Object.assign(new Error('Hanya SUPER ADMIN yang bisa menyetujui.'), { httpStatus: 403 });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Pending_Changes' });
+  const rows = res.data.values || [];
+  if (rows.length < 2) throw new Error('Tidak ada data pending.');
+  const headers = rows[0].map(h => String(h).trim().toUpperCase());
+  const col = k => headers.indexOf(k.toUpperCase());
+  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[col('ID')] || '').trim() === String(changeId).trim());
+  if (rowIdx === -1) throw new Error('Permohonan tidak ditemukan.');
+  if (String(rows[rowIdx][col('STATUS')] || '').toUpperCase() !== 'PENDING')
+    throw new Error('Permohonan sudah diproses sebelumnya.');
+
+  const action = String(rows[rowIdx][col('ACTION')] || '');
+  const data   = JSON.parse(rows[rowIdx][col('DATA')] || '{}');
+  if (decision === 'APPROVE') await applyUserChange(sheets, action, data);
+
+  const newStatus = decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: { valueInputOption: 'RAW', data: [
+      { range: `Pending_Changes!${colIndexToLetter(col('STATUS'))}${rowIdx + 1}`,         values: [[newStatus]] },
+      { range: `Pending_Changes!${colIndexToLetter(col('REVIEWED_BY'))}${rowIdx + 1}`,    values: [[auth.nik]] },
+      { range: `Pending_Changes!${colIndexToLetter(col('REVIEWED_AT'))}${rowIdx + 1}`,    values: [[new Date().toISOString()]] },
+      { range: `Pending_Changes!${colIndexToLetter(col('REJECTION_REASON'))}${rowIdx + 1}`, values: [[reason || '']] },
+    ]}
+  });
+
+  // WA ke proposer
+  const proposerNik = String(rows[rowIdx][col('PROPOSED_BY_NIK')] || '');
+  const karyawan = await getSheetData(sheets, 'Master_Karyawan');
+  const proposer = karyawan.find(r => String(r['NIK'] || '').trim() === proposerNik);
+  if (proposer?.['NO WHATSAPP']) {
+    const icon = decision === 'APPROVE' ? '✅' : '❌';
+    let msg = `Halo ${proposer['NAMA']}, permohonan perubahan data karyawan kamu *${icon} ${newStatus}*`;
+    if (decision === 'REJECT' && reason) msg += `\n\nAlasan: ${reason}`;
+    sendWaNotification(proposer['NO WHATSAPP'], msg).catch(() => {});
+  }
+  return { status: 'success', message: `Permohonan berhasil ${decision === 'APPROVE' ? 'disetujui' : 'ditolak'}.` };
 }
 
 function stripSensitiveKaryawan(rows) {
@@ -451,6 +586,8 @@ module.exports = async (req, res) => {
         case 'getInspectionReports':result = await getInspectionReports(sheets); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role); break;
+        case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
+        case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         default: throw new Error('Action tidak dikenali: ' + action);
       }
       return res.status(200).json(result);
@@ -476,6 +613,12 @@ module.exports = async (req, res) => {
       switch (action) {
         case 'changePassword':
           result = await changePassword(sheets, authUser.nik, data?.old_password, data?.new_password);
+          break;
+        case 'proposeChange':
+          result = await proposeChange(sheets, authUser, data?.action, data?.payload);
+          break;
+        case 'reviewChange':
+          result = await reviewChange(sheets, authUser, data?.change_id, data?.decision, data?.reason);
           break;
         case 'submitHazardReport':     result = await submitHazardReport(sheets, drive, data); break;
         case 'submitInspectionReport': result = await submitInspectionReport(sheets, drive, data); break;
