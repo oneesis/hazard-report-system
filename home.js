@@ -24,13 +24,10 @@ async function initHomePage() {
     const reports = await refreshNotifications();
     renderMyReports(reports);
     renderQuickStats(reports);
-    renderHazardHistory(reports);
   } catch (e) {
     console.error('Home load error', e);
     const el = document.getElementById('myReportsList');
     if (el) el.innerHTML = '<p class="reports-loading">Gagal memuat laporan.</p>';
-    const he = document.getElementById('hazardHistoryList');
-    if (he) he.innerHTML = '<p class="reports-loading" style="font-size:.8rem">Gagal memuat.</p>';
   }
 }
 
@@ -145,45 +142,6 @@ function renderHazardDraft() {
       </a>`;
     section.style.display = '';
   } catch { section.style.display = 'none'; }
-}
-
-function renderHazardHistory(reports) {
-  const el = document.getElementById('hazardHistoryList');
-  if (!el) return;
-  const user   = getCurrentUser();
-  const myNik  = String(user?.nik  || '').trim();
-  const myNama = String(user?.nama || '').trim().toLowerCase();
-
-  const mine = (reports || []).filter(r => {
-    if (getReportType(r) !== 'HAZARD') return false;
-    const rNik  = String(r.nik_pelapor || r.nik || '').trim();
-    const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
-    return (myNik && rNik === myNik) || (myNama && rNama === myNama);
-  }).sort((a, b) => new Date(b.timestamp || b.tanggal_laporan || 0) - new Date(a.timestamp || a.tanggal_laporan || 0))
-    .slice(0, 4);
-
-  if (!mine.length) {
-    el.innerHTML = '<p class="reports-loading" style="font-size:.8rem;color:#94a3b8;padding:6px 0">Belum ada laporan hazard.</p>';
-    return;
-  }
-  el.innerHTML = mine.map(r => {
-    const status   = (getReportStatus(r) || 'OPEN').toUpperCase();
-    const id       = escapeHTML(getReportId(r) || '-');
-    const desc     = escapeHTML((r.deskripsi_bahaya || r.temuan || '-').substring(0, 48));
-    const date     = r.timestamp || r.tanggal_laporan
-      ? new Date(r.timestamp || r.tanggal_laporan).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '-';
-    const dotCls   = `dot-${status.toLowerCase()}`;
-    const badgeCls = `badge-${status.toLowerCase()}`;
-    return `<div class="report-item" style="padding:8px 0;border-bottom:1px solid #f1f5f9">
-      <div class="report-item-dot ${dotCls}"></div>
-      <div class="report-item-body">
-        <div class="report-item-id">${id}</div>
-        <div class="report-item-desc">${desc}</div>
-        <div class="report-item-meta">${date}</div>
-      </div>
-      <span class="report-item-badge ${badgeCls}">${status}</span>
-    </div>`;
-  }).join('');
 }
 
 function renderQuickStats(reports) {
