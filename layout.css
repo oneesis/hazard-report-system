@@ -522,6 +522,13 @@ body:has(.app-layout) {
   height: 34px;
   border-radius: 50%;
   font-size: 12px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #003087, #307FE2);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .app-topbar .user-menu-dropdown {
   width: 190px;
