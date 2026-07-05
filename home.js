@@ -72,12 +72,13 @@ function renderMyReports(reports) {
   if (!el) return;
   const user = getCurrentUser();
 
-  // Filter: my reports only (non-admin sees own, admin sees all)
-  const myNik = user?.nik || '';
-  const isAdmin = isAdminOrAbove(user?.role);
-  const pool = isAdmin
-    ? (reports || [])
-    : (reports || []).filter(r => (r.nik_pelapor || r.nik || '').toString() === myNik.toString());
+  const myNik  = String(user?.nik  || '').trim();
+  const myNama = String(user?.nama || '').trim().toLowerCase();
+  const pool = (reports || []).filter(r => {
+    const rNik  = String(r.nik_pelapor || r.nik || '').trim();
+    const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
+    return (myNik && rNik === myNik) || (myNama && rNama === myNama);
+  });
 
   const recent = pool
     .sort((a, b) => new Date(b.tanggal_laporan || 0) - new Date(a.tanggal_laporan || 0))
@@ -152,11 +153,9 @@ function renderHazardHistory(reports) {
   const user   = getCurrentUser();
   const myNik  = String(user?.nik  || '').trim();
   const myNama = String(user?.nama || '').trim().toLowerCase();
-  const isAdmin = isAdminOrAbove(user?.role);
 
   const mine = (reports || []).filter(r => {
     if (getReportType(r) !== 'HAZARD') return false;
-    if (isAdmin) return true;
     const rNik  = String(r.nik_pelapor || r.nik || '').trim();
     const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
     return (myNik && rNik === myNik) || (myNama && rNama === myNama);
@@ -188,12 +187,14 @@ function renderHazardHistory(reports) {
 }
 
 function renderQuickStats(reports) {
-  const user    = getCurrentUser();
-  const myNik   = user?.nik || '';
-  const isAdmin = isAdminOrAbove(user?.role);
-  const pool    = isAdmin
-    ? (reports || [])
-    : (reports || []).filter(r => (r.nik_pelapor || r.nik || '').toString() === myNik.toString());
+  const user   = getCurrentUser();
+  const myNik  = String(user?.nik  || '').trim();
+  const myNama = String(user?.nama || '').trim().toLowerCase();
+  const pool   = (reports || []).filter(r => {
+    const rNik  = String(r.nik_pelapor || r.nik || '').trim();
+    const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
+    return (myNik && rNik === myNik) || (myNama && rNama === myNama);
+  });
 
   const total   = pool.length;
   const open    = pool.filter(r => getReportStatus(r) === 'OPEN').length;
