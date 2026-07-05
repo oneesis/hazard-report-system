@@ -57,7 +57,7 @@
         <img src="assets/Logo EBL.png" alt="Logo" class="sidebar-logo">
         <div>
           <div class="sidebar-brand-name">ONE-SAP</div>
-          <div class="sidebar-brand-sub">Precision Logistics</div>
+          <div class="sidebar-brand-sub">Safety Accountability Program</div>
         </div>
       </a>
 
