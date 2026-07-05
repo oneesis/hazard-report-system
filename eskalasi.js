@@ -3,7 +3,24 @@ async function loadEskalasi() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...'; }
 
   try {
-    const all = await fetchAllReports();
+    const user = getCurrentUser();
+    let all = await fetchAllReports();
+
+    // ADMIN (bukan SUPER_ADMIN): filter by perusahaan atau sebagai PIC
+    if (!isSuperAdminRole(user?.role)) {
+      const myPerusahaan = String(user?.perusahaan || '').trim().toLowerCase();
+      const myNama = String(user?.nama || '').trim().toLowerCase();
+      const myNik  = String(user?.nik  || '').trim().toLowerCase();
+      all = all.filter(r => {
+        const rPerusahaan = String(r.perusahaan || r.company || '').trim().toLowerCase();
+        const rPic        = String(r.nama_pic || '').trim().toLowerCase();
+        const rNikPic     = String(r.nik_pic || '').trim().toLowerCase();
+        return (myPerusahaan && rPerusahaan === myPerusahaan) ||
+               (myNama && rPic === myNama) ||
+               (myNik  && rNikPic === myNik);
+      });
+    }
+
     const active = all.filter(r => r.status_perbaikan !== 'CLOSED');
 
     const overdue = [], warning = [], ok = [], nodue = [];

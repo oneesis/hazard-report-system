@@ -223,26 +223,7 @@
   .um-search { width: 100%; }
 }
 
-/* DARK MODE */
-@media (prefers-color-scheme: dark) {
-  .admin-layout { background: #0f172a; }
-  .admin-topbar { background: #1e293b; border-color: #334155; }
-  .admin-page-title { color: #f1f5f9; }
-  .admin-card { background: #1e293b; border-color: #334155; }
-  .admin-table th { background: #0f172a; border-color: #334155; }
-  .admin-table td { border-color: #334155; color: #e2e8f0; }
-  .admin-table tr:hover td { background: #334155; }
-  .um-search { background: #0f172a; border-color: #334155; color: #e2e8f0; }
-  .um-page-btn { background: #1e293b; border-color: #334155; color: #e2e8f0; }
-  .um-pending-table th { background: #0f172a; border-color: #334155; }
-  .um-pending-table td { border-color: #334155; }
-  .btn-secondary { background: #1e293b; border-color: #334155; color: #94a3b8; }
-}
-body.dark-mode .admin-layout { background: #0f172a; }
-body.dark-mode .admin-topbar { background: #1e293b; border-color: #334155; }
-body.dark-mode .admin-page-title { color: #f1f5f9; }
-body.dark-mode .admin-card { background: #1e293b; border-color: #334155; }
-body.dark-mode .admin-table th { background: #0f172a; border-color: #334155; }
-body.dark-mode .admin-table td { border-color: #334155; color: #e2e8f0; }
-body.dark-mode .admin-table tr:hover td { background: #334155; }
-body.dark-mode .um-search { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+/* App is light-mode only — no dark mode overrides */
+.admin-layout { color-scheme: light; }
+.admin-card   { color-scheme: light; }
+.admin-table td { color: #1e293b; }

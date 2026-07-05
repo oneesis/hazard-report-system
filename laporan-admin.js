@@ -9,8 +9,25 @@ document.addEventListener('DOMContentLoaded', initLaporan);
 
 async function initLaporan() {
   try {
+    const user = getCurrentUser();
     lmReports = await fetchAllReports();
-    window.__reportsCache = lmReports; // for dashboard.js modal compat
+
+    // ADMIN (bukan SUPER_ADMIN): hanya tampil laporan dari perusahaan sendiri atau jika jadi PIC
+    if (!isSuperAdminRole(user?.role)) {
+      const myPerusahaan = String(user?.perusahaan || '').trim().toLowerCase();
+      const myNama = String(user?.nama || '').trim().toLowerCase();
+      const myNik  = String(user?.nik  || '').trim().toLowerCase();
+      lmReports = lmReports.filter(r => {
+        const rPerusahaan = String(r.perusahaan || r.company || '').trim().toLowerCase();
+        const rPic        = String(r.nama_pic || r.pic || '').trim().toLowerCase();
+        const rNikPic     = String(r.nik_pic || '').trim().toLowerCase();
+        return (myPerusahaan && rPerusahaan === myPerusahaan) ||
+               (myNama && rPic === myNama) ||
+               (myNik  && rNikPic === myNik);
+      });
+    }
+
+    window.__reportsCache = lmReports;
     populateDeptFilter();
     lmRender();
     wireFilters();

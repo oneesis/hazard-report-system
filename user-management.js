@@ -13,12 +13,6 @@ async function initUserManagement() {
   if (isSuperAdminRole(user?.role)) await loadPendingChanges();
 }
 
-function isAdminOrAbove(role) {
-  const r = String(role || '').toUpperCase();
-  return r === 'ADMIN' || r === 'SUPER_ADMIN';
-}
-function isSuperAdminRole(role) { return String(role || '').toUpperCase() === 'SUPER_ADMIN'; }
-
 async function loadUsers() {
   const tbody = document.getElementById('umTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px">Memuat...</td></tr>';
@@ -63,12 +57,13 @@ function renderUMTable() {
   const canEdit = isAdminOrAbove(user?.role);
 
   if (!page.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
     renderUMPagination();
     return;
   }
 
-  tbody.innerHTML = page.map(u => `
+  window._umPageArr = page;
+  tbody.innerHTML = page.map((u, idx) => `
     <tr>
       <td>${escapeHTML(u['PERUSAHAAN'] || '')}</td>
       <td>${escapeHTML(u['NAMA'] || '')}</td>
@@ -81,8 +76,8 @@ function renderUMTable() {
       <td class="um-center">${escapeHTML(String(u['OBJ SBO'] || '0'))}</td>
       <td class="um-center">${escapeHTML(String(u['OBJ PC'] || '0'))}</td>
       ${canEdit ? `<td class="um-actions">
-        <button class="um-btn-edit" onclick='openEditUser(${JSON.stringify(u)})'>Edit</button>
-        <button class="um-btn-delete" onclick='confirmDeleteUser(${JSON.stringify(u)})'>Hapus</button>
+        <button class="um-btn-edit" onclick="openEditUser(window._umPageArr[${idx}])">Edit</button>
+        <button class="um-btn-delete" onclick="confirmDeleteUser(window._umPageArr[${idx}])">Hapus</button>
       </td>` : ''}
     </tr>`).join('');
 
