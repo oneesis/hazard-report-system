@@ -194,32 +194,29 @@ function handleOpenReportQuery() {
 function updateKPI() {
   const visibleReports = getVisibleReportsFromCache();
 
-  const openCount =
-    visibleReports.filter(
-      r => (r.status_perbaikan || "OPEN") === "OPEN"
-    ).length;
+  const openCount     = visibleReports.filter(r => (r.status_perbaikan || "OPEN") === "OPEN").length;
+  const progressCount = visibleReports.filter(r => r.status_perbaikan === "PROGRESS").length;
+  const closedCount   = visibleReports.filter(r => r.status_perbaikan === "CLOSED").length;
 
-  const progressCount =
-    visibleReports.filter(
-      r => r.status_perbaikan === "PROGRESS"
-    ).length;
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  set("kpiOpen",     openCount);
+  set("kpiProgress", progressCount);
+  set("kpiClosed",   closedCount);
+  set("kpiOverdue",  visibleReports.filter(isOverdue).length);
 
-  const closedCount =
-    visibleReports.filter(
-      r => r.status_perbaikan === "CLOSED"
-    ).length;
-
-  document.getElementById("kpiOpen").textContent =
-    openCount;
-
-  document.getElementById(
-    "kpiProgress"
-  ).textContent = progressCount;
-
-  document.getElementById("kpiClosed").textContent = closedCount;
-
-  const overdueEl = document.getElementById("kpiOverdue");
-  if (overdueEl) overdueEl.textContent = visibleReports.filter(isOverdue).length;
+  // Avg. closing days
+  const closed = visibleReports.filter(r => r.status_perbaikan === "CLOSED");
+  if (closed.length) {
+    const totalDays = closed.reduce((sum, r) => {
+      const open  = new Date(r.tanggal_laporan || r.timestamp || 0);
+      const close = new Date(r.tanggal_closing || r.closing_date || 0);
+      if (isNaN(open) || isNaN(close) || close <= open) return sum;
+      return sum + Math.round((close - open) / 86400000);
+    }, 0);
+    set("kpiAvgClose", Math.round(totalDays / closed.length));
+  } else {
+    set("kpiAvgClose", "-");
+  }
 }
 
 // ========================================
@@ -461,7 +458,7 @@ function renderDashboardCharts(reportsList) {
     });
   }
 
-  // --- Render Trend Chart (Monthly Bar) ---
+  // --- Render Trend Chart (Stacked Bar by Status) ---
   const ctxTrend = document.getElementById("chartTrend")?.getContext("2d");
   if (ctxTrend) {
     if (trendChartInstance) trendChartInstance.destroy();
@@ -470,33 +467,40 @@ function renderDashboardCharts(reportsList) {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       return { label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }), year: d.getFullYear(), month: d.getMonth() };
     });
-    const trendData = months.map(m =>
-      reportsList.filter(r => { const d = parseReportDate(r); return d && d.getFullYear() === m.year && d.getMonth() === m.month; }).length
+    const byMonth = (status) => months.map(m =>
+      reportsList.filter(r => {
+        const d = parseReportDate(r);
+        return d && d.getFullYear() === m.year && d.getMonth() === m.month &&
+               (r.status_perbaikan || "OPEN") === status;
+      }).length
     );
     trendChartInstance = new Chart(ctxTrend, {
       type: "bar",
       data: {
         labels: months.map(m => m.label),
-        datasets: [{
-          label: "Jumlah Laporan",
-          data: trendData,
-          backgroundColor: "rgba(37, 99, 235, 0.8)",
-          hoverBackgroundColor: "#2563eb",
-          borderRadius: 8,
-          borderWidth: 0
-        }]
+        datasets: [
+          { label: "OPEN",     data: byMonth("OPEN"),     backgroundColor: "rgba(220,38,38,.75)",  borderRadius: 4 },
+          { label: "PROGRESS", data: byMonth("PROGRESS"), backgroundColor: "rgba(245,158,11,.75)", borderRadius: 4 },
+          { label: "CLOSED",   data: byMonth("CLOSED"),   backgroundColor: "rgba(22,163,74,.75)",  borderRadius: 4 }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 11 }, color: "#475569" } }
+        },
         scales: {
-          y: { beginAtZero: true, ticks: { precision: 0, color: "#64748b", font: { size: 11 } }, grid: { color: "#f1f5f9" } },
-          x: { ticks: { color: "#475569", font: { weight: "bold", size: 11 } }, grid: { display: false } }
+          x: { stacked: true, ticks: { color: "#475569", font: { weight: "bold", size: 11 } }, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0, color: "#64748b", font: { size: 11 } }, grid: { color: "#f1f5f9" } }
         }
       }
     });
   }
+
+  // --- Analytics: Leaderboard + Dept Breakdown ---
+  renderLeaderboard(reportsList);
+  renderDeptBreakdown(reportsList);
 
   // --- Render Location Chart (Horizontal Bar) ---
   const ctxLokasi = document.getElementById("chartLokasi")?.getContext("2d");
@@ -1272,4 +1276,69 @@ function showToast(message, type = "success") {
   showToast._timer = setTimeout(() => {
     toast.classList.remove("show");
   }, 3000);
+}
+
+// ========================================
+// LEADERBOARD
+// ========================================
+function renderLeaderboard(reportsList) {
+  const el = document.getElementById("leaderboardList");
+  if (!el) return;
+
+  const counts = {};
+  const depts  = {};
+  reportsList.forEach(r => {
+    const name = (r.nama || r.pelapor || "").trim();
+    if (!name) return;
+    counts[name] = (counts[name] || 0) + 1;
+    if (!depts[name]) depts[name] = r.departemen || r.department || "";
+  });
+
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!sorted.length) { el.innerHTML = '<p style="color:#94a3b8;font-size:.82rem;padding:12px 0">Belum ada data</p>'; return; }
+
+  const max = sorted[0][1];
+  el.innerHTML = sorted.map(([name, count], i) => {
+    const initials = name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+    const dept     = escapeHTML(depts[name] || "");
+    const pct      = Math.round((count / max) * 100);
+    const rankCls  = i < 3 ? `rank-${i + 1}` : "";
+    return `<div class="leader-item">
+      <div class="leader-rank ${rankCls}">${i + 1}</div>
+      <div class="leader-avatar">${escapeHTML(initials)}</div>
+      <div class="leader-info">
+        <div class="leader-name">${escapeHTML(name)}</div>
+        ${dept ? `<div class="leader-dept">${dept}</div>` : ""}
+      </div>
+      <div class="leader-bar-wrap"><div class="leader-bar" style="width:${pct}%"></div></div>
+      <div class="leader-count">${count}</div>
+    </div>`;
+  }).join("");
+}
+
+// ========================================
+// DEPT BREAKDOWN
+// ========================================
+function renderDeptBreakdown(reportsList) {
+  const el = document.getElementById("deptBreakdown");
+  if (!el) return;
+
+  const counts = {};
+  reportsList.forEach(r => {
+    const dept = (r.departemen || r.department || "Lainnya").trim() || "Lainnya";
+    counts[dept] = (counts[dept] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!sorted.length) { el.innerHTML = '<p style="color:#94a3b8;font-size:.82rem;padding:12px 0">Belum ada data</p>'; return; }
+
+  const max = sorted[0][1];
+  el.innerHTML = sorted.map(([dept, count]) => {
+    const pct = Math.round((count / max) * 100);
+    return `<div class="dept-row">
+      <div class="dept-name" title="${escapeHTML(dept)}">${escapeHTML(dept)}</div>
+      <div class="dept-bar-wrap"><div class="dept-bar" style="width:${pct}%"></div></div>
+      <div class="dept-count">${count}</div>
+    </div>`;
+  }).join("");
 }

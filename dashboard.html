@@ -70,6 +70,12 @@
         <div class="kpi-title">OVERDUE</div>
         <div id="kpiOverdue" class="kpi-value">0</div>
       </div>
+
+      <div class="kpi-card avgclose">
+        <div class="kpi-title">AVG. CLOSING</div>
+        <div id="kpiAvgClose" class="kpi-value">-</div>
+        <div class="kpi-unit">hari</div>
+      </div>
     </section>
 
     <!-- CHARTS SECTION -->
@@ -90,6 +96,22 @@
         <h3 class="chart-title">Tren Laporan per Bulan (6 Bulan Terakhir)</h3>
         <div class="chart-container">
           <canvas id="chartTrend"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS ROW: Leaderboard + Dept Breakdown -->
+    <section class="analytics-row">
+      <div class="chart-card analytics-card">
+        <h3 class="chart-title"><i class="fa-solid fa-trophy" style="color:#F2A900"></i> Top Pelapor</h3>
+        <div id="leaderboardList" class="leaderboard-list">
+          <p class="loading-row" style="font-size:.82rem;padding:12px 0">Memuat...</p>
+        </div>
+      </div>
+      <div class="chart-card analytics-card">
+        <h3 class="chart-title"><i class="fa-solid fa-sitemap" style="color:#307FE2"></i> Distribusi per Departemen</h3>
+        <div id="deptBreakdown" class="dept-breakdown">
+          <p class="loading-row" style="font-size:.82rem;padding:12px 0">Memuat...</p>
         </div>
       </div>
     </section>
