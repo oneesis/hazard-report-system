@@ -1,6 +1,8 @@
 {
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
-    "googleapis": "^144.0.0"
+    "bcryptjs": "^2.4.3",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.3"
   }
 }

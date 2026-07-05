@@ -34,16 +34,19 @@ if (loginForm) {
         throw new Error("Mohon lengkapi NIK dan password.");
       }
 
-      const res = await fetch(`${BASE_URL}?action=login&nik=${encodeURIComponent(
-        nik
-      )}&password=${encodeURIComponent(password)}`);
+      // Kredensial dikirim via POST body — tidak pernah muncul di URL/log
+      const res = await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", data: { nik, password } })
+      });
       const result = await res.json();
 
       if (result.status !== "success") {
         throw new Error(result.message || "Login gagal.");
       }
 
-      saveUserSession(result.user);
+      saveUserSession(result.user, result.token);
       window.location.href = "index-home.html";
     } catch (err) {
       errorMessage.textContent = err.message;

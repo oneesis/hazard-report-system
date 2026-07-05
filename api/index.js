@@ -1,6 +1,11 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
 const https = require('https');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const TOKEN_TTL = '12h'; // sesi berlaku 12 jam
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const FOLDER_HAZARD_ID = process.env.FOLDER_HAZARD_ID;
@@ -91,12 +96,34 @@ async function saveMultipleImagesToDrive(drive, base64DataField, folderId, idPre
 
 // ===== ACTIONS =====
 
+function verifyPassword(input, stored) {
+  const s = String(stored || '').trim();
+  const i = String(input || '').trim();
+  if (!s || !i) return false;
+  // Hash bcrypt diawali $2a$/$2b$/$2y$ — fallback plaintext hanya untuk masa transisi
+  // sebelum script migrasi hash-passwords.js dijalankan.
+  if (/^\$2[aby]\$/.test(s)) return bcrypt.compareSync(i, s);
+  return s === i;
+}
+
+function requireAuth(req) {
+  if (!JWT_SECRET) throw Object.assign(new Error('JWT_SECRET belum diset di environment.'), { httpStatus: 500 });
+  const header = String(req.headers['authorization'] || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!token) throw Object.assign(new Error('Tidak terautentikasi. Silakan login.'), { httpStatus: 401 });
+  try {
+    return jwt.verify(token, JWT_SECRET); // { nik, nama, role, ... }
+  } catch {
+    throw Object.assign(new Error('Sesi berakhir. Silakan login ulang.'), { httpStatus: 401 });
+  }
+}
+
 async function login(sheets, nik, password) {
   const data = await getSheetData(sheets, 'Master_Karyawan');
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
-  if (!user) return { status: 'error', message: 'NIK tidak ditemukan.' };
-  if (String(user['PASSWORD'] || '').trim() !== String(password || '').trim())
-    return { status: 'error', message: 'Password salah.' };
+  // Pesan error disamakan agar tidak membocorkan NIK mana yang terdaftar
+  if (!user || !verifyPassword(password, user['PASSWORD']))
+    return { status: 'error', message: 'NIK atau password salah.' };
   return {
     status: 'success',
     user: {
@@ -110,6 +137,25 @@ async function login(sheets, nik, password) {
       role: String(user['ROLE'] || 'USER').trim().toUpperCase()
     }
   };
+}
+
+function issueToken(user) {
+  return jwt.sign(
+    { nik: user.nik, nama: user.nama, role: user.role },
+    JWT_SECRET,
+    { expiresIn: TOKEN_TTL }
+  );
+}
+
+function stripSensitiveKaryawan(rows) {
+  // Jangan pernah kirim kolom PASSWORD ke client
+  return rows.map(r => {
+    const clean = { ...r };
+    Object.keys(clean).forEach(k => {
+      if (normalizeHeader(k) === 'password') delete clean[k];
+    });
+    return clean;
+  });
 }
 
 async function getHazardReports(sheets) {
@@ -342,10 +388,17 @@ module.exports = async (req, res) => {
     const { sheets, drive } = getClients();
 
     if (req.method === 'GET') {
-      const { action, type, nik, password, nama, role } = req.query;
+      const { action, type } = req.query;
+
+      // Health check — satu-satunya GET tanpa auth
+      if (!action) return res.status(200).json({ status: 'success', message: 'HAZARD REPORT ONE-SAP API is running' });
+
+      // Semua action GET lainnya wajib token valid
+      const auth = requireAuth(req);
+
       let result;
       switch (action) {
-        case 'masterKaryawan':       result = await getSheetData(sheets, 'Master_Karyawan'); break;
+        case 'masterKaryawan':       result = stripSensitiveKaryawan(await getSheetData(sheets, 'Master_Karyawan')); break;
         case 'masterLokasi':         result = await getSheetData(sheets, 'Master_Lokasi'); break;
         case 'masterJenisInspeksi':  result = await getSheetData(sheets, 'Jenis_Inspeksi'); break;
         case 'inspectionChecklist': {
@@ -364,11 +417,11 @@ module.exports = async (req, res) => {
           }
           break;
         }
-        case 'login':               result = await login(sheets, nik, password); break;
         case 'getHazardReports':    result = await getHazardReports(sheets); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets); break;
-        case 'getAllReports':        result = await getAllReports(sheets, nik, nama, role); break;
-default: result = { status: 'success', message: 'HAZARD REPORT ONE-SAP API is running' };
+        // Identitas & role diambil dari token — parameter query diabaikan
+        case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role); break;
+        default: throw new Error('Action tidak dikenali: ' + action);
       }
       return res.status(200).json(result);
     }
@@ -378,6 +431,17 @@ default: result = { status: 'success', message: 'HAZARD REPORT ONE-SAP API is ru
       let body = req.body;
       if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
       const { action, data } = body || {};
+
+      // Login: satu-satunya POST tanpa token — kredensial di body, bukan di URL
+      if (action === 'login') {
+        const result = await login(sheets, data?.nik, data?.password);
+        if (result.status === 'success') result.token = issueToken(result.user);
+        return res.status(200).json(result);
+      }
+
+      // Semua action POST lainnya wajib token valid
+      requireAuth(req);
+
       let result;
       switch (action) {
         case 'submitHazardReport':     result = await submitHazardReport(sheets, drive, data); break;
@@ -396,6 +460,6 @@ default: result = { status: 'success', message: 'HAZARD REPORT ONE-SAP API is ru
 
     return res.status(405).json({ status: 'error', message: 'Method not allowed' });
   } catch (error) {
-    return res.status(500).json({ status: 'error', message: error.message });
+    return res.status(error.httpStatus || 500).json({ status: 'error', message: error.message });
   }
 };

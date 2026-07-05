@@ -22,10 +22,60 @@ function installPwaApp() {
   });
 }
 
-function saveUserSession(user){localStorage.setItem("hazard_user",JSON.stringify(user));}
+// ===== SESSION & TOKEN =====
+function saveUserSession(user, token){
+  localStorage.setItem("hazard_user", JSON.stringify(user));
+  if (token) localStorage.setItem("hazard_token", token);
+}
 function getCurrentUser(){const d=localStorage.getItem("hazard_user");return d?JSON.parse(d):null;}
-function requireLogin(){if(!getCurrentUser()) window.location.href="login.html";}
-function logout(){localStorage.removeItem("hazard_user");window.location.href="login.html";}
+function getAuthToken(){return localStorage.getItem("hazard_token") || "";}
+
+function isTokenExpired(token){
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.exp && (payload.exp * 1000) < Date.now();
+  } catch { return true; }
+}
+
+function requireLogin(){
+  const token = getAuthToken();
+  if (!getCurrentUser() || !token || isTokenExpired(token)) {
+    localStorage.removeItem("hazard_user");
+    localStorage.removeItem("hazard_token");
+    window.location.href = "login.html";
+  }
+}
+
+function logout(){
+  localStorage.removeItem("hazard_user");
+  localStorage.removeItem("hazard_token");
+  window.location.href = "login.html";
+}
+
+// ===== FETCH INTERCEPTOR =====
+// Semua request ke /api otomatis diberi header Authorization.
+// Respons 401 (token invalid/expired) -> otomatis logout.
+// Dengan ini dashboard.js / script.js / inspection-form.js tidak perlu diubah.
+(function () {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init = {}) {
+    const url = typeof input === "string" ? input : (input && input.url) || "";
+    const isApiCall = url === "/api" || url.startsWith("/api?") || url.startsWith("/api/");
+    const isLoginCall = init && typeof init.body === "string" && init.body.indexOf('"action":"login"') !== -1;
+
+    if (isApiCall && !isLoginCall) {
+      const token = getAuthToken();
+      init.headers = Object.assign({}, init.headers, token ? { "Authorization": "Bearer " + token } : {});
+    }
+
+    const response = await originalFetch(input, init);
+
+    if (isApiCall && !isLoginCall && response.status === 401) {
+      logout();
+    }
+    return response;
+  };
+})();
 function isAdmin(){const u=getCurrentUser();return u&&String(u.role||"").toUpperCase()==="ADMIN";}
 function isUserRole(){const u=getCurrentUser();return u&&String(u.role||"").toUpperCase()==="USER";}
 function escapeHTML(value){
