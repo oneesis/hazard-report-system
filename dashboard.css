@@ -52,7 +52,7 @@ body.dark-mode .um-page-btn { background:#1e293b; border-color:#334155; color:#e
    BODY
 ======================================== */
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: linear-gradient(135deg, #00205B 0%, #003087 55%, #307FE2 100%);
   min-height: 100vh;
   padding: 30px;

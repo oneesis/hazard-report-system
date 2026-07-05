@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HAZARD REPORT ONE-SAP</title>
+  <title>Hazard Report - ONE-SAP</title>
   <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
 
   <!-- CSS utama -->
@@ -49,7 +49,7 @@
             class="logo nilai-inti"
         />
 </div>
-        <h1 class="main-title">HAZARD REPORT ONE-SAP</h1>
+        <h1 class="main-title">Hazard Report</h1>
         <p class="main-subtitle">Safety Accountability Program</p>
 
       <!-- STEP PROGRESS -->
@@ -84,10 +84,12 @@
           <div class="step-label">Verifikasi</div>
         </div>
       </div>
+      <div id="stepSummary" class="step-summary"></div>
 
       <!-- ALERT ERROR -->
       <div id="alertError" class="alert-error" style="display:none;">
-        Semua field yang bertanda (*) wajib diisi.
+        <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>
+        Masih ada field yang belum diisi. Lihat highlight merah di bawah.
       </div>
 
       <!-- ===================================== -->
@@ -563,11 +565,7 @@
 <!-- AUTO-SAVE INDICATOR -->
 <div id="autoSaveIndicator" class="auto-save-indicator">Draft tersimpan</div>
 
-<!-- DARK MODE TOGGLE -->
-<button id="darkModeToggle" class="dark-mode-toggle">
-  <span class="toggle-icon">🌙</span>
-  <span>Dark Mode</span>
-</button>
+
 
 
 <script src="auth.js"></script>

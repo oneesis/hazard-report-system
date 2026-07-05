@@ -2,24 +2,26 @@
 
 (function () {
   const PAGE_MAP = {
-    'index-home.html': 'beranda',
-    'index.html':      'hazard',
-    'inspection.html': 'inspeksi',
+    'index-home.html':   'beranda',
+    'index.html':        'hazard',
+    'inspection.html':   'inspeksi',
     'inspection-form.html': 'inspeksi',
-    'dashboard.html':  'dashboard',
-    'admin.html':      'admin-user',
-    'laporan-admin.html': 'laporan',
-    'eskalasi.html':   'eskalasi',
+    'dashboard.html':    'dashboard',
+    'admin.html':        'admin-user',
+    'laporan-admin.html':'laporan',
+    'eskalasi.html':     'eskalasi',
+    'laporan-detail.html':'laporan-detail',
   };
 
   const PAGE_TITLES = {
-    'beranda':   'Beranda',
-    'hazard':    'Hazard Report',
-    'inspeksi':  'Inspeksi',
-    'dashboard': 'Dashboard',
-    'admin-user':'Manajemen User',
-    'laporan':   'Manajemen Laporan',
-    'eskalasi':  'Eskalasi',
+    'beranda':        'Beranda',
+    'hazard':         'Hazard Report',
+    'inspeksi':       'Inspeksi',
+    'dashboard':      'Dashboard',
+    'admin-user':     'Manajemen User',
+    'laporan':        'Manajemen Laporan',
+    'eskalasi':       'Monitoring Eskalasi',
+    'laporan-detail': 'Detail Laporan',
   };
 
   function getActivePage() {
