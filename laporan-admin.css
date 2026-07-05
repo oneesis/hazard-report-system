@@ -268,15 +268,5 @@
   .lm-table-wrap { overflow-x: auto; }
 }
 
-/* ── Dark mode ── */
-@media (prefers-color-scheme: dark) {
-  .lm-title    { color: #e2e8f0; }
-  .lm-kpi      { background: #1e293b; border-color: #334155; }
-  .lm-filter-bar { background: #1e293b; border-color: #334155; }
-  .lm-search-input, .lm-date-input, .lm-select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
-  .lm-table-wrap { background: #1e293b; border-color: #334155; }
-  .lm-table th   { background: #0f172a; border-bottom-color: #334155; color: #94a3b8; }
-  .lm-table td   { border-bottom-color: #334155; color: #e2e8f0; }
-  .lm-table tbody tr:hover { background: #263146; }
-  .lm-pagination { border-top-color: #334155; }
-}
+/* Light mode only */
+.lm-content { color-scheme: light; }

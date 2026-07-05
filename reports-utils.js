@@ -126,11 +126,24 @@ function isReportVisible(report) {
   const user = getCurrentUser();
   if (!user) return false;
 
-  if (String(user.role || "").toUpperCase() === "ADMIN") {
-    return true;
+  const role = String(user.role || "").toUpperCase().replace(/\s+/g, "_");
+
+  if (role === "SUPER_ADMIN") return true;
+
+  if (role === "ADMIN") {
+    // Admin hanya lihat laporan dari perusahaan sendiri atau di mana mereka jadi PIC
+    const myPerusahaan = String(user.perusahaan || "").trim().toLowerCase();
+    const myNama = String(user.nama || "").trim().toLowerCase();
+    const myNik  = String(user.nik  || "").trim().toLowerCase();
+    const rPerusahaan = String(report.perusahaan || report.company || "").trim().toLowerCase();
+    const rPic        = String(report.nama_pic || report.pic || "").trim().toLowerCase();
+    const rNikPic     = String(report.nik_pic || "").trim().toLowerCase();
+    return (myPerusahaan && rPerusahaan === myPerusahaan) ||
+           (myNama && rPic === myNama) ||
+           (myNik  && rNikPic === myNik);
   }
 
-  // Untuk non-admin: hanya terlihat jika user adalah pelapor atau PIC
+  // USER: hanya terlihat jika pelapor atau PIC
   return getUserRelation(report) !== null;
 }
 

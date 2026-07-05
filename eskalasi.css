@@ -245,12 +245,5 @@
   .esk-cards   { grid-template-columns: 1fr; }
 }
 
-/* ── Dark mode ── */
-@media (prefers-color-scheme: dark) {
-  .esk-title { color: #e2e8f0; }
-  .esk-sum-item { background: #1e293b; border-color: #334155; }
-  .esk-card     { background: #1e293b; border-color: #334155; }
-  .esk-card-desc { color: #cbd5e1; }
-  .esk-card-footer { border-top-color: #334155; }
-  .esk-due-date { color: #e2e8f0; }
-}
+/* Light mode only */
+.esk-content { color-scheme: light; }

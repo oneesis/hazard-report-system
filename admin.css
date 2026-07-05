@@ -227,3 +227,13 @@
 .admin-layout { color-scheme: light; }
 .admin-card   { color-scheme: light; }
 .admin-table td { color: #1e293b; }
+
+/* Edit/Add user modal — must be fixed overlay */
+#umModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}

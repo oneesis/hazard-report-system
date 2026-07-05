@@ -355,20 +355,5 @@
   .detail-gallery { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── Dark mode ── */
-@media (prefers-color-scheme: dark) {
-  .detail-hero-id   { color: #e2e8f0; }
-  .detail-card      { background: #1e293b; border-color: #334155; }
-  .detail-card-header { color: #e2e8f0; }
-  .detail-field-row { border-bottom-color: #334155; }
-  .detail-field-row span  { color: #94a3b8; }
-  .detail-field-row strong{ color: #e2e8f0; }
-  .detail-text      { color: #cbd5e1; }
-  .bc-current       { color: #94a3b8; }
-  .closing-textarea { background: #0f172a; border-color: #334155; color: #e2e8f0; }
-  .timeline-item::before { background: #334155; }
-  .timeline-label   { color: #e2e8f0; }
-  .timeline-note    { background: #0f172a; border-color: #334155; }
-  .closing-form     { border-top-color: #334155; }
-  .detail-gallery-img { border-color: #334155; background: #0f172a; }
-}
+/* Light mode only */
+.detail-page { color-scheme: light; }
