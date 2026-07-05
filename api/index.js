@@ -349,6 +349,25 @@ module.exports = async (req, res) => {
           }
           break;
         }
+        case 'testFonnte': {
+          const token = process.env.FONNTE_TOKEN;
+          if (!token) { result = { status: 'error', message: 'FONNTE_TOKEN tidak ada di env' }; break; }
+          const testResult = await new Promise(resolve => {
+            const payload = new URLSearchParams({ target: '6289692045980', message: 'Test dari debug endpoint' }).toString();
+            const req = https.request({
+              hostname: 'api.fonnte.com', path: '/send', method: 'POST',
+              headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
+            }, res => {
+              let body = '';
+              res.on('data', d => body += d);
+              res.on('end', () => resolve({ statusCode: res.statusCode, body, tokenLength: token.length }));
+            });
+            req.on('error', e => resolve({ error: e.message }));
+            req.write(payload); req.end();
+          });
+          result = { status: 'success', fonnte: testResult };
+          break;
+        }
         case 'login':               result = await login(sheets, nik, password); break;
         case 'getHazardReports':    result = await getHazardReports(sheets); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets); break;
