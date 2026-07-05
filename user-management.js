@@ -433,7 +433,7 @@ function renderMyHistory(list) {
         <td><span class="um-action-badge um-action-${(p['ACTION']||'').toLowerCase()}">${escapeHTML(p['ACTION']||'')}</span></td>
         <td class="um-data-cell">${escapeHTML(data.NAMA || data.NIK || '-')}</td>
         <td>${statusBadge(p['STATUS'] || '-')}</td>
-        <td>${escapeHTML(p['REASON'] || p['CATATAN'] || '-')}</td>
+        <td>${escapeHTML(p['REJECTION_REASON'] || p['REASON'] || p['CATATAN'] || '-')}</td>
       </tr>`;
     }).join('')}</tbody>
   </table>`;
