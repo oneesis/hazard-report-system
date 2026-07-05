@@ -270,3 +270,22 @@
 
 /* Light mode only */
 .lm-content { color-scheme: light; }
+
+/* ── Override btn-view agar compact di dalam tabel ── */
+.btn-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: .78rem;
+  font-weight: 700;
+  background: #003087;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.btn-view:hover { background: #00205B; transform: none; box-shadow: none; }
+.btn-view svg { width: 13px; height: 13px; color: #fff; }
