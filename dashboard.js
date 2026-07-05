@@ -6,6 +6,8 @@ let selectedAfterPhotoBase64List = [];
 let selectedStatus = "OPEN";
 let statusChartInstance = null;
 let lokasiChartInstance = null;
+let currentPage = 1;
+const PAGE_SIZE = 20;
 
 // ========================================
 // INITIALIZE
@@ -120,26 +122,7 @@ async function loadReports() {
       </tr>
     `;
 
-    const response = await fetch(`${BASE_URL}?action=getAllReports`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    }
-
-    const text = await response.text();
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch (err) {
-      throw new Error('Response API bukan JSON valid: ' + text);
-    }
-
-    if (result.status !== "success") {
-      throw new Error(
-        result.message || "Gagal memuat data."
-      );
-    }
-    reports = result.data || [];
-    console.log('loadReports: total fetched reports =', reports.length);
+    reports = await fetchAllReports();
 
     // Jika ada data di server tetapi pengguna tidak melihatnya karena visibilitas,
     // tampilkan pesan informatif di tabel agar mudah didiagnosis.
@@ -297,30 +280,30 @@ function renderTable() {
   });
 
   filteredReports = filtered;
+  currentPage = 1;
 
-  if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="9" class="loading-row">
-          Tidak ada data.
-        </td>
-      </tr>
-    `;
-    renderDashboardCharts([]);
+  renderTablePage();
+  renderDashboardCharts(filtered);
+}
+
+function renderTablePage() {
+  const tbody = document.getElementById("reportTableBody");
+  if (!tbody) return;
+
+  if (filteredReports.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="loading-row">Tidak ada data.</td></tr>`;
+    renderPagination();
     return;
   }
 
-  tbody.innerHTML = filtered
-    .map((report, index) => {
-      const status =
-        report.status_perbaikan || "OPEN";
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const endIdx = Math.min(startIdx + PAGE_SIZE, filteredReports.length);
 
-      const badgeClass =
-        status === "OPEN"
-          ? "status-open"
-          : status === "PROGRESS"
-          ? "status-progress"
-          : "status-closed";
+  tbody.innerHTML = filteredReports.slice(startIdx, endIdx)
+    .map((report, localIndex) => {
+      const globalIndex = startIdx + localIndex;
+      const status = report.status_perbaikan || "OPEN";
+      const badgeClass = status === "OPEN" ? "status-open" : status === "PROGRESS" ? "status-progress" : "status-closed";
 
       return `
         <tr>
@@ -331,13 +314,9 @@ function renderTable() {
           <td>${getDashboardLocation(report)}</td>
           <td>${getDashboardDescription(report)}</td>
           <td>${report.nama_pic || ""}</td>
+          <td><span class="status-badge ${badgeClass}">${status}</span></td>
           <td>
-            <span class="status-badge ${badgeClass}">
-              ${status}
-            </span>
-          </td>
-          <td>
-            <button class="btn-view" data-report-index="${index}" aria-label="Lihat detail laporan">
+            <button class="btn-view" data-report-index="${globalIndex}" aria-label="Lihat detail laporan">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7 0-10 6.3-10 7s3 7 10 7 10-6.3 10-7-3-7-10-7zm0 12c-3.9 0-6.7-2.7-8-5 1.3-2.3 4.1-5 8-5s6.7 2.7 8 5c-1.3 2.3-4.1 5-8 5zm0-9a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
               View
             </button>
@@ -346,7 +325,43 @@ function renderTable() {
       `;
     })
     .join("");
-  renderDashboardCharts(filtered);
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const container = document.getElementById("tablePagination");
+  if (!container) return;
+
+  const total = filteredReports.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const start = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+
+  if (total <= PAGE_SIZE) {
+    container.innerHTML = `<div class="pagination-info">${total} laporan</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="pagination-info">Menampilkan ${start}–${end} dari ${total} laporan</div>
+    <div class="pagination-controls">
+      <button class="pagination-btn" ${currentPage <= 1 ? "disabled" : ""} onclick="goToPage(${currentPage - 1})" aria-label="Halaman sebelumnya">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <span class="pagination-page">${currentPage} / ${totalPages}</span>
+      <button class="pagination-btn" ${currentPage >= totalPages ? "disabled" : ""} onclick="goToPage(${currentPage + 1})" aria-label="Halaman berikutnya">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  `;
+}
+
+function goToPage(page) {
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  currentPage = Math.min(Math.max(1, page), totalPages);
+  renderTablePage();
+  document.querySelector(".table-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderDashboardCharts(reportsList) {
@@ -913,6 +928,7 @@ async function submitClosingNote() {
 
     const response = await fetch(BASE_URL, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: isInspectionReport(currentReport)
           ? "updateInspectionReport"

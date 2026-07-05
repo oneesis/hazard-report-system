@@ -125,19 +125,22 @@ async function getHazardReports(sheets) {
 }
 
 async function getInspectionReports(sheets) {
+  // ponytail: parallel fetches — 8 sheets sequential was ~8x slower
+  const results = await Promise.allSettled(
+    INSPECTION_SHEETS.map(sheetName => getSheetData(sheets, sheetName).then(rows => ({ sheetName, rows })))
+  );
   const data = [];
-  for (const sheetName of INSPECTION_SHEETS) {
-    try {
-      const rows = await getSheetData(sheets, sheetName);
-      rows.forEach(row => {
-        const normalized = {};
-        Object.keys(row).forEach(k => { normalized[normalizeHeader(k)] = row[k]; });
-        if (!String(normalized.id || '').trim()) return;
-        normalized.report_type = 'INSPECTION';
-        normalized.inspection_sheet = sheetName;
-        data.push(normalized);
-      });
-    } catch { /* sheet belum ada */ }
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue;
+    const { sheetName, rows } = result.value;
+    rows.forEach(row => {
+      const normalized = {};
+      Object.keys(row).forEach(k => { normalized[normalizeHeader(k)] = row[k]; });
+      if (!String(normalized.id || '').trim()) return;
+      normalized.report_type = 'INSPECTION';
+      normalized.inspection_sheet = sheetName;
+      data.push(normalized);
+    });
   }
   return { status: 'success', data };
 }
@@ -171,16 +174,18 @@ async function getAllReports(sheets, nik, nama, role) {
 }
 
 function mapInspectionValue(header, data) {
+  // key: underscore-to-space so "JENIS_INSPEKSI" → "JENIS INSPEKSI"
   const key = header.trim().toUpperCase().replace(/_/g, ' ').replace(/\s+/g, ' ');
   const map = {
-    'ID': data.id, 'TIMESTAMP': data.timestamp, 'JENIS_INSPEKSI': data.jenis_inspeksi,
+    'ID': data.id, 'TIMESTAMP': data.timestamp,
+    'JENIS INSPEKSI': data.jenis_inspeksi,   // was 'JENIS_INSPEKSI' — never matched after transform
     'PERUSAHAAN': data.perusahaan, 'PERUSAHAAN SUBCONT(1)': data.subcont1, 'SUBCONT1': data.subcont1,
     'NAMA': data.nama, 'NIK': data.nik, 'JABATAN': data.jabatan, 'DEPARTEMEN': data.departemen,
-    'NO WHATSAPP': data.no_whatsapp, 'NO_WHATSAPP': data.no_whatsapp,
+    'NO WHATSAPP': data.no_whatsapp,
     'TANGGAL KEJADIAN': data.tanggal_inspeksi, 'TANGGAL INSPEKSI': data.tanggal_inspeksi,
     'SHIFT KEJADIAN': data.shift_inspeksi, 'SHIFT INSPEKSI': data.shift_inspeksi,
     'LOKASI': data.lokasi_inspeksi, 'LOKASI INSPEKSI': data.lokasi_inspeksi,
-    'DETAIL_LOKASI_INSPEKSI': data.detail_lokasi_inspeksi,
+    'DETAIL LOKASI INSPEKSI': data.detail_lokasi_inspeksi,  // was 'DETAIL_LOKASI_INSPEKSI' — never matched
     'TEMUAN INSPEKSI': data.temuan_inspeksi,
     'UPLOAD FOTO INSPEKSI': data.upload_foto_inspeksi,
     'TINDAKAN PERBAIKAN YANG DIUSULKAN KEPADA PENANGGUNGJAWAB (PIC)': data.tindakan_usulan_pic,
@@ -190,7 +195,7 @@ function mapInspectionValue(header, data) {
     'NO WHATTSAPP PIC': data.no_whatsapp_pic, 'NO WHATSAPP PIC': data.no_whatsapp_pic,
     'NIK PIC': data.nik_pic, 'BATAS WAKTU': data.batas_waktu,
     'UPLOAD FOTO PERBAIKAN PIC': data.upload_foto_perbaikan_pic,
-    'STATUS_PERBAIKAN': data.status_perbaikan, 'STATUS PERBAIKAN': data.status_perbaikan,
+    'STATUS PERBAIKAN': data.status_perbaikan,
     'PERNYATAAN': data.pernyataan, 'TANDA TANGAN': data.tanda_tangan,
     'CATATAN CLOSING': data.catatan_closing, 'TANGGAL CLOSING': data.tanggal_closing
   };
@@ -322,7 +327,10 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { action, data } = req.body;
+      // GAS-style clients send text/plain — parse body regardless of Content-Type
+      let body = req.body;
+      if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+      const { action, data } = body || {};
       let result;
       switch (action) {
         case 'submitHazardReport':     result = await submitHazardReport(sheets, drive, data); break;

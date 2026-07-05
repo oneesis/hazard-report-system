@@ -130,7 +130,7 @@ const OneSapOfflineSync = {
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: action, data: data })
       });
       const text = await response.text();

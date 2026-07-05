@@ -174,7 +174,6 @@ async function fetchAllReports() {
     throw new Error(result.message || "Gagal memuat data.");
   }
 
-  console.log('fetchAllReports: menerima', (result.data || []).length, 'laporan dari server');
   return result.data || [];
 }
 
