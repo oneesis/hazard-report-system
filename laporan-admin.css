@@ -324,6 +324,12 @@
 /* Light mode only */
 .lm-content { color-scheme: light; }
 
+/* ── Override btn-primary/secondary: reset dashboard.css big buttons ── */
+.btn-primary  { padding: 9px 18px; border-radius: 8px; font-size: .85rem; box-shadow: none; }
+.btn-primary:hover  { transform: none; box-shadow: none; background: #d99500; }
+.btn-secondary { padding: 9px 14px; border-radius: 8px; font-size: .85rem; box-shadow: none; }
+.btn-secondary:hover { transform: none; }
+
 /* ── Override btn-view agar compact di dalam tabel ── */
 .btn-view {
   display: inline-flex;

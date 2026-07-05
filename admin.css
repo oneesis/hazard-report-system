@@ -231,12 +231,7 @@
 .admin-subnav-btn:hover { color: #003087; }
 .admin-subnav-btn.active { color: #003087; border-bottom-color: #F2A900; }
 
-/* BUTTONS */
-.btn-primary { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:#F2A900; color:#00205B; border:none; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:700; }
-.btn-primary:hover { background:#d99500; }
-.btn-secondary { display:inline-flex; align-items:center; gap:7px; padding:9px 14px; background:#fff; color:#475569; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:600; }
-.btn-secondary:hover { background:#f8fafc; }
-.btn-icon { padding:9px 10px; gap:0; }
+/* Buttons inherited from layout.css */
 
 /* MOBILE */
 @media (max-width: 768px) {

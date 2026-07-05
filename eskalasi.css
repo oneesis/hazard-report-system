@@ -46,7 +46,7 @@
 
 .esk-sum-item {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1.5px solid #e2e8f0;
   padding: 18px 16px;
   text-align: center;
@@ -127,7 +127,7 @@
 
 .esk-card {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1.5px solid #e2e8f0;
   padding: 16px;
   display: flex;

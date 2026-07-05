@@ -267,7 +267,7 @@
 .timeline-dot--done    { background: #22c55e; color: #fff; }
 .timeline-dot--pending { background: #e2e8f0; color: #94a3b8; }
 .timeline-dot--open    { background: #f97316; color: #fff; }
-.timeline-dot--progress{ background: #3b82f6; color: #fff; }
+.timeline-dot--progress{ background: #f59e0b; color: #fff; }
 .timeline-dot--closed  { background: #003087; color: #F2A900; }
 
 .timeline-body { flex: 1; padding-top: 2px; }

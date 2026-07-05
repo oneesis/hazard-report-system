@@ -269,7 +269,7 @@
 
 .ins-card {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1.5px solid #e2e8f0;
   padding: 14px 12px;
   text-decoration: none;
@@ -323,7 +323,7 @@
 /* ── Daily Summary (mobile only) ── */
 .daily-summary {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1.5px solid #e2e8f0;
   padding: 18px 20px;
   margin-top: 16px;
@@ -436,7 +436,7 @@
 .report-item-dot.dot-open    { background: #f97316; }
 .report-item-dot.dot-closed  { background: #22c55e; }
 .report-item-dot.dot-overdue { background: #ef4444; }
-.report-item-dot.dot-progress{ background: #3b82f6; }
+.report-item-dot.dot-progress{ background: #f59e0b; }
 
 .report-item-body { flex: 1; min-width: 0; }
 
@@ -474,9 +474,9 @@
 }
 
 .badge-open     { background: #fff7ed; color: #c2410c; }
-.badge-progress { background: #eff6ff; color: #1d4ed8; }
+.badge-progress { background: #fffbeb; color: #b45309; }
 .badge-closed   { background: #f0fdf4; color: #15803d; }
-.badge-overdue  { background: #fef2f2; color: #b91c1c; }
+.badge-overdue  { background: #fff7ed; color: #ea580c; }
 
 .btn-see-all {
   display: flex;

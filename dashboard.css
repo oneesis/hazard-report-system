@@ -505,8 +505,8 @@ body.dark-mode .badge-overdue {
 
 .search-input:focus {
   outline: none;
-  border-color: #003087;
-  box-shadow: 0 0 0 6px rgba(0, 48, 135, 0.06);
+  border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48, 127, 226, 0.15);
 }
 .date-note {
   font-size: 12px;
@@ -544,8 +544,8 @@ body.dark-mode .badge-overdue {
 .filter-bar input:focus,
 .filter-bar select:focus {
   outline: none;
-  border-color: #003087;
-  box-shadow: 0 0 0 4px rgba(0, 48, 135, 0.12);
+  border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48, 127, 226, 0.15);
 }
 
 /* ========================================
@@ -910,8 +910,8 @@ tbody tr:hover {
 
 #modalInputAfterPhoto:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48, 127, 226, 0.15);
 }
 
 .status-buttons {
@@ -945,8 +945,8 @@ tbody tr:hover {
 
 .field-row textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48, 127, 226, 0.15);
 }
 
 .required {
