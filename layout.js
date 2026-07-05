@@ -88,7 +88,7 @@
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password">
             <i class="fa-solid fa-key"></i>
           </button>
-          <button class="sidebar-logout-btn" onclick="logout()" title="Logout">
+          <button class="sidebar-logout-btn" onclick="confirmLogout()" title="Logout">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
           </button>
         </div>

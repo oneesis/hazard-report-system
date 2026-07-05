@@ -52,6 +52,36 @@ function logout(){
   window.location.href = "login.html";
 }
 
+function confirmLogout() {
+  let m = document.getElementById('logoutConfirmModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'logoutConfirmModal';
+    m.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
+    m.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:28px 28px 24px;width:min(360px,90vw);box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center">
+        <div style="width:52px;height:52px;border-radius:50%;background:#fff7ed;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.4rem;color:#ea580c">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </div>
+        <h3 style="margin:0 0 8px;font-size:1rem;font-weight:700;color:#0f172a">Keluar dari Aplikasi?</h3>
+        <p style="margin:0 0 24px;font-size:.85rem;color:#64748b">Sesi Anda akan diakhiri dan Anda perlu login kembali.</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button onclick="document.getElementById('logoutConfirmModal').style.display='none'"
+            style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;color:#475569;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+            Batal
+          </button>
+          <button onclick="logout()"
+            style="flex:1;padding:10px;border:none;border-radius:8px;background:#dc2626;color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">
+            Ya, Keluar
+          </button>
+        </div>
+      </div>`;
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+    document.body.appendChild(m);
+  }
+  m.style.display = 'flex';
+}
+
 // ===== FETCH INTERCEPTOR =====
 // Semua request ke /api otomatis diberi header Authorization.
 // Respons 401 (token invalid/expired) -> otomatis logout.
@@ -136,7 +166,7 @@ function renderUserProfile() {
         <span>Ganti Password</span>
       </button>
 
-      <button class="btn-logout" type="button" onclick="logout()" role="menuitem">
+      <button class="btn-logout" type="button" onclick="confirmLogout()" role="menuitem">
         <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
         <span>Logout</span>
       </button>
