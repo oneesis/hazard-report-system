@@ -288,7 +288,6 @@ async function rejectChange(changeId, reason) {
 }
 
 function renderUMTab() {
-  // Sudah di-render dari HTML, fungsi ini hanya untuk inisialisasi event
   const search = document.getElementById('umSearch');
   if (search) search.addEventListener('input', filterUsers);
 }

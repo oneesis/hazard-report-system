@@ -31,6 +31,7 @@
     <a href="index.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span>Buat Hazard Report</a>
     <a href="inspection.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>Buat Inspeksi</a>
     <a href="dashboard.html" class="btn secondary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>Dashboard Monitoring</a>
+    <a href="admin.html" class="btn secondary" id="btnAdminPanel" style="display:none"><span class="icon" aria-hidden="true"><i class="fa-solid fa-users-gear"></i></span>Admin Panel</a>
   </div>
 
   <div class="hero-cards">
@@ -83,7 +84,15 @@
 <script src="offline-sync.js"></script>
 <script>
   requireLogin();
-  window.addEventListener("DOMContentLoaded", renderUserProfile);
+  window.addEventListener("DOMContentLoaded", () => {
+    renderUserProfile();
+    const user = getCurrentUser();
+    const r = String(user?.role || '').toUpperCase();
+    if (r === 'ADMIN' || r === 'SUPER_ADMIN') {
+      const btn = document.getElementById('btnAdminPanel');
+      if (btn) btn.style.display = '';
+    }
+  });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="home.js"></script>

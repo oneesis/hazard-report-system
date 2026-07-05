@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - ONE-SAP</title>
+  <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="admin-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+      <img src="./assets/Logo EBL.png" alt="Logo" class="sidebar-logo">
+      <span>Admin Panel</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="sidebar-item active" data-section="sectionUsers" onclick="showSection('sectionUsers', this)">
+        <i class="fa-solid fa-users-gear"></i>
+        <span>Manajemen User</span>
+      </button>
+      <button class="sidebar-item" data-section="sectionPending" onclick="showSection('sectionPending', this)" id="sidebarPending" style="display:none">
+        <i class="fa-solid fa-clock"></i>
+        <span>Pending Approval</span>
+        <span class="sidebar-badge" id="pendingBadge" style="display:none">0</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <a href="dashboard.html" class="sidebar-link">
+        <i class="fa-solid fa-chart-simple"></i> Dashboard
+      </a>
+      <a href="index-home.html" class="sidebar-link">
+        <i class="fa-solid fa-house"></i> Home
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="admin-main">
+
+    <!-- TOP BAR -->
+    <header class="admin-topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <h1 class="admin-page-title" id="adminPageTitle">Manajemen User</h1>
+      <div id="userProfile" class="user-menu"></div>
+    </header>
+
+    <!-- MANAJEMEN USER -->
+    <section id="sectionUsers" class="admin-section">
+      <div class="um-header">
+        <div class="um-header-actions">
+          <input type="text" id="umSearch" placeholder="Cari nama, NIK, departemen..." class="um-search">
+          <button class="btn-primary" onclick="openAddUser()">
+            <i class="fa-solid fa-user-plus"></i> Tambah User
+          </button>
+          <button class="btn-secondary" onclick="loadUsers()">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-card" style="overflow-x:auto">
+        <table id="umTable" class="admin-table">
+          <thead>
+            <tr>
+              <th>Perusahaan</th><th>Nama</th><th>NIK</th><th>Jabatan</th>
+              <th>Departemen</th><th>WhatsApp</th>
+              <th class="um-center">OBJ HR</th><th class="um-center">OBJ INS</th>
+              <th class="um-center">OBJ SBO</th><th class="um-center">OBJ PC</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="umTableBody">
+            <tr><td colspan="11" class="um-loading">Memuat data...</td></tr>
+          </tbody>
+        </table>
+        <div id="umPagination" class="table-pagination"></div>
+      </div>
+    </section>
+
+    <!-- PENDING APPROVAL (SUPER_ADMIN only) -->
+    <section id="sectionPending" class="admin-section" style="display:none">
+      <div class="um-header">
+        <div class="um-header-actions">
+          <button class="btn-secondary" onclick="loadPendingChanges()">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh
+          </button>
+        </div>
+      </div>
+      <div class="admin-card">
+        <div id="umPendingSection"><p class="um-empty">Memuat...</p></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="auth.js"></script>
+<script src="user-management.js"></script>
+<script>
+  requireLogin();
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    // Hanya ADMIN dan SUPER_ADMIN yang boleh masuk
+    if (!isAdminOrAbove(user?.role)) {
+      window.location.href = 'index-home.html';
+      return;
+    }
+    renderUserProfile();
+    if (isSuperAdminRole(user?.role)) {
+      document.getElementById('sidebarPending').style.display = 'flex';
+    }
+    initUserManagement();
+  });
+
+  function showSection(sectionId, btn) {
+    document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(sectionId).style.display = 'block';
+    btn.classList.add('active');
+    const titles = { sectionUsers: 'Manajemen User', sectionPending: 'Pending Approval' };
+    document.getElementById('adminPageTitle').textContent = titles[sectionId] || '';
+    if (sectionId === 'sectionPending') loadPendingChanges();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('open');
+  }
+</script>
+</body>
+</html>

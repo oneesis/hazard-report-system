@@ -70,16 +70,6 @@
   </div>
 
 </header>
-    <!-- TAB NAVIGATION (hanya untuk ADMIN/SUPER_ADMIN) -->
-    <nav id="dashboardTabs" class="dashboard-tabs" style="display:none">
-      <button class="dash-tab active" data-tab="tabDashboard" onclick="switchTab('tabDashboard',this)">
-        <i class="fa-solid fa-chart-simple"></i> Dashboard
-      </button>
-      <button class="dash-tab" data-tab="tabUserMgmt" onclick="switchTab('tabUserMgmt',this)">
-        <i class="fa-solid fa-users-gear"></i> Manajemen User
-      </button>
-    </nav>
-
     <!-- KPI CARDS -->
     <section class="kpi-grid">
       <div class="kpi-card open">
@@ -168,6 +158,10 @@
         <option value="INSPECTION">Inspeksi</option>
       </select>
 
+      <a href="admin.html" id="btnAdminPanel" class="btn-secondary" style="display:none">
+        <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+        <span>Admin Panel</span>
+      </a>
       <button id="btnRefresh" class="btn-primary" title="Refresh data">
         <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
         <span>Refresh</span>
@@ -204,40 +198,6 @@
         </tbody>
       </table>
       <div id="tablePagination" class="table-pagination"></div>
-    </section>
-
-    <!-- USER MANAGEMENT SECTION -->
-    <section id="tabUserMgmt" class="tab-section" style="display:none">
-      <div class="um-header">
-        <h2><i class="fa-solid fa-users-gear"></i> Manajemen User</h2>
-        <div class="um-header-actions">
-          <input type="text" id="umSearch" placeholder="Cari nama, NIK, departemen..." class="um-search">
-          <button class="btn-primary" onclick="openAddUser()"><i class="fa-solid fa-user-plus"></i> Tambah User</button>
-          <button class="btn-secondary" onclick="loadUsers()"><i class="fa-solid fa-arrows-rotate"></i></button>
-        </div>
-      </div>
-
-      <div class="table-card" style="overflow-x:auto">
-        <table id="umTable">
-          <thead>
-            <tr>
-              <th>Perusahaan</th><th>Nama</th><th>NIK</th><th>Jabatan</th><th>Departemen</th>
-              <th>WhatsApp</th><th>OBJ HR</th><th>OBJ INS</th><th>OBJ SBO</th><th>OBJ PC</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="umTableBody">
-            <tr><td colspan="11" style="text-align:center;padding:20px">Memuat...</td></tr>
-          </tbody>
-        </table>
-        <div id="umPagination" class="table-pagination"></div>
-      </div>
-
-      <!-- Pending Changes (hanya SUPER_ADMIN) -->
-      <div id="umPendingWrapper" style="display:none">
-        <h3 class="um-pending-title"><i class="fa-solid fa-clock"></i> Permohonan Pending</h3>
-        <div id="umPendingSection" class="um-pending-section"></div>
-      </div>
     </section>
 
     <div id="reportModal" class="modal hidden" aria-hidden="true">
@@ -386,7 +346,6 @@
   <script src="notifications.js"></script>
   <script src="offline-sync.js"></script>
   <script src="dashboard.js"></script>
-  <script src="user-management.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       if (window.flatpickr) {
@@ -405,22 +364,12 @@
     requireLogin();
     window.addEventListener("DOMContentLoaded", () => {
       renderUserProfile();
-      const user = getCurrentUser();
-      if (isAdminOrAbove(user?.role)) {
-        document.getElementById('dashboardTabs').style.display = 'flex';
-        if (isSuperAdminRole(user?.role))
-          document.getElementById('umPendingWrapper').style.display = 'block';
+      const r = String(getCurrentUser()?.role || '').toUpperCase();
+      if (r === 'ADMIN' || r === 'SUPER_ADMIN') {
+        const btn = document.getElementById('btnAdminPanel');
+        if (btn) btn.style.display = '';
       }
     });
-    function switchTab(tabId, btn) {
-      document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
-      document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
-      document.getElementById(tabId).style.display = 'block';
-      btn.classList.add('active');
-      if (tabId === 'tabUserMgmt') initUserManagement();
-    }
-    function isAdminOrAbove(role) { const r = String(role||'').toUpperCase(); return r==='ADMIN'||r==='SUPER_ADMIN'; }
-    function isSuperAdminRole(role) { return String(role||'').toUpperCase()==='SUPER_ADMIN'; }
   </script>
   <nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
     <a href="index-home.html" class="mobile-bottom-link">
