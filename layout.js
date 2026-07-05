@@ -84,9 +84,14 @@
           <div class="sidebar-user-name">${safe(user?.nama || 'User')}</div>
           <div class="sidebar-user-role">${safe(role || 'USER')}</div>
         </div>
-        <button class="sidebar-logout-btn" onclick="logout()" title="Logout">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        </button>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password">
+            <i class="fa-solid fa-key"></i>
+          </button>
+          <button class="sidebar-logout-btn" onclick="logout()" title="Logout">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
       </div>`;
 
     // Update mobile topbar title

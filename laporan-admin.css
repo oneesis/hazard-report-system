@@ -261,12 +261,65 @@
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .lm-content { padding: 16px; }
-  .lm-filter-bar { flex-direction: column; align-items: stretch; }
   .lm-search-wrap { min-width: unset; }
   .lm-date-input { width: 100%; }
   .lm-select { width: 100%; }
   .lm-table-wrap { overflow-x: auto; }
 }
+
+@media (max-width: 640px) {
+  /* Filter bar: search selalu tampil, sisanya collapsible */
+  .lm-filter-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+  .lm-filter-extra { display: none; flex-direction: column; gap: 8px; }
+  .lm-filter-extra.open { display: flex; }
+  .lm-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: .8rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+  }
+  /* Tabel: card view per baris di mobile */
+  .lm-table thead { display: none; }
+  .lm-table tr {
+    display: block;
+    background: #fff;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    margin-bottom: 8px;
+    padding: 12px 14px;
+  }
+  .lm-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border: none;
+    font-size: .8rem;
+  }
+  .lm-table td::before {
+    content: attr(data-label);
+    font-size: .7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+  .lm-table td:first-child { font-size: .85rem; font-weight: 800; }
+}
+
+/* Desktop: toggle button hidden */
+.lm-filter-toggle { display: none; }
 
 /* Light mode only */
 .lm-content { color-scheme: light; }

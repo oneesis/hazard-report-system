@@ -189,12 +189,18 @@ body:has(.app-layout) {
   margin-top: 1px;
 }
 
+.sidebar-user-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .sidebar-logout-btn {
   background: none;
   border: none;
   color: rgba(255,255,255,.45);
   cursor: pointer;
-  padding: 6px;
+  padding: 6px 7px;
   border-radius: 6px;
   font-size: .9rem;
   transition: color .15s, background .15s;

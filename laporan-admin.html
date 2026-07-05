@@ -80,35 +80,41 @@
             placeholder="Cari ID, Pelapor, PIC, Lokasi..." autocomplete="off">
         </div>
 
-        <div class="lm-date-wrap">
-          <i class="fa-solid fa-calendar-days lm-cal-icon"></i>
-          <input type="text" id="dateRange" class="lm-date-input"
-            placeholder="Dari - Sampai" autocomplete="off">
+        <button class="lm-filter-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('i').classList.toggle('fa-chevron-up');this.querySelector('i').classList.toggle('fa-chevron-down')">
+          <i class="fa-solid fa-filter"></i> Filter <i class="fa-solid fa-chevron-down" style="font-size:.7rem"></i>
+        </button>
+
+        <div class="lm-filter-extra">
+          <div class="lm-date-wrap">
+            <i class="fa-solid fa-calendar-days lm-cal-icon"></i>
+            <input type="text" id="dateRange" class="lm-date-input"
+              placeholder="Dari - Sampai" autocomplete="off">
+          </div>
+
+          <select id="statusFilter" class="lm-select">
+            <option value="">Semua Status</option>
+            <option value="OPEN">OPEN</option>
+            <option value="PROGRESS">PROGRESS</option>
+            <option value="CLOSED">CLOSED</option>
+          </select>
+
+          <select id="typeFilter" class="lm-select">
+            <option value="">Semua Jenis</option>
+            <option value="HAZARD">Hazard</option>
+            <option value="INSPECTION">Inspeksi</option>
+          </select>
+
+          <select id="deptFilter" class="lm-select">
+            <option value="">Semua Dept</option>
+          </select>
+
+          <select id="slaFilter" class="lm-select">
+            <option value="">Semua SLA</option>
+            <option value="overdue">Overdue</option>
+            <option value="warning">Warning (≤3 hari)</option>
+            <option value="ok">On Track</option>
+          </select>
         </div>
-
-        <select id="statusFilter" class="lm-select">
-          <option value="">Semua Status</option>
-          <option value="OPEN">OPEN</option>
-          <option value="PROGRESS">PROGRESS</option>
-          <option value="CLOSED">CLOSED</option>
-        </select>
-
-        <select id="typeFilter" class="lm-select">
-          <option value="">Semua Jenis</option>
-          <option value="HAZARD">Hazard</option>
-          <option value="INSPECTION">Inspeksi</option>
-        </select>
-
-        <select id="deptFilter" class="lm-select">
-          <option value="">Semua Dept</option>
-        </select>
-
-        <select id="slaFilter" class="lm-select">
-          <option value="">Semua SLA</option>
-          <option value="overdue">Overdue</option>
-          <option value="warning">Warning (≤3 hari)</option>
-          <option value="ok">On Track</option>
-        </select>
       </div>
 
       <!-- TABLE -->

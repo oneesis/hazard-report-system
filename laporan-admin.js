@@ -169,18 +169,18 @@ function renderLmTable() {
     const dueFmt    = due ? new Date(due).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'2-digit' }) : '-';
     const deptVal   = escapeHTML(r.departemen || r.department || '-');
     return `<tr>
-      <td><strong>${escapeHTML(r.id || '-')}</strong></td>
-      <td><span class="report-type-badge ${getReportType(r).toLowerCase()}">${escapeHTML(getReportTypeLabel(r))}</span></td>
-      <td style="white-space:nowrap">${escapeHTML(formatDate(r.timestamp))}</td>
-      <td>${escapeHTML(r.nama || '-')}</td>
-      <td>${deptVal}</td>
-      <td>${escapeHTML(getDashboardLocation(r))}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHTML(getDashboardDescription(r))}</td>
-      <td>${escapeHTML(r.nama_pic || '-')}</td>
-      <td style="white-space:nowrap">${escapeHTML(dueFmt)}</td>
-      <td>${slaBadge(r)}</td>
-      <td><span class="status-badge ${badgeCls}">${escapeHTML(status)}</span></td>
-      <td>
+      <td data-label="ID"><strong>${escapeHTML(r.id || '-')}</strong></td>
+      <td data-label="Jenis"><span class="report-type-badge ${getReportType(r).toLowerCase()}">${escapeHTML(getReportTypeLabel(r))}</span></td>
+      <td data-label="Tanggal">${escapeHTML(formatDate(r.timestamp))}</td>
+      <td data-label="Pelapor">${escapeHTML(r.nama || '-')}</td>
+      <td data-label="Dept">${deptVal}</td>
+      <td data-label="Lokasi">${escapeHTML(getDashboardLocation(r))}</td>
+      <td data-label="Deskripsi" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHTML(getDashboardDescription(r))}</td>
+      <td data-label="PIC">${escapeHTML(r.nama_pic || '-')}</td>
+      <td data-label="Due Date">${escapeHTML(dueFmt)}</td>
+      <td data-label="SLA">${slaBadge(r)}</td>
+      <td data-label="Status"><span class="status-badge ${badgeCls}">${escapeHTML(status)}</span></td>
+      <td data-label="">
         <button class="btn-view" data-report-index="${globalIdx}">
           <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 5c-7 0-10 6.3-10 7s3 7 10 7 10-6.3 10-7-3-7-10-7zm0 12c-3.9 0-6.7-2.7-8-5 1.3-2.3 4.1-5 8-5s6.7 2.7 8 5c-1.3 2.3-4.1 5-8 5zm0-9a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
           View

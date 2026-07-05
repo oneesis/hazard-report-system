@@ -1824,13 +1824,14 @@ tbody td:first-child {
 
   .dashboard-title {
     flex-direction: column;
-    font-size: 2.25rem;
-    letter-spacing: 0;
+    font-size: 1.5rem;
+    letter-spacing: -.5px;
   }
 
   .dashboard-subtitle {
-    font-size: 0.98rem;
+    font-size: 0.82rem;
     line-height: 1.5;
+    margin-top: 6px;
   }
 
   .dashboard-logo {

@@ -107,6 +107,9 @@ function renderUserProfile() {
 
   const installStyle = deferredPrompt ? "display: flex;" : "display: none;";
 
+  // Di app-layout, info user sudah ada di sidebar — dropdown cukup tombol aksi
+  const inAppLayout = !!document.querySelector('.app-layout');
+
   container.innerHTML = `
     <button class="user-menu-button" type="button" onclick="toggleUserMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="userMenuDropdown">
       <span class="user-avatar" aria-hidden="true">${userInitials}</span>
@@ -115,12 +118,13 @@ function renderUserProfile() {
     </button>
 
     <div id="userMenuDropdown" class="user-menu-dropdown" role="menu">
-      <div class="user-name">${userName}</div>
-      <div class="user-role-badge">${userRole}</div>
-      <div class="user-title">${userTitle}</div>
-      <div class="user-company">${userCompany}</div>
-
-      <div class="user-divider"></div>
+      ${!inAppLayout ? `
+        <div class="user-name">${userName}</div>
+        <div class="user-role-badge">${userRole}</div>
+        <div class="user-title">${userTitle}</div>
+        <div class="user-company">${userCompany}</div>
+        <div class="user-divider"></div>
+      ` : ''}
 
       <button id="btnInstallPwa" class="btn-install-pwa" type="button" onclick="installPwaApp()" role="menuitem" style="${installStyle}">
         <i class="fa-solid fa-download" aria-hidden="true"></i>
