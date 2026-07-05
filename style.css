@@ -1,5 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+/* ===== CHANGE PASSWORD MODAL ===== */
+#changePasswordModal { display: none; position: fixed; inset: 0; z-index: 9999; align-items: center; justify-content: center; }
+.cp-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+.cp-box { position: relative; background: #fff; border-radius: 16px; padding: 28px; width: min(400px, 92vw); box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.cp-box h3 { margin: 0 0 20px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+.cp-field { margin-bottom: 14px; }
+.cp-field label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 5px; color: #475569; }
+.cp-field input { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .9rem; box-sizing: border-box; transition: border-color .2s; }
+.cp-field input:focus { outline: none; border-color: #6366f1; }
+.cp-msg { font-size: .82rem; color: #ef4444; min-height: 18px; margin: 4px 0 12px; }
+.cp-msg.cp-success { color: #16a34a; }
+.cp-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.cp-btn-cancel { padding: 9px 18px; border: 1.5px solid #e2e8f0; background: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+.cp-btn-submit { padding: 9px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+.cp-btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+.btn-change-password { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; background: none; border: none; border-radius: 8px; cursor: pointer; font-size: .85rem; font-weight: 500; color: inherit; }
+.btn-change-password:hover { background: #f1f5f9; }
+body.dark-mode .cp-box { background: #1e293b; color: #e2e8f0; }
+body.dark-mode .cp-field label { color: #94a3b8; }
+body.dark-mode .cp-field input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+body.dark-mode .cp-btn-cancel { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+body.dark-mode .btn-change-password:hover { background: #334155; }
+
 /* ========================================
    SKELETON LOADING - SECTION 1
 ======================================== */

@@ -125,6 +125,11 @@ function renderUserProfile() {
         <span>Instal Aplikasi</span>
       </button>
 
+      <button class="btn-change-password" type="button" onclick="openChangePasswordModal()" role="menuitem">
+        <i class="fa-solid fa-key" aria-hidden="true"></i>
+        <span>Ganti Password</span>
+      </button>
+
       <button class="btn-logout" type="button" onclick="logout()" role="menuitem">
         <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
         <span>Logout</span>
@@ -164,6 +169,85 @@ document.addEventListener("keydown", function (e) {
     closeUserMenu();
   }
 });
+
+// ===== GANTI PASSWORD =====
+function openChangePasswordModal() {
+  closeUserMenu();
+  let modal = document.getElementById('changePasswordModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'changePasswordModal';
+    modal.innerHTML = `
+      <div class="cp-overlay" onclick="closeChangePasswordModal()"></div>
+      <div class="cp-box" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
+        <h3 id="cpTitle"><i class="fa-solid fa-key"></i> Ganti Password</h3>
+        <div class="cp-field">
+          <label>Password Lama</label>
+          <input type="password" id="cpOld" placeholder="Password saat ini" autocomplete="current-password">
+        </div>
+        <div class="cp-field">
+          <label>Password Baru</label>
+          <input type="password" id="cpNew" placeholder="Minimal 6 karakter" autocomplete="new-password">
+        </div>
+        <div class="cp-field">
+          <label>Konfirmasi Password Baru</label>
+          <input type="password" id="cpConfirm" placeholder="Ulangi password baru" autocomplete="new-password">
+        </div>
+        <p id="cpMsg" class="cp-msg"></p>
+        <div class="cp-actions">
+          <button type="button" class="cp-btn-cancel" onclick="closeChangePasswordModal()">Batal</button>
+          <button type="button" class="cp-btn-submit" onclick="submitChangePassword()">Simpan</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('cpOld').value = '';
+  document.getElementById('cpNew').value = '';
+  document.getElementById('cpConfirm').value = '';
+  document.getElementById('cpMsg').textContent = '';
+  document.getElementById('cpMsg').className = 'cp-msg';
+  modal.style.display = 'flex';
+  document.getElementById('cpOld').focus();
+}
+
+function closeChangePasswordModal() {
+  const modal = document.getElementById('changePasswordModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function submitChangePassword() {
+  const oldPw  = document.getElementById('cpOld').value.trim();
+  const newPw  = document.getElementById('cpNew').value.trim();
+  const confirm = document.getElementById('cpConfirm').value.trim();
+  const msg = document.getElementById('cpMsg');
+
+  msg.className = 'cp-msg';
+  if (!oldPw || !newPw || !confirm) { msg.textContent = 'Semua kolom wajib diisi.'; return; }
+  if (newPw.length < 6) { msg.textContent = 'Password baru minimal 6 karakter.'; return; }
+  if (newPw !== confirm) { msg.textContent = 'Konfirmasi password tidak cocok.'; return; }
+
+  const btn = document.querySelector('.cp-btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  try {
+    const res = await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'changePassword', data: { old_password: oldPw, new_password: newPw } })
+    });
+    const result = await res.json();
+    if (result.status !== 'success') throw new Error(result.message);
+    msg.className = 'cp-msg cp-success';
+    msg.textContent = 'Password berhasil diubah! Silakan login ulang.';
+    setTimeout(() => { logout(); }, 2000);
+  } catch (err) {
+    msg.textContent = err.message || 'Gagal mengubah password.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Simpan';
+  }
+}
 
 // Register Service Worker for PWA offline capability
 if ("serviceWorker" in navigator) {

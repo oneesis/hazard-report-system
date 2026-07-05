@@ -139,6 +139,36 @@ async function login(sheets, nik, password) {
   };
 }
 
+async function changePassword(sheets, nik, oldPassword, newPassword) {
+  if (!newPassword || newPassword.length < 6)
+    throw Object.assign(new Error('Password baru minimal 6 karakter.'), { httpStatus: 400 });
+
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
+  const rows = res.data.values || [];
+  if (rows.length < 2) throw new Error('Data karyawan tidak ditemukan.');
+
+  const headers = rows[0].map(h => String(h).trim().toUpperCase());
+  const nikCol = headers.indexOf('NIK');
+  const pwCol  = headers.indexOf('PASSWORD');
+  if (nikCol === -1 || pwCol === -1) throw new Error('Kolom NIK/PASSWORD tidak ditemukan.');
+
+  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(nik || '').trim());
+  if (rowIdx === -1) throw new Error('User tidak ditemukan.');
+
+  if (!verifyPassword(oldPassword, rows[rowIdx][pwCol]))
+    throw Object.assign(new Error('Password lama salah.'), { httpStatus: 400 });
+
+  const hash = bcrypt.hashSync(newPassword, 10);
+  const colLetter = colIndexToLetter(pwCol);
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `Master_Karyawan!${colLetter}${rowIdx + 1}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [[hash]] }
+  });
+  return { status: 'success', message: 'Password berhasil diubah.' };
+}
+
 function issueToken(user) {
   return jwt.sign(
     { nik: user.nik, nama: user.nama, role: user.role },
@@ -440,10 +470,13 @@ module.exports = async (req, res) => {
       }
 
       // Semua action POST lainnya wajib token valid
-      requireAuth(req);
+      const authUser = requireAuth(req);
 
       let result;
       switch (action) {
+        case 'changePassword':
+          result = await changePassword(sheets, authUser.nik, data?.old_password, data?.new_password);
+          break;
         case 'submitHazardReport':     result = await submitHazardReport(sheets, drive, data); break;
         case 'submitInspectionReport': result = await submitInspectionReport(sheets, drive, data); break;
         case 'updateHazardReport':     result = await updateReport(sheets, drive, data, 'Hazard_Report', '-Closing'); break;
