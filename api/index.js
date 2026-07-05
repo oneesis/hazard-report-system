@@ -122,7 +122,7 @@ async function login(sheets, nik, password) {
   const data = await getSheetData(sheets, 'Master_Karyawan');
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
   // Pesan error disamakan agar tidak membocorkan NIK mana yang terdaftar
-  if (!user || String(user['ROLE'] || '').toUpperCase() === 'DELETED' || !verifyPassword(password, user['PASSWORD']))
+  if (!user || normalizeRole(user['ROLE']) === 'DELETED' || !verifyPassword(password, user['PASSWORD']))
     return { status: 'error', message: 'NIK atau password salah.' };
   return {
     status: 'success',
@@ -134,7 +134,7 @@ async function login(sheets, nik, password) {
       perusahaan: String(user['PERUSAHAAN'] || '').trim(),
       subcont: String(user['SUBCONT'] || user['PERUSAHAAN SUBCONT(1)'] || '').trim(),
       no_whatsapp: String(user['NO WHATSAPP'] || '').trim(),
-      role: String(user['ROLE'] || 'USER').trim().toUpperCase()
+      role: String(user['ROLE'] || 'USER').trim().toUpperCase().replace(/\s+/g, '_')
     }
   };
 }
@@ -177,8 +177,9 @@ function issueToken(user) {
   );
 }
 
-function isSuperAdmin(role) { return String(role || '').toUpperCase() === 'SUPER_ADMIN'; }
-function isAdminOrAbove(role) { const r = String(role || '').toUpperCase(); return r === 'ADMIN' || r === 'SUPER_ADMIN'; }
+function normalizeRole(role) { return String(role || '').trim().toUpperCase().replace(/\s+/g, '_'); }
+function isSuperAdmin(role) { return normalizeRole(role) === 'SUPER_ADMIN'; }
+function isAdminOrAbove(role) { const r = normalizeRole(role); return r === 'ADMIN' || r === 'SUPER_ADMIN'; }
 
 const KARYAWAN_HEADERS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','ROLE','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
 const PENDING_HEADERS  = ['ID','TIMESTAMP','ACTION','PROPOSED_BY_NIK','PROPOSED_BY_NAMA','PERUSAHAAN','TARGET_NIK','DATA','STATUS','REVIEWED_BY','REVIEWED_AT','REJECTION_REASON'];
