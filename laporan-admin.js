@@ -70,6 +70,10 @@ function wireFilters() {
     const idx = Number(btn.dataset.reportIndex);
     if (lmFiltered[idx]) openReportModal(lmFiltered[idx]);
   });
+  // Pasang close modal — dashboard.js melewatkan ini saat __skipDashboardInit aktif
+  document.getElementById('modalClose')?.addEventListener('click', closeReportModal);
+  document.querySelector('.modal-overlay')?.addEventListener('click', closeReportModal);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReportModal(); });
 }
 
 function slaDays(report) {
