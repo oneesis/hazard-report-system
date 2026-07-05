@@ -32,7 +32,8 @@ async function loadPendingChanges() {
   try {
     const res = await fetch('/api?action=getPendingChanges');
     const result = await res.json();
-    renderPendingChanges(result.data || []);
+    window.__pendingChanges = result.data || [];
+    renderPendingChanges(window.__pendingChanges);
   } catch { /* silent */ }
 }
 
@@ -250,9 +251,10 @@ async function submitPropose(action, payload) {
       body: JSON.stringify({ action: 'proposeChange', data: { action, payload } })
     });
     const result = await res.json();
-    alert(result.message);
+    showAdminToast(result.message || (result.status === 'success' ? 'Permohonan terkirim.' : 'Gagal.'),
+      result.status === 'success' ? 'success' : 'error');
     if (result.status === 'success') loadUsers();
-  } catch (e) { alert(e.message); }
+  } catch (e) { showAdminToast(e.message || 'Terjadi kesalahan.', 'error'); }
 }
 
 async function reviewChange(changeId, decision) {
@@ -262,27 +264,127 @@ async function reviewChange(changeId, decision) {
       body: JSON.stringify({ action: 'reviewChange', data: { change_id: changeId, decision } })
     });
     const result = await res.json();
-    alert(result.message);
+    showAdminToast(result.message || (result.status === 'success' ? 'Berhasil.' : 'Gagal.'),
+      result.status === 'success' ? 'success' : 'error');
     if (result.status === 'success') { loadUsers(); loadPendingChanges(); }
-  } catch (e) { alert(e.message); }
+  } catch (e) { showAdminToast(e.message || 'Terjadi kesalahan.', 'error'); }
+}
+
+function showAdminToast(msg, type = 'success') {
+  let t = document.getElementById('adminToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'adminToast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99999;padding:10px 20px;border-radius:10px;font-size:.85rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.15);transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.style.background = type === 'success' ? '#003087' : '#dc2626';
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
 }
 
 function promptReject(changeId) {
-  const reason = prompt('Alasan penolakan (opsional):');
-  if (reason === null) return; // cancelled
-  rejectChange(changeId, reason);
+  const pending = (window.__pendingChanges || []).find(p => p['ID'] === changeId);
+  let modal = document.getElementById('rejectModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'rejectModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div class="cp-overlay" onclick="closeRejectModal()"></div>
+      <div class="cp-box" style="width:min(480px,94vw)">
+        <h3 style="margin:0 0 16px;font-size:1rem;display:flex;align-items:center;gap:8px;color:#dc2626">
+          <i class="fa-solid fa-circle-xmark"></i> Tolak Pengajuan
+        </h3>
+        <div id="rejectDetail" style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#334155;line-height:1.7"></div>
+        <div class="cp-field">
+          <label for="rejectReason">Alasan Penolakan <span style="color:#94a3b8;font-weight:400">(opsional)</span></label>
+          <textarea id="rejectReason" rows="3"
+            placeholder="Jelaskan alasan penolakan kepada pengaju..."
+            style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.85rem;resize:vertical;font-family:'Inter',sans-serif;box-sizing:border-box;transition:border-color .15s"
+            onfocus="this.style.borderColor='#307FE2'" onblur="this.style.borderColor='#e2e8f0'"></textarea>
+        </div>
+        <p id="rejectMsg" style="font-size:.82rem;color:#ef4444;min-height:18px;margin:0 0 12px"></p>
+        <div class="cp-actions">
+          <button class="cp-btn-cancel" onclick="closeRejectModal()">Batal</button>
+          <button id="rejectConfirmBtn"
+            style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;transition:background .15s"
+            onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'"
+            onclick="submitRejectModal()">
+            <i class="fa-solid fa-xmark"></i> Konfirmasi Tolak
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  modal.dataset.changeId = changeId;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectMsg').textContent = '';
+
+  const detail = document.getElementById('rejectDetail');
+  if (pending) {
+    const data = safeParseJson(pending['DATA'] || '{}');
+    const actionLabel = { ADD:'Tambah User', EDIT:'Edit User', DELETE:'Hapus User' };
+    const actionColor = { ADD:'#dcfce7;color:#15803d', EDIT:'#dbeafe;color:#003087', DELETE:'#fee2e2;color:#dc2626' };
+    const ac = (pending['ACTION'] || '').toUpperCase();
+    detail.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700;background:${actionColor[ac]||'#f1f5f9;color:#475569'}">${actionLabel[ac]||ac}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:100px 1fr;gap:4px">
+        <span style="color:#94a3b8">Diajukan oleh</span>
+        <strong>${escapeHTML(pending['PROPOSED_BY_NAMA'] || pending['PROPOSED_BY_NIK'] || '-')}</strong>
+        <span style="color:#94a3b8">Perusahaan</span>
+        <span>${escapeHTML(pending['PERUSAHAAN'] || '-')}</span>
+        <span style="color:#94a3b8">User</span>
+        <strong>${escapeHTML(data.NAMA || data.NIK || pending['TARGET_NIK'] || '-')}</strong>
+        <span style="color:#94a3b8">Waktu</span>
+        <span>${escapeHTML(formatDate(pending['TIMESTAMP']))}</span>
+      </div>`;
+  } else {
+    detail.innerHTML = `<span style="color:#94a3b8">ID: ${escapeHTML(changeId)}</span>`;
+  }
+
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('rejectReason')?.focus(), 60);
 }
 
-async function rejectChange(changeId, reason) {
+function closeRejectModal() {
+  const m = document.getElementById('rejectModal');
+  if (m) m.style.display = 'none';
+}
+
+async function submitRejectModal() {
+  const modal = document.getElementById('rejectModal');
+  const changeId = modal?.dataset.changeId;
+  const reason = (document.getElementById('rejectReason')?.value || '').trim();
+  const btn = document.getElementById('rejectConfirmBtn');
+  const msg = document.getElementById('rejectMsg');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+  msg.textContent = '';
+
   try {
     const res = await fetch('/api', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reviewChange', data: { change_id: changeId, decision: 'REJECT', reason } })
     });
     const result = await res.json();
-    alert(result.message);
-    if (result.status === 'success') loadPendingChanges();
-  } catch (e) { alert(e.message); }
+    if (result.status !== 'success') throw new Error(result.message || 'Gagal memproses.');
+    closeRejectModal();
+    showAdminToast('Pengajuan berhasil ditolak.', 'error');
+    loadPendingChanges();
+  } catch (e) {
+    msg.textContent = e.message || 'Gagal memproses.';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Konfirmasi Tolak';
+  }
 }
 
 function renderUMTab() {
@@ -366,7 +468,7 @@ function handleCsvFile(input) {
 
 async function processCsvImport(csvText) {
   const lines = csvText.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) { alert('File CSV kosong atau hanya berisi header.'); return; }
+  if (lines.length < 2) { showAdminToast('File CSV kosong atau hanya berisi header.', 'error'); return; }
   const header = parseCsvLine(lines[0]).map(h => h.trim().toUpperCase());
   const rows = lines.slice(1).map(l => parseCsvLine(l));
 
@@ -376,7 +478,7 @@ async function processCsvImport(csvText) {
     return obj;
   }).filter(u => u['NAMA'] && u['PASSWORD']);
 
-  if (!users.length) { alert('Tidak ada data valid. Pastikan kolom NAMA dan PASSWORD terisi.'); return; }
+  if (!users.length) { showAdminToast('Tidak ada data valid. Pastikan kolom NAMA dan PASSWORD terisi.', 'error'); return; }
 
   const confirmed = confirm(`Akan mengimpor ${users.length} user baru. Semua akan mendapat role USER.\n\nLanjutkan?`);
   if (!confirmed) return;
@@ -401,7 +503,7 @@ async function processCsvImport(csvText) {
       if (result.status === 'success') success++; else failed++;
     } catch { failed++; }
   }
-  alert(`Import selesai.\nBerhasil: ${success}\nGagal: ${failed}`);
+  showAdminToast(`Import selesai. Berhasil: ${success}, Gagal: ${failed}`, success ? 'success' : 'error');
   if (success) loadUsers();
 }
 
