@@ -1361,6 +1361,7 @@ async function autofillDataPelapor() {
 // INITIALIZE
 // ========================================
 document.addEventListener("DOMContentLoaded", async () => {
+  document.getElementById('step1')?.classList.add('section-1-skeleton');
   try {
     await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadMasterTemuan()]);
     loadPerusahaanOptions();
@@ -1427,6 +1428,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!isAdmin()) setSection1Editable(false);
     autofillDataPelapor();
+    document.getElementById('step1')?.classList.remove('section-1-skeleton');
 
     // Initialize enhancements
     loadDraft();

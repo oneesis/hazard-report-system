@@ -1340,12 +1340,15 @@ function initializeInspectionForm(type) {
 }
 
 async function initPage() {
+  document.getElementById('step1')?.classList.add('section-1-skeleton');
   try {
     const params = getQueryParams();
     const type = (params.type || "").toUpperCase();
     await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadInspectionChecklist()]);
     initializeInspectionForm(type);
+    document.getElementById('step1')?.classList.remove('section-1-skeleton');
   } catch (error) {
+    document.getElementById('step1')?.classList.remove('section-1-skeleton');
     console.error("Gagal memuat data inspeksi:", error);
     showAlert();
     const alertBox = document.getElementById("alertError");

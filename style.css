@@ -1,5 +1,39 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+/* ========================================
+   SKELETON LOADING - SECTION 1
+======================================== */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+#step1.section-1-skeleton .form-group {
+  position: relative;
+  pointer-events: none;
+}
+
+#step1.section-1-skeleton .form-group::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  z-index: 10;
+}
+
+#step1.section-1-skeleton button {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+body.dark-mode #step1.section-1-skeleton .form-group::after {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
 :root {
   --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -604,7 +638,59 @@ input[readonly] {
 /* ========================================
     DARK MODE TOGGLE
 ======================================== */
+/* Step summary text - shown only on mobile below progress circles */
+.step-summary {
+  display: none;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 4px;
+  margin-bottom: 20px;
+  letter-spacing: 0.01em;
+}
+
+/* Dark mode toggle inside user menu */
+.btn-dark-mode {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.btn-dark-mode:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+body.dark-mode .btn-dark-mode {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  color: #e2e8f0;
+}
+
+body.dark-mode .btn-dark-mode:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+/* Legacy floating dark mode toggle — hidden (moved to user menu) */
 .dark-mode-toggle {
+  display: none !important;
+}
+
+/* Keep legacy CSS for reference but non-functional */
+.dark-mode-toggle-legacy {
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -2134,10 +2220,11 @@ input[type="file"]:hover {
   }
 
   .step-progress {
-    overflow-x: auto;
-    padding-bottom: 10px;
-    justify-content: flex-start;
-    scrollbar-width: thin;
+    overflow-x: visible;
+    padding-bottom: 0;
+    justify-content: space-between;
+    gap: 0;
+    margin-bottom: 4px;
   }
 
   .step-progress::before {
@@ -2145,7 +2232,24 @@ input[type="file"]:hover {
   }
 
   .step {
-    min-width: 82px;
+    min-width: unset;
+    flex: 1;
+  }
+
+  .step-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    margin-bottom: 0;
+  }
+
+  /* Hide all step labels on small screens — step-summary text replaces them */
+  .step-progress .step-label {
+    display: none;
+  }
+
+  .step-summary {
+    display: block;
   }
 
   .step-label {
@@ -2259,11 +2363,6 @@ input[type="file"]:hover {
     background: linear-gradient(135deg, #0ea5e9, #1d4ed8);
   }
 
-  .dark-mode-toggle {
-    bottom: calc(104px + env(safe-area-inset-bottom));
-    right: 14px;
-    padding: 10px 12px;
-  }
 }
 
 /* ========================================
