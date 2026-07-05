@@ -19,7 +19,7 @@
     .ins-drafts-list { display: flex; flex-direction: column; gap: 8px; }
     .draft-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid #fde68a; border-radius: 10px; padding: 12px 14px; text-decoration: none; color: inherit; transition: border-color .15s; position: relative; }
     .draft-card:hover { border-color: #f59e0b; }
-    .draft-card-icon { width: 36px; height: 36px; border-radius: 9px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+    .draft-card-icon { width: 40px; height: 40px; border-radius: 10px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
     .draft-card-content { flex: 1; min-width: 0; }
     .draft-card-title { font-size: .85rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
     .draft-card-meta { font-size: .72rem; color: #94a3b8; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -117,6 +117,16 @@
     INS_KG:'fa-building', INS_SP:'fa-water', INS_T:'fa-mountain',
     INS_TB:'fa-oil-can', INS_WS:'fa-hammer'
   };
+  const TYPE_COLORS = {
+    INS_CB:'linear-gradient(135deg,#0ea5e9,#0284c7)',
+    INS_JA:'linear-gradient(135deg,#f59e0b,#d97706)',
+    INS_MD:'linear-gradient(135deg,#10b981,#059669)',
+    INS_KG:'linear-gradient(135deg,#307FE2,#003087)',
+    INS_SP:'linear-gradient(135deg,#06b6d4,#0891b2)',
+    INS_T: 'linear-gradient(135deg,#f43f5e,#e11d48)',
+    INS_TB:'linear-gradient(135deg,#ff5722,#e64a19)',
+    INS_WS:'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+  };
 
   function timeAgo(s) {
     const m = Math.floor((Date.now() - new Date(s)) / 60000);
@@ -151,7 +161,7 @@
       card.className = 'draft-card';
       const parts = [d.lokasi_inspeksi, d.tanggal_inspeksi].filter(Boolean).join(' · ');
       card.innerHTML = `
-        <div class="draft-card-icon"><i class="fa-solid ${TYPE_ICONS[type] || 'fa-clipboard'}"></i></div>
+        <div class="draft-card-icon" style="background:${TYPE_COLORS[type]||'linear-gradient(135deg,#64748b,#475569)'}"><i class="fa-solid ${TYPE_ICONS[type] || 'fa-clipboard'}"></i></div>
         <div class="draft-card-content">
           <div class="draft-card-title">${TYPE_LABELS[type] || type}</div>
           <div class="draft-card-meta">
