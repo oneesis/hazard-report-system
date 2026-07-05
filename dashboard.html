@@ -86,6 +86,11 @@
         <div class="kpi-title">CLOSED</div>
         <div id="kpiClosed" class="kpi-value">0</div>
       </div>
+
+      <div class="kpi-card overdue">
+        <div class="kpi-title">OVERDUE</div>
+        <div id="kpiOverdue" class="kpi-value">0</div>
+      </div>
     </section>
 
     <!-- CHARTS SECTION -->
@@ -100,6 +105,12 @@
         <h3 class="chart-title">Temuan Bahaya Berdasarkan Lokasi (Top 5)</h3>
         <div class="chart-container">
           <canvas id="chartLokasi"></canvas>
+        </div>
+      </div>
+      <div class="chart-card chart-card-full">
+        <h3 class="chart-title">Tren Laporan per Bulan (6 Bulan Terakhir)</h3>
+        <div class="chart-container">
+          <canvas id="chartTrend"></canvas>
         </div>
       </div>
     </section>
@@ -182,6 +193,7 @@
           </tr>
         </tbody>
       </table>
+      <div id="tablePagination" class="table-pagination"></div>
     </section>
 
     <div id="reportModal" class="modal hidden" aria-hidden="true">

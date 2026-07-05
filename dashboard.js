@@ -6,6 +6,7 @@ let selectedAfterPhotoBase64List = [];
 let selectedStatus = "OPEN";
 let statusChartInstance = null;
 let lokasiChartInstance = null;
+let trendChartInstance = null;
 let currentPage = 1;
 const PAGE_SIZE = 20;
 
@@ -161,6 +162,15 @@ document.getElementById('reportTableBody').innerHTML = `
   }
 }
 
+function isOverdue(report) {
+  if ((report.status_perbaikan || 'OPEN') === 'CLOSED') return false;
+  const due = new Date(getReportValue(report, ['batas_waktu', 'due_date'], ''));
+  if (isNaN(due)) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due < today;
+}
+
 function getVisibleReportsFromCache() {
   return getVisibleReports(reports);
 }
@@ -206,8 +216,10 @@ function updateKPI() {
     "kpiProgress"
   ).textContent = progressCount;
 
-  document.getElementById("kpiClosed").textContent =
-    closedCount;
+  document.getElementById("kpiClosed").textContent = closedCount;
+
+  const overdueEl = document.getElementById("kpiOverdue");
+  if (overdueEl) overdueEl.textContent = visibleReports.filter(isOverdue).length;
 }
 
 // ========================================
@@ -304,9 +316,10 @@ function renderTablePage() {
       const globalIndex = startIdx + localIndex;
       const status = report.status_perbaikan || "OPEN";
       const badgeClass = status === "OPEN" ? "status-open" : status === "PROGRESS" ? "status-progress" : "status-closed";
+      const overdue = isOverdue(report);
 
       return `
-        <tr>
+        <tr${overdue ? ' class="row-overdue"' : ''}>
           <td><strong>${report.id || ""}</strong></td>
           <td><span class="report-type-badge ${getReportType(report).toLowerCase()}">${getReportTypeLabel(report)}</span></td>
           <td>${formatDate(report.timestamp)}</td>
@@ -314,7 +327,7 @@ function renderTablePage() {
           <td>${getDashboardLocation(report)}</td>
           <td>${getDashboardDescription(report)}</td>
           <td>${report.nama_pic || ""}</td>
-          <td><span class="status-badge ${badgeClass}">${status}</span></td>
+          <td><span class="status-badge ${badgeClass}">${status}</span>${overdue ? '<span class="badge-overdue">Overdue</span>' : ''}</td>
           <td>
             <button class="btn-view" data-report-index="${globalIndex}" aria-label="Lihat detail laporan">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7 0-10 6.3-10 7s3 7 10 7 10-6.3 10-7-3-7-10-7zm0 12c-3.9 0-6.7-2.7-8-5 1.3-2.3 4.1-5 8-5s6.7 2.7 8 5c-1.3 2.3-4.1 5-8 5zm0-9a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
@@ -444,6 +457,43 @@ function renderDashboardCharts(reportsList) {
           }
         },
         cutout: "70%"
+      }
+    });
+  }
+
+  // --- Render Trend Chart (Monthly Bar) ---
+  const ctxTrend = document.getElementById("chartTrend")?.getContext("2d");
+  if (ctxTrend) {
+    if (trendChartInstance) trendChartInstance.destroy();
+    const now = new Date();
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return { label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }), year: d.getFullYear(), month: d.getMonth() };
+    });
+    const trendData = months.map(m =>
+      reportsList.filter(r => { const d = parseReportDate(r); return d && d.getFullYear() === m.year && d.getMonth() === m.month; }).length
+    );
+    trendChartInstance = new Chart(ctxTrend, {
+      type: "bar",
+      data: {
+        labels: months.map(m => m.label),
+        datasets: [{
+          label: "Jumlah Laporan",
+          data: trendData,
+          backgroundColor: "rgba(37, 99, 235, 0.8)",
+          hoverBackgroundColor: "#2563eb",
+          borderRadius: 8,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0, color: "#64748b", font: { size: 11 } }, grid: { color: "#f1f5f9" } },
+          x: { ticks: { color: "#475569", font: { weight: "bold", size: 11 } }, grid: { display: false } }
+        }
       }
     });
   }
