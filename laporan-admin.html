@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manajemen Laporan - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="laporan-admin.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <!-- Mobile topbar -->
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Manajemen Laporan</span>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <div class="lm-content">
+
+      <!-- PAGE HEADER -->
+      <div class="lm-header">
+        <div>
+          <h1 class="lm-title">
+            <i class="fa-solid fa-file-lines"></i> Manajemen Laporan
+          </h1>
+          <p class="lm-subtitle">Kelola dan pantau semua laporan Hazard &amp; Inspeksi</p>
+        </div>
+        <div class="lm-header-actions">
+          <button id="btnRefresh" class="btn-primary" title="Refresh data">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh
+          </button>
+          <button id="btnExportCsv" class="btn-secondary">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI STRIP -->
+      <div class="lm-kpi-strip">
+        <div class="lm-kpi lm-kpi--total">
+          <div class="lm-kpi-num" id="kpiTotal">-</div>
+          <div class="lm-kpi-label">Total</div>
+        </div>
+        <div class="lm-kpi lm-kpi--open">
+          <div class="lm-kpi-num" id="kpiOpen">-</div>
+          <div class="lm-kpi-label">Open</div>
+        </div>
+        <div class="lm-kpi lm-kpi--progress">
+          <div class="lm-kpi-num" id="kpiProgress">-</div>
+          <div class="lm-kpi-label">Progress</div>
+        </div>
+        <div class="lm-kpi lm-kpi--closed">
+          <div class="lm-kpi-num" id="kpiClosed">-</div>
+          <div class="lm-kpi-label">Closed</div>
+        </div>
+        <div class="lm-kpi lm-kpi--overdue">
+          <div class="lm-kpi-num" id="kpiOverdue">-</div>
+          <div class="lm-kpi-label">Overdue</div>
+        </div>
+      </div>
+
+      <!-- FILTER BAR -->
+      <div class="lm-filter-bar">
+        <div class="lm-search-wrap">
+          <i class="fa-solid fa-magnifying-glass lm-search-icon"></i>
+          <input type="text" id="searchInput" class="lm-search-input"
+            placeholder="Cari ID, Pelapor, PIC, Lokasi..." autocomplete="off">
+        </div>
+
+        <div class="lm-date-wrap">
+          <i class="fa-solid fa-calendar-days lm-cal-icon"></i>
+          <input type="text" id="dateRange" class="lm-date-input"
+            placeholder="Dari - Sampai" autocomplete="off">
+        </div>
+
+        <select id="statusFilter" class="lm-select">
+          <option value="">Semua Status</option>
+          <option value="OPEN">OPEN</option>
+          <option value="PROGRESS">PROGRESS</option>
+          <option value="CLOSED">CLOSED</option>
+        </select>
+
+        <select id="typeFilter" class="lm-select">
+          <option value="">Semua Jenis</option>
+          <option value="HAZARD">Hazard</option>
+          <option value="INSPECTION">Inspeksi</option>
+        </select>
+
+        <select id="deptFilter" class="lm-select">
+          <option value="">Semua Dept</option>
+        </select>
+
+        <select id="slaFilter" class="lm-select">
+          <option value="">Semua SLA</option>
+          <option value="overdue">Overdue</option>
+          <option value="warning">Warning (≤3 hari)</option>
+          <option value="ok">On Track</option>
+        </select>
+      </div>
+
+      <!-- TABLE -->
+      <div class="lm-table-wrap">
+        <table id="reportTable" class="lm-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Jenis</th>
+              <th>Tanggal</th>
+              <th>Pelapor</th>
+              <th>Dept</th>
+              <th>Lokasi</th>
+              <th>Deskripsi</th>
+              <th>PIC</th>
+              <th>Due Date</th>
+              <th>SLA</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="reportTableBody">
+            <tr><td colspan="12" class="lm-loading">Memuat data...</td></tr>
+          </tbody>
+        </table>
+        <div id="tablePagination" class="lm-pagination"></div>
+      </div>
+
+    </div><!-- end lm-content -->
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-bottom-nav">
+      <a href="index-home.html" class="mobile-bottom-link">
+        <i class="fa-solid fa-house"></i><span>Beranda</span>
+      </a>
+      <a href="index.html" class="mobile-bottom-link">
+        <div class="mobile-bottom-action-icon"><i class="fa-solid fa-plus"></i></div>
+        <span style="color:#00205B;margin-top:2px">Lapor</span>
+      </a>
+      <a href="dashboard.html" class="mobile-bottom-link">
+        <i class="fa-solid fa-chart-simple"></i><span>Dashboard</span>
+      </a>
+      <a href="#" class="mobile-bottom-link" onclick="event.preventDefault();toggleUserMenu()">
+        <i class="fa-solid fa-user"></i><span>Profil</span>
+      </a>
+    </nav>
+
+  </div><!-- end app-main -->
+</div><!-- end app-layout -->
+
+<!-- REUSE DASHBOARD MODAL -->
+<div id="reportModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-overlay" data-modal-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <div>
+        <p id="modalReportTag" class="modal-tag">Preview Laporan</p>
+        <h2 id="modalTitle">Detail Laporan</h2>
+      </div>
+      <button id="modalClose" class="btn-icon" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-status-row">
+      <span id="modalStatusBadge" class="status-badge status-open">OPEN</span>
+      <span id="modalHazardNumber" class="modal-hazard-number">#0000</span>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-card-section">
+        <div class="field-row"><span id="modalNumberLabel">Nomor Laporan</span><strong id="modalFieldHazardNumber">-</strong></div>
+        <div class="field-row"><span>Tanggal Laporan</span><strong id="modalFieldDate">-</strong></div>
+        <div class="field-row"><span>Pelapor</span><strong id="modalFieldReporter">-</strong></div>
+        <div class="field-row"><span>Departemen</span><strong id="modalFieldDepartment">-</strong></div>
+        <div class="field-row"><span>Lokasi</span><strong id="modalFieldLocation">-</strong></div>
+        <div class="field-row"><span id="modalCategoryLabel">Kategori</span><strong id="modalFieldCategory">-</strong></div>
+        <div class="field-row"><span id="modalRiskLabel">Tingkat Risiko</span><strong id="modalFieldRisk">-</strong></div>
+      </div>
+      <div class="modal-card-section">
+        <div class="field-row"><span>PIC Tindak Lanjut</span><strong id="modalFieldPic">-</strong></div>
+        <div class="field-row"><span>Due Date</span><strong id="modalFieldDueDate">-</strong></div>
+        <div class="field-row field-row-status">
+          <span>Status Perbaikan</span>
+          <div class="status-controls">
+            <div id="modalStatusButtons" class="status-buttons">
+              <button type="button" class="status-button" data-status="OPEN">Open</button>
+              <button type="button" class="status-button" data-status="PROGRESS">Progress</button>
+              <button type="button" class="status-button" data-status="CLOSED">Closed</button>
+            </div>
+            <strong id="modalFieldStatus">-</strong>
+          </div>
+        </div>
+        <div class="field-row field-row-textarea">
+          <span>Catatan Closing <span class="required">*</span></span>
+          <textarea id="modalInputClosingNote" rows="4" placeholder="Masukkan catatan closing..." required></textarea>
+        </div>
+        <div class="field-row"><span>Tanggal Closing</span><strong id="modalFieldClosingDate">-</strong></div>
+      </div>
+    </div>
+    <div class="modal-section modal-card-section">
+      <h3 id="modalDescriptionTitle">Deskripsi Temuan</h3>
+      <p id="modalFieldDescription">-</p>
+    </div>
+    <div class="modal-section modal-card-section">
+      <h3>Rekomendasi Perbaikan</h3>
+      <p id="modalFieldRecommendation">-</p>
+    </div>
+    <div class="modal-section modal-card-section reporter-declaration">
+      <h3>Pernyataan Pelapor</h3>
+      <p id="modalFieldStatement">-</p>
+      <img id="modalReporterSignature" class="reporter-signature hidden" alt="Tanda tangan pelapor" />
+    </div>
+    <div class="modal-section modal-card-section modal-photos-section">
+      <h3>Foto Temuan dan Perbaikan</h3>
+      <div class="photo-grid">
+        <div class="photo-card">
+          <p class="photo-title">Foto Temuan (Before)</p>
+          <div class="photo-frame" id="modalPhotoBeforeContainer">
+            <div id="modalPhotoBeforePlaceholder" class="photo-placeholder">Tidak ada foto temuan</div>
+          </div>
+        </div>
+        <div class="photo-card">
+          <p class="photo-title">Foto Perbaikan (After)</p>
+          <div class="photo-frame" id="modalPhotoAfterContainer">
+            <div id="modalPhotoAfterPlaceholder" class="photo-placeholder">Belum ada foto perbaikan</div>
+          </div>
+          <label class="file-input-label" for="modalInputAfterPhoto">Upload Foto Perbaikan</label>
+          <input id="modalInputAfterPhoto" type="file" accept="image/*" multiple />
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="btnSubmitClosing" class="btn-primary">
+        <i class="fa-solid fa-paper-plane"></i> Submit Closing
+      </button>
+      <button id="btnDownloadPdf" class="btn-secondary">
+        <i class="fa-solid fa-file-arrow-down"></i> Print PDF
+      </button>
+      <button id="modalEdit" class="btn-secondary hidden">
+        <i class="fa-solid fa-pen"></i> Edit
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="photoZoomOverlay" class="photo-zoom-overlay">
+  <button id="photoZoomClose" class="photo-zoom-close" aria-label="Close">&times;</button>
+  <img id="zoomedPhoto" alt="Zoomed photo">
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
+<script>window.__skipDashboardInit = true;</script>
+<script src="dashboard.js"></script>
+<script src="laporan-admin.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    if (!isAdminOrAbove(user?.role)) {
+      window.location.href = 'index-home.html';
+      return;
+    }
+    renderUserProfile();
+    if (window.flatpickr) {
+      flatpickr('#dateRange', {
+        mode: 'range', dateFormat: 'm/d/Y', allowInput: true,
+        altInput: true, altFormat: 'd F Y'
+      });
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring Eskalasi - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="eskalasi.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <!-- Mobile topbar -->
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Monitoring Eskalasi</span>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <div class="esk-content">
+
+      <!-- PAGE HEADER -->
+      <div class="esk-header">
+        <div>
+          <h1 class="esk-title">
+            <i class="fa-solid fa-circle-exclamation"></i> Monitoring Eskalasi
+          </h1>
+          <p class="esk-subtitle">Laporan yang memerlukan perhatian segera berdasarkan status SLA</p>
+        </div>
+        <button id="btnRefresh" class="btn-primary" onclick="loadEskalasi()">
+          <i class="fa-solid fa-arrows-rotate"></i> Refresh
+        </button>
+      </div>
+
+      <!-- SUMMARY STRIP -->
+      <div class="esk-summary" id="eskSummary">
+        <div class="esk-sum-item esk-sum--overdue">
+          <div class="esk-sum-num" id="sumOverdue">-</div>
+          <div class="esk-sum-label"><i class="fa-solid fa-circle-xmark"></i> Overdue</div>
+        </div>
+        <div class="esk-sum-item esk-sum--warning">
+          <div class="esk-sum-num" id="sumWarning">-</div>
+          <div class="esk-sum-label"><i class="fa-solid fa-triangle-exclamation"></i> Warning ≤3 Hari</div>
+        </div>
+        <div class="esk-sum-item esk-sum--ok">
+          <div class="esk-sum-num" id="sumOk">-</div>
+          <div class="esk-sum-label"><i class="fa-solid fa-circle-check"></i> On Track</div>
+        </div>
+        <div class="esk-sum-item esk-sum--nodue">
+          <div class="esk-sum-num" id="sumNoDue">-</div>
+          <div class="esk-sum-label"><i class="fa-solid fa-circle-minus"></i> Tanpa Due Date</div>
+        </div>
+      </div>
+
+      <!-- OVERDUE GROUP -->
+      <div class="esk-group" id="groupOverdue">
+        <div class="esk-group-header esk-group-header--overdue">
+          <i class="fa-solid fa-circle-xmark"></i>
+          <span>OVERDUE</span>
+          <span class="esk-group-count" id="countOverdue">0</span>
+        </div>
+        <div class="esk-cards" id="cardsOverdue">
+          <p class="esk-empty">Tidak ada laporan overdue.</p>
+        </div>
+      </div>
+
+      <!-- WARNING GROUP -->
+      <div class="esk-group" id="groupWarning">
+        <div class="esk-group-header esk-group-header--warning">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>WARNING — Jatuh tempo dalam 3 hari</span>
+          <span class="esk-group-count" id="countWarning">0</span>
+        </div>
+        <div class="esk-cards" id="cardsWarning">
+          <p class="esk-empty">Tidak ada laporan dalam warning.</p>
+        </div>
+      </div>
+
+      <!-- ON TRACK GROUP -->
+      <div class="esk-group" id="groupOk">
+        <div class="esk-group-header esk-group-header--ok">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>ON TRACK</span>
+          <span class="esk-group-count" id="countOk">0</span>
+        </div>
+        <div class="esk-cards" id="cardsOk">
+          <p class="esk-empty">Tidak ada laporan aktif.</p>
+        </div>
+      </div>
+
+    </div><!-- end esk-content -->
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-bottom-nav">
+      <a href="index-home.html" class="mobile-bottom-link">
+        <i class="fa-solid fa-house"></i><span>Beranda</span>
+      </a>
+      <a href="index.html" class="mobile-bottom-link">
+        <div class="mobile-bottom-action-icon"><i class="fa-solid fa-plus"></i></div>
+        <span style="color:#00205B;margin-top:2px">Lapor</span>
+      </a>
+      <a href="dashboard.html" class="mobile-bottom-link">
+        <i class="fa-solid fa-chart-simple"></i><span>Dashboard</span>
+      </a>
+      <a href="#" class="mobile-bottom-link" onclick="event.preventDefault();toggleUserMenu()">
+        <i class="fa-solid fa-user"></i><span>Profil</span>
+      </a>
+    </nav>
+
+  </div><!-- end app-main -->
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
+<script src="eskalasi.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    if (!isAdminOrAbove(user?.role)) {
+      window.location.href = 'index-home.html';
+      return;
+    }
+    renderUserProfile();
+    loadEskalasi();
+  });
+</script>
+</body>
+</html>

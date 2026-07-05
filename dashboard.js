@@ -14,6 +14,9 @@ const PAGE_SIZE = 20;
 // INITIALIZE
 // ========================================
 document.addEventListener("DOMContentLoaded", () => {
+  // Skip auto-init when included as utility by other pages
+  if (typeof window.__skipDashboardInit !== 'undefined') return;
+
   initNotificationBell();
   refreshNotifications().catch(console.error);
   loadReports();
