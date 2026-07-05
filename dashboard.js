@@ -884,6 +884,10 @@ function openReportModal(report) {
     reporterSignature.classList.add("hidden");
   }
 
+  // "Buka halaman detail" link
+  const detailLinkEl = document.getElementById('modalDetailLink');
+  if (detailLinkEl) detailLinkEl.href = `laporan-detail.html?id=${encodeURIComponent(hazardNumber)}`;
+
   document.body.classList.add("no-scroll");
   const modal = document.getElementById("reportModal");
   modal.classList.remove("hidden");

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Laporan - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="laporan-detail.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Detail Laporan</span>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="detailLoading" class="detail-loading">
+      <i class="fa-solid fa-spinner fa-spin"></i> Memuat laporan...
+    </div>
+
+    <!-- Error state -->
+    <div id="detailError" class="detail-error" style="display:none">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <p id="detailErrorMsg">Laporan tidak ditemukan.</p>
+      <a href="dashboard.html" class="btn-primary" style="margin-top:16px">
+        <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard
+      </a>
+    </div>
+
+    <!-- Main content (hidden until loaded) -->
+    <div id="detailMain" class="detail-content" style="display:none">
+
+      <!-- BREADCRUMB -->
+      <nav class="detail-breadcrumb" aria-label="Breadcrumb">
+        <a href="dashboard.html"><i class="fa-solid fa-chart-simple"></i> Dashboard</a>
+        <span class="bc-sep"><i class="fa-solid fa-chevron-right"></i></span>
+        <span id="bcType">Laporan</span>
+        <span class="bc-sep"><i class="fa-solid fa-chevron-right"></i></span>
+        <span id="bcId" class="bc-current">-</span>
+      </nav>
+
+      <!-- HERO -->
+      <div class="detail-hero">
+        <div class="detail-hero-left">
+          <div class="detail-hero-badges">
+            <span id="heroTypeBadge" class="report-type-badge hazard">Hazard</span>
+            <span id="heroStatusBadge" class="status-badge status-open">OPEN</span>
+            <span id="heroOverdueBadge" class="badge-overdue" style="display:none">Overdue</span>
+          </div>
+          <h1 class="detail-hero-id" id="heroId">-</h1>
+          <p class="detail-hero-date" id="heroDate">-</p>
+        </div>
+        <div class="detail-hero-actions">
+          <button class="btn-secondary" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> Print
+          </button>
+          <a href="dashboard.html" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Kembali
+          </a>
+        </div>
+      </div>
+
+      <!-- 2-COLUMN GRID -->
+      <div class="detail-grid">
+
+        <!-- LEFT: info + photos -->
+        <div class="detail-left">
+
+          <!-- Info card -->
+          <div class="detail-card">
+            <div class="detail-card-header">
+              <i class="fa-solid fa-circle-info"></i> Informasi Laporan
+            </div>
+            <div class="detail-fields">
+              <div class="detail-field-row">
+                <span>Nomor Laporan</span><strong id="dfId">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span>Tanggal</span><strong id="dfDate">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span>Pelapor</span><strong id="dfReporter">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span>Departemen</span><strong id="dfDept">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span>Lokasi</span><strong id="dfLokasi">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span id="dfCategoryLabel">Kategori</span><strong id="dfCategory">-</strong>
+              </div>
+              <div class="detail-field-row" id="dfRiskRow">
+                <span id="dfRiskLabel">Tingkat Risiko</span>
+                <strong id="dfRisk">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deskripsi -->
+          <div class="detail-card">
+            <div class="detail-card-header">
+              <i class="fa-solid fa-file-lines"></i>
+              <span id="dfDescTitle">Deskripsi Temuan</span>
+            </div>
+            <p class="detail-text" id="dfDesc">-</p>
+
+            <div class="detail-card-header" style="margin-top:16px">
+              <i class="fa-solid fa-lightbulb"></i> Rekomendasi Perbaikan
+            </div>
+            <p class="detail-text" id="dfReko">-</p>
+          </div>
+
+          <!-- Gallery: Before -->
+          <div class="detail-card">
+            <div class="detail-card-header">
+              <i class="fa-solid fa-camera"></i> Foto Temuan
+            </div>
+            <div class="detail-gallery" id="galleryBefore">
+              <p class="gallery-empty">Tidak ada foto temuan.</p>
+            </div>
+          </div>
+
+          <!-- Pernyataan -->
+          <div class="detail-card" id="cardStatement">
+            <div class="detail-card-header">
+              <i class="fa-solid fa-pen-to-square"></i> Pernyataan Pelapor
+            </div>
+            <p class="detail-text" id="dfStatement">-</p>
+            <img id="dfSignature" class="detail-signature" alt="Tanda tangan" style="display:none">
+          </div>
+
+        </div><!-- end detail-left -->
+
+        <!-- RIGHT: status + timeline -->
+        <div class="detail-right">
+
+          <!-- Tindak Lanjut card -->
+          <div class="detail-card">
+            <div class="detail-card-header">
+              <i class="fa-solid fa-list-check"></i> Tindak Lanjut
+            </div>
+            <div class="detail-fields">
+              <div class="detail-field-row">
+                <span>PIC</span><strong id="dfPic">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span>Due Date</span><strong id="dfDueDate">-</strong>
+              </div>
+              <div class="detail-field-row">
+                <span>Status</span>
+                <span id="dfStatusBadge" class="status-badge status-open">OPEN</span>
+              </div>
+              <div class="detail-field-row" id="dfClosingDateRow" style="display:none">
+                <span>Tanggal Closing</span><strong id="dfClosingDate">-</strong>
+              </div>
+            </div>
+
+            <!-- Closing form (admin only) -->
+            <div id="closingForm" class="closing-form" style="display:none">
+              <div class="closing-form-title">Update Status</div>
+
+              <div class="status-buttons" id="detailStatusButtons">
+                <button type="button" class="status-button" data-status="OPEN">Open</button>
+                <button type="button" class="status-button" data-status="PROGRESS">Progress</button>
+                <button type="button" class="status-button" data-status="CLOSED">Closed</button>
+              </div>
+
+              <label class="closing-label">
+                Catatan Closing
+                <span class="required" id="closingRequired" style="display:none">*</span>
+              </label>
+              <textarea id="detailClosingNote" class="closing-textarea" rows="4"
+                placeholder="Masukkan catatan closing..."></textarea>
+
+              <!-- Gallery: After + upload -->
+              <label class="closing-label">Foto Perbaikan (After)</label>
+              <div class="detail-gallery" id="galleryAfter" style="margin-bottom:8px">
+                <p class="gallery-empty">Belum ada foto perbaikan.</p>
+              </div>
+              <label class="file-input-label" for="detailAfterPhoto">
+                <i class="fa-solid fa-upload"></i> Upload Foto Perbaikan
+              </label>
+              <input id="detailAfterPhoto" type="file" accept="image/*" multiple>
+              <div id="afterPhotoPreview" class="detail-gallery" style="margin-top:8px"></div>
+
+              <button id="btnDetailSubmit" class="btn-primary" style="width:100%;margin-top:12px"
+                onclick="submitDetailClosing()">
+                <i class="fa-solid fa-paper-plane"></i> Submit Closing
+              </button>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div class="detail-card">
+            <div class="detail-card-header">
+              <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+            </div>
+            <div class="detail-timeline" id="detailTimeline">
+              <p class="gallery-empty">Memuat riwayat...</p>
+            </div>
+          </div>
+
+        </div><!-- end detail-right -->
+
+      </div><!-- end detail-grid -->
+
+    </div><!-- end detailMain -->
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-bottom-nav">
+      <a href="index-home.html" class="mobile-bottom-link">
+        <i class="fa-solid fa-house"></i><span>Beranda</span>
+      </a>
+      <a href="index.html" class="mobile-bottom-link">
+        <div class="mobile-bottom-action-icon"><i class="fa-solid fa-plus"></i></div>
+        <span style="color:#00205B;margin-top:2px">Lapor</span>
+      </a>
+      <a href="dashboard.html" class="mobile-bottom-link active">
+        <i class="fa-solid fa-chart-simple"></i><span>Dashboard</span>
+      </a>
+      <a href="#" class="mobile-bottom-link" onclick="event.preventDefault();toggleUserMenu()">
+        <i class="fa-solid fa-user"></i><span>Profil</span>
+      </a>
+    </nav>
+
+  </div><!-- end app-main -->
+</div>
+
+<!-- Photo zoom -->
+<div id="photoZoomOverlay" class="photo-zoom-overlay">
+  <button id="photoZoomClose" class="photo-zoom-close" aria-label="Close">&times;</button>
+  <img id="zoomedPhoto" alt="Zoomed photo">
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
+<script src="laporan-detail.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    renderUserProfile();
+    initDetailPage();
+  });
+</script>
+</body>
+</html>
