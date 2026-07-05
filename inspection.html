@@ -1,79 +1,103 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pilih Inspeksi - ONE-SAP</title>
-<link rel="icon" href="assets/Logo EBL.png" type="image/png" />
-<link rel="stylesheet" href="style.css" />
-<link rel="stylesheet" href="home.css" />
-<link rel="manifest" href="manifest.json" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pilih Inspeksi - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .ins-page { padding: 24px; max-width: 960px; margin: 0 auto; color-scheme: light; }
+    .ins-page-header { margin-bottom: 24px; }
+    .ins-page-title { font-size: 1.3rem; font-weight: 800; color: #00205B; letter-spacing: -.02em; margin-bottom: 4px; }
+    .ins-page-sub { font-size: .85rem; color: #64748b; }
+    .ins-drafts { background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 16px 20px; margin-bottom: 24px; }
+    .ins-drafts-title { font-size: .8rem; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
+    .ins-drafts-list { display: flex; flex-direction: column; gap: 8px; }
+    .draft-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid #fde68a; border-radius: 10px; padding: 12px 14px; text-decoration: none; color: inherit; transition: border-color .15s; position: relative; }
+    .draft-card:hover { border-color: #f59e0b; }
+    .draft-card-icon { width: 36px; height: 36px; border-radius: 9px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+    .draft-card-content { flex: 1; min-width: 0; }
+    .draft-card-title { font-size: .85rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+    .draft-card-meta { font-size: .72rem; color: #94a3b8; display: flex; flex-wrap: wrap; gap: 6px; }
+    .draft-card-badge { font-size: .72rem; font-weight: 700; color: #d97706; white-space: nowrap; }
+    .draft-delete-btn { background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px 6px; border-radius: 6px; font-size: .8rem; flex-shrink: 0; }
+    .draft-delete-btn:hover { background: #fee2e2; }
+    .ins-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media (max-width: 700px) { .ins-grid { grid-template-columns: repeat(2, 1fr); } .ins-page { padding: 16px; } }
+    @media (max-width: 380px) { .ins-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+  </style>
 </head>
-<body class="inspection-list-page">
-<div class="container">
-<header class="hero">
-    <div class="hero-top-left">
-      <a href="index-home.html" class="btn-home-back" title="Kembali ke Home">
-        <i class="fa-solid fa-house"></i> <span class="btn-home-text">Home</span>
-      </a>
-    </div>
-    <div class="hero-top">
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span class="app-topbar-title">Pilih Inspeksi</span>
       <div id="notificationBell"></div>
       <div id="userProfile" class="user-menu"></div>
     </div>
 
-  <div class="logos">
-    <img src="assets/Logo Hasnur.png" alt="Hasnur Group" class="logo" />
-    <img src="assets/Nilai Inti - Indonesia.png" alt="Core Value" class="logo" />
+    <div class="ins-page">
+      <div class="ins-page-header">
+        <h1 class="ins-page-title"><i class="fa-solid fa-list-check" style="color:#307FE2;margin-right:8px"></i>Form Inspeksi</h1>
+        <p class="ins-page-sub">Pilih jenis inspeksi. Setiap area kerja punya formulir tersendiri.</p>
+      </div>
+
+      <!-- Draft section -->
+      <div id="inspectionDraftsSection" class="ins-drafts" style="display:none">
+        <div class="ins-drafts-title"><i class="fa-solid fa-pen-to-square"></i> Draft — Lanjutkan Inspeksi</div>
+        <div id="inspectionDraftsList" class="ins-drafts-list"></div>
+      </div>
+
+      <!-- Grid kartu inspeksi -->
+      <div class="ins-grid inspections-grid">
+        <a href="inspection-form.html?type=INS_CB" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-gear"></i></span>
+          <h3>Conveyor Belt</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_JA" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-road"></i></span>
+          <h3>Jalan Angkut</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_MD" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-utensils"></i></span>
+          <h3>Mess & Dapur</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_KG" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-building"></i></span>
+          <h3>Kantor & Gudang</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_SP" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-water"></i></span>
+          <h3>Settling Pond</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_T" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-mountain"></i></span>
+          <h3>Tambang</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_TB" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-oil-can"></i></span>
+          <h3>Tangki BBM</h3>
+        </a>
+        <a href="inspection-form.html?type=INS_WS" class="inspector-card">
+          <span class="icon"><i class="fa-solid fa-hammer"></i></span>
+          <h3>Workshop</h3>
+        </a>
+      </div>
+    </div>
+
+    <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
   </div>
-
-  <h1><span class="home-title-icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>Pilih Form Inspeksi</h1>
-  <p>Pilih jenis inspeksi yang akan diinput. Setiap inspeksi punya formulir tersendiri.</p>
-
-  <section id="inspectionDraftsSection" class="inspection-drafts-section" style="display:none;">
-    <h2 class="drafts-section-title"><i class="fa-solid fa-pen-to-square"></i> Draft Inspeksi</h2>
-    <p class="drafts-section-subtitle">Lanjutkan inspeksi yang belum selesai</p>
-    <div id="inspectionDraftsList" class="inspection-drafts-list"></div>
-  </section>
-
-  <section class="card card-grid inspections-grid">
-    <a href="inspection-form.html?type=INS_CB" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span>
-      <h3>Inspeksi Conveyor Belt</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_JA" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-road"></i></span>
-      <h3>Inspeksi Jalan Angkut</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_MD" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-utensils"></i></span>
-      <h3>Inspeksi Mess dan Dapur</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_KG" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
-      <h3>Inspeksi Kantor dan Gudang</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_SP" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-water"></i></span>
-      <h3>Inspeksi Settling Pond</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_T" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-mountain"></i></span>
-      <h3>Inspeksi Tambang</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_TB" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-oil-can"></i></span>
-      <h3>Inspeksi Tangki BBM</h3>
-    </a>
-    <a href="inspection-form.html?type=INS_WS" class="inspector-card">
-      <span class="icon" aria-hidden="true"><i class="fa-solid fa-hammer"></i></span>
-      <h3>Inspeksi Workshop</h3>
-    </a>
-  </section>
-</header>
 </div>
-<nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
+
 <script src="auth.js"></script>
 <script src="layout.js"></script>
 <script src="reports-utils.js"></script>
@@ -82,137 +106,75 @@
 <script>
   requireLogin();
 
-  const INSPECTION_DRAFT_PREFIX = "inspection_draft_";
-  const INSPECTION_TYPE_LABELS = {
-    INS_CB: "Inspeksi Conveyor Belt",
-    INS_JA: "Inspeksi Jalan Angkut",
-    INS_MD: "Inspeksi Mess dan Dapur",
-    INS_KG: "Inspeksi Kantor dan Gudang",
-    INS_SP: "Inspeksi Settling Pond",
-    INS_T: "Inspeksi Tambang",
-    INS_TB: "Inspeksi Tangki BBM",
-    INS_WS: "Inspeksi Workshop"
+  const DRAFT_PREFIX = 'inspection_draft_';
+  const TYPE_LABELS = {
+    INS_CB:'Conveyor Belt', INS_JA:'Jalan Angkut', INS_MD:'Mess & Dapur',
+    INS_KG:'Kantor & Gudang', INS_SP:'Settling Pond', INS_T:'Tambang',
+    INS_TB:'Tangki BBM', INS_WS:'Workshop'
   };
-  const INSPECTION_TYPE_ICONS = {
-    INS_CB: "fa-gear",
-    INS_JA: "fa-road",
-    INS_MD: "fa-utensils",
-    INS_KG: "fa-building",
-    INS_SP: "fa-water",
-    INS_T: "fa-mountain",
-    INS_TB: "fa-oil-can",
-    INS_WS: "fa-hammer"
+  const TYPE_ICONS = {
+    INS_CB:'fa-gear', INS_JA:'fa-road', INS_MD:'fa-utensils',
+    INS_KG:'fa-building', INS_SP:'fa-water', INS_T:'fa-mountain',
+    INS_TB:'fa-oil-can', INS_WS:'fa-hammer'
   };
 
-  function formatDateIndo(dateStr) {
-    if (!dateStr) return "";
-    try {
-      const parts = dateStr.split("-");
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      return dateStr;
-    } catch (e) {
-      return dateStr;
-    }
+  function timeAgo(s) {
+    const m = Math.floor((Date.now() - new Date(s)) / 60000);
+    if (m < 1) return 'Baru saja';
+    if (m < 60) return `${m} menit lalu`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} jam lalu`;
+    return `${Math.floor(h / 24)} hari lalu`;
   }
 
-  function loadDraftsList() {
-    const section = document.getElementById("inspectionDraftsSection");
-    const list = document.getElementById("inspectionDraftsList");
-    if (!section || !list) return;
-
+  function loadDrafts() {
+    const section = document.getElementById('inspectionDraftsSection');
+    const list = document.getElementById('inspectionDraftsList');
     const drafts = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(INSPECTION_DRAFT_PREFIX)) {
+      if (key?.startsWith(DRAFT_PREFIX)) {
         try {
-          const data = JSON.parse(localStorage.getItem(key));
-          const typeCode = key.replace(INSPECTION_DRAFT_PREFIX, "").toUpperCase();
-          drafts.push({
-            key,
-            typeCode,
-            label: INSPECTION_TYPE_LABELS[typeCode] || typeCode,
-            icon: INSPECTION_TYPE_ICONS[typeCode] || "fa-clipboard-check",
-            savedAt: data._savedAt || null,
-            step: data._currentStep || 1,
-            lokasi: data.lokasi_inspeksi || "",
-            tanggal: data.tanggal_inspeksi || ""
-          });
-        } catch (e) {
-          console.warn("Failed to parse draft:", key, e);
-        }
+          const d = JSON.parse(localStorage.getItem(key));
+          const type = key.replace(DRAFT_PREFIX, '').toUpperCase();
+          drafts.push({ key, type, d });
+        } catch { /* skip corrupt */ }
       }
     }
-
-    if (drafts.length === 0) {
-      section.style.display = "none";
-      return;
-    }
-
-    section.style.display = "block";
-    list.innerHTML = "";
-
-    drafts.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
-
-    drafts.forEach(draft => {
-      const card = document.createElement("a");
-      card.href = `inspection-form.html?type=${draft.typeCode}`;
-      card.className = "draft-card";
-
-      const timeAgo = draft.savedAt ? formatTimeAgo(draft.savedAt) : "";
-      const infoLine = [formatDateIndo(draft.tanggal), draft.lokasi].filter(Boolean).join(" · ");
-
+    if (!drafts.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    drafts.sort((a, b) => (b.d._savedAt || '').localeCompare(a.d._savedAt || ''));
+    list.innerHTML = '';
+    drafts.forEach(({ key, type, d }) => {
+      const card = document.createElement('a');
+      card.href = `inspection-form.html?type=${type}`;
+      card.className = 'draft-card';
+      const parts = [d.lokasi_inspeksi, d.tanggal_inspeksi].filter(Boolean).join(' · ');
       card.innerHTML = `
-        <div class="draft-card-icon"><i class="fa-solid ${draft.icon}"></i></div>
+        <div class="draft-card-icon"><i class="fa-solid ${TYPE_ICONS[type] || 'fa-clipboard'}"></i></div>
         <div class="draft-card-content">
-          <div class="draft-card-title">${draft.label}</div>
+          <div class="draft-card-title">${TYPE_LABELS[type] || type}</div>
           <div class="draft-card-meta">
-            ${infoLine ? `<span>${infoLine}</span>` : ""}
-            <span>Step ${draft.step}/5</span>
-            ${timeAgo ? `<span>${timeAgo}</span>` : ""}
+            ${parts ? `<span>${parts}</span>` : ''}
+            <span>Step ${d._currentStep || 1}/5</span>
+            ${d._savedAt ? `<span>${timeAgo(d._savedAt)}</span>` : ''}
           </div>
         </div>
         <div class="draft-card-badge">Lanjutkan <i class="fa-solid fa-arrow-right"></i></div>
-        <button type="button" class="draft-delete-btn" title="Hapus draft" data-key="${draft.key}">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      `;
-
-      // Prevent delete button from navigating
-      card.querySelector(".draft-delete-btn").addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (confirm("Hapus draft inspeksi ini?")) {
-          localStorage.removeItem(draft.key);
-          loadDraftsList();
-        }
+        <button type="button" class="draft-delete-btn" title="Hapus draft"><i class="fa-solid fa-trash-can"></i></button>`;
+      card.querySelector('.draft-delete-btn').addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (confirm('Hapus draft ini?')) { localStorage.removeItem(key); loadDrafts(); }
       });
-
       list.appendChild(card);
     });
   }
 
-  function formatTimeAgo(dateStr) {
-    try {
-      const diff = Date.now() - new Date(dateStr).getTime();
-      const mins = Math.floor(diff / 60000);
-      if (mins < 1) return "Baru saja";
-      if (mins < 60) return `${mins} menit lalu`;
-      const hours = Math.floor(mins / 60);
-      if (hours < 24) return `${hours} jam lalu`;
-      const days = Math.floor(hours / 24);
-      return `${days} hari lalu`;
-    } catch (e) {
-      return "";
-    }
-  }
-
-  window.addEventListener("DOMContentLoaded", () => {
+  window.addEventListener('DOMContentLoaded', () => {
     renderUserProfile();
-    initNotificationBell();
-    refreshNotifications().catch(console.error);
-    loadDraftsList();
+    initNotificationBell?.();
+    refreshNotifications?.().catch(() => {});
+    loadDrafts();
   });
 </script>
 </body>

@@ -2034,30 +2034,41 @@ textarea {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .user-menu-button,
   .user-menu-dropdown {
     width: 220px;
   }
 
-  .user-menu-button {
-    font-size: 11px;
-    padding: 9px 12px;
-  }
-
-  .user-name {
-    font-size: 12px;
-  }
+  .user-name { font-size: 12px; }
 
   .user-title,
   .user-company,
-  .user-role {
-    font-size: 10px;
-  }
+  .user-role { font-size: 10px; }
 
-  .btn-logout {
-    font-size: 10px;
-    padding: 8px 10px;
-  }
+  .btn-logout { font-size: 10px; padding: 8px 10px; }
+}
+
+/* Di dalam app-topbar: cukup tampilkan avatar saja, tanpa teks dan lebar besar */
+.app-topbar .user-menu-button {
+  width: auto;
+  background: none;
+  box-shadow: none;
+  padding: 2px;
+  border: none;
+  border-radius: 50%;
+  gap: 0;
+}
+.app-topbar .user-menu-label,
+.app-topbar .user-menu-chevron { display: none; }
+.app-topbar .user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.app-topbar .user-menu-dropdown {
+  width: 230px;
+  right: 0;
+  top: calc(100% + 10px);
 }
 
 /* ========================================
