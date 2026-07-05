@@ -5,76 +5,136 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beranda - ONE-SAP</title>
 <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="home.css">
 <link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="home.css">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+
 <div class="app-layout">
   <aside id="appSidebar" class="app-sidebar"></aside>
   <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
   <div class="app-main">
+
     <!-- Mobile topbar -->
     <div class="app-topbar">
       <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
       <span id="appTopbarTitle" class="app-topbar-title">Beranda</span>
+      <div id="notificationBell"></div>
       <div id="userProfile" class="user-menu"></div>
     </div>
 
-    <div class="container">
-<header class="hero">
-    <div class="hero-top">
-      <div id="notificationBell"></div>
-    </div>
+    <!-- PAGE CONTENT -->
+    <div class="home-content">
 
-  <!-- LOGO -->
-  <div class="logos">
-    <img src="assets/Logo Hasnur.png" alt="Hasnur Group" class="logo" />
-    <img src="assets/Nilai Inti - Indonesia.png" alt="Core Value" class="logo" />
-  </div>
-
-  <h1><span class="home-title-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>Hazard Report ONE-SAP</h1>
-  <p>Safety Observation and Action Program</p>
-
-  <div class="actions actions-grid">
-    <a href="index.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span>Buat Hazard Report</a>
-    <a href="inspection.html" class="btn primary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>Buat Inspeksi</a>
-    <a href="dashboard.html" class="btn secondary"><span class="icon" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>Dashboard Monitoring</a>
-    <a href="admin.html" class="btn secondary" id="btnAdminPanel" style="display:none"><span class="icon" aria-hidden="true"><i class="fa-solid fa-users-gear"></i></span>Admin Panel</a>
-  </div>
-
-  <div class="hero-cards">
-    <div class="feature-card">
-      <div class="feature-icon" aria-hidden="true">
-        <i class="fa-solid fa-bolt"></i>
+      <!-- GREETING -->
+      <div class="home-greeting">
+        <div class="home-greeting-text">
+          <p class="greeting-day" id="greetingDay"></p>
+          <h1 class="greeting-name" id="greetingName">Selamat Datang</h1>
+          <p class="greeting-sync" id="greetingSync">
+            <i class="fa-solid fa-circle-check" style="color:#22c55e;font-size:.7rem"></i>
+            Data siap digunakan
+          </p>
+        </div>
+        <div class="greeting-user-badge" id="greetingBadge"></div>
       </div>
-      <h3>Pelaporan Cepat</h3>
-      <p>Lapor hazard dengan proses sederhana dan tampilan yang nyaman.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon" aria-hidden="true">
-        <i class="fa-solid fa-chart-line"></i>
-      </div>
-      <h3>Monitoring Real-time</h3>
-      <p>Dashboard ringkas mudah dipantau untuk status laporan hari ini.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon" aria-hidden="true">
-        <i class="fa-solid fa-lock"></i>
-      </div>
-      <h3>Akses Aman</h3>
-      <p>Login dan laporan dikelola dengan tampilan profesional dan jelas.</p>
-    </div>
-  </div>
-</header>
 
-<footer class="footer">Developed by Andre Anantama Irawan &copy; 2026</footer>
-</div><!-- end .container -->
+      <!-- 2-COL GRID -->
+      <div class="home-grid">
 
-    <!-- Mobile bottom nav -->
+        <!-- LEFT: main -->
+        <div class="home-main">
+
+          <!-- HAZARD REPORT BANNER -->
+          <a href="index.html" class="hazard-banner">
+            <div class="hazard-banner-icon">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="hazard-banner-body">
+              <h2>Hazard Report</h2>
+              <p>Laporkan potensi bahaya di area kerja segera.</p>
+            </div>
+            <div class="hazard-banner-arrow">
+              <i class="fa-solid fa-chevron-right"></i>
+            </div>
+          </a>
+
+          <!-- INSPEKSI SECTION -->
+          <div class="home-section">
+            <div class="home-section-header">
+              <h3>Inspeksi <span id="insAreaCount" class="ins-area-count">8 Area Kerja</span></h3>
+              <a href="inspection.html" class="home-section-link">Lihat Semua <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+            <div class="ins-grid" id="insGrid">
+              <!-- rendered by home.js -->
+            </div>
+          </div>
+
+          <!-- DAILY SUMMARY (mobile only) -->
+          <div class="daily-summary" id="dailySummary" style="display:none">
+            <p class="daily-summary-label">RINGKASAN HARI INI</p>
+            <div class="daily-summary-row">
+              <div>
+                <div class="daily-num" id="dailyClosed">-</div>
+                <div class="daily-label">Laporan Selesai</div>
+              </div>
+              <div class="daily-divider"></div>
+              <div>
+                <div class="daily-num daily-num--urgent" id="dailyOpen">-</div>
+                <div class="daily-label">Butuh Follow-up</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- end home-main -->
+
+        <!-- RIGHT: panel -->
+        <aside class="home-right">
+
+          <div class="my-reports-card">
+            <div class="my-reports-header">
+              <h3><i class="fa-solid fa-clock-rotate-left"></i> Laporan Terakhir Saya</h3>
+            </div>
+            <div class="my-reports-list" id="myReportsList">
+              <p class="reports-loading">Memuat laporan...</p>
+            </div>
+            <a href="dashboard.html" class="btn-see-all">
+              Lihat Semua Riwayat <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="quick-stats-card" id="quickStatsCard">
+            <p class="quick-stats-label">STATISTIK KEAMANAN</p>
+            <div class="quick-stats-grid" id="quickStatsGrid">
+              <div class="quick-stat">
+                <div class="quick-stat-num" id="qsTotal">-</div>
+                <div class="quick-stat-desc">Total Laporan</div>
+              </div>
+              <div class="quick-stat">
+                <div class="quick-stat-num qs-open" id="qsOpen">-</div>
+                <div class="quick-stat-desc">Open</div>
+              </div>
+              <div class="quick-stat">
+                <div class="quick-stat-num qs-closed" id="qsClosed">-</div>
+                <div class="quick-stat-desc">Closed</div>
+              </div>
+              <div class="quick-stat">
+                <div class="quick-stat-num qs-overdue" id="qsOverdue">-</div>
+                <div class="quick-stat-desc">Overdue</div>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+      </div><!-- end home-grid -->
+
+    </div><!-- end home-content -->
+
+    <!-- MOBILE BOTTOM NAV -->
     <nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
       <a href="index-home.html" class="mobile-bottom-link active" aria-current="page">
         <i class="fa-solid fa-house"></i>
@@ -93,26 +153,23 @@
         <span>Profil</span>
       </a>
     </nav>
-  </div><!-- end .app-main -->
-</div><!-- end .app-layout -->
+
+  </div><!-- end app-main -->
+</div><!-- end app-layout -->
+
+<div id="toast" class="toast"></div>
+
 <script src="auth.js"></script>
 <script src="layout.js"></script>
 <script src="reports-utils.js"></script>
 <script src="notifications.js"></script>
 <script src="offline-sync.js"></script>
+<script src="home.js"></script>
 <script>
   requireLogin();
-  window.addEventListener("DOMContentLoaded", () => {
+  window.addEventListener('DOMContentLoaded', () => {
     renderUserProfile();
-    const user = getCurrentUser();
-    const r = String(user?.role || '').toUpperCase();
-    if (r === 'ADMIN' || r === 'SUPER_ADMIN') {
-      const btn = document.getElementById('btnAdminPanel');
-      if (btn) btn.style.display = '';
-    }
   });
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-<script src="home.js"></script>
 </body>
 </html>

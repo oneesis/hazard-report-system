@@ -1,156 +1,138 @@
-document.addEventListener("DOMContentLoaded", initHomePage);
+document.addEventListener('DOMContentLoaded', initHomePage);
+
+const INSPECTION_AREAS = [
+  { type: 'INS_CB', name: 'Conveyor Belt',     sub: 'Area Produksi',    icon: 'fa-gears' },
+  { type: 'INS_JA', name: 'Jalan Angkut',       sub: 'Main Hauling',     icon: 'fa-truck' },
+  { type: 'INS_MD', name: 'Mess dan Dapur',     sub: 'Camp Utama',       icon: 'fa-utensils' },
+  { type: 'INS_KG', name: 'Kantor & Gudang',    sub: 'Logistics Center', icon: 'fa-building' },
+  { type: 'INS_SP', name: 'Settling Pond',      sub: 'Water Management', icon: 'fa-water' },
+  { type: 'INS_TB', name: 'Tambang',            sub: 'Pit West Wing',    icon: 'fa-helmet-safety' },
+  { type: 'INS_BB', name: 'Tangki BBM',         sub: 'Fuel Station',     icon: 'fa-gas-pump' },
+  { type: 'INS_WS', name: 'Workshop',           sub: 'Maintenance Yard', icon: 'fa-wrench' },
+];
+
+const DAYS_ID  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 async function initHomePage() {
+  renderGreeting();
+  renderInsGrid();
   initNotificationBell();
-
-  // Trigger GSAP entrance animations synchronously and instantly to avoid element hiding during network delays
-  if (typeof gsap !== "undefined") {
-    try {
-      // Temporarily disable CSS transitions during animation setup to avoid conflicts
-      const animatedSelectors = [".hero-top", ".logos .logo", "h1", ".hero > p", ".actions .btn", ".feature-card", ".card"];
-      animatedSelectors.forEach(sel => {
-        document.querySelectorAll(sel).forEach(el => el.classList.add("no-transition"));
-      });
-
-      gsap.from(".hero-top", { 
-        opacity: 0, 
-        y: -20, 
-        duration: 0.8, 
-        ease: "power2.out", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll(".hero-top").forEach(el => el.classList.remove("no-transition"))
-      });
-      
-      gsap.from(".logos .logo", { 
-        opacity: 0, 
-        scale: 0.9, 
-        duration: 0.8, 
-        delay: 0.2, 
-        stagger: 0.15, 
-        ease: "back.out(1.7)", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll(".logos .logo").forEach(el => el.classList.remove("no-transition"))
-      });
-      
-      gsap.from("h1", { 
-        opacity: 0, 
-        y: 20, 
-        duration: 0.8, 
-        delay: 0.3, 
-        ease: "power3.out", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll("h1").forEach(el => el.classList.remove("no-transition"))
-      });
-      
-      gsap.from(".hero > p", { 
-        opacity: 0, 
-        y: 15, 
-        duration: 0.8, 
-        delay: 0.4, 
-        ease: "power3.out", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll(".hero > p").forEach(el => el.classList.remove("no-transition"))
-      });
-      
-      gsap.from(".actions .btn", { 
-        opacity: 0, 
-        y: 20, 
-        duration: 0.6, 
-        delay: 0.5, 
-        stagger: 0.1, 
-        ease: "back.out(1.2)", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll(".actions .btn").forEach(el => el.classList.remove("no-transition"))
-      });
-      
-      gsap.from(".feature-card", { 
-        opacity: 0, 
-        y: 30, 
-        duration: 0.8, 
-        delay: 0.7, 
-        stagger: 0.15, 
-        ease: "power2.out", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll(".feature-card").forEach(el => el.classList.remove("no-transition"))
-      });
-      
-      gsap.from(".card", { 
-        opacity: 0, 
-        y: 30, 
-        duration: 0.8, 
-        delay: 0.9, 
-        ease: "power2.out", 
-        clearProps: "all",
-        onComplete: () => document.querySelectorAll(".card").forEach(el => el.classList.remove("no-transition"))
-      });
-    } catch (e) {
-      console.warn("GSAP animation error, falling back to static layout:", e);
-      // Clean up classes if error occurs
-      document.querySelectorAll(".no-transition").forEach(el => el.classList.remove("no-transition"));
-    }
-  }
 
   try {
     const reports = await refreshNotifications();
-    updateHomeKpis(reports);
-    updateHighRiskList(reports);
-  } catch (error) {
-    console.error(error);
-    const list = document.getElementById("highRiskList");
-    if (list) {
-      list.innerHTML = "<li>Gagal memuat data.</li>";
-    }
+    renderMyReports(reports);
+    renderQuickStats(reports);
+  } catch (e) {
+    console.error('Home load error', e);
+    const el = document.getElementById('myReportsList');
+    if (el) el.innerHTML = '<p class="reports-loading">Gagal memuat laporan.</p>';
   }
 }
 
-function updateHomeKpis(reports) {
-  const visible = getVisibleReports(reports);
+function renderGreeting() {
+  const user = getCurrentUser();
+  const now  = new Date();
+  const h    = now.getHours();
+  const greet = h < 11 ? 'Selamat Pagi' : h < 15 ? 'Selamat Siang' : h < 18 ? 'Selamat Sore' : 'Selamat Malam';
+  const dateStr = `${DAYS_ID[now.getDay()]}, ${now.getDate()} ${MONTHS_ID[now.getMonth()]} ${now.getFullYear()}`;
 
-  const totalEl = document.getElementById("kpiTotal");
-  const openEl = document.getElementById("kpiOpen");
-  const progressEl = document.getElementById("kpiProgress");
-  const closedEl = document.getElementById("kpiClosed");
+  const dayEl  = document.getElementById('greetingDay');
+  const nameEl = document.getElementById('greetingName');
+  const badge  = document.getElementById('greetingBadge');
 
-  if (totalEl) totalEl.textContent = visible.length;
-  if (openEl) {
-    openEl.textContent = visible.filter(
-      r => getReportStatus(r) === "OPEN"
-    ).length;
-  }
-  if (progressEl) {
-    progressEl.textContent = visible.filter(
-      r => getReportStatus(r) === "PROGRESS"
-    ).length;
-  }
-  if (closedEl) {
-    closedEl.textContent = visible.filter(
-      r => getReportStatus(r) === "CLOSED"
-    ).length;
+  if (dayEl)  dayEl.textContent  = dateStr;
+  if (nameEl) nameEl.textContent = user?.nama ? `${greet}, ${user.nama.split(' ')[0]}` : greet;
+
+  if (badge && user?.nama) {
+    const initials = user.nama.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    badge.textContent = initials;
   }
 }
 
-function updateHighRiskList(reports) {
-  const list = document.getElementById("highRiskList");
-  if (!list) return;
+function renderInsGrid() {
+  const grid = document.getElementById('insGrid');
+  if (!grid) return;
+  grid.innerHTML = INSPECTION_AREAS.map(area => `
+    <a class="ins-card" href="inspection-form.html?type=${area.type}" aria-label="${area.name}">
+      <div class="ins-card-icon"><i class="fa-solid ${area.icon}"></i></div>
+      <div class="ins-card-name">${area.name}</div>
+      <div class="ins-card-sub">${area.sub}</div>
+      <span class="ins-card-go">Mulai <i class="fa-solid fa-arrow-right"></i></span>
+    </a>
+  `).join('');
+}
 
-  const visible = getVisibleReports(reports);
-  const highRisk = visible
-    .filter(r => {
-      const risk = (
-        r.tingkat_risiko ||
-        r.tingkat_resiko ||
-        ""
-      ).toUpperCase();
-      return risk.includes("HIGH") || risk.includes("EXTREME");
-    })
+function renderMyReports(reports) {
+  const el  = document.getElementById('myReportsList');
+  if (!el) return;
+  const user = getCurrentUser();
+
+  // Filter: my reports only (non-admin sees own, admin sees all)
+  const myNik = user?.nik || '';
+  const isAdmin = isAdminOrAbove(user?.role);
+  const pool = isAdmin
+    ? (reports || [])
+    : (reports || []).filter(r => (r.nik_pelapor || r.nik || '').toString() === myNik.toString());
+
+  const recent = pool
+    .sort((a, b) => new Date(b.tanggal_laporan || 0) - new Date(a.tanggal_laporan || 0))
     .slice(0, 5);
 
-  list.innerHTML = highRisk.length
-    ? highRisk
-        .map(
-          r =>
-            `<li><strong>${escapeHTML(getReportId(r) || "-")}</strong> - ${escapeHTML(r.deskripsi_bahaya || "-")} (${escapeHTML(r.nama_pic || "-")})</li>`
-        )
-        .join("")
-    : "<li>Tidak ada hazard High/Extreme.</li>";
+  if (!recent.length) {
+    el.innerHTML = `<div class="reports-empty">
+      <i class="fa-regular fa-folder-open"></i>
+      Belum ada laporan
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = recent.map(r => {
+    const status  = (getReportStatus(r) || 'OPEN').toUpperCase();
+    const id      = escapeHTML(getReportId(r) || '-');
+    const desc    = escapeHTML((r.deskripsi_bahaya || r.temuan || '-').substring(0, 60));
+    const date    = r.tanggal_laporan ? new Date(r.tanggal_laporan).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '-';
+    const dotCls  = `dot-${status.toLowerCase()}`;
+    const badgeCls = `badge-${status.toLowerCase()}`;
+    return `<div class="report-item">
+      <div class="report-item-dot ${dotCls}"></div>
+      <div class="report-item-body">
+        <div class="report-item-id">${id}</div>
+        <div class="report-item-desc">${desc}</div>
+        <div class="report-item-meta">${date}</div>
+      </div>
+      <span class="report-item-badge ${badgeCls}">${status}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderQuickStats(reports) {
+  const user    = getCurrentUser();
+  const myNik   = user?.nik || '';
+  const isAdmin = isAdminOrAbove(user?.role);
+  const pool    = isAdmin
+    ? (reports || [])
+    : (reports || []).filter(r => (r.nik_pelapor || r.nik || '').toString() === myNik.toString());
+
+  const total   = pool.length;
+  const open    = pool.filter(r => getReportStatus(r) === 'OPEN').length;
+  const closed  = pool.filter(r => getReportStatus(r) === 'CLOSED').length;
+  const overdue = pool.filter(r => {
+    const due = r.due_date || r.tanggal_due;
+    return due && getReportStatus(r) !== 'CLOSED' && new Date(due) < new Date();
+  }).length;
+
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  set('qsTotal',  total);
+  set('qsOpen',   open);
+  set('qsClosed', closed);
+  set('qsOverdue',overdue);
+
+  // Also fill mobile daily summary
+  const sum = document.getElementById('dailySummary');
+  if (sum && window.innerWidth <= 700) {
+    sum.style.display = '';
+    set('dailyClosed', closed);
+    set('dailyOpen',   open);
+  }
 }
