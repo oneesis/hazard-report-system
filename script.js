@@ -1,7 +1,6 @@
 // HAZARD REPORT ONE-SAP
 
-const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
+const BASE_URL = "/api";
 
 let masterKaryawan = [];
 let masterLokasi = [];
@@ -32,13 +31,10 @@ async function loadMasterKaryawan() {
   try {
     const data = await fetchJSON(`${BASE_URL}?action=masterKaryawan`);
     masterKaryawan = Array.isArray(data) ? data : (data.data || []);
-    console.log('✓ script: masterKaryawan loaded, count=', masterKaryawan.length);
-    console.log('  First employee:', masterKaryawan[0]);
-    window.masterKaryawan = masterKaryawan; // Ensure global access
+    window.masterKaryawan = masterKaryawan;
   } catch (err) {
-    console.error('✗ script: gagal load masterKaryawan', err);
+    console.error('Gagal load masterKaryawan:', err);
     masterKaryawan = [];
-    // Fallback: jika user sudah login, buat satu record sementara dari profil
     try {
       const user = getCurrentUser();
       if (user && user.nik) {
@@ -51,11 +47,10 @@ async function loadMasterKaryawan() {
           'DEPARTEMEN': user.departemen || '',
           'NO WHATSAPP': user.no_whatsapp || ''
         }];
-        console.log('✓ script: menggunakan fallback masterKaryawan dari profil user');
-        window.masterKaryawan = masterKaryawan; // Ensure global access
+        window.masterKaryawan = masterKaryawan;
       }
     } catch (e) {
-      console.error('✗ script: fallback masterKaryawan gagal', e);
+      console.error('Fallback masterKaryawan gagal:', e);
     }
   }
 }
@@ -64,10 +59,9 @@ async function loadMasterLokasi() {
   try {
     const data = await fetchJSON(`${BASE_URL}?action=masterLokasi`);
     masterLokasi = Array.isArray(data) ? data : (data.data || []);
-    console.log('✓ script: masterLokasi loaded, count=', masterLokasi.length);
-    window.masterLokasi = masterLokasi; // Ensure global access
+    window.masterLokasi = masterLokasi;
   } catch (err) {
-    console.error('✗ script: gagal load masterLokasi', err);
+    console.error('Gagal load masterLokasi:', err);
     masterLokasi = [];
     window.masterLokasi = masterLokasi;
   }
@@ -77,10 +71,9 @@ async function loadMasterTemuan() {
   try {
     const data = await fetchJSON(`${BASE_URL}?action=masterTemuan`);
     masterTemuan = Array.isArray(data) ? data : (data.data || []);
-    console.log('✓ script: masterTemuan loaded, count=', masterTemuan.length);
-    window.masterTemuan = masterTemuan; // Ensure global access
+    window.masterTemuan = masterTemuan;
   } catch (err) {
-    console.error('✗ script: gagal load masterTemuan', err);
+    console.error('Gagal load masterTemuan:', err);
     masterTemuan = [];
     window.masterTemuan = masterTemuan;
   }
@@ -932,26 +925,10 @@ function setupKeyboardNavigation() {
 }
 
 // ========================================
-// DARK MODE
-// ========================================
-function initDarkMode() {
-  const saved = localStorage.getItem("darkMode");
-  if (saved === "enabled") {
-    document.body.classList.add("dark-mode");
-  }
-
-  const toggle = document.getElementById("darkModeToggle");
-  if (toggle) {
-    toggle.addEventListener("click", () => {
-      document.body.classList.toggle("dark-mode");
-      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode") ? "enabled" : "disabled");
-    });
-  }
-}
-
-// ========================================
 // MULTI STEP
 // ========================================
+const STEP_LABELS = ["Data Pelapor", "Detail Kejadian", "Identifikasi Bahaya", "Tindakan Perbaikan", "Data PIC", "Verifikasi"];
+
 function showStep(stepNumber) {
   currentStep = stepNumber;
 
@@ -968,6 +945,9 @@ function showStep(stepNumber) {
     if (value < stepNumber) step.classList.add("completed");
     else if (value === stepNumber) step.classList.add("active");
   });
+
+  const summary = document.getElementById("stepSummary");
+  if (summary) summary.textContent = `Langkah ${stepNumber} dari ${STEP_LABELS.length} — ${STEP_LABELS[stepNumber - 1]}`;
 
   hideAlert();
   clearFieldErrors();
@@ -987,7 +967,24 @@ function validateSection2() {
 }
 
 function validateSection3() {
-  return validateRequiredFields(["jenis_bahaya", "ketidaksesuaian_bahaya", "sub_ketidaksesuaian", "deskripsi_bahaya"]);
+  const textValid = validateRequiredFields(["jenis_bahaya", "ketidaksesuaian_bahaya", "sub_ketidaksesuaian", "deskripsi_bahaya"]);
+
+  if (selectedBahayaPhotos.length === 0) {
+    const fileInput = document.getElementById("upload_foto_bahaya");
+    const formGroup = fileInput?.closest(".form-group");
+    if (formGroup && !formGroup.querySelector(".field-error")) {
+      const error = document.createElement("div");
+      error.className = "field-error";
+      error.textContent = "Minimal 1 foto bahaya wajib diupload.";
+      formGroup.appendChild(error);
+    }
+    if (fileInput) fileInput.classList.add("error");
+    showAlert();
+    if (textValid) formGroup?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return false;
+  }
+
+  return textValid;
 }
 
 function validateSection4() {
@@ -995,7 +992,30 @@ function validateSection4() {
 }
 
 function validateSection5() {
-  return validateRequiredFields(["perusahaan_pic", "subcont2", "nama_pic", "batas_waktu"]);
+  const valid = validateRequiredFields(["perusahaan_pic", "subcont2", "nama_pic", "batas_waktu"]);
+  if (!valid) return false;
+
+  const batasWaktuEl = document.getElementById("batas_waktu");
+  if (batasWaktuEl && batasWaktuEl.value) {
+    const selected = new Date(batasWaktuEl.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selected < today) {
+      addFieldError(batasWaktuEl);
+      const formGroup = batasWaktuEl.closest(".form-group");
+      if (formGroup) {
+        const error = document.createElement("div");
+        error.className = "field-error";
+        error.textContent = "Batas waktu tidak boleh di masa lampau.";
+        formGroup.appendChild(error);
+        formGroup.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      showAlert();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function validateSection6() {
@@ -1341,16 +1361,8 @@ async function autofillDataPelapor() {
 // INITIALIZE
 // ========================================
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🔄 [script.js] DOMContentLoaded fired - starting initialization");
   try {
-    console.log("⏳ Loading master data...");
     await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadMasterTemuan()]);
-    console.log("✅ Master data loaded successfully");
-    console.log("   masterKaryawan:", masterKaryawan?.length || 0, "records");
-    console.log("   masterLokasi:", masterLokasi?.length || 0, "records");
-    console.log("   masterTemuan:", masterTemuan?.length || 0, "records");
-
-    console.log("⏳ Initializing UI...");
     loadPerusahaanOptions();
     loadLokasiOptions();
     loadKetidaksesuaianOptions();
@@ -1363,8 +1375,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     initializeNamaPicChoices();
     initializeSignaturePad();
 
+    const today = new Date().toISOString().split("T")[0];
     const tanggalInput = document.getElementById("tanggal_kejadian");
-    if (tanggalInput) tanggalInput.value = new Date().toISOString().split("T")[0];
+    if (tanggalInput) tanggalInput.value = today;
+
+    const batasWaktuInput = document.getElementById("batas_waktu");
+    if (batasWaktuInput) batasWaktuInput.min = today;
 
     // Event listeners
     document.getElementById("perusahaan")?.addEventListener("change", loadSubcontOptions);
@@ -1420,7 +1436,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupCharCounter("tindakan_usulan_pic", 600);
     setupPhotoZoom();
     setupKeyboardNavigation();
-    initDarkMode();
     initOfflineDetection();
 
     // Auto-save on input/change events inside the card

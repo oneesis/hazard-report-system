@@ -1,4 +1,4 @@
-const BASE_URL = "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
+const BASE_URL = "/api";
 
 const loginForm = document.getElementById("loginForm");
 const passwordToggle = document.getElementById("passwordToggle");

@@ -1,4 +1,4 @@
-window.__inspectionFormBaseUrl = window.__inspectionFormBaseUrl || "https://script.google.com/macros/s/AKfycbxEgAJH81qw_4zjrkBqYoXV8ihNTy2OQPBGQwGpB3n2UX4DWAydE9A5-4VjvQ1753Nz/exec";
+window.__inspectionFormBaseUrl = window.__inspectionFormBaseUrl || "/api";
 var __INSPECTION_BASE_URL = window.__inspectionFormBaseUrl;
 
 const INSPECTION_TYPE_LABELS = {
@@ -578,6 +578,8 @@ function getFormData() {
   };
 }
 
+const INSPECTION_STEP_LABELS = ["Data Pelapor", "Detail Inspeksi", "Temuan", "Data PIC", "Pernyataan"];
+
 function showStep(step) {
   currentStep = Math.min(Math.max(step, 1), TOTAL_STEPS);
   document.querySelectorAll(".form-step").forEach(stepEl => {
@@ -587,6 +589,10 @@ function showStep(step) {
   if (currentStep === 5) {
     requestAnimationFrame(resizeSignaturePad);
   }
+
+  const summary = document.getElementById("inspectionStepSummary");
+  if (summary) summary.textContent = `Langkah ${currentStep} dari ${TOTAL_STEPS} — ${INSPECTION_STEP_LABELS[currentStep - 1]}`;
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -675,7 +681,30 @@ function validateStep3() {
 }
 
 function validateStep4() {
-  return validateRequiredFields(["perusahaan_pic", "subcont2", "nama_pic", "batas_waktu"]);
+  const valid = validateRequiredFields(["perusahaan_pic", "subcont2", "nama_pic", "batas_waktu"]);
+  if (!valid) return false;
+
+  const batasWaktuEl = document.getElementById("batas_waktu");
+  if (batasWaktuEl && batasWaktuEl.value) {
+    const selected = new Date(batasWaktuEl.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selected < today) {
+      addFieldError(batasWaktuEl);
+      const formGroup = batasWaktuEl.closest(".form-group");
+      if (formGroup) {
+        const error = document.createElement("div");
+        error.className = "field-error";
+        error.textContent = "Batas waktu tidak boleh di masa lampau.";
+        formGroup.appendChild(error);
+        formGroup.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      showAlert();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function validateStep5() {
@@ -1271,8 +1300,11 @@ function initializeInspectionForm(type) {
    populatePicOptions();
    populatePelaporOptions();
    initializeSignaturePad();
+   const todayStr = new Date().toISOString().split("T")[0];
    const tanggalInput = document.getElementById("tanggal_inspeksi");
-   if (tanggalInput) tanggalInput.value = new Date().toISOString().split("T")[0];
+   if (tanggalInput) tanggalInput.value = todayStr;
+   const batasWaktuInput = document.getElementById("batas_waktu");
+   if (batasWaktuInput) batasWaktuInput.min = todayStr;
   document.getElementById("perusahaan")?.addEventListener("change", () => {
     loadSubcontOptions();
     toggleManualPelaporMode();
