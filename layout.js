@@ -41,7 +41,7 @@
     if (!el) return;
 
     const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
-    const role = String(user?.role || '').toUpperCase();
+    const role = String(user?.role || '').toUpperCase().replace(/\s+/g, '_');
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
     const active = getActivePage();
 
@@ -94,6 +94,34 @@
     if (titleEl) titleEl.textContent = PAGE_TITLES[active] || 'ONE-SAP';
   }
 
+  function renderMobileNav() {
+    const el = document.getElementById('mobileBottomNav');
+    if (!el) return;
+
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const role = String(user?.role || '').toUpperCase().replace(/\s+/g, '_');
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const active = getActivePage();
+
+    function mbnLink(href, icon, label, key) {
+      return `<a href="${href}" class="mbn-item${active===key?' mbn-active':''}">
+        <i class="fa-solid ${icon}"></i><span>${label}</span>
+      </a>`;
+    }
+
+    el.innerHTML = `
+      ${mbnLink('index-home.html','fa-house','Beranda','beranda')}
+      <a href="index.html" class="mbn-item mbn-fab-item${active==='hazard'?' mbn-active':''}">
+        <div class="mbn-fab-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <span>Lapor</span>
+      </a>
+      ${mbnLink('dashboard.html','fa-chart-simple','Dashboard','dashboard')}
+      ${isAdmin
+        ? mbnLink('laporan-admin.html','fa-shield-halved','Admin','laporan')
+        : mbnLink('inspection.html','fa-list-check','Inspeksi','inspeksi')}
+    `;
+  }
+
   // Toggle sidebar (mobile)
   window.toggleSidebar = function () {
     const sidebar = document.getElementById('appSidebar');
@@ -111,5 +139,6 @@
     });
 
     renderSidebar();
+    renderMobileNav();
   });
 })();

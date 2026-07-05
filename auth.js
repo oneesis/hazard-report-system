@@ -78,8 +78,8 @@ function logout(){
 })();
 function isAdmin(){const u=getCurrentUser();return u&&String(u.role||"").toUpperCase()==="ADMIN";}
 function isUserRole(){const u=getCurrentUser();return u&&String(u.role||"").toUpperCase()==="USER";}
-function isAdminOrAbove(role){const r=String(role||"").toUpperCase();return r==="ADMIN"||r==="SUPER_ADMIN";}
-function isSuperAdminRole(role){return String(role||"").toUpperCase()==="SUPER_ADMIN";}
+function isAdminOrAbove(role){const r=String(role||"").toUpperCase().replace(/\s+/g,"_");return r==="ADMIN"||r==="SUPER_ADMIN";}
+function isSuperAdminRole(role){return String(role||"").toUpperCase().replace(/\s+/g,"_")==="SUPER_ADMIN";}
 function escapeHTML(value){
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;",

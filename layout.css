@@ -1,3 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
 /* =============================================
    APP SHELL — Global Layout with Sidebar
    ============================================= */
@@ -362,3 +366,54 @@ body:has(.app-layout) {
   font-size: 22px;
   color: #00205B;
 }
+
+/* =============================================
+   DYNAMIC MOBILE NAV (rendered by layout.js)
+   ============================================= */
+#mobileBottomNav {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.mbn-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px 8px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  transition: color .15s;
+  position: relative;
+}
+
+.mbn-item i { font-size: 1.15rem; line-height: 1; }
+.mbn-item span { white-space: nowrap; }
+
+.mbn-active { color: #003087; }
+.mbn-active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: #003087;
+  border-radius: 0 0 2px 2px;
+}
+
+.mbn-fab-item { color: #00205B; }
+
+.mbn-fab-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #F2A900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(242,169,0,.35);
+}
+
+.mbn-fab-icon i { font-size: 1.1rem; color: #00205B; }
