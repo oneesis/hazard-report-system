@@ -186,7 +186,7 @@
 .um-page-btn { padding:6px 12px; border:1.5px solid #e2e8f0; background:#fff; border-radius:6px; cursor:pointer; font-size:.82rem; margin:2px; }
 .um-page-btn.active { background:#003087; color:#fff; border-color:#003087; }
 .um-empty { color:#94a3b8; font-size:.9rem; padding:16px; }
-.um-modal-box { max-width:600px; }
+.um-modal-box { width: min(720px, 94vw); }
 .um-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
 .um-modal-grid .cp-field { margin-bottom:12px; }
 .um-action-badge { padding:3px 8px; border-radius:4px; font-size:.75rem; font-weight:700; }
