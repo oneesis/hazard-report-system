@@ -15,7 +15,7 @@ async function initUserManagement() {
 
 async function loadUsers() {
   const tbody = document.getElementById('umTableBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px">Memuat...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px">Memuat...</td></tr>';
   try {
     const res = await fetch('/api?action=getKaryawan');
     const result = await res.json();
@@ -24,7 +24,7 @@ async function loadUsers() {
     umPage = 1;
     renderUMTable();
   } catch (e) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:#ef4444">${e.message}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:#ef4444">${e.message}</td></tr>`;
   }
 }
 
@@ -100,6 +100,9 @@ function renderPendingChanges(list) {
   const section = document.getElementById('umPendingSection');
   if (!section) return;
   const pending = list.filter(r => String(r['STATUS'] || '').toUpperCase() === 'PENDING');
+  // update badge
+  const badge = document.getElementById('pendingBadge');
+  if (badge) { badge.textContent = pending.length; badge.style.display = pending.length ? '' : 'none'; }
   if (!pending.length) { section.innerHTML = '<p class="um-empty">Tidak ada permohonan pending.</p>'; return; }
 
   section.innerHTML = `<table class="um-pending-table">
@@ -156,12 +159,12 @@ function openUMModal(user, action) {
         ${umField('DEPARTEMEN','Departemen',user['DEPARTEMEN']||'')}
         ${umField('NO WHATSAPP','No WhatsApp',user['NO WHATSAPP']||'')}
         ${!isEdit ? umField('PASSWORD','Password (min. 6 karakter)','') : ''}
-        <div class="cp-field">
+        ${isSuperAdminRole(getCurrentUser()?.role) ? `<div class="cp-field">
           <label>Role</label>
           <select id="umf_ROLE">
             ${['USER','ADMIN','SUPER_ADMIN'].map(r => `<option value="${r}"${String(user['ROLE']||'USER').toUpperCase()===r?' selected':''}>${r}</option>`).join('')}
           </select>
-        </div>
+        </div>` : '<input type="hidden" id="umf_ROLE" value="USER">'}
         ${umFieldNum('OBJ HR','Target HR/Bulan',user['OBJ HR']||'0')}
         ${umFieldNum('OBJ INS','Target Inspeksi/Bulan',user['OBJ INS']||'0')}
         ${umFieldNum('OBJ SBO','Target SBO/Bulan',user['OBJ SBO']||'0')}
@@ -285,4 +288,132 @@ async function rejectChange(changeId, reason) {
 function renderUMTab() {
   const search = document.getElementById('umSearch');
   if (search) search.addEventListener('input', filterUsers);
+}
+
+// ===== RIWAYAT PENGAJUAN =====
+
+async function loadMyHistory() {
+  const section = document.getElementById('umHistorySection');
+  if (!section) return;
+  section.innerHTML = '<p class="um-empty">Memuat...</p>';
+  try {
+    const res = await fetch('/api?action=getPendingChanges');
+    const result = await res.json();
+    const user = getCurrentUser();
+    const myNik  = String(user?.nik  || '').trim().toLowerCase();
+    const myNama = String(user?.nama  || '').trim().toLowerCase();
+    const all = (result.data || []).filter(r => {
+      const rNik  = String(r['PROPOSED_BY_NIK']  || '').trim().toLowerCase();
+      const rNama = String(r['PROPOSED_BY_NAMA'] || '').trim().toLowerCase();
+      return (myNik && rNik === myNik) || (myNama && rNama === myNama);
+    });
+    renderMyHistory(all);
+  } catch (e) {
+    if (section) section.innerHTML = `<p class="um-empty" style="color:#ef4444">${e.message}</p>`;
+  }
+}
+
+function renderMyHistory(list) {
+  const section = document.getElementById('umHistorySection');
+  if (!section) return;
+  if (!list.length) { section.innerHTML = '<p class="um-empty">Belum ada riwayat pengajuan.</p>'; return; }
+  const statusBadge = s => {
+    const map = { PENDING:'background:#fef9c3;color:#854d0e', APPROVED:'background:#dcfce7;color:#15803d', REJECTED:'background:#fee2e2;color:#dc2626' };
+    const style = map[String(s).toUpperCase()] || 'background:#f1f5f9;color:#475569';
+    return `<span class="um-action-badge" style="${style}">${escapeHTML(s)}</span>`;
+  };
+  section.innerHTML = `<table class="um-pending-table">
+    <thead><tr><th>Waktu</th><th>Action</th><th>Data</th><th>Status</th><th>Catatan</th></tr></thead>
+    <tbody>${list.map(p => {
+      const data = safeParseJson(p['DATA']);
+      return `<tr>
+        <td>${formatDate(p['TIMESTAMP'])}</td>
+        <td><span class="um-action-badge um-action-${(p['ACTION']||'').toLowerCase()}">${escapeHTML(p['ACTION']||'')}</span></td>
+        <td class="um-data-cell">${escapeHTML(data.NAMA || data.NIK || '-')}</td>
+        <td>${statusBadge(p['STATUS'] || '-')}</td>
+        <td>${escapeHTML(p['REASON'] || p['CATATAN'] || '-')}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+// ===== CSV IMPORT/EXPORT =====
+
+const CSV_COLUMNS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
+
+function downloadCsvTemplate() {
+  const header = CSV_COLUMNS.join(',');
+  const example = ['PT Contoh','Subcont A','Nama Karyawan','123456','Operator','HSE','08123456789','password123','2','4','2','1'].join(',');
+  const blob = new Blob([header + '\n' + example + '\n'], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'template_import_user.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function triggerCsvImport() {
+  document.getElementById('csvFileInput')?.click();
+}
+
+function handleCsvFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => processCsvImport(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+async function processCsvImport(csvText) {
+  const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { alert('File CSV kosong atau hanya berisi header.'); return; }
+  const header = parseCsvLine(lines[0]).map(h => h.trim().toUpperCase());
+  const rows = lines.slice(1).map(l => parseCsvLine(l));
+
+  const users = rows.map(cols => {
+    const obj = {};
+    header.forEach((h, i) => { obj[h] = (cols[i] || '').trim(); });
+    return obj;
+  }).filter(u => u['NAMA'] && u['PASSWORD']);
+
+  if (!users.length) { alert('Tidak ada data valid. Pastikan kolom NAMA dan PASSWORD terisi.'); return; }
+
+  const confirmed = confirm(`Akan mengimpor ${users.length} user baru. Semua akan mendapat role USER.\n\nLanjutkan?`);
+  if (!confirmed) return;
+
+  let success = 0, failed = 0;
+  for (const u of users) {
+    const payload = {
+      PERUSAHAAN: u['PERUSAHAAN'] || '', SUBCONT: u['SUBCONT'] || '',
+      NAMA: u['NAMA'], NIK: u['NIK'] || '',
+      JABATAN: u['JABATAN'] || '', DEPARTEMEN: u['DEPARTEMEN'] || '',
+      'NO WHATSAPP': u['NO WHATSAPP'] || '', PASSWORD: u['PASSWORD'],
+      ROLE: 'USER',
+      'OBJ HR': u['OBJ HR'] || '0', 'OBJ INS': u['OBJ INS'] || '0',
+      'OBJ SBO': u['OBJ SBO'] || '0', 'OBJ PC': u['OBJ PC'] || '0',
+    };
+    try {
+      const res = await fetch('/api', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'proposeChange', data: { action: 'ADD', payload } })
+      });
+      const result = await res.json();
+      if (result.status === 'success') success++; else failed++;
+    } catch { failed++; }
+  }
+  alert(`Import selesai.\nBerhasil: ${success}\nGagal: ${failed}`);
+  if (success) loadUsers();
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
 }

@@ -176,7 +176,7 @@
 .um-loading { text-align: center; padding: 32px; color: #94a3b8; }
 
 /* SHARED UM styles */
-.um-header { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.um-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
 .um-header-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .um-search { padding:9px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:.85rem; width:240px; background:#fff; }
 .um-center { text-align:center; }
@@ -203,10 +203,40 @@
 .um-pending-table tr:last-child td { border-bottom:none; }
 
 /* BUTTONS */
+/* SUB-NAV TABS */
+.admin-subnav {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+.admin-subnav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.admin-subnav-btn:hover { color: #003087; }
+.admin-subnav-btn.active { color: #003087; border-bottom-color: #F2A900; }
+
+/* BUTTONS */
 .btn-primary { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:#F2A900; color:#00205B; border:none; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:700; }
 .btn-primary:hover { background:#d99500; }
 .btn-secondary { display:inline-flex; align-items:center; gap:7px; padding:9px 14px; background:#fff; color:#475569; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:600; }
 .btn-secondary:hover { background:#f8fafc; }
+.btn-icon { padding:9px 10px; gap:0; }
 
 /* MOBILE */
 @media (max-width: 768px) {
