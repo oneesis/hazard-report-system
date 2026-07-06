@@ -506,7 +506,7 @@ async function submitHazardReport(sheets, data) {
       `📍 Lokasi: ${data.lokasi_bahaya}${data.detail_lokasi_bahaya ? ' - ' + data.detail_lokasi_bahaya : ''}\n` +
       `⚠️ Temuan: ${data.jenis_bahaya}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
-      `Silakan buka aplikasi untuk melihat detail laporan.`;
+      `🔗 Detail laporan: https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`;
     const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
@@ -550,7 +550,7 @@ async function submitInspectionReport(sheets, data) {
       `🔍 Jenis: ${namaInspeksi}\n` +
       `📍 Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
-      `Silakan buka aplikasi untuk melihat detail laporan.`;
+      `🔗 Detail laporan: https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`;
     const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
@@ -678,7 +678,7 @@ module.exports = async (req, res) => {
           const waTarget = reportRow['NO WHATSAPP PIC'] || reportRow['NO WHATTSAPP PIC'] || reportRow['no_whatsapp_pic'] || '';
           const namaPic  = reportRow['NAMA PIC'] || reportRow['nama_pic'] || '';
           if (!waTarget) throw new Error('Nomor WA PIC tidak ada di laporan ini.');
-          const msg = `Halo ${namaPic}, pengingat: kamu adalah PIC untuk laporan *${data.report_id}*. Silakan buka aplikasi untuk melihat dan menindaklanjuti laporan.`;
+          const msg = `Halo ${namaPic}, pengingat: kamu adalah PIC untuk laporan *${data.report_id}*.\n\n🔗 Detail laporan: https://sap-ebl.vercel.app/laporan-detail.html?id=${data.report_id}`;
           const sent = await sendWaNotification(waTarget, msg).catch(() => false);
           const newStatus = sent ? 'TERKIRIM' : 'GAGAL';
           await writeWaStatusToSheet(sheets, sheetTarget, data.report_id, newStatus);
