@@ -342,13 +342,14 @@
 }
 
 @media (max-width: 767px) {
-  .lm-content { padding: 12px 14px 80px; overflow-x: hidden; }
+  .lm-content { padding: 12px 10px 80px; overflow-x: hidden; }
 
   /* KPI 2x2 + closed full */
   .lm-kpi-grid { grid-template-columns: 1fr 1fr; }
   .lm-kpi--closed { grid-column: 1 / -1; flex-direction: row; justify-content: flex-start; align-items: center; gap: 12px; }
   .lm-kpi--closed .lm-kpi-num { font-size: 1.6rem; }
-  .lm-kpi-num { font-size: 1.6rem; }
+  .lm-kpi { padding: 12px 12px; }
+  .lm-kpi-num { font-size: 1.5rem; }
 
   /* Searchbar: search full row, Refresh + Lainnya side by side */
   .lm-searchbar-row {
@@ -356,9 +357,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  /* Search spans both columns */
   .lm-search-wrap { grid-column: 1 / -1; min-width: unset; }
-  /* Refresh (#btnRefresh) → col 1, Lainnya (.lm-more-wrap) → col 2 */
   .lm-searchbar-row > .btn-secondary { width: 100%; box-sizing: border-box; }
   .lm-more-wrap .lm-action-btn { width: 100%; }
   .lm-dropdown { left: 0; right: 0; min-width: unset; }
@@ -369,21 +368,50 @@
     scrollbar-width: none; padding-bottom: 2px;
   }
   .lm-tabs::-webkit-scrollbar { display: none; }
-  /* Prevent tabs row from causing page overflow */
   .lm-tabs-row { overflow: hidden; }
 
   /* Filter panel */
   .lm-filter-extra { flex-direction: column; }
   .lm-date-input, .lm-select { width: 100%; box-sizing: border-box; }
 
-  /* Cards: single column stack */
-  .lm-card { grid-template-columns: 1fr !important; width: 100%; box-sizing: border-box; }
-  .lm-card-left  { border-right: none; border-bottom: 1px solid #f1f5f9; }
-  .lm-card-mid   { border-right: none; border-bottom: 1px solid #f1f5f9; }
-  .lm-card-right { grid-column: 1 !important; border-top: none; }
-  .lm-detail-btn { width: 100%; justify-content: center; }
+  /* ── Cards: keep 3 columns, compact sizing ── */
+  .lm-card {
+    grid-template-columns: minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr) !important;
+    width: 100%; box-sizing: border-box;
+    border-radius: 10px;
+  }
+  /* restore column borders (overrides tablet rules) */
+  .lm-card-left  { border-right: 1px solid #f1f5f9 !important; border-bottom: none !important; }
+  .lm-card-mid   { border-right: 1px solid #f1f5f9 !important; border-bottom: none !important; }
+  .lm-card-right {
+    grid-column: auto !important; /* override tablet 1/-1 */
+    border-top: none !important; padding-top: 10px;
+  }
+  .lm-card-left, .lm-card-mid, .lm-card-right { padding: 10px 8px; }
 
-  /* Card list containment */
+  /* Left col — compact */
+  .lm-card-id { font-size: .72rem; word-break: break-all; margin-bottom: 5px; }
+  .lm-card-tags { gap: 3px; margin-bottom: 4px; }
+  .lm-card .report-type-badge { font-size: .58rem !important; padding: 2px 4px !important; }
+  .lm-card .lm-risk-badge     { font-size: .58rem; padding: 2px 4px; }
+  .lm-card-location { font-size: .7rem; margin-bottom: 3px; }
+  .lm-card-location i { display: none; }
+  .lm-card-desc { font-size: .68rem; margin-bottom: 4px; -webkit-line-clamp: 2; }
+  .lm-card-photo-wrap { display: none; } /* hide photo on mobile to save space */
+
+  /* Mid col — compact */
+  .lm-meta-row   { gap: 4px; margin-bottom: 5px; }
+  .lm-meta-icon  { font-size: .68rem; width: 10px; }
+  .lm-meta-label { font-size: .58rem; }
+  .lm-meta-val   { font-size: .72rem; word-break: break-word; }
+
+  /* Right col — compact */
+  .lm-card-right  { gap: 5px; }
+  .lm-card-due-date { font-size: .76rem; }
+  .lm-card .sla-badge { font-size: .58rem; padding: 3px 5px; white-space: normal; }
+  .lm-bar-pct { font-size: .58rem; }
+  .lm-detail-btn { font-size: .68rem; padding: 6px 5px; width: 100%; justify-content: center; }
+
   .lm-card-list { overflow-x: hidden; }
 }
 
