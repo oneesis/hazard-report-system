@@ -15,6 +15,22 @@
 
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
+/* ── Status toggle buttons ── */
+.status-buttons { display:flex; gap:8px; flex-wrap:wrap; }
+.status-button {
+  padding:7px 18px; border-radius:20px; font-size:.82rem; font-weight:700;
+  cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#94a3b8;
+  font-family:'Inter',sans-serif; transition:all .15s; white-space:nowrap;
+}
+.status-button:hover { border-color:#94a3b8; color:#475569; }
+.status-button[data-status="OPEN"].selected,
+.status-button[data-status="OPEN"]:hover    { border-color:#f59e0b; background:#fffbeb; color:#b45309; }
+.status-button[data-status="PROGRESS"].selected,
+.status-button[data-status="PROGRESS"]:hover { border-color:#307FE2; background:#eff6ff; color:#003087; }
+.status-button[data-status="CLOSED"].selected,
+.status-button[data-status="CLOSED"]:hover  { border-color:#10b981; background:#ecfdf5; color:#065f46; }
+.status-button.selected { font-weight:800; }
+
 /* ── Canonical compact buttons (all app-shell pages) ── */
 .btn-primary {
   display: inline-flex; align-items: center; gap: 7px;

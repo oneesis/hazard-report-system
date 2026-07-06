@@ -914,29 +914,7 @@ tbody tr:hover {
   box-shadow: 0 0 0 3px rgba(48, 127, 226, 0.15);
 }
 
-.status-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.status-button {
-  padding: 10px 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 16px;
-  background: #ffffff;
-  color: #0f172a;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.status-button.selected {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: #ffffff;
-}
+/* Status buttons → layout.css */
 
 .status-controls {
   display: grid;
