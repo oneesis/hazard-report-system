@@ -66,6 +66,9 @@
         ${navItem('index.html',      'fa-triangle-exclamation','Hazard Report','hazard',    active)}
         ${navItem('inspection.html', 'fa-list-check',          'Inspeksi',      'inspeksi',  active)}
         ${navItem('dashboard.html',  'fa-chart-simple',        'Dashboard',     'dashboard', active)}
+        <button class="sidebar-nav-item" onclick="openMobileProfileSheet()">
+          <i class="fa-solid fa-circle-user"></i><span>Profil</span>
+        </button>
       </nav>
 
       ${isAdmin ? `
@@ -121,9 +124,9 @@
         <span>Lapor</span>
       </a>
       ${mbnLink('dashboard.html','fa-chart-simple','Dashboard','dashboard')}
-      ${isAdmin
-        ? mbnLink('laporan-admin.html','fa-shield-halved','Admin','laporan')
-        : mbnLink('inspection.html','fa-list-check','Inspeksi','inspeksi')}
+      <button class="mbn-item" onclick="openMobileProfileSheet()">
+        <i class="fa-solid fa-circle-user"></i><span>Profil</span>
+      </button>
     `;
   }
 
@@ -136,6 +139,53 @@
   };
 
   // Close sidebar when clicking overlay
+  function injectAdminStrip() {
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const role = String(user?.role || '').toUpperCase().replace(/\s+/g, '_');
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+    const topbar = document.querySelector('.app-topbar');
+    if (!topbar || topbar.previousElementSibling?.classList.contains('app-admin-strip')) return;
+    const strip = document.createElement('div');
+    strip.className = 'app-admin-strip';
+    strip.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Admin';
+    topbar.parentNode.insertBefore(strip, topbar);
+  }
+
+  window.openMobileProfileSheet = function () {
+    let sheet = document.getElementById('__mobileProfileSheet');
+    if (!sheet) {
+      const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+      const role = String(user?.role || '').toUpperCase();
+      const initials = user?.nama
+        ? String(user.nama).trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+        : 'U';
+      const safe = v => String(v ?? '').replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c]));
+
+      sheet = document.createElement('div');
+      sheet.id = '__mobileProfileSheet';
+      sheet.className = 'profile-sheet-overlay';
+      sheet.innerHTML = `
+        <div class="profile-sheet">
+          <div class="profile-sheet-handle"></div>
+          <div class="profile-sheet-avatar">${safe(initials)}</div>
+          <div class="profile-sheet-name">${safe(user?.nama || 'User')}</div>
+          <div class="profile-sheet-role">${safe(role || 'USER')}</div>
+          <div class="profile-sheet-actions">
+            <button class="btn-secondary" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; openChangePasswordModal()">
+              <i class="fa-solid fa-key"></i> Ganti Password
+            </button>
+            <button class="btn-danger" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; confirmLogout()">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+            </button>
+          </div>
+        </div>`;
+      sheet.addEventListener('click', e => { if (e.target === sheet) sheet.style.display = 'none'; });
+      document.body.appendChild(sheet);
+    }
+    sheet.style.display = 'flex';
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('sidebarOverlay');
     overlay?.addEventListener('click', () => {
@@ -145,5 +195,6 @@
 
     renderSidebar();
     renderMobileNav();
+    injectAdminStrip();
   });
 })();
