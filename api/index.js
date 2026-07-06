@@ -50,19 +50,24 @@ async function getSheetHeaders(sheets, sheetName) {
   return (res.data.values?.[0] || []).map(h => String(h).trim());
 }
 
-async function saveBase64ImageToImgBB(base64Data, fileName) {
+async function saveBase64ImageToDrive(base64Data, folderId, fileName) {
   if (!base64Data) return '';
-  const apiKey = process.env.IMGBB_API_KEY;
-  if (!apiKey) throw new Error('IMGBB_API_KEY belum dikonfigurasi. Hubungi administrator.');
-  const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-  const body = new URLSearchParams({ key: apiKey, image: base64, name: fileName });
-  const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body });
+  const scriptUrl = process.env.APPS_SCRIPT_URL;
+  const secret    = process.env.APPS_SCRIPT_SECRET;
+  if (!scriptUrl) throw new Error('APPS_SCRIPT_URL belum dikonfigurasi. Hubungi administrator.');
+  if (!folderId)  throw new Error('Folder ID Google Drive belum dikonfigurasi. Hubungi administrator.');
+  const res = await fetch(scriptUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: base64Data, folderId, name: fileName, secret: secret || '' }),
+    redirect: 'follow',
+  });
   const result = await res.json();
-  if (!result.success) throw new Error('Gagal upload foto: ' + (result.error?.message || 'Unknown'));
-  return result.data.url;
+  if (!result.success) throw new Error('Gagal upload foto ke Drive: ' + (result.error || 'Unknown'));
+  return result.url;
 }
 
-async function saveMultipleImagesToImgBB(base64DataField, idPrefix) {
+async function saveMultipleImagesToDrive(base64DataField, folderId, idPrefix) {
   if (!base64DataField) return '';
   let list;
   try {
@@ -72,7 +77,7 @@ async function saveMultipleImagesToImgBB(base64DataField, idPrefix) {
   const urls = [];
   for (let i = 0; i < list.length; i++) {
     if (list[i]) {
-      const url = await saveBase64ImageToImgBB(list[i], `${idPrefix}-${i + 1}`);
+      const url = await saveBase64ImageToDrive(list[i], folderId, `${idPrefix}-${i + 1}.jpg`);
       if (url) urls.push(url);
     }
   }
@@ -422,7 +427,7 @@ async function submitHazardReport(sheets, data) {
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
   if (data.upload_foto_bahaya)
-    fotoBahayaUrl = await saveMultipleImagesToImgBB(data.upload_foto_bahaya, id + '-Hazard');
+    fotoBahayaUrl = await saveMultipleImagesToDrive(data.upload_foto_bahaya, process.env.FOLDER_HAZARD_ID, id + '-Hazard');
 
   const row = [
     id, new Date().toISOString(), data.perusahaan, data.subcont1, data.nama, data.nik,
@@ -467,7 +472,7 @@ async function submitInspectionReport(sheets, data) {
   const id = 'INSP-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoInspeksiUrl = '';
   if (data.upload_foto_inspeksi)
-    fotoInspeksiUrl = await saveMultipleImagesToImgBB(data.upload_foto_inspeksi, id + '-Inspection');
+    fotoInspeksiUrl = await saveMultipleImagesToDrive(data.upload_foto_inspeksi, process.env.FOLDER_HAZARD_ID, id + '-Inspection');
 
   const headers = await getSheetHeaders(sheets, sheetName);
   const rowData = { ...data, id, timestamp: new Date().toISOString(), upload_foto_inspeksi: fotoInspeksiUrl, status_perbaikan: 'OPEN' };
@@ -509,7 +514,7 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic)
-    fotoPerbaikanUrl = await saveMultipleImagesToImgBB(data.upload_foto_perbaikan_pic, data.id + folderSuffix);
+    fotoPerbaikanUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, process.env.FOLDER_CLOSING_ID, data.id + folderSuffix);
 
   const updates = [];
   const setCell = (headerName, value) => {
