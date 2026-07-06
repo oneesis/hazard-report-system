@@ -84,20 +84,18 @@
 /* ── Filter bar ── */
 .lm-filter-bar {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  flex-wrap: wrap;
   margin-bottom: 16px;
   background: #fff;
   border-radius: 12px;
   border: 1.5px solid #e2e8f0;
   padding: 14px 16px;
-  align-items: center;
 }
 
 .lm-search-wrap {
   position: relative;
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
 }
 
 .lm-search-icon {
@@ -125,6 +123,13 @@
   border-color: #307FE2;
   box-shadow: 0 0 0 3px rgba(48,127,226,.1);
   background: #fff;
+}
+
+.lm-filter-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .lm-date-wrap {
@@ -263,9 +268,7 @@
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .lm-content { padding: 16px; }
-  .lm-search-wrap { min-width: unset; }
-  .lm-date-input { width: 100%; }
-  .lm-select { width: 100%; }
+  .lm-date-input { width: 160px; }
   .lm-table-wrap { overflow-x: auto; }
 }
 
