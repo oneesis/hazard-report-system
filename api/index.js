@@ -223,7 +223,7 @@ async function proposeChange(sheets, auth, action, data) {
   karyawan.filter(r => isSuperAdmin(r['ROLE'])).forEach(sa => {
     if (sa['NO WHATSAPP']) {
       const msg = `Halo ${sa['NAMA']}, ada permohonan *${action.toUpperCase()}* data karyawan dari *${auth.nama}* (${auth.perusahaan}).\n\n👤 User: ${data.NAMA || data.NIK || '-'}\n\nSilakan buka dashboard untuk review dan approval.`;
-      sendWaNotification(sa['NO WHATSAPP'], msg).catch(() => {});
+      await sendWaNotification(sa['NO WHATSAPP'], msg).catch(() => {});
     }
   });
   return { status: 'success', message: 'Permohonan dikirim, menunggu persetujuan SUPER ADMIN.', id };
@@ -311,7 +311,7 @@ async function reviewChange(sheets, auth, changeId, decision, reason) {
     const icon = decision === 'APPROVE' ? '✅' : '❌';
     let msg = `Halo ${proposer['NAMA']}, permohonan perubahan data karyawan kamu *${icon} ${newStatus}*`;
     if (decision === 'REJECT' && reason) msg += `\n\nAlasan: ${reason}`;
-    sendWaNotification(proposer['NO WHATSAPP'], msg).catch(() => {});
+    await sendWaNotification(proposer['NO WHATSAPP'], msg).catch(() => {});
   }
   return { status: 'success', message: `Permohonan berhasil ${decision === 'APPROVE' ? 'disetujui' : 'ditolak'}.` };
 }
@@ -465,7 +465,7 @@ async function submitHazardReport(sheets, data) {
       `⚠️ Temuan: ${data.jenis_bahaya}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
       `Silakan buka aplikasi untuk melihat detail laporan.`;
-    sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
+    await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
   }
 
   return { status: 'success', message: 'Hazard Report berhasil disimpan.', id };
@@ -506,7 +506,7 @@ async function submitInspectionReport(sheets, data) {
       `📍 Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
       `Silakan buka aplikasi untuk melihat detail laporan.`;
-    sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
+    await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
   }
 
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id };
