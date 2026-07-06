@@ -2,6 +2,8 @@
 let reports = [];
 let filteredReports = [];
 let currentReport = null;
+let analyticsRange = 1;    // months: 1, 3, 6
+let overdueOnlyFilter = false;
 let selectedAfterPhotoBase64List = [];
 let selectedStatus = "OPEN";
 let statusChartInstance = null;
@@ -19,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initNotificationBell();
   refreshNotifications().catch(console.error);
+  initAnalyticsSection();
   loadReports();
 
   document
@@ -148,6 +151,7 @@ document.getElementById('reportTableBody').innerHTML = `
 
     updateKPI();
     renderTable();
+    updateAnalyticsKpi(reports);
     handleOpenReportQuery();
 
   } catch (error) {
@@ -288,7 +292,8 @@ function renderTable() {
       (!startDate || (reportDate && reportDate >= startDate)) &&
       (!endDate || (reportDate && reportDate <= endDate));
 
-    return matchesSearch && matchesStatus && matchesType && matchesDate;
+    const matchesOverdue = !overdueOnlyFilter || isOverdue(report);
+    return matchesSearch && matchesStatus && matchesType && matchesDate && matchesOverdue;
   });
 
   filteredReports = filtered;
@@ -1348,4 +1353,137 @@ function renderDeptBreakdown(reportsList) {
       <div class="dept-count">${count}</div>
     </div>`;
   }).join("");
+}
+
+// ========================================
+// ANALYTICS KPI (admin-only)
+// ========================================
+
+// TODO: Confirm actual date formats from a live data sample before relying on this.
+// Sheet dates may be DD/MM/YYYY, ISO strings, or Excel serial numbers.
+function parseSheetDate(value) {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // ISO / native parse (works for most standard formats)
+  let d = new Date(s);
+  if (!isNaN(d)) return d;
+
+  // DD/MM/YYYY or D/M/YYYY (common Indonesian format)
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    d = new Date(`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`);
+    if (!isNaN(d)) return d;
+  }
+
+  return null;
+}
+
+function initAnalyticsSection() {
+  const role = String((typeof getCurrentUser === 'function' ? getCurrentUser() : null)?.role || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+
+  const section = document.getElementById('analyticsSection');
+  if (!section) return;
+  section.style.display = '';
+
+  section.querySelectorAll('.range-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      section.querySelectorAll('.range-chip').forEach(b => b.classList.remove('range-chip--active'));
+      btn.classList.add('range-chip--active');
+      analyticsRange = Number(btn.dataset.range);
+      updateAnalyticsKpi(reports);
+    });
+  });
+
+  document.getElementById('akpiOverdueCard')?.addEventListener('click', () => {
+    overdueOnlyFilter = !overdueOnlyFilter;
+    document.getElementById('akpiOverdueCard').classList.toggle('akpi-overdue-card--active', overdueOnlyFilter);
+    renderTable();
+    document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function updateAnalyticsKpi(allReports) {
+  const role = String((typeof getCurrentUser === 'function' ? getCurrentUser() : null)?.role || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+
+  const visible = getVisibleReports(allReports) || [];
+  const now = new Date();
+
+  const rangeStart = new Date(now.getFullYear(), now.getMonth() - analyticsRange + 1, 1);
+  rangeStart.setHours(0, 0, 0, 0);
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - analyticsRange * 2 + 1, 1);
+  prevStart.setHours(0, 0, 0, 0);
+
+  const dateKeys = ['timestamp','tanggal_laporan','tanggal_inspeksi','tanggal_kejadian','tanggal','date'];
+  const inRange = visible.filter(r => {
+    const d = parseSheetDate(getReportValue(r, dateKeys, ''));
+    return d && d >= rangeStart;
+  });
+  const inPrev = visible.filter(r => {
+    const d = parseSheetDate(getReportValue(r, dateKeys, ''));
+    return d && d >= prevStart && d < rangeStart;
+  });
+
+  // 1. Total Laporan
+  const total = inRange.length;
+  const el1 = document.getElementById('akpiTotal');
+  if (el1) el1.textContent = total.toLocaleString('id-ID');
+
+  const deltaEl = document.getElementById('akpiTotalDelta');
+  if (deltaEl) {
+    if (inPrev.length > 0) {
+      const pct = Math.round(((total - inPrev.length) / inPrev.length) * 100);
+      deltaEl.textContent = (pct >= 0 ? '+' : '') + pct + '% vs periode sebelumnya';
+      deltaEl.className = 'akpi-delta ' + (pct >= 0 ? 'akpi-delta--up' : 'akpi-delta--down');
+    } else {
+      deltaEl.textContent = '';
+    }
+  }
+
+  // 2. % Closing Tepat Waktu
+  const closed = inRange.filter(r => r.status_perbaikan === 'CLOSED');
+  const ontimeEl = document.getElementById('akpiOntime');
+  const ontimeTag = document.getElementById('akpiOntimeTag');
+  if (closed.length > 0) {
+    const ontime = closed.filter(r => {
+      const closing = parseSheetDate(getReportValue(r, ['tanggal_closing','closing_date','tgl_closing','tanggal_selesai'], ''));
+      const due     = parseSheetDate(getReportValue(r, ['batas_waktu','due_date','tanggal_due'], ''));
+      return closing && due && closing <= due;
+    });
+    const pct = Math.round((ontime.length / closed.length) * 100);
+    if (ontimeEl) {
+      ontimeEl.textContent = pct + '%';
+      ontimeEl.style.color = pct >= 90 ? 'var(--color-status-closed)'
+                           : pct >= 70 ? 'var(--color-accent)'
+                           : 'var(--color-status-overdue)';
+    }
+    if (ontimeTag) {
+      ontimeTag.textContent = pct >= 90 ? 'High Perf' : pct >= 70 ? 'Cukup' : 'Perlu Perhatian';
+      ontimeTag.className = 'akpi-tag ' + (pct >= 90 ? 'akpi-tag--green' : pct >= 70 ? 'akpi-tag--sun' : 'akpi-tag--red');
+    }
+  } else {
+    if (ontimeEl) { ontimeEl.textContent = '—'; ontimeEl.style.color = ''; }
+    if (ontimeTag) { ontimeTag.textContent = 'Tidak ada data'; ontimeTag.className = 'akpi-tag'; }
+  }
+
+  // 3. Rata-rata hari closing
+  const avgEl = document.getElementById('akpiAvgDays');
+  if (avgEl) {
+    let totalDays = 0, count = 0;
+    closed.forEach(r => {
+      const open  = parseSheetDate(getReportValue(r, dateKeys, ''));
+      const close = parseSheetDate(getReportValue(r, ['tanggal_closing','closing_date','tgl_closing','tanggal_selesai'], ''));
+      if (!open || !close || close <= open) return;
+      totalDays += (close - open) / 86400000;
+      count++;
+    });
+    avgEl.textContent = count > 0 ? (totalDays / count).toFixed(1) : '—';
+  }
+
+  // 4. Overdue (all visible, not range-gated — you always want total open overdue)
+  const overdueEl = document.getElementById('akpiOverdueCount');
+  if (overdueEl) overdueEl.textContent = visible.filter(isOverdue).length;
 }

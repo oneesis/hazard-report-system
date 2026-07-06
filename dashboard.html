@@ -50,6 +50,37 @@
   </div>
 
 </header>
+    <!-- ANALYTICS SECTION (admin-only, shown by JS) -->
+    <section id="analyticsSection" style="display:none">
+      <div class="range-chips">
+        <button class="range-chip range-chip--active" data-range="1">Bulan Ini</button>
+        <button class="range-chip" data-range="3">3 Bulan</button>
+        <button class="range-chip" data-range="6">6 Bulan</button>
+      </div>
+      <div class="akpi-grid">
+        <div class="akpi-card akpi-total">
+          <div class="akpi-label">Total Laporan</div>
+          <div id="akpiTotal" class="akpi-value">—</div>
+          <div id="akpiTotalDelta" class="akpi-delta"></div>
+        </div>
+        <div class="akpi-card">
+          <div class="akpi-label">% Closing Tepat Waktu</div>
+          <div id="akpiOntime" class="akpi-value">—</div>
+          <div id="akpiOntimeTag" class="akpi-tag"></div>
+        </div>
+        <div class="akpi-card">
+          <div class="akpi-label">Rata-rata Hari Closing</div>
+          <div id="akpiAvgDays" class="akpi-value">—</div>
+          <div class="akpi-tag">hari</div>
+        </div>
+        <div class="akpi-card akpi-overdue-card" id="akpiOverdueCard" title="Klik untuk filter overdue di tabel">
+          <div class="akpi-label">Overdue</div>
+          <div id="akpiOverdueCount" class="akpi-value">—</div>
+          <div class="akpi-tag">Lihat Detail →</div>
+        </div>
+      </div>
+    </section>
+
     <!-- KPI CARDS -->
     <section class="kpi-grid">
       <div class="kpi-card open">

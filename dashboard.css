@@ -2279,3 +2279,127 @@ body.dark-mode .leader-rank       { background: #334155; }
 body.dark-mode .dept-name         { color: #cbd5e1; }
 body.dark-mode .leader-bar-wrap,
 body.dark-mode .dept-bar-wrap     { background: #334155; }
+
+/* ========================================
+   ANALYTICS SECTION (Fase 2)
+======================================== */
+#analyticsSection {
+  margin-bottom: 28px;
+}
+
+/* ── Time range chips ── */
+.range-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.range-chip {
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: .82rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  transition: all .15s;
+}
+
+.range-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.range-chip--active {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+  color: #fff;
+}
+
+/* ── Analytics KPI grid ── */
+.akpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.akpi-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.akpi-total {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.akpi-total .akpi-label,
+.akpi-total .akpi-value,
+.akpi-total .akpi-delta { color: inherit; }
+
+.akpi-overdue-card {
+  border: 2px solid var(--color-status-overdue);
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.akpi-overdue-card:hover,
+.akpi-overdue-card--active {
+  background: #fff5f5;
+}
+
+.akpi-overdue-card .akpi-value { color: var(--color-status-overdue); }
+.akpi-overdue-card .akpi-label { color: var(--color-status-overdue); font-weight: 700; }
+
+.akpi-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.akpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.akpi-delta {
+  font-size: .72rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.akpi-delta--up   { color: var(--color-status-closed); }
+.akpi-delta--down { color: var(--color-status-overdue); }
+
+.akpi-tag {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.akpi-tag--green { color: var(--color-status-closed); }
+.akpi-tag--sun   { color: var(--color-accent); }
+.akpi-tag--red   { color: var(--color-status-overdue); }
+
+@media (max-width: 768px) {
+  .akpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .akpi-value { font-size: 1.6rem; }
+}
