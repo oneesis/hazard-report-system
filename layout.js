@@ -121,9 +121,6 @@
         <span>Lapor</span>
       </a>
       ${mbnLink('dashboard.html','fa-chart-simple','Dashboard','dashboard')}
-      <button class="mbn-item" onclick="openMobileProfileSheet()">
-        <i class="fa-solid fa-circle-user"></i><span>Profil</span>
-      </button>
     `;
   }
 

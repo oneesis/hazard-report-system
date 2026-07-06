@@ -343,6 +343,8 @@
 
 @media (max-width: 767px) {
   .lm-content { padding: 12px 10px 80px; overflow-x: hidden; }
+  /* topbar already shows the title */
+  .lm-header { display: none; }
 
   /* KPI 2x2 + closed full */
   .lm-kpi-grid { grid-template-columns: 1fr 1fr; }
