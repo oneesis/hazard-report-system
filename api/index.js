@@ -461,20 +461,19 @@ async function ensureWaStatusColumn(sheets, sheetName) {
 
 async function writeWaStatusToSheet(sheets, sheetName, reportId, waStatus) {
   try {
-    const [waCol, dataRes] = await Promise.all([
-      ensureWaStatusColumn(sheets, sheetName),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!A:A` })
-    ]);
-    const ids = (dataRes.data.values || []).map(r => String(r[0] || '').trim());
-    const rowIdx = ids.findIndex((v, i) => i > 0 && v === reportId);
-    if (rowIdx === -1) return;
+    const waCol = await ensureWaStatusColumn(sheets, sheetName);
+    const dataRes = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
+    const rows = dataRes.data.values || [];
+    // Search all columns — ID might not always be in col A
+    const rowIdx = rows.findIndex((row, i) => i > 0 && row.some(cell => String(cell || '').trim() === reportId));
+    if (rowIdx === -1) { console.error('writeWaStatus: row not found for', reportId, 'in', sheetName); return; }
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${sheetName}!${colIndexToLetter(waCol)}${rowIdx + 1}`,
       valueInputOption: 'RAW',
       requestBody: { values: [[waStatus]] }
     });
-  } catch { /* non-critical */ }
+  } catch (err) { console.error('writeWaStatus error:', err?.message || err); }
 }
 
 async function submitHazardReport(sheets, data) {
