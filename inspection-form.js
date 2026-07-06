@@ -526,7 +526,6 @@ function getFormData() {
     tanggal_inspeksi: document.getElementById("tanggal_inspeksi")?.value || "",
     shift_inspeksi: document.getElementById("shift_inspeksi")?.value || "",
     lokasi_inspeksi: document.getElementById("lokasi_inspeksi")?.value || "",
-    detail_lokasi_inspeksi: document.getElementById("detail_lokasi_inspeksi")?.value || "",
     temuan_inspeksi: temuanInspeksiAuto,
     inspection_checklist: JSON.stringify(checklistValues),
     temuan_fields: temuan_fields,
