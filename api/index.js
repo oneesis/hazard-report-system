@@ -220,12 +220,12 @@ async function proposeChange(sheets, auth, action, data) {
   });
   // WA ke semua SUPER_ADMIN
   const karyawan = await getSheetData(sheets, 'Master_Karyawan');
-  karyawan.filter(r => isSuperAdmin(r['ROLE'])).forEach(sa => {
+  for (const sa of karyawan.filter(r => isSuperAdmin(r['ROLE']))) {
     if (sa['NO WHATSAPP']) {
       const msg = `Halo ${sa['NAMA']}, ada permohonan *${action.toUpperCase()}* data karyawan dari *${auth.nama}* (${auth.perusahaan}).\n\n👤 User: ${data.NAMA || data.NIK || '-'}\n\nSilakan buka dashboard untuk review dan approval.`;
       await sendWaNotification(sa['NO WHATSAPP'], msg).catch(() => {});
     }
-  });
+  }
   return { status: 'success', message: 'Permohonan dikirim, menunggu persetujuan SUPER ADMIN.', id };
 }
 
