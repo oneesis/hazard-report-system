@@ -61,6 +61,7 @@ async function getSheetHeaders(sheets, sheetName) {
 
 async function saveBase64ImageToDrive(drive, base64Data, folderId, fileName) {
   if (!base64Data) return '';
+  if (!folderId) throw new Error('Folder ID Google Drive belum dikonfigurasi. Hubungi administrator.');
   const mimeMatch = base64Data.match(/^data:(.+);base64,/);
   if (!mimeMatch) throw new Error('Format gambar tidak valid.');
   const mimeType = mimeMatch[1];
@@ -68,11 +69,13 @@ async function saveBase64ImageToDrive(drive, base64Data, folderId, fileName) {
   const file = await drive.files.create({
     requestBody: { name: fileName, parents: [folderId] },
     media: { mimeType, body: Readable.from(buffer) },
-    fields: 'id'
+    fields: 'id',
+    supportsAllDrives: true,
   });
   await drive.permissions.create({
     fileId: file.data.id,
-    requestBody: { role: 'reader', type: 'anyone' }
+    requestBody: { role: 'reader', type: 'anyone' },
+    supportsAllDrives: true,
   });
   return `https://drive.google.com/file/d/${file.data.id}/view`;
 }
