@@ -6,6 +6,7 @@
   <title>Dashboard Laporan - ONE-SAP</title>
   <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
 
+  <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="home.css">
   <link rel="stylesheet" href="dashboard.css">
@@ -49,6 +50,114 @@
   </div>
 
 </header>
+    <!-- ANALYTICS SECTION (admin-only, shown by JS) -->
+    <section id="analyticsSection" style="display:none">
+      <div class="range-chips">
+        <button class="range-chip range-chip--active" data-range="1">Bulan Ini</button>
+        <button class="range-chip" data-range="3">3 Bulan</button>
+        <button class="range-chip" data-range="6">6 Bulan</button>
+      </div>
+      <div class="akpi-grid">
+        <div class="akpi-card akpi-total">
+          <div class="akpi-label">Total Laporan</div>
+          <div id="akpiTotal" class="akpi-value">—</div>
+          <div id="akpiTotalDelta" class="akpi-delta"></div>
+        </div>
+        <div class="akpi-card">
+          <div class="akpi-label">% Closing Tepat Waktu</div>
+          <div id="akpiOntime" class="akpi-value">—</div>
+          <div id="akpiOntimeTag" class="akpi-tag"></div>
+        </div>
+        <div class="akpi-card">
+          <div class="akpi-label">Rata-rata Hari Closing</div>
+          <div id="akpiAvgDays" class="akpi-value">—</div>
+          <div class="akpi-tag">hari</div>
+        </div>
+        <div class="akpi-card akpi-overdue-card" id="akpiOverdueCard" title="Klik untuk filter overdue di tabel">
+          <div class="akpi-label">Overdue</div>
+          <div id="akpiOverdueCount" class="akpi-value">—</div>
+          <div class="akpi-tag">Lihat Detail →</div>
+        </div>
+      </div>
+
+      <!-- Pareto Ketidaksesuaian -->
+      <div class="chart-card pareto-card" id="paretoCard" style="margin-top:16px">
+        <div class="pareto-card-header">
+          <h3 class="chart-title" style="margin:0">PARETO KETIDAKSESUAIAN</h3>
+          <span class="pareto-hint">Klik bar untuk lihat detail sub</span>
+        </div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="chartPareto"></canvas>
+        </div>
+        <!-- Drill-down panel (shown on bar click) -->
+        <div id="paretoDrilldown" style="display:none">
+          <div class="drilldown-header">
+            <div class="drilldown-breadcrumb" id="drilldownBreadcrumb"></div>
+            <button class="drilldown-close" id="drilldownClose">× Tutup</button>
+          </div>
+          <div id="drilldownBars" class="drilldown-bars"></div>
+        </div>
+      </div>
+
+      <!-- Row 2: Tren Risiko + Aging -->
+      <div class="analytics-row-2">
+        <!-- Tren Tingkat Risiko -->
+        <div class="chart-card">
+          <div class="chart-card-header-row">
+            <h3 class="chart-title" style="margin:0">TREN TINGKAT RISIKO (6 BLN)</h3>
+            <div class="risk-legend">
+              <span class="risk-legend-dot" style="background:var(--color-risk-low)"></span>Rendah
+              <span class="risk-legend-dot" style="background:var(--color-risk-mid)"></span>Sedang
+              <span class="risk-legend-dot" style="background:var(--color-risk-high)"></span>Tinggi
+            </div>
+          </div>
+          <div class="chart-container" style="height:220px">
+            <canvas id="chartRiskTrend"></canvas>
+          </div>
+        </div>
+        <!-- Aging Laporan Open -->
+        <div class="chart-card">
+          <h3 class="chart-title">AGING LAPORAN OPEN</h3>
+          <div class="aging-tiles">
+            <div class="aging-tile aging-tile--green">
+              <div id="agingCount0_7" class="aging-count">—</div>
+              <div class="aging-label">Dalam SLA</div>
+              <div class="aging-sub">0–7 hari</div>
+            </div>
+            <div class="aging-tile aging-tile--sun">
+              <div id="agingCount8_14" class="aging-count">—</div>
+              <div class="aging-label">Mendekati Deadline</div>
+              <div class="aging-sub">8–14 hari</div>
+            </div>
+            <div class="aging-tile aging-tile--red">
+              <div id="agingCountOver14" class="aging-count">—</div>
+              <div class="aging-label">Critical / Eskalasi</div>
+              <div class="aging-sub">&gt;14 hari</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Top 5 Lokasi + Hotspot -->
+      <div class="analytics-row-2">
+        <div class="chart-card">
+          <h3 class="chart-title">TOP 5 LOKASI BAHAYA</h3>
+          <div id="topLokasiList" class="top-lokasi-list"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">HOTSPOT MATRIKS</h3>
+          <table class="hotspot-table">
+            <thead>
+              <tr><th>Sub-Kategori</th><th>Lokasi</th><th>Jumlah</th></tr>
+            </thead>
+            <tbody id="hotspotTableBody">
+              <tr><td colspan="3" class="hotspot-empty">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- KPI CARDS -->
     <section class="kpi-grid">
       <div class="kpi-card open">

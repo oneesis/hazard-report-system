@@ -1,44 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* ── Design tokens ── */
-:root {
-  --clr-ocean:    #003087;
-  --clr-sun:      #F2A900;
-  --clr-midnight: #00205B;
-  --clr-sky:      #307FE2;
-  --clr-border:   #e2e8f0;
-  --radius-sm:    8px;
-  --radius-md:    12px;
-  --radius-lg:    16px;
-  --focus-ring:   0 0 0 3px rgba(48,127,226,.15);
-}
-
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+body { font-family: var(--font-sans); }
 
 /* ── Status toggle buttons ── */
 .status-buttons { display:flex; gap:8px; flex-wrap:wrap; }
 .status-button {
   padding:7px 18px; border-radius:20px; font-size:.82rem; font-weight:700;
-  cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#94a3b8;
-  font-family:'Inter',sans-serif; transition:all .15s; white-space:nowrap;
+  cursor:pointer; border:1.5px solid var(--color-border); background:var(--color-surface); color:#94a3b8;
+  font-family:var(--font-sans); transition:all .15s; white-space:nowrap;
 }
 .status-button:hover { border-color:#94a3b8; color:#475569; }
 .status-button[data-status="OPEN"].selected,
-.status-button[data-status="OPEN"]:hover    { border-color:#f59e0b; background:#fffbeb; color:#b45309; }
+.status-button[data-status="OPEN"]:hover    { border-color:var(--color-status-open); background:#fffbeb; color:#b45309; }
 .status-button[data-status="PROGRESS"].selected,
-.status-button[data-status="PROGRESS"]:hover { border-color:#307FE2; background:#eff6ff; color:#003087; }
+.status-button[data-status="PROGRESS"]:hover { border-color:var(--color-info); background:#eff6ff; color:var(--color-primary); }
 .status-button[data-status="CLOSED"].selected,
-.status-button[data-status="CLOSED"]:hover  { border-color:#10b981; background:#ecfdf5; color:#065f46; }
+.status-button[data-status="CLOSED"]:hover  { border-color:var(--color-status-closed); background:#ecfdf5; color:#065f46; }
 .status-button.selected { font-weight:800; }
 
 /* ── Canonical compact buttons (all app-shell pages) ── */
 .btn-primary {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px;
-  background: #F2A900; color: #00205B;
-  border: none; border-radius: 8px;
+  background: var(--color-accent); color: var(--color-primary-dark);
+  border: none; border-radius: var(--radius-control);
   cursor: pointer; font-size: .85rem; font-weight: 700;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   transition: background .15s;
   white-space: nowrap;
 }
@@ -47,10 +34,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 .btn-secondary {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 14px;
-  background: #fff; color: #475569;
-  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  background: var(--color-surface); color: #475569;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-control);
   cursor: pointer; font-size: .85rem; font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   transition: background .15s, border-color .15s;
   white-space: nowrap;
 }
@@ -63,10 +50,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 .btn-danger {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px;
-  background: #dc2626; color: #fff;
-  border: none; border-radius: 8px;
+  background: var(--color-status-overdue); color: #fff;
+  border: none; border-radius: var(--radius-control);
   cursor: pointer; font-size: .85rem; font-weight: 700;
-  font-family: 'Inter', sans-serif; transition: background .15s;
+  font-family: var(--font-sans); transition: background .15s;
   white-space: nowrap;
 }
 .btn-danger:hover { background: #b91c1c; }
@@ -75,9 +62,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 10px;
   background: #25d366; color: #fff;
-  border: none; border-radius: 8px;
+  border: none; border-radius: var(--radius-control);
   cursor: pointer; font-size: .75rem; font-weight: 700;
-  font-family: 'Inter', sans-serif; transition: background .15s;
+  font-family: var(--font-sans); transition: background .15s;
   white-space: nowrap;
 }
 .btn-wa-resend:hover { background: #1da851; }
@@ -89,7 +76,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   background: rgba(0,0,0,.45);
 }
 .cm-box {
-  background: #fff; border-radius: 16px; padding: 28px 28px 24px;
+  background: var(--color-surface); border-radius: 16px; padding: 28px 28px 24px;
   width: min(360px, 90vw); box-shadow: 0 8px 40px rgba(0,0,0,.18);
   text-align: center;
 }
@@ -99,9 +86,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   margin: 0 auto 16px; font-size: 1.4rem;
 }
 .cm-icon--warning { background: #fff7ed; color: #ea580c; }
-.cm-icon--danger  { background: #fee2e2; color: #dc2626; }
-.cm-title { margin: 0 0 8px; font-size: 1rem; font-weight: 700; color: #0f172a; }
-.cm-text  { margin: 0 0 24px; font-size: .85rem; color: #64748b; }
+.cm-icon--danger  { background: #fee2e2; color: var(--color-status-overdue); }
+.cm-title { margin: 0 0 8px; font-size: 1rem; font-weight: 700; color: var(--color-text); }
+.cm-text  { margin: 0 0 24px; font-size: .85rem; color: var(--color-text-muted); }
 .cm-actions { display: flex; gap: 10px; }
 .cm-actions > * { flex: 1; }
 
@@ -109,16 +96,15 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
    APP SHELL — Global Layout with Sidebar
    ============================================= */
 
-/* Reset body when app-layout is used */
 body:has(.app-layout) {
   padding: 0 !important;
-  background: #f0f2f5 !important;
+  background: var(--color-bg) !important;
 }
 
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background: #f0f2f5;
+  background: var(--color-bg);
 }
 
 /* =============================================
@@ -127,7 +113,7 @@ body:has(.app-layout) {
 .app-sidebar {
   width: 260px;
   min-height: 100vh;
-  background: #00205B;
+  background: var(--color-primary-dark);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -190,7 +176,7 @@ body:has(.app-layout) {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: rgba(255,255,255,.65);
   text-decoration: none;
   font-size: .875rem;
@@ -219,7 +205,7 @@ body:has(.app-layout) {
 /* Active: Sun yellow left bar */
 .sidebar-nav-item.active {
   background: rgba(242,169,0,.12);
-  color: #F2A900;
+  color: var(--color-accent);
   font-weight: 600;
 }
 
@@ -228,7 +214,7 @@ body:has(.app-layout) {
   position: absolute;
   left: 0; top: 4px; bottom: 4px;
   width: 4px;
-  background: #F2A900;
+  background: var(--color-accent);
   border-radius: 0 4px 4px 0;
 }
 
@@ -259,8 +245,8 @@ body:has(.app-layout) {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #F2A900;
-  color: #00205B;
+  background: var(--color-accent);
+  color: var(--color-primary-dark);
   font-weight: 800;
   font-size: .8rem;
   display: flex;
@@ -337,14 +323,32 @@ body:has(.app-layout) {
   flex-direction: column;
 }
 
+/* Mobile admin strip — shows above topbar for ADMIN users */
+.app-admin-strip {
+  background: var(--color-primary-dark);
+  color: rgba(255,255,255,.8);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 5px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (min-width: 769px) {
+  .app-admin-strip { display: none; }
+}
+
 /* Mobile topbar (hamburger + title + profile) */
 .app-topbar {
   display: none;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -355,7 +359,7 @@ body:has(.app-layout) {
   border: none;
   cursor: pointer;
   font-size: 1.1rem;
-  color: #003087;
+  color: var(--color-primary);
   padding: 4px;
   border-radius: 6px;
   flex-shrink: 0;
@@ -365,7 +369,7 @@ body:has(.app-layout) {
   flex: 1;
   font-size: 1rem;
   font-weight: 700;
-  color: #00205B;
+  color: var(--color-primary-dark);
 }
 
 /* =============================================
@@ -396,8 +400,8 @@ body:has(.app-layout) {
   display: none;
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  background: #fff;
-  border-top: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
   z-index: 80;
   padding: 0;
   box-shadow: 0 -2px 12px rgba(0,0,0,.06);
@@ -432,7 +436,7 @@ body:has(.app-layout) {
 
 .mobile-bottom-link.active,
 .mobile-bottom-link:hover {
-  color: #003087;
+  color: var(--color-primary);
 }
 
 .mobile-bottom-link svg,
@@ -453,14 +457,14 @@ body:has(.app-layout) {
   text-decoration: none;
   font-size: .65rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-primary-dark);
 }
 
 .mobile-bottom-action-icon {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #F2A900;
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -473,7 +477,7 @@ body:has(.app-layout) {
   width: 22px;
   height: 22px;
   font-size: 22px;
-  color: #00205B;
+  color: var(--color-primary-dark);
 }
 
 /* =============================================
@@ -497,41 +501,45 @@ body:has(.app-layout) {
   letter-spacing: .01em;
   transition: color .15s;
   position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  width: 100%;
 }
 
 .mbn-item i { font-size: 1.15rem; line-height: 1; }
 .mbn-item span { white-space: nowrap; }
 
-.mbn-active { color: #003087; }
+.mbn-active { color: var(--color-primary); }
 .mbn-active::after {
   content: '';
   position: absolute;
   top: 0; left: 20%; right: 20%;
   height: 2px;
-  background: #003087;
+  background: var(--color-primary);
   border-radius: 0 0 2px 2px;
 }
 
-.mbn-fab-item { color: #00205B; }
+.mbn-fab-item { color: var(--color-primary-dark); }
 
 .mbn-fab-icon {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #F2A900;
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(242,169,0,.35);
 }
 
-.mbn-fab-icon i { font-size: 1.1rem; color: #00205B; }
+.mbn-fab-icon i { font-size: 1.1rem; color: var(--color-primary-dark); }
 
 /* =============================================
    APP TOPBAR — USER MENU (avatar only, no text)
    ============================================= */
 
-/* Positioning context + show/hide (pages that don't load style.css need this) */
 .app-topbar .user-menu {
   position: relative;
   display: inline-flex;
@@ -540,8 +548,8 @@ body:has(.app-layout) {
 .app-topbar .user-menu .user-menu-dropdown {
   display: none;
   position: absolute;
-  background: #fff;
-  border: 1.5px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,.12);
   z-index: 200;
@@ -549,7 +557,6 @@ body:has(.app-layout) {
 }
 .app-topbar .user-menu.open .user-menu-dropdown { display: block; }
 
-/* Buttons inside user-menu dropdown */
 .app-topbar .user-menu-dropdown .btn-change-password,
 .app-topbar .user-menu-dropdown .btn-install-pwa {
   display: flex;
@@ -563,7 +570,7 @@ body:has(.app-layout) {
   font-weight: 600;
   color: #334155;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   transition: background .12s;
 }
 .app-topbar .user-menu-dropdown .btn-change-password:hover,
@@ -586,7 +593,7 @@ body:has(.app-layout) {
   border-radius: 50%;
   font-size: 12px;
   font-weight: 800;
-  background: linear-gradient(135deg, #003087, #307FE2);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-info));
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -611,9 +618,9 @@ body:has(.app-layout) {
   padding: 9px 12px;
   font-size: .82rem;
   font-weight: 600;
-  color: #ef4444;
+  color: var(--color-status-overdue);
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   transition: background .12s;
   margin-top: 2px;
 }
@@ -628,7 +635,6 @@ body:has(.app-layout) {
   align-items: center;
 }
 
-/* Bell button */
 .notification-button {
   position: relative;
   width: 36px;
@@ -645,16 +651,15 @@ body:has(.app-layout) {
   transition: background .15s, color .15s;
   flex-shrink: 0;
 }
-.notification-button:hover { background: #f1f5f9; color: #003087; }
+.notification-button:hover { background: #f1f5f9; color: var(--color-primary); }
 
-/* Unread badge */
 .notification-badge {
   position: absolute;
   top: 2px; right: 2px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: #ef4444;
+  background: var(--color-status-overdue);
   color: #fff;
   font-size: .62rem;
   font-weight: 700;
@@ -667,7 +672,6 @@ body:has(.app-layout) {
 }
 .notification-badge.hidden { display: none; }
 
-/* Dropdown panel */
 .notification-dropdown {
   display: none;
   position: absolute;
@@ -675,8 +679,8 @@ body:has(.app-layout) {
   right: 0;
   width: 320px;
   max-width: calc(100vw - 24px);
-  background: #fff;
-  border: 1.5px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0,0,0,.12);
   z-index: 200;
@@ -684,7 +688,6 @@ body:has(.app-layout) {
 }
 .notification-menu.open .notification-dropdown { display: block; }
 
-/* Header */
 .notification-dropdown-header {
   display: flex;
   align-items: center;
@@ -695,7 +698,7 @@ body:has(.app-layout) {
 .notification-dropdown-header h3 {
   font-size: .9rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text);
   margin: 0;
 }
 .notification-summary {
@@ -704,7 +707,6 @@ body:has(.app-layout) {
   font-weight: 500;
 }
 
-/* List */
 .notification-list {
   list-style: none;
   margin: 0;
@@ -713,7 +715,6 @@ body:has(.app-layout) {
   overflow-y: auto;
 }
 
-/* Each item */
 .notification-item {
   display: flex;
   flex-direction: column;
@@ -738,7 +739,7 @@ body:has(.app-layout) {
 .notification-item-top strong {
   font-size: .78rem;
   font-weight: 700;
-  color: #003087;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -747,7 +748,7 @@ body:has(.app-layout) {
   display: inline-block;
   width: 7px; height: 7px;
   border-radius: 50%;
-  background: #307FE2;
+  background: var(--color-info);
   flex-shrink: 0;
 }
 .notification-role {
@@ -756,7 +757,7 @@ body:has(.app-layout) {
   padding: 2px 6px;
   border-radius: 20px;
   background: #f1f5f9;
-  color: #64748b;
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 .notification-message {
@@ -787,7 +788,6 @@ body:has(.app-layout) {
   letter-spacing: .04em;
 }
 
-/* Empty state */
 .notification-empty {
   padding: 24px 16px;
   text-align: center;
@@ -795,7 +795,6 @@ body:has(.app-layout) {
   color: #94a3b8;
 }
 
-/* Footer toggle */
 .notification-list-footer {
   border-top: 1px solid #f1f5f9;
 }
@@ -807,14 +806,13 @@ body:has(.app-layout) {
   border: none;
   font-size: .75rem;
   font-weight: 600;
-  color: #307FE2;
+  color: var(--color-info);
   cursor: pointer;
   text-align: center;
   transition: background .12s;
 }
 .notification-toggle:hover { background: #f0f7ff; }
 
-/* On mobile: anchor the dropdown from the left of the viewport */
 @media (max-width: 480px) {
   .notification-dropdown {
     right: auto;
@@ -825,3 +823,62 @@ body:has(.app-layout) {
   }
   .notification-list { max-height: 55vh; }
 }
+
+/* =============================================
+   MOBILE PROFILE SHEET
+   ============================================= */
+.profile-sheet-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,.45);
+  align-items: flex-end;
+  justify-content: center;
+}
+.profile-sheet {
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 24px 32px;
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+}
+.profile-sheet-handle {
+  width: 40px; height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.profile-sheet-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-primary-dark);
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.profile-sheet-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+.profile-sheet-role {
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 24px;
+}
+.profile-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-sheet-actions > * { width: 100%; justify-content: center; }
