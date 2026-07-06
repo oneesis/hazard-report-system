@@ -22,7 +22,6 @@
   <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
   <div class="app-main">
-    <!-- Mobile topbar -->
     <div class="app-topbar">
       <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
       <span id="appTopbarTitle" class="app-topbar-title">Manajemen Laporan</span>
@@ -35,115 +34,128 @@
       <!-- PAGE HEADER -->
       <div class="lm-header">
         <div>
-          <h1 class="lm-title">
-            <i class="fa-solid fa-file-lines"></i> Manajemen Laporan
-          </h1>
+          <h1 class="lm-title"><i class="fa-solid fa-file-lines"></i> Manajemen Laporan</h1>
           <p class="lm-subtitle">Kelola dan pantau semua laporan Hazard &amp; Inspeksi</p>
         </div>
-        <div class="lm-header-actions">
-          <button id="btnRefresh" class="btn-primary" title="Refresh data">
-            <i class="fa-solid fa-arrows-rotate"></i> Refresh
-          </button>
-          <button id="btnExportCsv" class="btn-secondary">
-            <i class="fa-solid fa-file-csv"></i> Export CSV
-          </button>
-        </div>
       </div>
 
-      <!-- KPI STRIP -->
-      <div class="lm-kpi-strip">
-        <div class="lm-kpi lm-kpi--total">
-          <div class="lm-kpi-num" id="kpiTotal">-</div>
-          <div class="lm-kpi-label">Total</div>
-        </div>
-        <div class="lm-kpi lm-kpi--open">
-          <div class="lm-kpi-num" id="kpiOpen">-</div>
-          <div class="lm-kpi-label">Open</div>
-        </div>
-        <div class="lm-kpi lm-kpi--progress">
-          <div class="lm-kpi-num" id="kpiProgress">-</div>
-          <div class="lm-kpi-label">Progress</div>
-        </div>
-        <div class="lm-kpi lm-kpi--closed">
-          <div class="lm-kpi-num" id="kpiClosed">-</div>
-          <div class="lm-kpi-label">Closed</div>
-        </div>
-        <div class="lm-kpi lm-kpi--overdue">
-          <div class="lm-kpi-num" id="kpiOverdue">-</div>
-          <div class="lm-kpi-label">Overdue</div>
-        </div>
-      </div>
-
-      <!-- FILTER BAR -->
-      <div class="lm-filter-bar">
+      <!-- SEARCH + ACTION BAR -->
+      <div class="lm-searchbar-row">
         <div class="lm-search-wrap">
           <i class="fa-solid fa-magnifying-glass lm-search-icon"></i>
           <input type="text" id="searchInput" class="lm-search-input"
-            placeholder="Cari ID, Pelapor, PIC, Lokasi..." autocomplete="off">
+            placeholder="Cari ID, Pelapor, PIC, atau Keyword..." autocomplete="off">
         </div>
-
-        <button class="lm-filter-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('i').classList.toggle('fa-chevron-up');this.querySelector('i').classList.toggle('fa-chevron-down')">
-          <i class="fa-solid fa-filter"></i> Filter <i class="fa-solid fa-chevron-down" style="font-size:.7rem"></i>
+        <button id="btnRefresh" class="btn-secondary lm-action-btn">
+          <i class="fa-solid fa-arrows-rotate"></i> Refresh
         </button>
-
-        <div class="lm-filter-extra">
-          <div class="lm-date-wrap">
-            <i class="fa-solid fa-calendar-days lm-cal-icon"></i>
-            <input type="text" id="dateRange" class="lm-date-input"
-              placeholder="Dari - Sampai" autocomplete="off">
+        <div class="lm-more-wrap">
+          <button class="btn-secondary lm-action-btn" id="btnLainnya">
+            <i class="fa-solid fa-ellipsis-vertical"></i> Lainnya <i class="fa-solid fa-chevron-down lm-chevron"></i>
+          </button>
+          <div class="lm-dropdown" id="lainnyaDropdown">
+            <button id="btnExportCsv" class="lm-dropdown-item">
+              <i class="fa-solid fa-download"></i> Export CSV
+            </button>
+            <button class="lm-dropdown-item" onclick="alert('Panduan belum tersedia')">
+              <i class="fa-solid fa-circle-question"></i> Panduan Penggunaan
+            </button>
           </div>
-
-          <select id="statusFilter" class="lm-select">
-            <option value="">Semua Status</option>
-            <option value="OPEN">OPEN</option>
-            <option value="PROGRESS">PROGRESS</option>
-            <option value="CLOSED">CLOSED</option>
-          </select>
-
-          <select id="typeFilter" class="lm-select">
-            <option value="">Semua Jenis</option>
-            <option value="HAZARD">Hazard</option>
-            <option value="INSPECTION">Inspeksi</option>
-          </select>
-
-          <select id="deptFilter" class="lm-select">
-            <option value="">Semua Dept</option>
-          </select>
-
-          <select id="slaFilter" class="lm-select">
-            <option value="">Semua SLA</option>
-            <option value="overdue">Overdue</option>
-            <option value="warning">Warning (≤3 hari)</option>
-            <option value="ok">On Track</option>
-          </select>
         </div>
       </div>
 
-      <!-- TABLE -->
-      <div class="lm-table-wrap">
-        <table id="reportTable" class="lm-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Jenis</th>
-              <th>Tanggal</th>
-              <th>Pelapor</th>
-              <th>Dept</th>
-              <th>Lokasi</th>
-              <th>Deskripsi</th>
-              <th>PIC</th>
-              <th>Due Date</th>
-              <th>SLA</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="reportTableBody">
-            <tr><td colspan="12" class="lm-loading">Memuat data...</td></tr>
-          </tbody>
-        </table>
-        <div id="tablePagination" class="lm-pagination"></div>
+      <!-- KPI CARDS -->
+      <div class="lm-kpi-grid">
+        <div class="lm-kpi lm-kpi--total">
+          <div class="lm-kpi-inner">
+            <div>
+              <div class="lm-kpi-label">TOTAL LAPORAN</div>
+              <div class="lm-kpi-num" id="kpiTotal">-</div>
+              <div class="lm-kpi-sub">Semua waktu</div>
+            </div>
+            <div class="lm-kpi-icon"><i class="fa-solid fa-file-lines"></i></div>
+          </div>
+        </div>
+        <div class="lm-kpi lm-kpi--open">
+          <div class="lm-kpi-inner">
+            <div>
+              <div class="lm-kpi-label">OPEN</div>
+              <div class="lm-kpi-num" id="kpiOpen">-</div>
+              <div class="lm-kpi-sub">Butuh Tindakan</div>
+            </div>
+            <div class="lm-kpi-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+          </div>
+        </div>
+        <div class="lm-kpi lm-kpi--progress">
+          <div class="lm-kpi-inner">
+            <div>
+              <div class="lm-kpi-label">IN PROGRESS</div>
+              <div class="lm-kpi-num" id="kpiProgress">-</div>
+              <div class="lm-kpi-sub">Sedang Diproses</div>
+            </div>
+            <div class="lm-kpi-icon"><i class="fa-solid fa-spinner"></i></div>
+          </div>
+        </div>
+        <div class="lm-kpi lm-kpi--overdue">
+          <div class="lm-kpi-inner">
+            <div>
+              <div class="lm-kpi-label">OVERDUE</div>
+              <div class="lm-kpi-num" id="kpiOverdue">-</div>
+              <div class="lm-kpi-sub">Terlambat</div>
+            </div>
+            <div class="lm-kpi-icon"><i class="fa-solid fa-clock"></i></div>
+          </div>
+        </div>
+        <div class="lm-kpi lm-kpi--closed">
+          <span class="lm-kpi-closed-tag">CLOSED</span>
+          <span class="lm-kpi-num" id="kpiClosed">-</span>
+          <span class="lm-kpi-sub">Selesai</span>
+        </div>
       </div>
+
+      <!-- FILTER TABS -->
+      <div class="lm-tabs-row">
+        <div class="lm-tabs" id="lmTabs">
+          <button class="lm-tab active" data-tab="semua"><i class="fa-solid fa-list"></i> Semua</button>
+          <button class="lm-tab" data-tab="open"><span class="lm-dot lm-dot--open"></span> Open <span class="lm-tab-count" id="tabCountOpen"></span></button>
+          <button class="lm-tab" data-tab="progress"><span class="lm-dot lm-dot--progress"></span> In Progress <span class="lm-tab-count" id="tabCountProgress"></span></button>
+          <button class="lm-tab" data-tab="overdue"><span class="lm-dot lm-dot--overdue"></span> Overdue <span class="lm-tab-count" id="tabCountOverdue"></span></button>
+          <button class="lm-tab" data-tab="risiko-tinggi"><i class="fa-solid fa-shield-halved"></i> Risiko Tinggi</button>
+        </div>
+        <button class="lm-filter-toggle-btn" id="btnFilterToggle">
+          <i class="fa-solid fa-sliders"></i> Filter
+        </button>
+      </div>
+
+      <!-- ADVANCED FILTER (hidden by default) -->
+      <div class="lm-filter-extra" id="lmFilterExtra">
+        <div class="lm-date-wrap">
+          <i class="fa-solid fa-calendar-days lm-cal-icon"></i>
+          <input type="text" id="dateRange" class="lm-date-input" placeholder="Dari - Sampai" autocomplete="off">
+        </div>
+        <select id="statusFilter" class="lm-select"><option value="">Semua Status</option><option value="OPEN">OPEN</option><option value="PROGRESS">PROGRESS</option><option value="CLOSED">CLOSED</option></select>
+        <select id="typeFilter" class="lm-select"><option value="">Semua Jenis</option><option value="HAZARD">Hazard</option><option value="INSPECTION">Inspeksi</option></select>
+        <select id="deptFilter" class="lm-select"><option value="">Semua Dept</option></select>
+        <select id="slaFilter" class="lm-select"><option value="">Semua SLA</option><option value="overdue">Overdue</option><option value="warning">Warning (≤3 hari)</option><option value="ok">On Track</option></select>
+      </div>
+
+      <!-- SORT ROW -->
+      <div class="lm-sort-row">
+        <span class="lm-sort-label">Urutkan:</span>
+        <select id="sortSelect" class="lm-sort-select">
+          <option value="due_asc">Due Date Terdekat</option>
+          <option value="date_desc">Terbaru</option>
+          <option value="date_asc">Terlama</option>
+        </select>
+      </div>
+
+      <!-- CARD LIST -->
+      <div id="reportCardList" class="lm-card-list">
+        <div class="lm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</div>
+      </div>
+
+      <!-- PAGINATION -->
+      <div id="tablePagination" class="lm-pagination"></div>
 
     </div><!-- end lm-content -->
 
@@ -152,7 +164,7 @@
   </div><!-- end app-main -->
 </div><!-- end app-layout -->
 
-<!-- REUSE DASHBOARD MODAL -->
+<!-- MODAL (reuse dari dashboard.js) -->
 <div id="reportModal" class="modal hidden" aria-hidden="true">
   <div class="modal-overlay" data-modal-close></div>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -238,15 +250,9 @@
       </div>
     </div>
     <div class="modal-actions">
-      <button id="btnSubmitClosing" class="btn-primary">
-        <i class="fa-solid fa-paper-plane"></i> Submit Closing
-      </button>
-      <button id="btnDownloadPdf" class="btn-secondary">
-        <i class="fa-solid fa-file-arrow-down"></i> Print PDF
-      </button>
-      <button id="modalEdit" class="btn-secondary hidden">
-        <i class="fa-solid fa-pen"></i> Edit
-      </button>
+      <button id="btnSubmitClosing" class="btn-primary"><i class="fa-solid fa-paper-plane"></i> Submit Closing</button>
+      <button id="btnDownloadPdf" class="btn-secondary"><i class="fa-solid fa-file-arrow-down"></i> Print PDF</button>
+      <button id="modalEdit" class="btn-secondary hidden"><i class="fa-solid fa-pen"></i> Edit</button>
     </div>
   </div>
 </div>
