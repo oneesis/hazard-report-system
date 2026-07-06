@@ -126,12 +126,8 @@ body {
 /* ========================================
    RESPONSIVE
 ======================================== */
-@media (max-width: 1200px) {
-  .kpi-grid { gap: 20px; }
-  .filter-bar { padding: 24px 28px; }
-}
 
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
   .dashboard-header {
     padding: 28px 32px;
     border-radius: 28px;
@@ -164,7 +160,7 @@ body {
   .search-wrap { width: 100%; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   body { padding: 15px; }
 
   .dashboard-header {
@@ -183,7 +179,7 @@ body {
   }
 
   .kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     margin-bottom: 24px;
   }
@@ -311,7 +307,7 @@ body.dark-mode .badge-overdue {
 .filter-bar > * { min-width: 0; }
 .filter-bar { column-gap: 18px; }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .filter-bar {
     display: grid;
     /* date | search | status | type | refresh | export */
@@ -326,16 +322,9 @@ body.dark-mode .badge-overdue {
   .filter-bar .btn-primary, .filter-bar .btn-secondary { width: auto; min-width: 96px; white-space: nowrap; }
 }
 
-/* tablet: allow grid to collapse into two rows to avoid overlap */
-@media (max-width: 1100px) and (min-width: 700px) {
-  .filter-bar { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; }
-  .filter-bar .date-range { grid-column: 1 / 2; }
-  .filter-bar .search-wrap { grid-column: 2 / 3; }
-  .filter-bar select, .filter-bar .btn-primary, .filter-bar .btn-secondary { grid-column: 2 / 3; justify-self: end; }
-}
 
 /* Desktop: align label and input in date-range */
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   /* Stack label above input for cleaner, proportional layout */
   .date-range {
     display: flex;
@@ -458,7 +447,7 @@ body.dark-mode .badge-overdue {
 .search-input { width: 100%; }
 
 /* Remove date-range right border on narrower screens */
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .date-range { border-right: none; padding-right: 0; }
 }
 
@@ -519,7 +508,7 @@ body.dark-mode .badge-overdue {
   color: #64748b;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .date-range {
     flex-direction: row;
     align-items: center;
@@ -1101,7 +1090,7 @@ tbody tr:hover {
 /* ========================================
    RESPONSIVE
 ======================================== */
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
   .kpi-grid {
     grid-template-columns: 1fr;
   }
@@ -1367,7 +1356,7 @@ tbody tr:hover {
 /* ========================================
    RESPONSIVE
 ======================================== */
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
   .dashboard-topbar {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -1528,7 +1517,7 @@ tbody tr:hover {
   background: #dc2626;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .user-menu-button {
     width: 52px !important;
     height: 52px !important;
@@ -1757,7 +1746,7 @@ tbody td:first-child {
   line-height: 1.45;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
   .dashboard-header {
     padding: 24px;
   }
@@ -1795,7 +1784,7 @@ tbody td:first-child {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   body {
     padding: 12px 12px calc(108px + env(safe-area-inset-bottom));
   }
@@ -1924,7 +1913,7 @@ tbody td:first-child {
 /* ========================================
    MOBILE HEADER ADJUSTMENTS
 ======================================== */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   /* Layout: 2 rows (Home & Profile/Notif on row 1, Logos centered on row 2) */
   .dashboard-topbar {
     display: grid !important;
@@ -2072,7 +2061,7 @@ tbody td:first-child {
 }
 
 /* Responsive Charts */
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
   .charts-section {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -2263,12 +2252,12 @@ tbody td:first-child {
 }
 
 /* Responsive */
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
   .kpi-grid { grid-template-columns: repeat(3, 1fr); }
   .analytics-row { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -2396,12 +2385,25 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 .akpi-tag--sun   { color: var(--color-accent); }
 .akpi-tag--red   { color: var(--color-status-overdue); }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .akpi-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
   .akpi-value { font-size: 1.6rem; }
+}
+
+/* Sticky chips on mobile — stick below app-topbar + admin-strip (~68px combined) */
+@media (max-width: 767px) {
+  .range-chips {
+    position: sticky;
+    top: 68px;
+    z-index: 40;
+    background: var(--color-surface, #f8fafc);
+    padding: 8px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+  }
 }
 
 /* ========================================
@@ -2527,7 +2529,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
   white-space: nowrap;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .drilldown-row {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
@@ -2547,7 +2549,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
   margin-top: 16px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .analytics-row-2 { grid-template-columns: 1fr; }
 }
 
