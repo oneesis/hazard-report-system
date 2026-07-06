@@ -350,14 +350,18 @@
   .lm-kpi--closed .lm-kpi-num { font-size: 1.6rem; }
   .lm-kpi-num { font-size: 1.6rem; }
 
-  /* Searchbar: search full-width, Refresh + Lainnya side by side */
-  .lm-searchbar-row { flex-wrap: wrap; gap: 8px; }
-  .lm-search-wrap   { flex: 0 0 100%; min-width: unset; }
-  /* Refresh button and Lainnya share a row */
-  .lm-searchbar-row > .lm-action-btn { flex: 1; min-width: 0; justify-content: center; }
-  .lm-more-wrap     { flex: 1; min-width: 0; }
-  .lm-more-wrap .lm-action-btn { width: 100%; justify-content: center; }
-  .lm-dropdown      { left: 0; right: 0; min-width: unset; }
+  /* Searchbar: search full row, Refresh + Lainnya side by side */
+  .lm-searchbar-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  /* Search spans both columns */
+  .lm-search-wrap { grid-column: 1 / -1; min-width: unset; }
+  /* Refresh (#btnRefresh) → col 1, Lainnya (.lm-more-wrap) → col 2 */
+  .lm-searchbar-row > .btn-secondary { width: 100%; box-sizing: border-box; }
+  .lm-more-wrap .lm-action-btn { width: 100%; }
+  .lm-dropdown { left: 0; right: 0; min-width: unset; }
 
   /* Tabs scrollable */
   .lm-tabs {
