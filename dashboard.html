@@ -79,6 +79,25 @@
           <div class="akpi-tag">Lihat Detail →</div>
         </div>
       </div>
+
+      <!-- Pareto Ketidaksesuaian -->
+      <div class="chart-card pareto-card" id="paretoCard" style="margin-top:16px">
+        <div class="pareto-card-header">
+          <h3 class="chart-title" style="margin:0">PARETO KETIDAKSESUAIAN</h3>
+          <span class="pareto-hint">Klik bar untuk lihat detail sub</span>
+        </div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="chartPareto"></canvas>
+        </div>
+        <!-- Drill-down panel (shown on bar click) -->
+        <div id="paretoDrilldown" style="display:none">
+          <div class="drilldown-header">
+            <div class="drilldown-breadcrumb" id="drilldownBreadcrumb"></div>
+            <button class="drilldown-close" id="drilldownClose">× Tutup</button>
+          </div>
+          <div id="drilldownBars" class="drilldown-bars"></div>
+        </div>
+      </div>
     </section>
 
     <!-- KPI CARDS -->

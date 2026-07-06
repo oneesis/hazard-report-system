@@ -4,6 +4,10 @@ let filteredReports = [];
 let currentReport = null;
 let analyticsRange = 1;    // months: 1, 3, 6
 let overdueOnlyFilter = false;
+let paretoChartInstance = null;
+let paretoData = [];       // {label, count}[]
+let paretoInRange = [];    // reports in current range, for drill-down
+let selectedParetoIndex = -1;
 let selectedAfterPhotoBase64List = [];
 let selectedStatus = "OPEN";
 let statusChartInstance = null;
@@ -1403,6 +1407,8 @@ function initAnalyticsSection() {
     renderTable();
     document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+
+  document.getElementById('drilldownClose')?.addEventListener('click', closeDrilldown);
 }
 
 function updateAnalyticsKpi(allReports) {
@@ -1486,4 +1492,182 @@ function updateAnalyticsKpi(allReports) {
   // 4. Overdue (all visible, not range-gated — you always want total open overdue)
   const overdueEl = document.getElementById('akpiOverdueCount');
   if (overdueEl) overdueEl.textContent = visible.filter(isOverdue).length;
+
+  renderParetoChart(allReports);
+}
+
+// ========================================
+// PARETO CHART + DRILL-DOWN (Fase 3)
+// ========================================
+function renderParetoChart(allReports) {
+  const role = String((typeof getCurrentUser === 'function' ? getCurrentUser() : null)?.role || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+
+  const ctx = document.getElementById('chartPareto')?.getContext('2d');
+  if (!ctx) return;
+
+  const visible = getVisibleReports(allReports) || [];
+  const now = new Date();
+  const rangeStart = new Date(now.getFullYear(), now.getMonth() - analyticsRange + 1, 1);
+  rangeStart.setHours(0, 0, 0, 0);
+
+  const dateKeys = ['timestamp','tanggal_laporan','tanggal_inspeksi','tanggal_kejadian','tanggal','date'];
+  paretoInRange = visible.filter(r => {
+    const d = parseSheetDate(getReportValue(r, dateKeys, ''));
+    return d && d >= rangeStart;
+  });
+
+  // Count by ketidaksesuaian_bahaya (hazard-only field)
+  const counts = {};
+  paretoInRange.forEach(r => {
+    const val = String(r.ketidaksesuaian_bahaya || '').trim();
+    if (!val) return;
+    counts[val] = (counts[val] || 0) + 1;
+  });
+
+  paretoData = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([label, count]) => ({ label, count }));
+
+  const card = document.getElementById('paretoCard');
+  if (!paretoData.length) {
+    if (card) card.style.display = 'none';
+    return;
+  }
+  if (card) card.style.display = '';
+
+  selectedParetoIndex = -1;
+  closeDrilldown();
+
+  const total = paretoData.reduce((s, d) => s + d.count, 0);
+  let running = 0;
+  const cumulative = paretoData.map(d => { running += d.count; return Math.round((running / total) * 100); });
+
+  if (paretoChartInstance) paretoChartInstance.destroy();
+
+  paretoChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: paretoData.map(d => d.label),
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Jumlah',
+          data: paretoData.map(d => d.count),
+          backgroundColor: paretoData.map(() => '#003087'),
+          borderWidth: 0,
+          borderRadius: 4,
+          yAxisID: 'y',
+          order: 2
+        },
+        {
+          type: 'line',
+          label: 'Kumulatif %',
+          data: cumulative,
+          borderColor: '#F2A900',
+          backgroundColor: 'transparent',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#F2A900',
+          tension: 0.3,
+          yAxisID: 'y2',
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      onClick: (_evt, elements) => {
+        if (!elements.length) return;
+        openDrilldown(elements[0].index);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 1
+              ? ` Kumulatif: ${ctx.raw}%`
+              : ` Jumlah: ${ctx.raw}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#475569', font: { size: 11, weight: '600', family: 'Inter,sans-serif' }, maxRotation: 30 }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#f1f5f9' },
+          ticks: { precision: 0, color: '#64748b', font: { size: 11 } }
+        },
+        y2: {
+          position: 'right',
+          min: 0, max: 100,
+          grid: { display: false },
+          ticks: { color: '#F2A900', font: { size: 11 }, callback: v => v + '%' }
+        }
+      }
+    }
+  });
+}
+
+function openDrilldown(idx) {
+  const item = paretoData[idx];
+  if (!item) return;
+
+  selectedParetoIndex = idx;
+
+  // Highlight selected bar, fade others
+  if (paretoChartInstance) {
+    paretoChartInstance.data.datasets[0].backgroundColor = paretoData.map((_, i) =>
+      i === idx ? '#F2A900' : 'rgba(0,48,135,0.35)'
+    );
+    paretoChartInstance.update('none');
+  }
+
+  // Count sub_ketidaksesuaian for selected category
+  const subCounts = {};
+  paretoInRange.forEach(r => {
+    if (String(r.ketidaksesuaian_bahaya || '').trim() !== item.label) return;
+    const sub = String(r.sub_ketidaksesuaian || '').trim();
+    if (!sub) return;
+    subCounts[sub] = (subCounts[sub] || 0) + 1;
+  });
+
+  const subs = Object.entries(subCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const catTotal = subs.reduce((s, [, c]) => s + c, 0);
+
+  const breadcrumb = document.getElementById('drilldownBreadcrumb');
+  if (breadcrumb) breadcrumb.textContent = `Semua Ketidaksesuaian / ${item.label}`;
+
+  const barsEl = document.getElementById('drilldownBars');
+  if (barsEl) {
+    if (!subs.length) {
+      barsEl.innerHTML = '<p class="drilldown-empty">Tidak ada data sub ketidaksesuaian.</p>';
+    } else {
+      barsEl.innerHTML = subs.map(([sub, count]) => {
+        const pct = catTotal > 0 ? Math.round((count / catTotal) * 100) : 0;
+        return `<div class="drilldown-row">
+          <div class="drilldown-row-label" title="${escapeHTML(sub)}">${escapeHTML(sub)}</div>
+          <div class="drilldown-row-bar-wrap"><div class="drilldown-row-bar" style="width:${pct}%"></div></div>
+          <div class="drilldown-row-count">${count}</div>
+          <span class="drilldown-row-pct">${pct}%</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  document.getElementById('paretoDrilldown').style.display = '';
+}
+
+function closeDrilldown() {
+  const panel = document.getElementById('paretoDrilldown');
+  if (panel) panel.style.display = 'none';
+
+  if (paretoChartInstance && selectedParetoIndex !== -1) {
+    selectedParetoIndex = -1;
+    paretoChartInstance.data.datasets[0].backgroundColor = paretoData.map(() => '#003087');
+    paretoChartInstance.update('none');
+  }
 }
