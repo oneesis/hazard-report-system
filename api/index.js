@@ -50,21 +50,34 @@ async function getSheetHeaders(sheets, sheetName) {
   return (res.data.values?.[0] || []).map(h => String(h).trim());
 }
 
+function getDriveClient() {
+  const oauth2 = new google.auth.OAuth2(
+    process.env.GOOGLE_OAUTH_CLIENT_ID,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+  );
+  oauth2.setCredentials({ refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN });
+  return google.drive({ version: 'v3', auth: oauth2 });
+}
+
 async function saveBase64ImageToDrive(base64Data, folderId, fileName) {
   if (!base64Data) return '';
-  const scriptUrl = process.env.APPS_SCRIPT_URL;
-  const secret    = process.env.APPS_SCRIPT_SECRET;
-  if (!scriptUrl) throw new Error('APPS_SCRIPT_URL belum dikonfigurasi. Hubungi administrator.');
-  if (!folderId)  throw new Error('Folder ID Google Drive belum dikonfigurasi. Hubungi administrator.');
-  const res = await fetch(scriptUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image: base64Data, folderId, name: fileName, secret: secret || '' }),
-    redirect: 'follow',
+  if (!folderId) throw new Error('Folder ID Google Drive belum dikonfigurasi. Hubungi administrator.');
+  if (!process.env.GOOGLE_OAUTH_REFRESH_TOKEN) throw new Error('GOOGLE_OAUTH_REFRESH_TOKEN belum dikonfigurasi.');
+  const { Readable } = require('stream');
+  const drive = getDriveClient();
+  const mimeMatch = base64Data.match(/^data:(.+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const buffer = Buffer.from(base64Data.replace(/^data:.+;base64,/, ''), 'base64');
+  const file = await drive.files.create({
+    requestBody: { name: fileName, parents: [folderId] },
+    media: { mimeType, body: Readable.from(buffer) },
+    fields: 'id',
   });
-  const result = await res.json();
-  if (!result.success) throw new Error('Gagal upload foto ke Drive: ' + (result.error || 'Unknown'));
-  return result.url;
+  await drive.permissions.create({
+    fileId: file.data.id,
+    requestBody: { role: 'reader', type: 'anyone' },
+  });
+  return `https://drive.google.com/file/d/${file.data.id}/view`;
 }
 
 async function saveMultipleImagesToDrive(base64DataField, folderId, idPrefix) {
