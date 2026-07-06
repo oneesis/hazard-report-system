@@ -367,9 +367,13 @@ body:has(.app-layout) {
 
 .app-topbar-title {
   flex: 1;
+  min-width: 0;
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-primary-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* =============================================
