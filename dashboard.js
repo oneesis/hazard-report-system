@@ -1215,7 +1215,7 @@ function handleAfterPhotoChange(event) {
 
   const invalidFile = files.find(file => !file.type.startsWith("image/"));
   if (invalidFile) {
-    alert("Semua file harus berupa gambar.");
+    showToast("Semua file harus berupa gambar.", "error");
     event.target.value = "";
     return;
   }

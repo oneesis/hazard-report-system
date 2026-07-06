@@ -881,7 +881,7 @@ function previewFotoBahaya(event) {
 
   const invalidFile = files.find(file => !file.type.startsWith("image/"));
   if (invalidFile) {
-    alert("Semua file harus berupa gambar.");
+    showToast("Semua file harus berupa gambar.", "error");
     event.target.value = "";
     return;
   }
@@ -1212,8 +1212,8 @@ async function submitForm() {
     if (!navigator.onLine) {
       if (typeof OneSapOfflineSync !== "undefined") {
         await OneSapOfflineSync.queueHazardReport(data);
-        alert("Koneksi internet tidak tersedia.\n\nHazard Report Anda disimpan secara lokal (antrean offline) dan akan dikirim otomatis ketika perangkat mendapat sinyal.");
-        window.location.href = "index-home.html";
+        showToast("Tidak ada koneksi. Laporan disimpan offline dan akan dikirim otomatis.", "warning");
+        setTimeout(() => { window.location.href = "index-home.html"; }, 2000);
         return;
       }
     }
@@ -1229,8 +1229,8 @@ async function submitForm() {
       // Intercept network failure (connection drop) during fetch
       if (typeof OneSapOfflineSync !== "undefined") {
         await OneSapOfflineSync.queueHazardReport(data);
-        alert("Gagal terhubung ke server.\n\nHazard Report Anda disimpan secara lokal (antrean offline) dan akan dikirim otomatis ketika sinyal terhubung kembali.");
-        window.location.href = "index-home.html";
+        showToast("Gagal terhubung ke server. Laporan disimpan offline.", "warning");
+        setTimeout(() => { window.location.href = "index-home.html"; }, 2000);
         return;
       }
       throw fetchError;
@@ -1245,13 +1245,13 @@ async function submitForm() {
     }
 
     if (result.status === "success") {
-      alert("Hazard Report berhasil disimpan!\n\nID: " + result.id);
-      window.location.href = "index-home.html";
+      showToast("Hazard Report berhasil disimpan! ID: " + result.id);
+      setTimeout(() => { window.location.href = "index-home.html"; }, 1500);
     } else {
       throw new Error(result.message || "Gagal menyimpan data.");
     }
   } catch (error) {
-    alert("Terjadi kesalahan saat submit:\n\n" + error.message);
+    showToast("Terjadi kesalahan: " + error.message, "error");
   } finally {
     hideLoading();
     const btnSubmit = document.getElementById("btnSubmit");

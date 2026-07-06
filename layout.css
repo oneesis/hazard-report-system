@@ -58,6 +58,53 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
 .btn-icon { padding: 9px 10px !important; gap: 0 !important; }
 
+.btn-sm { padding: 6px 12px !important; font-size: .78rem !important; }
+
+.btn-danger {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px;
+  background: #dc2626; color: #fff;
+  border: none; border-radius: 8px;
+  cursor: pointer; font-size: .85rem; font-weight: 700;
+  font-family: 'Inter', sans-serif; transition: background .15s;
+  white-space: nowrap;
+}
+.btn-danger:hover { background: #b91c1c; }
+
+.btn-wa-resend {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  background: #25d366; color: #fff;
+  border: none; border-radius: 8px;
+  cursor: pointer; font-size: .75rem; font-weight: 700;
+  font-family: 'Inter', sans-serif; transition: background .15s;
+  white-space: nowrap;
+}
+.btn-wa-resend:hover { background: #1da851; }
+
+/* ── Shared confirm/alert modal (logout, reject, etc.) ── */
+.cm-overlay {
+  display: none; position: fixed; inset: 0; z-index: 99999;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.45);
+}
+.cm-box {
+  background: #fff; border-radius: 16px; padding: 28px 28px 24px;
+  width: min(360px, 90vw); box-shadow: 0 8px 40px rgba(0,0,0,.18);
+  text-align: center;
+}
+.cm-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px; font-size: 1.4rem;
+}
+.cm-icon--warning { background: #fff7ed; color: #ea580c; }
+.cm-icon--danger  { background: #fee2e2; color: #dc2626; }
+.cm-title { margin: 0 0 8px; font-size: 1rem; font-weight: 700; color: #0f172a; }
+.cm-text  { margin: 0 0 24px; font-size: .85rem; color: #64748b; }
+.cm-actions { display: flex; gap: 10px; }
+.cm-actions > * { flex: 1; }
+
 /* =============================================
    APP SHELL — Global Layout with Sidebar
    ============================================= */

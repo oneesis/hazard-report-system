@@ -762,7 +762,7 @@ async function submitForm() {
     if (typeof OneSapOfflineSync !== "undefined") {
       try {
         await OneSapOfflineSync.queueInspectionReport(data);
-        alert("Koneksi internet tidak tersedia.\n\nInspeksi Anda disimpan secara lokal (antrean offline) dan akan dikirim otomatis ketika perangkat mendapat sinyal.");
+        showToast("Tidak ada koneksi. Inspeksi disimpan offline dan akan dikirim otomatis.", "warning");
         clearInspectionDraft();
         window.location.href = "inspection.html";
         return;
@@ -784,7 +784,7 @@ async function submitForm() {
       // Intercept network failure (connection drop) during fetch
       if (typeof OneSapOfflineSync !== "undefined") {
         await OneSapOfflineSync.queueInspectionReport(data);
-        alert("Gagal terhubung ke server.\n\nInspeksi Anda telah disimpan secara lokal (antrean offline) dan akan disinkronkan otomatis saat jaringan kembali normal.");
+        showToast("Gagal terhubung ke server. Inspeksi disimpan offline.", "warning");
         clearInspectionDraft();
         window.location.href = "inspection.html";
         return;
@@ -795,14 +795,14 @@ async function submitForm() {
     const text = await response.text();
     const result = JSON.parse(text);
     if (result.status === "success") {
-      alert("Inspeksi berhasil disimpan!\n\nID: " + (result.id || "-"));
+      showToast("Inspeksi berhasil disimpan! ID: " + (result.id || "-"));
       clearInspectionDraft();
       window.location.href = "inspection.html";
     } else {
       throw new Error(result.message || "Gagal menyimpan inspeksi.");
     }
   } catch (error) {
-    alert("Terjadi kesalahan saat submit inspeksi:\n\n" + error.message);
+    showToast("Terjadi kesalahan: " + error.message, "error");
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -986,7 +986,7 @@ function setupPhotoPreview() {
 
     const invalidFile = files.find(file => !file.type.startsWith("image/"));
     if (invalidFile) {
-      alert("Semua file harus berupa gambar.");
+      showToast("Semua file harus berupa gambar.", "error");
       event.target.value = "";
       return;
     }

@@ -240,8 +240,11 @@ async function submitUMModal(action, originalNik) {
 }
 
 function confirmDeleteUser(user) {
-  if (!confirm(`Hapus ${user['NAMA']} (${user['NIK'] || '-'})?\n\nUser akan dinonaktifkan dan tidak bisa login.`)) return;
-  submitPropose('DELETE', { NIK: user['NIK'], NAMA: user['NAMA'] });
+  openConfirmModal(
+    `Hapus ${user['NAMA']} (${user['NIK'] || '-'})? User akan dinonaktifkan dan tidak bisa login.`,
+    () => submitPropose('DELETE', { NIK: user['NIK'], NAMA: user['NAMA'] }),
+    { okLabel: 'Ya, Hapus' }
+  );
 }
 
 async function submitPropose(action, payload) {
@@ -310,10 +313,7 @@ function promptReject(changeId) {
         <p id="rejectMsg" style="font-size:.82rem;color:#ef4444;min-height:18px;margin:0 0 12px"></p>
         <div class="cp-actions">
           <button class="cp-btn-cancel" onclick="closeRejectModal()">Batal</button>
-          <button id="rejectConfirmBtn"
-            style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;transition:background .15s"
-            onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'"
-            onclick="submitRejectModal()">
+          <button id="rejectConfirmBtn" class="btn-danger" onclick="submitRejectModal()">
             <i class="fa-solid fa-xmark"></i> Konfirmasi Tolak
           </button>
         </div>
@@ -480,9 +480,14 @@ async function processCsvImport(csvText) {
 
   if (!users.length) { showAdminToast('Tidak ada data valid. Pastikan kolom NAMA dan PASSWORD terisi.', 'error'); return; }
 
-  const confirmed = confirm(`Akan mengimpor ${users.length} user baru. Semua akan mendapat role USER.\n\nLanjutkan?`);
-  if (!confirmed) return;
+  openConfirmModal(
+    `Akan mengimpor ${users.length} user baru. Semua akan mendapat role USER.`,
+    () => _executeCsvImport(users),
+    { okLabel: 'Ya, Import' }
+  );
+}
 
+async function _executeCsvImport(users) {
   let success = 0, failed = 0;
   for (const u of users) {
     const payload = {

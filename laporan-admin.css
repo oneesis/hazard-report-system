@@ -116,7 +116,7 @@
   border-radius: 8px;
   font-size: .85rem;
   background: #fafbfc;
-  color: #0f172a;
+  color: #1e293b;
   font-family: 'Inter', sans-serif;
 }
 
@@ -148,7 +148,7 @@
   border-radius: 8px;
   font-size: .82rem;
   background: #fafbfc;
-  color: #0f172a;
+  color: #1e293b;
   font-family: 'Inter', sans-serif;
   width: 180px;
 }
@@ -156,6 +156,7 @@
 .lm-date-input:focus {
   outline: none;
   border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48,127,226,.1);
   background: #fff;
 }
 
@@ -165,7 +166,7 @@
   border-radius: 8px;
   font-size: .82rem;
   background: #fafbfc;
-  color: #0f172a;
+  color: #1e293b;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
 }
@@ -173,6 +174,7 @@
 .lm-select:focus {
   outline: none;
   border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48,127,226,.1);
   background: #fff;
 }
 
@@ -209,7 +211,7 @@
 .lm-table td {
   padding: 11px 14px;
   border-bottom: 1px solid #f1f5f9;
-  color: #0f172a;
+  color: #1e293b;
   vertical-align: middle;
 }
 
@@ -324,11 +326,11 @@
 /* Light mode only */
 .lm-content { color-scheme: light; }
 
-/* ── Override btn-primary/secondary: reset dashboard.css big buttons ── */
-.btn-primary  { padding: 9px 18px; border-radius: 8px; font-size: .85rem; box-shadow: none; }
-.btn-primary:hover  { transform: none; box-shadow: none; background: #d99500; }
-.btn-secondary { padding: 9px 14px; border-radius: 8px; font-size: .85rem; box-shadow: none; }
-.btn-secondary:hover { transform: none; }
+/* ── Reset dashboard.css big-button inflation when inside laporan-admin ── */
+.lm-content .btn-primary  { padding: 9px 18px; font-size: .85rem; box-shadow: none; }
+.lm-content .btn-primary:hover  { transform: none; box-shadow: none; background: #d99500; }
+.lm-content .btn-secondary { padding: 9px 14px; font-size: .85rem; box-shadow: none; }
+.lm-content .btn-secondary:hover { transform: none; }
 
 /* ── Override btn-view agar compact di dalam tabel ── */
 .btn-view {
@@ -341,7 +343,7 @@
   background: #003087;
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
   transition: background .15s;

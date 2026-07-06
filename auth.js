@@ -52,28 +52,61 @@ function logout(){
   window.location.href = "login.html";
 }
 
+// Global toast — works on any page; pages with their own showToast will override this.
+function showToast(msg, type = 'success') {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  requestAnimationFrame(() => el.classList.add('show'));
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// Generic confirm modal using .cm-* classes from layout.css
+function openConfirmModal(msg, onOk, opts) {
+  let m = document.getElementById('__genericConfirmModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = '__genericConfirmModal';
+    m.className = 'cm-overlay';
+    m.innerHTML = `<div class="cm-box">
+      <div class="cm-icon cm-icon--warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <p class="cm-title" id="__gcmTitle"></p>
+      <div class="cm-actions">
+        <button class="btn-secondary" id="__gcmCancel">Batal</button>
+        <button class="btn-danger"    id="__gcmOk">Ya, Lanjutkan</button>
+      </div></div>`;
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+    document.body.appendChild(m);
+    document.getElementById('__gcmCancel').addEventListener('click', () => { m.style.display = 'none'; });
+  }
+  document.getElementById('__gcmTitle').textContent = msg;
+  if (opts?.okLabel) document.getElementById('__gcmOk').textContent = opts.okLabel;
+  document.getElementById('__gcmOk').onclick = () => { m.style.display = 'none'; onOk(); };
+  m.style.display = 'flex';
+}
+
 function confirmLogout() {
   let m = document.getElementById('logoutConfirmModal');
   if (!m) {
     m = document.createElement('div');
     m.id = 'logoutConfirmModal';
-    m.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
+    m.className = 'cm-overlay';
     m.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:28px 28px 24px;width:min(360px,90vw);box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center">
-        <div style="width:52px;height:52px;border-radius:50%;background:#fff7ed;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.4rem;color:#ea580c">
+      <div class="cm-box">
+        <div class="cm-icon cm-icon--warning">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </div>
-        <h3 style="margin:0 0 8px;font-size:1rem;font-weight:700;color:#0f172a">Keluar dari Aplikasi?</h3>
-        <p style="margin:0 0 24px;font-size:.85rem;color:#64748b">Sesi Anda akan diakhiri dan Anda perlu login kembali.</p>
-        <div style="display:flex;gap:10px;justify-content:center">
-          <button onclick="document.getElementById('logoutConfirmModal').style.display='none'"
-            style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;color:#475569;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
-            Batal
-          </button>
-          <button onclick="logout()"
-            style="flex:1;padding:10px;border:none;border-radius:8px;background:#dc2626;color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">
-            Ya, Keluar
-          </button>
+        <h3 class="cm-title">Keluar dari Aplikasi?</h3>
+        <p class="cm-text">Sesi Anda akan diakhiri dan Anda perlu login kembali.</p>
+        <div class="cm-actions">
+          <button class="btn-secondary" onclick="document.getElementById('logoutConfirmModal').style.display='none'">Batal</button>
+          <button class="btn-danger" onclick="logout()">Ya, Keluar</button>
         </div>
       </div>`;
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });

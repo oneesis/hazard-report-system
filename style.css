@@ -1,5 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+/* ===== TOAST ===== */
+.toast {
+  position: fixed; top: 24px; right: 24px;
+  background: #10b981; color: #fff;
+  padding: 12px 20px; border-radius: 12px;
+  font-size: .88rem; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  z-index: 99999; opacity: 0;
+  transform: translateY(-12px); pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  font-family: 'Inter', sans-serif;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: #ef4444; }
+.toast.warning { background: #f59e0b; }
+
 /* ===== CHANGE PASSWORD MODAL ===== */
 #changePasswordModal { display: none; position: fixed; inset: 0; z-index: 9999; align-items: center; justify-content: center; }
 .cp-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45); }

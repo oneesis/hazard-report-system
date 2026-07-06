@@ -11,9 +11,9 @@
 .um-search { padding:9px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:.85rem; width:220px; }
 .um-center { text-align:center; }
 .um-actions { white-space:nowrap; }
-.um-btn-edit { padding:5px 12px; background:#F2A900; color:#00205B; border:none; border-radius:6px; cursor:pointer; font-size:.78rem; font-weight:700; margin-right:4px; }
-.um-btn-delete { padding:5px 12px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.78rem; font-weight:600; }
-.um-page-btn { padding:6px 12px; border:1.5px solid #e2e8f0; background:#fff; border-radius:6px; cursor:pointer; font-size:.82rem; margin:2px; }
+.um-btn-edit { padding:5px 12px; background:#F2A900; color:#00205B; border:none; border-radius:8px; cursor:pointer; font-size:.78rem; font-weight:700; margin-right:4px; }
+.um-btn-delete { padding:5px 12px; background:#ef4444; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:.78rem; font-weight:600; }
+.um-page-btn { padding:6px 12px; border:1.5px solid #e2e8f0; background:#fff; border-radius:8px; cursor:pointer; font-size:.82rem; margin:2px; }
 .um-page-btn.active { background:#003087; color:#fff; border-color:#003087; }
 .um-empty { color:#94a3b8; font-size:.9rem; padding:12px 0; }
 .um-modal-box { max-width:600px; }
@@ -28,8 +28,8 @@
 .um-action-edit { background:#dbeafe; color:#003087; }
 .um-action-delete { background:#fee2e2; color:#dc2626; }
 .um-review-btns { display:flex; gap:6px; }
-.um-btn-approve { padding:5px 10px; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.78rem; font-weight:600; }
-.um-btn-reject { padding:5px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.78rem; font-weight:600; }
+.um-btn-approve { padding:5px 10px; background:#16a34a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:.78rem; font-weight:600; }
+.um-btn-reject  { padding:5px 10px; background:#ef4444; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:.78rem; font-weight:600; }
 .um-data-cell { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 body.dark-mode .dashboard-tabs { border-bottom-color:#334155; }
 body.dark-mode .dash-tab { color:#94a3b8; }
@@ -349,7 +349,7 @@ body.dark-mode .badge-overdue {
   .date-range-label {
     text-transform: uppercase;
     font-size: 12px;
-    color: #0f172a;
+    color: #1e293b;
     font-weight: 800;
     margin-bottom: 6px;
   }
@@ -366,7 +366,7 @@ body.dark-mode .badge-overdue {
   border-radius: 12px;
   font-size: 14px;
   font-weight: 500;
-  color: #0f172a;
+  color: #1e293b;
   background: #ffffff;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -494,7 +494,7 @@ body.dark-mode .badge-overdue {
   border-radius: 12px;
   font-size: 15px;
   background: #ffffff;
-  color: #0f172a;
+  color: #1e293b;
   transition: box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -595,7 +595,7 @@ body.dark-mode .badge-overdue {
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
   background: #ffffff;
-  color: #0f172a;
+  color: #1e293b;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
@@ -630,7 +630,7 @@ body.dark-mode .badge-overdue {
   border: 1px solid rgba(0, 48, 135, 0.18);
   border-radius: 12px;
   background: #ffffff;
-  color: #0f172a;
+  color: #1e293b;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
@@ -656,7 +656,7 @@ body.dark-mode .badge-overdue {
   border: none;
   border-radius: 16px;
   background: #f8fafc;
-  color: #0f172a;
+  color: #1e293b;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -682,7 +682,7 @@ body.dark-mode .badge-overdue {
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: #0f172a;
+  color: #1e293b;
   font-weight: 700;
 }
 
@@ -727,7 +727,7 @@ td {
   padding: 18px 20px;
   border-bottom: 1px solid #f1f5f9;
   font-size: 14px;
-  color: #0f172a;
+  color: #1e293b;
 }
 
 tbody tr {
@@ -805,7 +805,7 @@ tbody tr:hover {
   margin: 0;
   font-size: 28px;
   line-height: 1.2;
-  color: #0f172a;
+  color: #1e293b;
 }
 
 .btn-icon {
@@ -814,7 +814,7 @@ tbody tr:hover {
   border: none;
   border-radius: 16px;
   background: #f8fafc;
-  color: #0f172a;
+  color: #1e293b;
   font-size: 20px;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -874,7 +874,7 @@ tbody tr:hover {
   border-radius: 16px;
   padding: 14px 16px;
   font-size: 15px;
-  color: #0f172a;
+  color: #1e293b;
   background: #ffffff;
   resize: vertical;
   line-height: 1.6;
@@ -905,7 +905,7 @@ tbody tr:hover {
   border: 1px solid #cbd5e1;
   border-radius: 14px;
   background: #ffffff;
-  color: #0f172a;
+  color: #1e293b;
 }
 
 #modalInputAfterPhoto:focus {
@@ -935,13 +935,13 @@ tbody tr:hover {
 .field-row strong {
   font-size: 15px;
   line-height: 1.7;
-  color: #0f172a;
+  color: #1e293b;
 }
 
 .modal-section h3 {
   margin: 0 0 12px;
   font-size: 18px;
-  color: #0f172a;
+  color: #1e293b;
 }
 
 .modal-section p {
@@ -1019,7 +1019,7 @@ tbody tr:hover {
   border: 1px solid #cbd5e1;
   border-radius: 12px;
   background: #f8fafc;
-  color: #0f172a;
+  color: #1e293b;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1194,7 +1194,7 @@ tbody tr:hover {
 
 .user-profile-name {
   font-weight: 700;
-  color: #0f172a;
+  color: #1e293b;
   font-size: 14px;
 }
 
@@ -1314,7 +1314,7 @@ tbody tr:hover {
   /* Typography */
   font-size: 12px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1e293b;
   text-align: center;
   white-space: nowrap;
 
@@ -1432,7 +1432,7 @@ tbody tr:hover {
 
   font-size: 12px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1e293b;
   text-align: center;
   white-space: nowrap;
 
@@ -1485,7 +1485,7 @@ tbody tr:hover {
 .user-name {
   font-size: 13px;
   font-weight: 800;        /* Bold */
-  color: #0f172a;
+  color: #1e293b;
   line-height: 1.4;
   margin-bottom: 10px;
   text-align: center;
@@ -2179,7 +2179,7 @@ tbody td:first-child {
 .leader-name {
   font-size: .82rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

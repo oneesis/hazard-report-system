@@ -40,8 +40,9 @@ async function resendWaPic() {
       r['WA_PIC_STATUS'] = result.wa_pic_status;
       renderWaBadge(r, isInspection);
     }
-    alert(result.message || (result.status === 'success' ? 'WA terkirim.' : 'Gagal.'));
-  } catch (e) { alert(e.message); }
+    const msg = result.message || (result.status === 'success' ? 'WA berhasil dikirim.' : 'Gagal mengirim WA.');
+    showToast(msg, result.status === 'success' ? 'success' : 'error');
+  } catch (e) { showToast(e.message, 'error'); }
   finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Kirim Ulang'; }
   }
