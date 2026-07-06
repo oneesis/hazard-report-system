@@ -447,15 +447,28 @@ async function ensureWaStatusColumn(sheets, sheetName) {
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!1:1` });
   const headers = (res.data.values?.[0] || []).map(h => String(h).trim());
   let col = headers.indexOf('WA_PIC_STATUS');
-  if (col === -1) {
-    col = headers.length;
-    await sheets.spreadsheets.values.update({
+  if (col !== -1) return col;
+
+  col = headers.length;
+
+  // Expand grid if needed — values.update fails if col >= sheet column count
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties' });
+  const sheetProps = meta.data.sheets?.find(s => s.properties.title === sheetName)?.properties;
+  if (sheetProps && col >= sheetProps.gridProperties.columnCount) {
+    await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${sheetName}!${colIndexToLetter(col)}1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [['WA_PIC_STATUS']] }
+      requestBody: {
+        requests: [{ appendDimension: { sheetId: sheetProps.sheetId, dimension: 'COLUMNS', length: 1 } }]
+      }
     });
   }
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${sheetName}!${colIndexToLetter(col)}1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [['WA_PIC_STATUS']] }
+  });
   return col;
 }
 
