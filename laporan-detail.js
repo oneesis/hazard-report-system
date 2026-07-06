@@ -2,6 +2,51 @@ let detailReport = null;
 let detailStatus = 'OPEN';
 let detailAfterPhotos = [];
 
+function renderWaBadge(r, isInspection) {
+  const badge = document.getElementById('dfWaBadge');
+  const btn   = document.getElementById('dfWaResendBtn');
+  if (!badge) return;
+  const raw = (r['WA_PIC_STATUS'] || r['wa_pic_status'] || '').trim().toUpperCase();
+  const map = {
+    'TERKIRIM':    { label: '✓ Terkirim', cls: 'terkirim' },
+    'GAGAL':       { label: '✗ Gagal',    cls: 'gagal' },
+    'TIDAK ADA WA':{ label: 'Tidak ada nomor WA', cls: 'tidak-ada' },
+  };
+  const info = map[raw] || { label: raw || '-', cls: 'tidak-ada' };
+  badge.textContent = info.label;
+  badge.className   = `detail-wa-badge ${info.cls}`;
+  if (btn) btn.style.display = (raw === 'GAGAL' || raw === 'TERKIRIM') ? '' : 'none';
+}
+
+async function resendWaPic() {
+  const r = detailReport;
+  if (!r) return;
+  const id   = getReportId(r);
+  const isInspection = String(id).startsWith('INSP-');
+  const sheet = isInspection
+    ? (r['inspection_sheet'] || r['INSPECTION_SHEET'] || r['jenis_inspeksi'] || r['JENIS INSPEKSI'] || '').trim().toUpperCase()
+    : 'Hazard_Report';
+
+  const btn = document.getElementById('dfWaResendBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Mengirim...'; }
+
+  try {
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resendWaPic', data: { report_id: id, sheet_name: sheet } })
+    });
+    const result = await res.json();
+    if (result.wa_pic_status) {
+      r['WA_PIC_STATUS'] = result.wa_pic_status;
+      renderWaBadge(r, isInspection);
+    }
+    alert(result.message || (result.status === 'success' ? 'WA terkirim.' : 'Gagal.'));
+  } catch (e) { alert(e.message); }
+  finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Kirim Ulang'; }
+  }
+}
+
 async function initDetailPage() {
   const id = new URLSearchParams(window.location.search).get('id');
   if (!id) return showError('Tidak ada ID laporan pada URL.');
@@ -97,6 +142,9 @@ function renderDetail(r) {
   // Tindak lanjut
   set('dfPic',     getReportValue(r, ['nama_pic','pic','penanggung_jawab'], '-'));
   set('dfDueDate', fmt(getReportValue(r, ['batas_waktu','due_date','tanggal_due','tgl_jatuh_tempo'], '-')));
+
+  // WA PIC badge
+  renderWaBadge(r, isInspection);
 
   const statusBadge = document.getElementById('dfStatusBadge');
   statusBadge.textContent = status;

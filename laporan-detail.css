@@ -2,6 +2,11 @@
    LAPORAN DETAIL PAGE
    ============================================ */
 
+.detail-wa-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:.75rem; font-weight:700; }
+.detail-wa-badge.terkirim { background:#dcfce7; color:#15803d; }
+.detail-wa-badge.gagal    { background:#fee2e2; color:#dc2626; }
+.detail-wa-badge.tidak-ada { background:#f1f5f9; color:#94a3b8; }
+
 @media print {
   .app-sidebar, .app-topbar, .mobile-bottom-nav, .sidebar-overlay,
   .detail-hero-actions, .closing-form, .detail-breadcrumb { display: none !important; }

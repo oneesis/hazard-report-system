@@ -422,18 +422,59 @@ function mapInspectionValue(header, data) {
 
 async function sendWaNotification(target, message) {
   const token = process.env.FONNTE_TOKEN;
-  if (!token || !target) return;
+  if (!token || !target) return false;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
   const payload = new URLSearchParams({ target: phone, message }).toString();
   return new Promise(resolve => {
     const req = https.request({
       hostname: 'api.fonnte.com', path: '/send', method: 'POST',
       headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
-    }, res => { res.resume(); resolve(); });
-    req.on('error', () => resolve());
+    }, res => {
+      let body = '';
+      res.on('data', d => { body += d; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(body).status === true); }
+        catch { resolve(false); }
+      });
+    });
+    req.on('error', () => resolve(false));
     req.write(payload);
     req.end();
   });
+}
+
+async function ensureWaStatusColumn(sheets, sheetName) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!1:1` });
+  const headers = (res.data.values?.[0] || []).map(h => String(h).trim());
+  let col = headers.indexOf('WA_PIC_STATUS');
+  if (col === -1) {
+    col = headers.length;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!${colIndexToLetter(col)}1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['WA_PIC_STATUS']] }
+    });
+  }
+  return col;
+}
+
+async function writeWaStatusToSheet(sheets, sheetName, reportId, waStatus) {
+  try {
+    const [waCol, dataRes] = await Promise.all([
+      ensureWaStatusColumn(sheets, sheetName),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!A:A` })
+    ]);
+    const ids = (dataRes.data.values || []).map(r => String(r[0] || '').trim());
+    const rowIdx = ids.findIndex((v, i) => i > 0 && v === reportId);
+    if (rowIdx === -1) return;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!${colIndexToLetter(waCol)}${rowIdx + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[waStatus]] }
+    });
+  } catch { /* non-critical */ }
 }
 
 async function submitHazardReport(sheets, data) {
@@ -458,6 +499,7 @@ async function submitHazardReport(sheets, data) {
     requestBody: { values: [row] }
   });
 
+  let waStatus = 'TIDAK ADA WA';
   if (data.no_whatsapp_pic && data.nama_pic) {
     const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan hazard baru.\n\n` +
       `📋 *${id}*\n` +
@@ -465,10 +507,12 @@ async function submitHazardReport(sheets, data) {
       `⚠️ Temuan: ${data.jenis_bahaya}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
       `Silakan buka aplikasi untuk melihat detail laporan.`;
-    await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
+    const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
+    waStatus = sent ? 'TERKIRIM' : 'GAGAL';
+    await writeWaStatusToSheet(sheets, 'Hazard_Report', id, waStatus);
   }
 
-  return { status: 'success', message: 'Hazard Report berhasil disimpan.', id };
+  return { status: 'success', message: 'Hazard Report berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
 const INSPECTION_NAMES = {
@@ -498,6 +542,7 @@ async function submitInspectionReport(sheets, data) {
     requestBody: { values: [row] }
   });
 
+  let waStatus = 'TIDAK ADA WA';
   if (data.no_whatsapp_pic && data.nama_pic) {
     const namaInspeksi = INSPECTION_NAMES[sheetName] || sheetName;
     const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan inspeksi baru.\n\n` +
@@ -506,10 +551,12 @@ async function submitInspectionReport(sheets, data) {
       `📍 Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}\n` +
       `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
       `Silakan buka aplikasi untuk melihat detail laporan.`;
-    await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => {});
+    const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
+    waStatus = sent ? 'TERKIRIM' : 'GAGAL';
+    await writeWaStatusToSheet(sheets, sheetName, id, waStatus);
   }
 
-  return { status: 'success', message: 'Inspeksi berhasil disimpan.', id };
+  return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
 async function updateReport(sheets, data, sheetName, folderSuffix) {
@@ -624,6 +671,20 @@ module.exports = async (req, res) => {
         case 'reviewChange':
           result = await reviewChange(sheets, authUser, data?.change_id, data?.decision, data?.reason);
           break;
+        case 'resendWaPic': {
+          const sheetTarget = data?.sheet_name || 'Hazard_Report';
+          const reportRow = (await getSheetData(sheets, sheetTarget)).find(r => r['ID'] === data?.report_id || r['id'] === data?.report_id);
+          if (!reportRow) throw new Error('Laporan tidak ditemukan.');
+          const waTarget = reportRow['NO WHATSAPP PIC'] || reportRow['NO WHATTSAPP PIC'] || reportRow['no_whatsapp_pic'] || '';
+          const namaPic  = reportRow['NAMA PIC'] || reportRow['nama_pic'] || '';
+          if (!waTarget) throw new Error('Nomor WA PIC tidak ada di laporan ini.');
+          const msg = `Halo ${namaPic}, pengingat: kamu adalah PIC untuk laporan *${data.report_id}*. Silakan buka aplikasi untuk melihat dan menindaklanjuti laporan.`;
+          const sent = await sendWaNotification(waTarget, msg).catch(() => false);
+          const newStatus = sent ? 'TERKIRIM' : 'GAGAL';
+          await writeWaStatusToSheet(sheets, sheetTarget, data.report_id, newStatus);
+          result = { status: 'success', wa_pic_status: newStatus, message: sent ? 'WA berhasil dikirim ulang.' : 'Gagal mengirim WA.' };
+          break;
+        }
         case 'submitHazardReport':     result = await submitHazardReport(sheets, data); break;
         case 'submitInspectionReport': result = await submitInspectionReport(sheets, data); break;
         case 'updateHazardReport':     result = await updateReport(sheets, data, 'Hazard_Report', '-Closing'); break;
