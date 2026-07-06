@@ -4,8 +4,8 @@
   "description": "Safety Observation and Action Program - Hazard & Inspection System",
   "start_url": "./index-home.html",
   "display": "standalone",
-  "background_color": "#0f2a6b",
-  "theme_color": "#2563eb",
+  "background_color": "#00205B",
+  "theme_color": "#003087",
   "orientation": "portrait",
   "icons": [
     {

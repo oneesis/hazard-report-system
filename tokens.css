@@ -1,0 +1,51 @@
+/* ============================================================
+   DESIGN TOKENS — ONE-SAP
+   Muat sebagai stylesheet PERTAMA di semua halaman HTML.
+   Semua file CSS lain wajib memakai var ini; tidak boleh ada
+   hex hardcoded baru.
+   ============================================================ */
+
+:root {
+  /* Brand — palet resmi */
+  --color-primary:        #003087;  /* Ocean — header, elemen utama, bar chart */
+  --color-primary-dark:   #00205B;  /* Midnight — sidebar, top bar, permukaan gelap */
+  --color-accent:         #F2A900;  /* Sun — tombol utama, highlight, garis kumulatif */
+  --color-accent-soft:    #FFE264;  /* Sand — background highlight halus */
+  --color-info:           #307FE2;  /* Sky — link, aksen sekunder */
+
+  /* Teks di atas warna */
+  --color-on-primary:     #FFFFFF;
+  --color-on-accent:      #00205B;  /* teks Midnight di atas tombol Sun */
+
+  /* Status — semantik K3, JANGAN diganti warna brand */
+  --color-status-open:    #F2A900;
+  --color-status-closed:  #16A34A;
+  --color-status-overdue: #DC2626;
+  --color-risk-low:       #16A34A;
+  --color-risk-mid:       #F2A900;
+  --color-risk-high:      #DC2626;
+
+  /* Netral */
+  --color-bg:             #F5F7FB;
+  --color-surface:        #FFFFFF;
+  --color-border:         #E2E8F0;
+  --color-text:           #1E293B;
+  --color-text-muted:     #64748B;
+
+  /* Bentuk & ruang */
+  --radius-card:          12px;
+  --radius-control:       8px;
+  --shadow-card:          0 1px 3px rgba(0, 32, 91, 0.08);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Tipografi */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Touch target minimum */
+  --tap-min: 48px;
+}
