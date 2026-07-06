@@ -5,6 +5,7 @@ let currentReport = null;
 let analyticsRange = 1;    // months: 1, 3, 6
 let overdueOnlyFilter = false;
 let paretoChartInstance = null;
+let riskTrendChartInstance = null;
 let paretoData = [];       // {label, count}[]
 let paretoInRange = [];    // reports in current range, for drill-down
 let selectedParetoIndex = -1;
@@ -1494,6 +1495,10 @@ function updateAnalyticsKpi(allReports) {
   if (overdueEl) overdueEl.textContent = visible.filter(isOverdue).length;
 
   renderParetoChart(allReports);
+  renderRiskTrend(allReports);
+  renderAging(allReports);
+  renderTopLokasi();
+  renderHotspot();
 }
 
 // ========================================
@@ -1670,4 +1675,152 @@ function closeDrilldown() {
     paretoChartInstance.data.datasets[0].backgroundColor = paretoData.map(() => '#003087');
     paretoChartInstance.update('none');
   }
+}
+
+// ========================================
+// TREN TINGKAT RISIKO (Fase 4)
+// ========================================
+function renderRiskTrend(allReports) {
+  const role = String((typeof getCurrentUser === 'function' ? getCurrentUser() : null)?.role || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+
+  const ctx = document.getElementById('chartRiskTrend')?.getContext('2d');
+  if (!ctx) return;
+
+  const visible = getVisibleReports(allReports) || [];
+  const now = new Date();
+
+  // Fixed 6 months per spec
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return { label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }), year: d.getFullYear(), month: d.getMonth() };
+  });
+
+  const dateKeys = ['timestamp','tanggal_laporan','tanggal_inspeksi','tanggal_kejadian','tanggal','date'];
+
+  function normalizeRisk(r) {
+    const val = String(getReportValue(r, ['tingkat_resiko','tingkat_risiko','risiko','risk_level'], '')).toLowerCase();
+    if (val.includes('rendah') || val.includes('low'))   return 'Rendah';
+    if (val.includes('sedang') || val.includes('med'))   return 'Sedang';
+    if (val.includes('tinggi') || val.includes('high'))  return 'Tinggi';
+    return null;
+  }
+
+  const byMonth = level => months.map(m =>
+    visible.filter(r => {
+      const d = parseSheetDate(getReportValue(r, dateKeys, ''));
+      return d && d.getFullYear() === m.year && d.getMonth() === m.month && normalizeRisk(r) === level;
+    }).length
+  );
+
+  if (riskTrendChartInstance) riskTrendChartInstance.destroy();
+
+  riskTrendChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m.label),
+      datasets: [
+        { label: 'Rendah', data: byMonth('Rendah'), backgroundColor: '#16A34A', borderRadius: 3 },
+        { label: 'Sedang', data: byMonth('Sedang'), backgroundColor: '#F2A900', borderRadius: 3 },
+        { label: 'Tinggi', data: byMonth('Tinggi'), backgroundColor: '#DC2626', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#475569', font: { size: 11 } } },
+        y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0, color: '#64748b', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ========================================
+// AGING LAPORAN OPEN (Fase 4)
+// ========================================
+function renderAging(allReports) {
+  const role = String((typeof getCurrentUser === 'function' ? getCurrentUser() : null)?.role || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+
+  const visible = getVisibleReports(allReports) || [];
+  const openReports = visible.filter(r => (r.status_perbaikan || 'OPEN') !== 'CLOSED');
+  const now = Date.now();
+  const dateKeys = ['timestamp','tanggal_laporan','tanggal_inspeksi','tanggal_kejadian','tanggal','date'];
+
+  let c0_7 = 0, c8_14 = 0, cOver14 = 0;
+  openReports.forEach(r => {
+    const d = parseSheetDate(getReportValue(r, dateKeys, ''));
+    if (!d) return;
+    const age = Math.floor((now - d) / 86400000);
+    if (age <= 7)       c0_7++;
+    else if (age <= 14) c8_14++;
+    else                cOver14++;
+  });
+
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  set('agingCount0_7', c0_7);
+  set('agingCount8_14', c8_14);
+  set('agingCountOver14', cOver14);
+}
+
+// ========================================
+// TOP 5 LOKASI BAHAYA (Fase 4)
+// ========================================
+function renderTopLokasi() {
+  const el = document.getElementById('topLokasiList');
+  if (!el) return;
+
+  const counts = {};
+  paretoInRange.forEach(r => {
+    const loc = getDashboardLocation(r).trim();
+    if (!loc) return;
+    counts[loc] = (counts[loc] || 0) + 1;
+  });
+
+  const top5 = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!top5.length) { el.innerHTML = '<p class="top-lokasi-empty">Tidak ada data</p>'; return; }
+
+  const max = top5[0][1];
+  el.innerHTML = top5.map(([loc, count], i) => {
+    const pct = Math.round((count / max) * 100);
+    const color = i === 0 ? 'var(--color-accent)' : 'var(--color-primary)';
+    return `<div class="top-lokasi-row">
+      <div class="top-lokasi-label" title="${escapeHTML(loc)}">${escapeHTML(loc)}</div>
+      <div class="top-lokasi-bar-wrap"><div class="top-lokasi-bar" style="width:${pct}%;background:${color}"></div></div>
+      <div class="top-lokasi-count">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+// ========================================
+// HOTSPOT MATRIKS (Fase 4)
+// ========================================
+function renderHotspot() {
+  const tbody = document.getElementById('hotspotTableBody');
+  if (!tbody) return;
+
+  const counts = {};
+  paretoInRange.forEach(r => {
+    const sub = String(r.sub_ketidaksesuaian || '').trim();
+    const loc = getDashboardLocation(r).trim();
+    if (!sub || !loc) return;
+    const key = sub + '\x00' + loc;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  const top5 = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!top5.length) { tbody.innerHTML = '<tr><td colspan="3" class="hotspot-empty">Tidak ada data</td></tr>'; return; }
+
+  tbody.innerHTML = top5.map(([key, count]) => {
+    const sep = key.indexOf('\x00');
+    const sub = key.slice(0, sep);
+    const loc = key.slice(sep + 1);
+    return `<tr>
+      <td class="hotspot-td-sub">${escapeHTML(sub)}</td>
+      <td class="hotspot-td-loc">${escapeHTML(loc)}</td>
+      <td><span class="hotspot-badge">${count}</span></td>
+    </tr>`;
+  }).join('');
 }

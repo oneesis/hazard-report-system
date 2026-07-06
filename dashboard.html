@@ -98,6 +98,64 @@
           <div id="drilldownBars" class="drilldown-bars"></div>
         </div>
       </div>
+
+      <!-- Row 2: Tren Risiko + Aging -->
+      <div class="analytics-row-2">
+        <!-- Tren Tingkat Risiko -->
+        <div class="chart-card">
+          <div class="chart-card-header-row">
+            <h3 class="chart-title" style="margin:0">TREN TINGKAT RISIKO (6 BLN)</h3>
+            <div class="risk-legend">
+              <span class="risk-legend-dot" style="background:var(--color-risk-low)"></span>Rendah
+              <span class="risk-legend-dot" style="background:var(--color-risk-mid)"></span>Sedang
+              <span class="risk-legend-dot" style="background:var(--color-risk-high)"></span>Tinggi
+            </div>
+          </div>
+          <div class="chart-container" style="height:220px">
+            <canvas id="chartRiskTrend"></canvas>
+          </div>
+        </div>
+        <!-- Aging Laporan Open -->
+        <div class="chart-card">
+          <h3 class="chart-title">AGING LAPORAN OPEN</h3>
+          <div class="aging-tiles">
+            <div class="aging-tile aging-tile--green">
+              <div id="agingCount0_7" class="aging-count">—</div>
+              <div class="aging-label">Dalam SLA</div>
+              <div class="aging-sub">0–7 hari</div>
+            </div>
+            <div class="aging-tile aging-tile--sun">
+              <div id="agingCount8_14" class="aging-count">—</div>
+              <div class="aging-label">Mendekati Deadline</div>
+              <div class="aging-sub">8–14 hari</div>
+            </div>
+            <div class="aging-tile aging-tile--red">
+              <div id="agingCountOver14" class="aging-count">—</div>
+              <div class="aging-label">Critical / Eskalasi</div>
+              <div class="aging-sub">&gt;14 hari</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Top 5 Lokasi + Hotspot -->
+      <div class="analytics-row-2">
+        <div class="chart-card">
+          <h3 class="chart-title">TOP 5 LOKASI BAHAYA</h3>
+          <div id="topLokasiList" class="top-lokasi-list"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">HOTSPOT MATRIKS</h3>
+          <table class="hotspot-table">
+            <thead>
+              <tr><th>Sub-Kategori</th><th>Lokasi</th><th>Jumlah</th></tr>
+            </thead>
+            <tbody id="hotspotTableBody">
+              <tr><td colspan="3" class="hotspot-empty">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- KPI CARDS -->

@@ -2534,3 +2534,199 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
   }
   .drilldown-row-bar-wrap { grid-column: 1 / -1; }
 }
+
+/* ========================================
+   FASE 4 — Tren Risiko, Aging, Top Lokasi, Hotspot
+======================================== */
+
+/* 2-column analytics rows */
+.analytics-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .analytics-row-2 { grid-template-columns: 1fr; }
+}
+
+/* Chart card header with legend */
+.chart-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.risk-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.risk-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 3px;
+  flex-shrink: 0;
+}
+
+/* Aging tiles */
+.aging-tiles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.aging-tile {
+  border-radius: var(--radius-control);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.aging-tile--green { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+.aging-tile--sun   { background: #fffbeb; border: 1.5px solid #fde68a; }
+.aging-tile--red   { background: #fff5f5; border: 1.5px solid #fecaca; }
+
+.aging-count {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.aging-tile--green .aging-count { color: var(--color-risk-low); }
+.aging-tile--sun   .aging-count { color: var(--color-risk-mid); }
+.aging-tile--red   .aging-count { color: var(--color-risk-high); }
+
+.aging-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.aging-sub {
+  font-size: .68rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Top 5 Lokasi Bahaya */
+.top-lokasi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.top-lokasi-empty { font-size: .82rem; color: #94a3b8; }
+
+.top-lokasi-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-lokasi-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-lokasi-bar-wrap {
+  background: #f1f5f9;
+  border-radius: 4px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.top-lokasi-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+
+.top-lokasi-count {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+}
+
+/* Hotspot table */
+.hotspot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+  margin-top: 8px;
+}
+
+.hotspot-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.hotspot-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f8fafc;
+  vertical-align: middle;
+}
+
+.hotspot-td-sub {
+  font-weight: 600;
+  color: var(--color-text);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotspot-td-loc {
+  color: var(--color-text-muted);
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotspot-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 8px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  border-radius: 12px;
+}
+
+.hotspot-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 16px;
+  font-size: .82rem;
+}
