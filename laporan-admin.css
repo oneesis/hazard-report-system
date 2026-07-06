@@ -310,23 +310,26 @@
   .lm-select { width: 100%; }
 
   /* Tabel: card view per baris */
-  .lm-table-wrap { border-radius: 0; border-left: none; border-right: none; }
+  .lm-table-wrap { background: transparent; border: none; border-radius: 0; }
   .lm-table thead { display: none; }
   .lm-table tbody tr {
-    display: block;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
     background: #fff;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1.5px solid #e2e8f0;
-    margin: 0 0 8px;
-    padding: 12px 14px;
+    margin: 0 0 10px;
+    padding: 14px;
   }
   .lm-table td {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 5px 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px 6px 0;
     border: none;
-    font-size: .82rem;
+    font-size: .9rem;
+    color: #1e293b;
     max-width: unset !important;
     overflow: visible !important;
     text-overflow: unset !important;
@@ -334,18 +337,37 @@
   }
   .lm-table td::before {
     content: attr(data-label);
-    font-size: .7rem;
+    font-size: .68rem;
     font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: .04em;
-    flex-shrink: 0;
-    min-width: 80px;
-    margin-right: 8px;
+    letter-spacing: .06em;
   }
-  .lm-table td[data-label=""] { justify-content: flex-end; padding-top: 8px; }
-  .lm-table td[data-label=""]:before { display: none; }
-  .lm-table td:first-child { font-size: .88rem; font-weight: 800; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px; padding-bottom: 8px; }
+  /* ID + JENIS: baris pertama full-width */
+  .lm-table td[data-label="ID"] {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #003087;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
+    margin-bottom: 2px;
+  }
+  .lm-table td[data-label="ID"]::before { display: none; }
+  /* Sembunyikan kolom kurang penting di mobile */
+  .lm-table td[data-label="Dept"],
+  .lm-table td[data-label="Deskripsi"],
+  .lm-table td[data-label="Tanggal"] { display: none; }
+  /* Aksi: full-width di bawah */
+  .lm-table td[data-label=""] {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 4px;
+  }
+  .lm-table td[data-label=""]::before { display: none; }
 }
 
 /* Desktop: toggle button & collapsible hidden */
