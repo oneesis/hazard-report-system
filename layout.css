@@ -411,6 +411,13 @@ body:has(.app-layout) {
   .mobile-bottom-nav {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+    height: 62px;
+  }
+  .mbn-item {
+    height: 100%;
+    justify-content: center;
+    align-items: center;
   }
 
   /* Add bottom padding so content isn't hidden behind nav */
