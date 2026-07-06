@@ -65,6 +65,11 @@ body {
 .container {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 28px;
+}
+
+@media (max-width: 767px) {
+  .container { padding: 0 16px; }
 }
 
 /* ========================================

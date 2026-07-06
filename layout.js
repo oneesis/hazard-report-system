@@ -66,9 +66,6 @@
         ${navItem('index.html',      'fa-triangle-exclamation','Hazard Report','hazard',    active)}
         ${navItem('inspection.html', 'fa-list-check',          'Inspeksi',      'inspeksi',  active)}
         ${navItem('dashboard.html',  'fa-chart-simple',        'Dashboard',     'dashboard', active)}
-        <button class="sidebar-nav-item" onclick="openMobileProfileSheet()">
-          <i class="fa-solid fa-circle-user"></i><span>Profil</span>
-        </button>
       </nav>
 
       ${isAdmin ? `
