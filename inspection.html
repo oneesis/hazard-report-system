@@ -185,6 +185,11 @@
     renderUserProfile();
     loadDrafts();
   });
+
+  // Re-check drafts on back-navigation (mobile bfcache restore)
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) loadDrafts();
+  });
 </script>
 </body>
 </html>
