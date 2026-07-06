@@ -13,7 +13,6 @@ const INSPECTION_TYPE_LABELS = {
 };
 
 let masterKaryawan = [];
-let masterLokasi = [];
 let signaturePad;
 let currentStep = 1;
 const TOTAL_STEPS = 5;
@@ -68,20 +67,6 @@ async function loadMasterKaryawan() {
   }
 }
 
-async function loadMasterLokasi() {
-  try {
-    const data = await fetchJSON(`${BASE_URL}?action=masterLokasi`);
-    masterLokasi = Array.isArray(data) ? data : (data.data || []);
-    console.log('✓ inspection-form: masterLokasi loaded, count=', masterLokasi.length);
-    window.masterLokasi = masterLokasi; // Ensure global access
-  } catch (err) {
-    console.error('✗ inspection-form: gagal load masterLokasi', err);
-    masterLokasi = [];
-    window.masterLokasi = masterLokasi;
-    const alertBox = document.getElementById('alertError');
-    if (alertBox) alertBox.textContent = 'Gagal memuat daftar lokasi. Cek koneksi/API.';
-  }
-}
 
 async function loadInspectionChecklist() {
   const params = getQueryParams();
@@ -445,13 +430,6 @@ function resetNamaDropdown() {
   select.innerHTML = '<option value="">Pilih Nama</option>';
 }
 
-function loadLokasiOptions() {
-  const select = document.getElementById("lokasi_inspeksi");
-  if (!select) return;
-  select.innerHTML = '<option value="">Pilih Lokasi</option>';
-  const list = [...new Set(masterLokasi.map(item => getValue(item, [Object.keys(item)[0]])).filter(Boolean))].sort();
-  list.forEach(item => select.add(new Option(item, item)));
-}
 
 function validateRequiredFields(fieldIds) {
   let isValid = true;
@@ -1296,7 +1274,6 @@ function setupInspectionAutosave() {
 function initializeInspectionForm(type) {
    setInspectionType(type);
    loadPerusahaanOptions();
-   loadLokasiOptions();
    populatePicOptions();
    populatePelaporOptions();
    initializeSignaturePad();
@@ -1344,7 +1321,7 @@ async function initPage() {
   try {
     const params = getQueryParams();
     const type = (params.type || "").toUpperCase();
-    await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadInspectionChecklist()]);
+    await Promise.all([loadMasterKaryawan(), loadInspectionChecklist()]);
     initializeInspectionForm(type);
     document.getElementById('step1')?.classList.remove('section-1-skeleton');
   } catch (error) {
