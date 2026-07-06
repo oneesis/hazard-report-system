@@ -410,7 +410,7 @@ body:has(.app-layout) {
 @media (max-width: 768px) {
   .mobile-bottom-nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   /* Add bottom padding so content isn't hidden behind nav */
