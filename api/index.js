@@ -1,5 +1,4 @@
 const { google } = require('googleapis');
-const { Readable } = require('stream');
 const https = require('https');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -8,23 +7,15 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_TTL = '12h'; // sesi berlaku 12 jam
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const FOLDER_HAZARD_ID = process.env.FOLDER_HAZARD_ID;
-const FOLDER_CLOSING_ID = process.env.FOLDER_CLOSING_ID;
 const INSPECTION_SHEETS = ['INS_CB', 'INS_JA', 'INS_MD', 'INS_KG', 'INS_SP', 'INS_T', 'INS_TB', 'INS_WS'];
 
 function getClients() {
   const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   const auth = new google.auth.GoogleAuth({
     credentials: creds,
-    scopes: [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive'
-    ]
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
   });
-  return {
-    sheets: google.sheets({ version: 'v4', auth }),
-    drive: google.drive({ version: 'v3', auth })
-  };
+  return { sheets: google.sheets({ version: 'v4', auth }) };
 }
 
 function normalizeHeader(h) {
@@ -59,28 +50,19 @@ async function getSheetHeaders(sheets, sheetName) {
   return (res.data.values?.[0] || []).map(h => String(h).trim());
 }
 
-async function saveBase64ImageToDrive(drive, base64Data, folderId, fileName) {
+async function saveBase64ImageToImgBB(base64Data, fileName) {
   if (!base64Data) return '';
-  if (!folderId) throw new Error('Folder ID Google Drive belum dikonfigurasi. Hubungi administrator.');
-  const mimeMatch = base64Data.match(/^data:(.+);base64,/);
-  if (!mimeMatch) throw new Error('Format gambar tidak valid.');
-  const mimeType = mimeMatch[1];
-  const buffer = Buffer.from(base64Data.split(',')[1], 'base64');
-  const file = await drive.files.create({
-    requestBody: { name: fileName, parents: [folderId] },
-    media: { mimeType, body: Readable.from(buffer) },
-    fields: 'id',
-    supportsAllDrives: true,
-  });
-  await drive.permissions.create({
-    fileId: file.data.id,
-    requestBody: { role: 'reader', type: 'anyone' },
-    supportsAllDrives: true,
-  });
-  return `https://drive.google.com/file/d/${file.data.id}/view`;
+  const apiKey = process.env.IMGBB_API_KEY;
+  if (!apiKey) throw new Error('IMGBB_API_KEY belum dikonfigurasi. Hubungi administrator.');
+  const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+  const body = new URLSearchParams({ key: apiKey, image: base64, name: fileName });
+  const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body });
+  const result = await res.json();
+  if (!result.success) throw new Error('Gagal upload foto: ' + (result.error?.message || 'Unknown'));
+  return result.data.url;
 }
 
-async function saveMultipleImagesToDrive(drive, base64DataField, folderId, idPrefix) {
+async function saveMultipleImagesToImgBB(base64DataField, idPrefix) {
   if (!base64DataField) return '';
   let list;
   try {
@@ -90,7 +72,7 @@ async function saveMultipleImagesToDrive(drive, base64DataField, folderId, idPre
   const urls = [];
   for (let i = 0; i < list.length; i++) {
     if (list[i]) {
-      const url = await saveBase64ImageToDrive(drive, list[i], folderId, `${idPrefix}-${i + 1}-${Date.now()}.jpg`);
+      const url = await saveBase64ImageToImgBB(list[i], `${idPrefix}-${i + 1}`);
       if (url) urls.push(url);
     }
   }
@@ -436,11 +418,11 @@ async function sendWaNotification(target, message) {
   });
 }
 
-async function submitHazardReport(sheets, drive, data) {
+async function submitHazardReport(sheets, data) {
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
   if (data.upload_foto_bahaya)
-    fotoBahayaUrl = await saveMultipleImagesToDrive(drive, data.upload_foto_bahaya, FOLDER_HAZARD_ID, id + '-Hazard');
+    fotoBahayaUrl = await saveMultipleImagesToImgBB(data.upload_foto_bahaya, id + '-Hazard');
 
   const row = [
     id, new Date().toISOString(), data.perusahaan, data.subcont1, data.nama, data.nik,
@@ -478,14 +460,14 @@ const INSPECTION_NAMES = {
   INS_TB: 'Inspeksi Tangki BBM', INS_WS: 'Inspeksi Workshop'
 };
 
-async function submitInspectionReport(sheets, drive, data) {
+async function submitInspectionReport(sheets, data) {
   const sheetName = String(data.inspection_code || data.jenis_inspeksi || '').trim().toUpperCase();
   if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Jenis inspeksi tidak valid: ' + sheetName);
 
   const id = 'INSP-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoInspeksiUrl = '';
   if (data.upload_foto_inspeksi)
-    fotoInspeksiUrl = await saveMultipleImagesToDrive(drive, data.upload_foto_inspeksi, FOLDER_HAZARD_ID, id + '-Inspection');
+    fotoInspeksiUrl = await saveMultipleImagesToImgBB(data.upload_foto_inspeksi, id + '-Inspection');
 
   const headers = await getSheetHeaders(sheets, sheetName);
   const rowData = { ...data, id, timestamp: new Date().toISOString(), upload_foto_inspeksi: fotoInspeksiUrl, status_perbaikan: 'OPEN' };
@@ -512,7 +494,7 @@ async function submitInspectionReport(sheets, drive, data) {
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id };
 }
 
-async function updateReport(sheets, drive, data, sheetName, folderSuffix) {
+async function updateReport(sheets, data, sheetName, folderSuffix) {
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
   const rows = res.data.values || [];
   if (rows.length < 2) throw new Error('Data tidak ditemukan.');
@@ -527,7 +509,7 @@ async function updateReport(sheets, drive, data, sheetName, folderSuffix) {
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic)
-    fotoPerbaikanUrl = await saveMultipleImagesToDrive(drive, data.upload_foto_perbaikan_pic, FOLDER_CLOSING_ID, data.id + folderSuffix);
+    fotoPerbaikanUrl = await saveMultipleImagesToImgBB(data.upload_foto_perbaikan_pic, data.id + folderSuffix);
 
   const updates = [];
   const setCell = (headerName, value) => {
@@ -554,7 +536,7 @@ async function updateReport(sheets, drive, data, sheetName, folderSuffix) {
 
 module.exports = async (req, res) => {
   try {
-    const { sheets, drive } = getClients();
+    const { sheets } = getClients();
 
     if (req.method === 'GET') {
       const { action, type } = req.query;
@@ -624,13 +606,13 @@ module.exports = async (req, res) => {
         case 'reviewChange':
           result = await reviewChange(sheets, authUser, data?.change_id, data?.decision, data?.reason);
           break;
-        case 'submitHazardReport':     result = await submitHazardReport(sheets, drive, data); break;
-        case 'submitInspectionReport': result = await submitInspectionReport(sheets, drive, data); break;
-        case 'updateHazardReport':     result = await updateReport(sheets, drive, data, 'Hazard_Report', '-Closing'); break;
+        case 'submitHazardReport':     result = await submitHazardReport(sheets, data); break;
+        case 'submitInspectionReport': result = await submitInspectionReport(sheets, data); break;
+        case 'updateHazardReport':     result = await updateReport(sheets, data, 'Hazard_Report', '-Closing'); break;
         case 'updateInspectionReport': {
           const sheetName = String(data.inspection_sheet || '').trim().toUpperCase();
           if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await updateReport(sheets, drive, data, sheetName, '-Inspection-Closing');
+          result = await updateReport(sheets, data, sheetName, '-Inspection-Closing');
           break;
         }
         default: throw new Error('Action tidak dikenali: ' + action);
