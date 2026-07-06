@@ -15,7 +15,7 @@ function renderWaBadge(r, isInspection) {
   const info = map[raw] || { label: raw || '-', cls: 'tidak-ada' };
   badge.textContent = info.label;
   badge.className   = `detail-wa-badge ${info.cls}`;
-  if (btn) btn.style.display = (raw === 'GAGAL' || raw === 'TERKIRIM') ? '' : 'none';
+  if (btn) btn.style.display = (raw !== 'TIDAK ADA WA') ? '' : 'none';
 }
 
 async function resendWaPic() {
