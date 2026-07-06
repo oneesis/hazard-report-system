@@ -120,6 +120,7 @@
         <div class="mbn-fab-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <span>Lapor</span>
       </a>
+      ${mbnLink('inspection.html','fa-list-check','Inspeksi','inspeksi')}
       ${mbnLink('dashboard.html','fa-chart-simple','Dashboard','dashboard')}
     `;
   }
