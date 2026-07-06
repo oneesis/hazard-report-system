@@ -509,8 +509,8 @@ async function submitHazardReport(sheets, data) {
       `Silakan buka aplikasi untuk melihat detail laporan.`;
     const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
-    await writeWaStatusToSheet(sheets, 'Hazard_Report', id, waStatus);
   }
+  await writeWaStatusToSheet(sheets, 'Hazard_Report', id, waStatus);
 
   return { status: 'success', message: 'Hazard Report berhasil disimpan.', id, wa_pic_status: waStatus };
 }
@@ -553,8 +553,8 @@ async function submitInspectionReport(sheets, data) {
       `Silakan buka aplikasi untuk melihat detail laporan.`;
     const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
-    await writeWaStatusToSheet(sheets, sheetName, id, waStatus);
   }
+  await writeWaStatusToSheet(sheets, sheetName, id, waStatus);
 
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
