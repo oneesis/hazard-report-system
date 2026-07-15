@@ -443,7 +443,7 @@ function renderTimeline(r, status, isInspection, planStatus, rencana, tanggalR, 
   }
 
   if (status === 'PROGRESS' || status === 'CLOSED') {
-    items.push({ dot: 'progress', label: 'Sedang Perbaikan (IN PROGRESS)', date: '-' });
+    items.push({ dot: status === 'CLOSED' ? 'done' : 'progress', label: 'Sedang Perbaikan (IN PROGRESS)', date: '-' });
   }
 
   if (status === 'CLOSED') {
