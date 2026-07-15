@@ -190,8 +190,9 @@ function renderDetail(r) {
   const tanggalR   = getReportValue(r, ['tanggal_rencana', 'TANGGAL_RENCANA'], '') || '';
   const rejComment = getReportValue(r, ['plan_review_comment', 'PLAN_REVIEW_COMMENT'], '') || '';
 
-  // Panel A: PIC submit rencana (shown to PIC/admin when plan not yet pending/approved)
-  const showPlanForm = status !== 'CLOSED' && (isAdmin || isPic(r)) && planStatus !== 'pending_review' && planStatus !== 'approved';
+  // Panel A: hanya untuk PIC non-admin, status OPEN, belum ada rencana
+  const showPlanForm = !isAdmin && status === 'OPEN' && isPic(r) &&
+    planStatus !== 'pending_review' && planStatus !== 'approved';
   if (showPlanForm) {
     document.getElementById('planForm').style.display = '';
     if (rencana) document.getElementById('planRencana').value = rencana;
@@ -202,7 +203,7 @@ function renderDetail(r) {
     }
   }
 
-  // Panel B: Pelapor review (shown when plan is pending_review)
+  // Panel B: Pelapor review saat plan pending_review
   const showReviewForm = status !== 'CLOSED' && (isAdmin || isPelapor(r)) && planStatus === 'pending_review';
   if (showReviewForm) {
     document.getElementById('reviewForm').style.display = '';
@@ -210,11 +211,11 @@ function renderDetail(r) {
     document.getElementById('reviewTanggal').textContent = tanggalR ? fmt(tanggalR) : '-';
   }
 
-  // Closing form — only after plan approved
-  if (status !== 'CLOSED' && (isAdmin || isPic(r)) && planStatus === 'approved') {
-    document.getElementById('closingForm').style.display = '';
-    wireClosingForm(r, status);
-  } else if (status === 'CLOSED') {
+  // Closing form: admin bypass workflow langsung; PIC setelah plan approved; atau sudah CLOSED
+  const showClosingForm = (isAdmin && status !== 'CLOSED') ||
+    (isPic(r) && planStatus === 'approved' && status !== 'CLOSED') ||
+    status === 'CLOSED';
+  if (showClosingForm) {
     document.getElementById('closingForm').style.display = '';
     wireClosingForm(r, status);
   }
