@@ -837,6 +837,12 @@ body:has(.app-layout) {
     max-height: 70vh;
   }
   .notification-list { max-height: 55vh; }
+  .sidebar-notif-bell .notification-dropdown {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    transform: none;
+  }
 }
 
 /* =============================================
