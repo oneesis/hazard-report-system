@@ -186,7 +186,7 @@ function computeActionItems(reports, user) {
   const nama = String(user?.nama || '').trim().toLowerCase();
   const wa   = String(user?.no_whatsapp || '').replace(/\D/g, '');
 
-  let rencana = 0, review = 0, closing = 0;
+  const rencana = [], review = [], closing = [];
 
   for (const r of (reports || [])) {
     const status     = String(r.status_perbaikan || 'OPEN').toUpperCase();
@@ -202,15 +202,15 @@ function computeActionItems(reports, user) {
     const namaRep = String(r.nama || r.nama_pelapor || '').trim().toLowerCase();
     const asRep   = (nik && nikRep === nik) || (nama && namaRep === nama);
 
-    if (asPic && status === 'OPEN' && !planStatus)          rencana++;
-    if (asRep && planStatus === 'pending_review')            review++;
-    if (asPic && planStatus === 'approved')                  closing++;
+    if (asPic && status === 'OPEN' && !planStatus) rencana.push(r);
+    if (asRep && planStatus === 'pending_review')   review.push(r);
+    if (asPic && planStatus === 'approved')         closing.push(r);
   }
 
   const items = [];
-  if (rencana) items.push({ count: rencana, label: `laporan menunggu rencana tindakan${rencana > 1 ? '' : ''} kamu`, color: 'orange', icon: 'fa-pen-to-square' });
-  if (review)  items.push({ count: review,  label: `rencana PIC menunggu review kamu`,                               color: 'blue',   icon: 'fa-magnifying-glass' });
-  if (closing) items.push({ count: closing, label: `laporan siap untuk closing kamu`,                                color: 'green',  icon: 'fa-flag-checkered' });
+  if (rencana.length) items.push({ reports: rencana, label: 'menunggu rencana tindakan kamu', color: 'orange', icon: 'fa-pen-to-square' });
+  if (review.length)  items.push({ reports: review,  label: 'rencana PIC menunggu review kamu', color: 'blue', icon: 'fa-magnifying-glass' });
+  if (closing.length) items.push({ reports: closing, label: 'siap untuk closing kamu', color: 'green', icon: 'fa-flag-checkered' });
   return items;
 }
 
@@ -218,20 +218,43 @@ function renderActionBanner(reports) {
   const el = document.getElementById('actionBanner');
   if (!el) return;
   const user  = getCurrentUser();
-  const role  = String(user?.role || '').toUpperCase().replace(/\s+/g, '_');
-  const isAdm = role === 'ADMIN' || role === 'SUPER_ADMIN';
   const items = computeActionItems(reports, user);
   if (!items.length) { el.style.display = 'none'; return; }
 
-  const href = isAdm ? 'laporan-admin.html' : 'dashboard.html';
+  const reportRow = r => {
+    const id   = escapeHTML(getReportId(r) || '-');
+    const desc = escapeHTML((r.deskripsi_bahaya || r.temuan_inspeksi || r.temuan || '').substring(0, 55) || '-');
+    const href = `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
+    return `<a href="${href}" class="ab-report-row">
+      <span class="ab-report-id">${id}</span>
+      <span class="ab-report-desc">${desc}</span>
+      <i class="fa-solid fa-arrow-right"></i>
+    </a>`;
+  };
+
   el.style.display = '';
   el.innerHTML = `<div class="action-banner">
     <div class="action-banner-title"><i class="fa-solid fa-circle-exclamation"></i> Perlu Tindakan Kamu</div>
-    ${items.map(it => `
-      <a href="${href}" class="action-banner-item action-banner-item--${it.color}">
-        <span class="action-banner-count">${it.count}</span>
-        <span class="action-banner-label"><i class="fa-solid ${it.icon}"></i> ${it.count} ${it.label}</span>
-        <i class="fa-solid fa-arrow-right action-banner-arrow"></i>
-      </a>`).join('')}
+    ${items.map((it, i) => `
+      <div class="action-banner-item action-banner-item--${it.color}" data-ab="${i}">
+        <div class="ab-header" onclick="toggleActionItem(${i})">
+          <span class="action-banner-count">${it.reports.length}</span>
+          <span class="action-banner-label"><i class="fa-solid ${it.icon}"></i> ${it.reports.length} laporan ${it.label}</span>
+          <i class="fa-solid fa-chevron-down ab-chevron"></i>
+        </div>
+        <div class="ab-list" style="display:none">
+          ${it.reports.map(reportRow).join('')}
+        </div>
+      </div>`).join('')}
   </div>`;
 }
+
+window.toggleActionItem = function(idx) {
+  const item = document.querySelector(`.action-banner-item[data-ab="${idx}"]`);
+  if (!item) return;
+  const list    = item.querySelector('.ab-list');
+  const chevron = item.querySelector('.ab-chevron');
+  const open    = list.style.display === 'none';
+  list.style.display    = open ? '' : 'none';
+  chevron.style.transform = open ? 'rotate(180deg)' : '';
+};

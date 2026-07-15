@@ -80,30 +80,55 @@
   gap: 6px;
 }
 .action-banner-item {
+  border-radius: 10px;
+  font-size: .82rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.action-banner-item:last-child { margin-bottom: 0; }
+.action-banner-item--orange { background: #fff7ed; color: #c2410c; }
+.action-banner-item--blue   { background: #eff6ff; color: #1d4ed8; }
+.action-banner-item--green  { background: #f0fdf4; color: #15803d; }
+.ab-header {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 10px;
-  text-decoration: none;
-  font-size: .82rem;
-  font-weight: 600;
-  margin-bottom: 6px;
-  transition: filter .15s;
+  cursor: pointer;
+  user-select: none;
 }
-.action-banner-item:last-child { margin-bottom: 0; }
-.action-banner-item:hover { filter: brightness(.96); }
-.action-banner-item--orange { background: #fff7ed; color: #c2410c; }
-.action-banner-item--blue   { background: #eff6ff; color: #1d4ed8; }
-.action-banner-item--green  { background: #f0fdf4; color: #15803d; }
+.ab-header:hover { filter: brightness(.96); }
 .action-banner-count {
   font-size: 1.2rem;
   font-weight: 800;
   min-width: 28px;
   text-align: center;
+  flex-shrink: 0;
 }
 .action-banner-label { flex: 1; }
-.action-banner-arrow { opacity: .5; font-size: .75rem; }
+.ab-chevron { font-size: .7rem; opacity: .6; transition: transform .2s; flex-shrink: 0; }
+.ab-list {
+  border-top: 1px solid rgba(0,0,0,.07);
+  padding: 4px 0;
+}
+.ab-report-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 500;
+  font-size: .78rem;
+  border-bottom: 1px solid rgba(0,0,0,.05);
+  transition: background .12s;
+}
+.ab-report-row:last-child { border-bottom: none; }
+.ab-report-row:hover { background: rgba(0,0,0,.04); }
+.ab-report-id { font-weight: 700; font-size: .75rem; min-width: 120px; flex-shrink: 0; }
+.ab-report-desc { flex: 1; color: inherit; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-report-row .fa-arrow-right { font-size: .65rem; opacity: .45; flex-shrink: 0; }
 
 /* ── Two-column grid ── */
 .home-grid {
