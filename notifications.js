@@ -338,6 +338,12 @@ function closeNotificationMenu() {
   const button = document.getElementById("notificationButton");
   menu?.classList.remove("open");
   button?.setAttribute("aria-expanded", "false");
+  const dropdown = document.getElementById("notificationDropdown");
+  if (dropdown?.dataset.portalParent && menu) {
+    menu.appendChild(dropdown);
+    dropdown.classList.remove("notif-portal");
+    delete dropdown.dataset.portalParent;
+  }
 }
 
 function toggleNotificationMenu() {
@@ -349,6 +355,20 @@ function toggleNotificationMenu() {
 
   const isOpen = menu.classList.toggle("open");
   button.setAttribute("aria-expanded", String(isOpen));
+
+  const dropdown = document.getElementById("notificationDropdown");
+  if (dropdown) {
+    if (isOpen && window.innerWidth <= 768) {
+      // portal: pindah ke body agar bebas dari sidebar DOM tree
+      dropdown.dataset.portalParent = "notificationMenu";
+      document.body.appendChild(dropdown);
+      dropdown.classList.add("notif-portal");
+    } else if (!isOpen && dropdown.dataset.portalParent) {
+      menu.appendChild(dropdown);
+      dropdown.classList.remove("notif-portal");
+      delete dropdown.dataset.portalParent;
+    }
+  }
 
   if (!isOpen) {
     notificationListExpanded = false;
@@ -427,7 +447,10 @@ function initNotificationBell() {
 
   document.addEventListener("click", event => {
     const menu = document.getElementById("notificationMenu");
-    if (menu && !menu.contains(event.target)) {
+    const dropdown = document.getElementById("notificationDropdown");
+    const insideMenu = menu && menu.contains(event.target);
+    const insidePortal = dropdown?.dataset.portalParent && dropdown.contains(event.target);
+    if (!insideMenu && !insidePortal) {
       closeNotificationMenu();
     }
   });
