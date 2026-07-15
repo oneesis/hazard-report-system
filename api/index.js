@@ -7,7 +7,8 @@ const webPush = require('web-push');
 // [PUSH-START] VAPID setup — lazy init agar tidak crash jika env belum diset
 let _vapidSet = false;
 function ensureVapid() {
-  if (_vapidSet || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
+  if (_vapidSet) return true;
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
   webPush.setVapidDetails(
     `mailto:${process.env.VAPID_EMAIL || 'admin@sap-ebl.vercel.app'}`,
     process.env.VAPID_PUBLIC_KEY,
