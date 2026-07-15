@@ -2,6 +2,25 @@ let detailReport = null;
 let detailStatus = 'OPEN';
 let detailAfterPhotos = [];
 
+function getDetailUser() { return getCurrentUser(); }
+
+function isPelapor(r) {
+  const u = getDetailUser();
+  if (!u) return false;
+  const nik = String(getReportValue(r, ['nik'], '') || '').trim();
+  return nik && nik === String(u.nik || '').trim();
+}
+
+function isPic(r) {
+  const u = getDetailUser();
+  if (!u) return false;
+  const nikPic = String(getReportValue(r, ['nik_pic'], '') || '').trim();
+  if (nikPic && nikPic === String(u.nik || '').trim()) return true;
+  const waPic = String(getReportValue(r, ['no_whatsapp_pic'], '') || '').replace(/\D/g, '');
+  const uWa   = String(u.no_whatsapp || '').replace(/\D/g, '');
+  return !!(waPic && uWa && waPic === uWa);
+}
+
 function renderWaBadge(r, isInspection) {
   const badge = document.getElementById('dfWaBadge');
   const btn   = document.getElementById('dfWaResendBtn');
@@ -163,16 +182,131 @@ function renderDetail(r) {
   renderGallery('galleryBefore', getImages(r, ['upload_foto_bahaya','upload_foto_inspeksi','upload_foto_bahaya_pic','foto_temuan','foto_before','foto_before_url','foto_bahaya']));
   renderGallery('galleryAfter',  getImages(r, ['upload_foto_perbaikan_pic','upload_foto_perbaikan','foto_perbaikan','foto_after','foto_after_url','after_photo']));
 
-  // Closing form — show for admin or non-closed
-  const user    = getCurrentUser();
-  const isAdmin = isAdminOrAbove(user?.role);
-  if (isAdmin || status !== 'CLOSED') {
+  // Workflow panels
+  const user      = getCurrentUser();
+  const isAdmin   = isAdminOrAbove(user?.role);
+  const planStatus = String(getReportValue(r, ['plan_status', 'PLAN_STATUS'], '') || '').trim().toLowerCase();
+  const rencana    = getReportValue(r, ['rencana_tindakan', 'RENCANA_TINDAKAN'], '') || '';
+  const tanggalR   = getReportValue(r, ['tanggal_rencana', 'TANGGAL_RENCANA'], '') || '';
+  const rejComment = getReportValue(r, ['plan_review_comment', 'PLAN_REVIEW_COMMENT'], '') || '';
+
+  // Panel A: PIC submit rencana (shown to PIC/admin when plan not yet pending/approved)
+  const showPlanForm = status !== 'CLOSED' && (isAdmin || isPic(r)) && planStatus !== 'pending_review' && planStatus !== 'approved';
+  if (showPlanForm) {
+    document.getElementById('planForm').style.display = '';
+    if (rencana) document.getElementById('planRencana').value = rencana;
+    if (tanggalR) document.getElementById('planTanggal').value = tanggalR.substring(0, 10);
+    if (planStatus === 'rejected' && rejComment) {
+      document.getElementById('planRejectedAlert').style.display = '';
+      document.getElementById('planRejectedComment').textContent = rejComment;
+    }
+  }
+
+  // Panel B: Pelapor review (shown when plan is pending_review)
+  const showReviewForm = status !== 'CLOSED' && (isAdmin || isPelapor(r)) && planStatus === 'pending_review';
+  if (showReviewForm) {
+    document.getElementById('reviewForm').style.display = '';
+    document.getElementById('reviewRencana').textContent = rencana || '-';
+    document.getElementById('reviewTanggal').textContent = tanggalR ? fmt(tanggalR) : '-';
+  }
+
+  // Closing form — only after plan approved
+  if (status !== 'CLOSED' && (isAdmin || isPic(r)) && planStatus === 'approved') {
+    document.getElementById('closingForm').style.display = '';
+    wireClosingForm(r, status);
+  } else if (status === 'CLOSED') {
     document.getElementById('closingForm').style.display = '';
     wireClosingForm(r, status);
   }
 
   // Timeline
-  renderTimeline(r, status, isInspection);
+  renderTimeline(r, status, isInspection, planStatus, rencana, tanggalR, rejComment);
+}
+
+// ── Action Plan ──
+function fillRekomendasiPelapor() {
+  if (!detailReport) return;
+  const reko = getReportValue(detailReport, [
+    'tindakan_perbaikan_yang_diusulkan_kepada_penanggungjawab_pic',
+    'tindakan_usulan_pic','rekomendasi_perbaikan','rekomendasi','tindakan_perbaikan'
+  ], '');
+  if (reko) document.getElementById('planRencana').value = reko;
+  else showToast('Tidak ada rekomendasi dari pelapor.', 'error');
+}
+
+async function submitActionPlan() {
+  if (!detailReport) return;
+  const rencana = document.getElementById('planRencana').value.trim();
+  const tanggal = document.getElementById('planTanggal').value;
+  if (!rencana) { showToast('Rencana tindakan wajib diisi.', 'error'); return; }
+
+  const btn = document.getElementById('btnSubmitPlan');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+
+  try {
+    const isInspection = (detailReport.report_type || '').toUpperCase() === 'INSPECTION';
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submitActionPlan', data: {
+        id: detailReport.id,
+        inspection_sheet: isInspection ? (detailReport.inspection_sheet || '') : '',
+        rencana_tindakan: rencana,
+        tanggal_rencana: tanggal,
+      }})
+    });
+    const result = await res.json();
+    if (result.status !== 'success') throw new Error(result.message);
+    showToast('Rencana berhasil dikirim ke pelapor!');
+    setTimeout(() => window.location.reload(), 1200);
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim ke Pelapor';
+  }
+}
+
+function toggleRejectForm() {
+  const show = document.getElementById('reviewComment').style.display === 'none';
+  document.getElementById('reviewComment').style.display = show ? '' : 'none';
+  document.getElementById('reviewCommentLabel').style.display = show ? '' : 'none';
+  document.getElementById('btnSubmitReject').style.display = show ? '' : 'none';
+}
+
+async function reviewActionPlan(decision) {
+  if (!detailReport) return;
+  const comment = document.getElementById('reviewComment').value.trim();
+  if (decision === 'rejected' && !comment) {
+    showToast('Komentar wajib diisi jika menolak.', 'error');
+    return;
+  }
+
+  const btn = decision === 'approved'
+    ? document.getElementById('btnApprove')
+    : document.getElementById('btnSubmitReject');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+  try {
+    const isInspection = (detailReport.report_type || '').toUpperCase() === 'INSPECTION';
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reviewActionPlan', data: {
+        id: detailReport.id,
+        inspection_sheet: isInspection ? (detailReport.inspection_sheet || '') : '',
+        decision,
+        comment,
+      }})
+    });
+    const result = await res.json();
+    if (result.status !== 'success') throw new Error(result.message);
+    showToast(result.message);
+    setTimeout(() => window.location.reload(), 1200);
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = decision === 'approved'
+      ? '<i class="fa-solid fa-check"></i> Setuju'
+      : '<i class="fa-solid fa-paper-plane"></i> Konfirmasi Penolakan';
+  }
 }
 
 // ── Closing form wiring ──
@@ -269,7 +403,7 @@ async function submitDetailClosing() {
 }
 
 // ── Timeline ──
-function renderTimeline(r, status, isInspection) {
+function renderTimeline(r, status, isInspection, planStatus, rencana, tanggalR, rejComment) {
   const el = document.getElementById('detailTimeline');
   if (!el) return;
 
@@ -293,11 +427,17 @@ function renderTimeline(r, status, isInspection) {
     });
   }
 
+  if (planStatus === 'pending_review') {
+    items.push({ dot: 'progress', label: 'Rencana Dikirim — Menunggu Persetujuan Pelapor', date: '-', note: rencana });
+  } else if (planStatus === 'rejected') {
+    items.push({ dot: 'progress', label: 'Rencana Dikirim', date: '-', note: rencana });
+    items.push({ dot: 'overdue', label: 'Rencana Ditolak Pelapor', date: '-', note: rejComment });
+  } else if (planStatus === 'approved') {
+    items.push({ dot: 'done', label: 'Rencana Disetujui Pelapor', date: fmt(tanggalR) || '-', note: rencana });
+  }
+
   if (status === 'PROGRESS' || status === 'CLOSED') {
-    items.push({
-      dot: 'progress', label: 'Sedang Ditangani (PROGRESS)',
-      date: '-'
-    });
+    items.push({ dot: 'progress', label: 'Sedang Perbaikan (IN PROGRESS)', date: '-' });
   }
 
   if (status === 'CLOSED') {
@@ -306,17 +446,18 @@ function renderTimeline(r, status, isInspection) {
       date: fmt(dateClosing) || '-',
       note: closingNote || ''
     });
+  } else if (!planStatus) {
+    items.push({ dot: 'pending', label: 'Menunggu Rencana dari PIC', date: '-' });
+  } else if (planStatus !== 'approved') {
+    items.push({ dot: 'pending', label: 'Menunggu Persetujuan', date: '-' });
   } else {
-    items.push({
-      dot: 'pending', label: 'Menunggu Closing',
-      date: '-'
-    });
+    items.push({ dot: 'pending', label: 'Menunggu Closing', date: '-' });
   }
 
   el.innerHTML = items.map(item => `
     <div class="timeline-item">
       <div class="timeline-dot timeline-dot--${item.dot}">
-        <i class="fa-solid ${item.dot === 'done' ? 'fa-check' : item.dot === 'closed' ? 'fa-flag-checkered' : item.dot === 'progress' ? 'fa-rotate' : 'fa-clock'}"></i>
+        <i class="fa-solid ${item.dot === 'done' ? 'fa-check' : item.dot === 'closed' ? 'fa-flag-checkered' : item.dot === 'progress' ? 'fa-rotate' : item.dot === 'overdue' ? 'fa-circle-xmark' : 'fa-clock'}"></i>
       </div>
       <div class="timeline-body">
         <div class="timeline-label">${escapeHTML(item.label)}</div>

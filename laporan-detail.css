@@ -3,6 +3,17 @@
    ============================================ */
 
 .detail-wa-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:.75rem; font-weight:700; }
+
+/* ── Workflow panels ── */
+.plan-alert { display:flex; align-items:flex-start; gap:8px; padding:10px 14px; border-radius:10px; font-size:.82rem; margin-bottom:12px; }
+.plan-alert--rejected { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+.plan-alert i { flex-shrink:0; margin-top:2px; }
+
+.plan-rencana-display { background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+.plan-rencana-label { font-size:.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.plan-rencana-text { font-size:.85rem; color:#1e293b; white-space:pre-wrap; }
+
+.timeline-dot--overdue { background:#fee2e2; border-color:#fca5a5; color:#dc2626; }
 .detail-wa-badge.terkirim { background:#dcfce7; color:#15803d; }
 .detail-wa-badge.gagal    { background:#fee2e2; color:#dc2626; }
 .detail-wa-badge.tidak-ada { background:#f1f5f9; color:#94a3b8; }

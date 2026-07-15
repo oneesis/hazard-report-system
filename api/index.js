@@ -571,6 +571,68 @@ async function submitInspectionReport(sheets, data) {
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
+async function updateWorkflowFields(sheets, sheetName, reportId, fields) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
+  const rows = res.data.values || [];
+  if (rows.length < 2) throw new Error('Data tidak ditemukan.');
+  const headers = rows[0].map(normalizeHeader);
+  const idCol = headers.indexOf('id');
+  if (idCol === -1) throw new Error('Kolom ID tidak ditemukan.');
+  const rowIndex = rows.findIndex((row, i) => i > 0 && String(row[idCol] || '').trim() === String(reportId).trim());
+  if (rowIndex === -1) throw new Error('Laporan tidak ditemukan.');
+  const actualRow = rowIndex + 1;
+  const reportRow = {};
+  headers.forEach((h, i) => { reportRow[h] = rows[rowIndex][i] ?? ''; });
+  const updates = Object.entries(fields).map(([key, value]) => {
+    const colIdx = headers.indexOf(normalizeHeader(key));
+    return colIdx !== -1 ? { range: `${sheetName}!${colIndexToLetter(colIdx)}${actualRow}`, values: [[value]] } : null;
+  }).filter(Boolean);
+  if (updates.length)
+    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: 'USER_ENTERED', data: updates } });
+  return reportRow;
+}
+
+async function submitActionPlan(sheets, data, sheetName) {
+  if (!data.rencana_tindakan?.trim()) throw new Error('Rencana tindakan wajib diisi.');
+  const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, {
+    'RENCANA_TINDAKAN':  data.rencana_tindakan.trim(),
+    'TANGGAL_RENCANA':   data.tanggal_rencana || '',
+    'PLAN_STATUS':       'pending_review',
+    'PLAN_SUBMITTED_AT': new Date().toISOString(),
+  });
+  const noWa = reportRow['no_whatsapp'] || '';
+  const nama  = reportRow['nama'] || '';
+  if (noWa) {
+    const msg = `Halo ${nama}, PIC telah menyampaikan rencana tindakan untuk laporan *${data.id}*.\n\n` +
+      `📋 Rencana: ${data.rencana_tindakan.trim()}\n📅 Tanggal rencana: ${data.tanggal_rencana || '-'}\n\n` +
+      `Silakan berikan persetujuan:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
+    await sendWaNotification(noWa, msg).catch(() => {});
+  }
+  return { status: 'success', message: 'Rencana tindakan berhasil dikirim ke pelapor.' };
+}
+
+async function reviewActionPlan(sheets, data, sheetName) {
+  const decision = data.decision;
+  if (decision !== 'approved' && decision !== 'rejected') throw new Error('Decision harus approved atau rejected.');
+  if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Komentar wajib diisi jika menolak.');
+  const fields = {
+    'PLAN_STATUS':          decision,
+    'PLAN_REVIEW_COMMENT':  data.comment || '',
+    'PLAN_REVIEWED_AT':     new Date().toISOString(),
+  };
+  if (decision === 'approved') fields['STATUS PERBAIKAN'] = 'PROGRESS';
+  const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, fields);
+  const noWaPic = reportRow['no_whatsapp_pic'] || '';
+  const namaPic = reportRow['nama_pic'] || '';
+  if (noWaPic) {
+    const msg = decision === 'approved'
+      ? `Halo ${namaPic}, rencana tindakan untuk laporan *${data.id}* telah ✅ *DISETUJUI* oleh pelapor.\n\nSilakan lanjutkan perbaikan:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+      : `Halo ${namaPic}, rencana tindakan untuk laporan *${data.id}* ❌ *DITOLAK* oleh pelapor.\n\n💬 Komentar: ${data.comment}\n\nSilakan revisi rencana:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
+    await sendWaNotification(noWaPic, msg).catch(() => {});
+  }
+  return { status: 'success', message: decision === 'approved' ? 'Rencana disetujui.' : 'Rencana ditolak, PIC akan merevisi.' };
+}
+
 async function updateReport(sheets, data, sheetName, folderSuffix) {
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
   const rows = res.data.values || [];
@@ -704,6 +766,18 @@ module.exports = async (req, res) => {
           const sheetName = String(data.inspection_sheet || '').trim().toUpperCase();
           if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
           result = await updateReport(sheets, data, sheetName, '-Inspection-Closing');
+          break;
+        }
+        case 'submitActionPlan': {
+          const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
+          if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
+          result = await submitActionPlan(sheets, data, sheetName);
+          break;
+        }
+        case 'reviewActionPlan': {
+          const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
+          if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
+          result = await reviewActionPlan(sheets, data, sheetName);
           break;
         }
         default: throw new Error('Action tidak dikenali: ' + action);

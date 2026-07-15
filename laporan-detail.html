@@ -178,7 +178,57 @@
               </div>
             </div>
 
-            <!-- Closing form (admin only) -->
+            <!-- Panel A: PIC submit rencana tindakan -->
+            <div id="planForm" class="closing-form" style="display:none">
+              <div class="closing-form-title"><i class="fa-solid fa-pen-to-square"></i> Rencana Tindakan Perbaikan</div>
+              <div id="planRejectedAlert" class="plan-alert plan-alert--rejected" style="display:none">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span>Rencana ditolak pelapor. Komentar: <strong id="planRejectedComment"></strong></span>
+              </div>
+              <label class="closing-label">Rencana Tindakan <span class="required">*</span></label>
+              <textarea id="planRencana" class="closing-textarea" rows="4"
+                placeholder="Deskripsikan tindakan perbaikan yang akan dilakukan..."></textarea>
+              <label class="closing-label">Tanggal Rencana Pelaksanaan</label>
+              <input type="date" id="planTanggal" class="lm-date-input" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+              <button id="btnSamaRekomendasi" class="btn-secondary" style="width:100%;margin-bottom:8px"
+                onclick="fillRekomendasiPelapor()">
+                <i class="fa-solid fa-copy"></i> Gunakan Rekomendasi Pelapor
+              </button>
+              <button id="btnSubmitPlan" class="btn-primary" style="width:100%"
+                onclick="submitActionPlan()">
+                <i class="fa-solid fa-paper-plane"></i> Kirim ke Pelapor
+              </button>
+            </div>
+
+          <!-- Panel B: Pelapor review rencana -->
+            <div id="reviewForm" class="closing-form" style="display:none">
+              <div class="closing-form-title"><i class="fa-solid fa-clipboard-check"></i> Review Rencana Tindakan</div>
+              <div class="plan-rencana-display">
+                <div class="plan-rencana-label">Rencana dari PIC:</div>
+                <div id="reviewRencana" class="plan-rencana-text">-</div>
+                <div class="plan-rencana-label" style="margin-top:8px">Tanggal Rencana:</div>
+                <div id="reviewTanggal" class="plan-rencana-text">-</div>
+              </div>
+              <label class="closing-label" id="reviewCommentLabel" style="display:none">
+                Komentar Penolakan <span class="required">*</span>
+              </label>
+              <textarea id="reviewComment" class="closing-textarea" rows="3"
+                placeholder="Tulis alasan penolakan..." style="display:none"></textarea>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="btnApprove" class="btn-primary" style="flex:1" onclick="reviewActionPlan('approved')">
+                  <i class="fa-solid fa-check"></i> Setuju
+                </button>
+                <button id="btnReject" class="btn-danger" style="flex:1" onclick="toggleRejectForm()">
+                  <i class="fa-solid fa-xmark"></i> Tolak
+                </button>
+              </div>
+              <button id="btnSubmitReject" class="btn-danger" style="width:100%;margin-top:8px;display:none"
+                onclick="reviewActionPlan('rejected')">
+                <i class="fa-solid fa-paper-plane"></i> Konfirmasi Penolakan
+              </button>
+            </div>
+
+          <!-- Closing form (hanya setelah rencana disetujui) -->
             <div id="closingForm" class="closing-form" style="display:none">
               <div class="closing-form-title">Update Status</div>
 
