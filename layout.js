@@ -190,6 +190,32 @@
     document.getElementById('sidebarOverlay')?.classList.remove('active');
   }
 
+  function injectIosInstallBanner() {
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+    if (!isIOS || window.navigator.standalone === true) return;
+    if (localStorage.getItem('ios_install_dismissed')) return;
+    const el = document.createElement('div');
+    el.id = 'iosInstallBanner';
+    el.className = 'ios-install-banner';
+    el.innerHTML = `
+      <div class="ios-install-banner-content">
+        <i class="fa-solid fa-arrow-up-from-bracket ios-install-icon"></i>
+        <div class="ios-install-text">
+          <strong>Aktifkan Notifikasi Push</strong>
+          <span>Tap <i class="fa-solid fa-arrow-up-from-bracket"></i> → "Add to Home Screen"</span>
+        </div>
+      </div>
+      <button class="ios-install-close" onclick="dismissIosInstallBanner()" aria-label="Tutup">
+        <i class="fa-solid fa-xmark"></i>
+      </button>`;
+    document.body.appendChild(el);
+  }
+
+  window.dismissIosInstallBanner = function () {
+    document.getElementById('iosInstallBanner')?.remove();
+    localStorage.setItem('ios_install_dismissed', '1');
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
 
@@ -205,6 +231,7 @@
     renderSidebar();
     renderMobileNav();
     injectAdminStrip();
+    injectIosInstallBanner();
     if (typeof initNotificationBell === 'function') initNotificationBell();
     if (typeof initPushNotifications === 'function') initPushNotifications();
     if (typeof refreshNotifications === 'function') {
