@@ -915,6 +915,28 @@ module.exports = async (req, res) => {
           await removePushSubscriptionByEndpoint(sheets, data.endpoint);
           result = { status: 'success', message: 'Push subscription removed.' };
           break;
+        case 'push_test': {
+          if (!ensureVapid()) {
+            result = { status: 'error', message: 'VAPID keys belum dikonfigurasi di env vars (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_EMAIL).' };
+            break;
+          }
+          let allSubs = [];
+          try { allSubs = await getSheetData(sheets, 'Push_Subscriptions'); } catch (e) { result = { status: 'error', message: 'Sheet Push_Subscriptions tidak ditemukan: ' + e.message }; break; }
+          const mySubs = allSubs.filter(r => String(r['NIK'] || '').trim() === String(authUser.nik).trim() && r['ENDPOINT']);
+          if (!mySubs.length) { result = { status: 'error', message: `Tidak ada subscription tersimpan untuk NIK ${authUser.nik}. Klik tombol bell di sidebar dulu.` }; break; }
+          let sent = 0, failed = 0;
+          for (const sub of mySubs) {
+            try {
+              await webPush.sendNotification(
+                { endpoint: sub['ENDPOINT'], keys: { p256dh: sub['P256DH'], auth: sub['AUTH'] } },
+                JSON.stringify({ title: 'Test ONE-SAP ✅', body: 'Push notification berhasil! Sistem siap digunakan.', url: 'https://sap-ebl.vercel.app/index-home.html' })
+              );
+              sent++;
+            } catch (e) { failed++; console.error('push_test send error:', e.message, e.statusCode); }
+          }
+          result = { status: sent > 0 ? 'success' : 'error', message: `${sent} push terkirim, ${failed} gagal dari ${mySubs.length} subscription.` };
+          break;
+        }
         // [PUSH-END]
         default: throw new Error('Action tidak dikenali: ' + action);
       }
