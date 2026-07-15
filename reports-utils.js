@@ -156,38 +156,44 @@ async function fetchHazardReports() {
   return fetchAllReports();
 }
 
+let _fetchAllReportsInFlight = null;
+
 async function fetchAllReports() {
-  let response;
-  try {
-    const user = getCurrentUser();
-    const params = new URLSearchParams({ action: "getAllReports" });
-    if (user) {
-      if (user.nik) params.append("nik", user.nik);
-      if (user.nama) params.append("nama", user.nama);
-      if (user.role) params.append("role", user.role);
+  if (_fetchAllReportsInFlight) return _fetchAllReportsInFlight;
+  _fetchAllReportsInFlight = (async () => {
+    let response;
+    try {
+      const user = getCurrentUser();
+      const params = new URLSearchParams({ action: "getAllReports" });
+      if (user) {
+        if (user.nik) params.append("nik", user.nik);
+        if (user.nama) params.append("nama", user.nama);
+        if (user.role) params.append("role", user.role);
+      }
+      response = await fetch(`${BASE_URL}?${params.toString()}`);
+    } catch (err) {
+      throw new Error('Network error saat memanggil API: ' + (err && err.message ? err.message : err));
     }
-    response = await fetch(`${BASE_URL}?${params.toString()}`);
-  } catch (err) {
-    throw new Error('Network error saat memanggil API: ' + (err && err.message ? err.message : err));
-  }
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText}`);
-  }
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
 
-  const text = await response.text();
-  let result;
-  try {
-    result = JSON.parse(text);
-  } catch (err) {
-    throw new Error('Response API bukan JSON valid: ' + text);
-  }
+    const text = await response.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (err) {
+      throw new Error('Response API bukan JSON valid: ' + text);
+    }
 
-  if (result.status !== "success") {
-    throw new Error(result.message || "Gagal memuat data.");
-  }
+    if (result.status !== "success") {
+      throw new Error(result.message || "Gagal memuat data.");
+    }
 
-  return result.data || [];
+    return result.data || [];
+  })().finally(() => { _fetchAllReportsInFlight = null; });
+  return _fetchAllReportsInFlight;
 }
 
 function formatNotificationDate(value) {
