@@ -915,6 +915,16 @@ module.exports = async (req, res) => {
           await removePushSubscriptionByEndpoint(sheets, data.endpoint);
           result = { status: 'success', message: 'Push subscription removed.' };
           break;
+        case 'push_debug':
+          result = {
+            status: 'success',
+            hasPublicKey:  !!process.env.VAPID_PUBLIC_KEY,
+            hasPrivateKey: !!process.env.VAPID_PRIVATE_KEY,
+            hasEmail:      !!process.env.VAPID_EMAIL,
+            pubKeyLen:     process.env.VAPID_PUBLIC_KEY?.length ?? 0,
+            privKeyLen:    process.env.VAPID_PRIVATE_KEY?.length ?? 0,
+          };
+          break;
         case 'push_test': {
           if (!ensureVapid()) {
             result = { status: 'error', message: 'VAPID keys belum dikonfigurasi di env vars (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_EMAIL).' };
