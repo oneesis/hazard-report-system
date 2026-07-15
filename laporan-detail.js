@@ -136,7 +136,9 @@ function renderDetail(r) {
   set('dfLokasi',   getDashboardLocation(r) || '-');
 
   document.getElementById('dfCategoryLabel').textContent = isInspection ? 'Jenis Inspeksi' : 'Kategori';
-  set('dfCategory', getDashboardCategory(r));
+  const INS_LABELS = { INS_CB:'Inspeksi Conveyor Belt', INS_JA:'Inspeksi Jalan Angkut', INS_MD:'Inspeksi Mess dan Dapur', INS_KG:'Inspeksi Kantor & Gudang', INS_SP:'Inspeksi Settling Pond', INS_T:'Inspeksi Tambang', INS_TB:'Inspeksi Tangki BBM', INS_WS:'Inspeksi Workshop' };
+  const catVal = getDashboardCategory(r);
+  set('dfCategory', (catVal === '-' && isInspection) ? (INS_LABELS[r.inspection_sheet] || r.inspection_sheet || '-') : catVal);
 
   document.getElementById('dfRiskLabel').textContent = isInspection ? 'Shift' : 'Tingkat Risiko';
   const riskVal = isInspection
@@ -193,8 +195,8 @@ function renderDetail(r) {
   const tanggalR   = getReportValue(r, ['tanggal_rencana', 'TANGGAL_RENCANA'], '') || '';
   const rejComment = getReportValue(r, ['plan_review_comment', 'PLAN_REVIEW_COMMENT'], '') || '';
 
-  // Panel A: hanya untuk PIC non-admin, status OPEN, belum ada rencana
-  const showPlanForm = !isAdmin && status === 'OPEN' && isPic(r) &&
+  // Panel A: untuk PIC atau admin, status OPEN, belum ada rencana
+  const showPlanForm = (isAdmin || isPic(r)) && status === 'OPEN' &&
     planStatus !== 'pending_review' && planStatus !== 'approved';
   if (showPlanForm) {
     document.getElementById('planForm').style.display = '';
