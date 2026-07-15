@@ -77,9 +77,12 @@ function renderMyReports(reports) {
     return (myNik && rNik === myNik) || (myNama && rNama === myNama);
   });
 
-  const recent = pool
-    .sort((a, b) => new Date(b.tanggal_laporan || 0) - new Date(a.tanggal_laporan || 0))
-    .slice(0, 5);
+  const getTs = r => {
+    const v = r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || 0;
+    const d = new Date(v);
+    return isNaN(d) ? 0 : d.getTime();
+  };
+  const recent = pool.sort((a, b) => getTs(b) - getTs(a)).slice(0, 5);
 
   if (!recent.length) {
     el.innerHTML = `<div class="reports-empty">
@@ -96,7 +99,7 @@ function renderMyReports(reports) {
     const date    = r.tanggal_laporan ? new Date(r.tanggal_laporan).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '-';
     const dotCls  = `dot-${status.toLowerCase()}`;
     const badgeCls = `badge-${status.toLowerCase()}`;
-    return `<div class="report-item">
+    return `<a class="report-item" href="laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}">
       <div class="report-item-dot ${dotCls}"></div>
       <div class="report-item-body">
         <div class="report-item-id">${id}</div>
@@ -104,7 +107,7 @@ function renderMyReports(reports) {
         <div class="report-item-meta">${date}</div>
       </div>
       <span class="report-item-badge ${badgeCls}">${status}</span>
-    </div>`;
+    </a>`;
   }).join('');
 }
 

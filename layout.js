@@ -85,6 +85,7 @@
           <div class="sidebar-user-role">${safe(role || 'USER')}</div>
         </div>
         <div class="sidebar-user-actions">
+          <div id="notificationBell" class="sidebar-notif-bell"></div>
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password">
             <i class="fa-solid fa-key"></i>
           </button>
@@ -191,5 +192,7 @@
     renderSidebar();
     renderMobileNav();
     injectAdminStrip();
+    if (typeof initNotificationBell === 'function') initNotificationBell();
+    if (typeof refreshNotifications === 'function') refreshNotifications().catch(() => {});
   });
 })();

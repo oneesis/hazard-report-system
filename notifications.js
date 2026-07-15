@@ -243,7 +243,7 @@ function buildNotificationItems(reports) {
 }
 
 function getDashboardReportUrl(reportId) {
-  return `dashboard.html?open=${encodeURIComponent(reportId)}`;
+  return `laporan-detail.html?id=${encodeURIComponent(reportId)}`;
 }
 
 let notificationItems = [];

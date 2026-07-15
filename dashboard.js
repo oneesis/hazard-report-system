@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const report = filteredReports[rowIndex];
       if (!report) return;
 
-      openReportModal(report);
+      window.location.href = 'laporan-detail.html?id=' + encodeURIComponent(getReportId(report));
     });
 
   document
@@ -194,7 +194,7 @@ function handleOpenReportQuery() {
   const report = reports.find(r => getReportId(r) === openId);
   if (!report || !isReportVisible(report)) return;
 
-  openReportModal(report);
+  window.location.href = 'laporan-detail.html?id=' + encodeURIComponent(openId);
   if (typeof markNotificationRead === "function") {
     markNotificationRead(openId);
   }
