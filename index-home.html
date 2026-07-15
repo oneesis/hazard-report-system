@@ -108,8 +108,16 @@
             <div class="my-reports-header">
               <h3><i class="fa-solid fa-clock-rotate-left"></i> Laporan Terakhir Saya</h3>
             </div>
+            <div class="my-reports-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="myReportsSearch" placeholder="Cari ID atau deskripsi..." autocomplete="off">
+            </div>
             <div class="my-reports-list" id="myReportsList">
-              <p class="reports-loading">Memuat laporan...</p>
+              ${['','',''].map(() => `<div class="skeleton-report-item">
+                <div class="sk sk-dot"></div>
+                <div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div>
+                <div class="sk sk-badge"></div>
+              </div>`).join('')}
             </div>
             <a href="dashboard.html" class="btn-see-all">
               Lihat Semua Riwayat <i class="fa-solid fa-arrow-right"></i>

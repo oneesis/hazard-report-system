@@ -203,6 +203,16 @@
     renderMobileNav();
     injectAdminStrip();
     if (typeof initNotificationBell === 'function') initNotificationBell();
-    if (typeof refreshNotifications === 'function') refreshNotifications().catch(() => {});
+    if (typeof refreshNotifications === 'function') {
+      refreshNotifications().catch(() => {});
+      // auto-refresh tiap 5 menit, hanya saat tab aktif
+      setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        if (typeof invalidateReportsCache === 'function') invalidateReportsCache();
+        refreshNotifications().then(reports => {
+          document.dispatchEvent(new CustomEvent('reportsRefreshed', { detail: reports }));
+        }).catch(() => {});
+      }, 5 * 60 * 1000);
+    }
   });
 })();

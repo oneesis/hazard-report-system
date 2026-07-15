@@ -25,6 +25,22 @@ async function initHomePage() {
     renderActionBanner(reports);
     renderMyReports(reports);
     renderQuickStats(reports);
+
+    // search filter
+    let _allReports = reports;
+    document.getElementById('myReportsSearch')?.addEventListener('input', function () {
+      const q = this.value.trim().toLowerCase();
+      renderMyReports(_allReports, q);
+    });
+
+    // update saat auto-refresh dari layout.js
+    document.addEventListener('reportsRefreshed', e => {
+      _allReports = e.detail;
+      const q = (document.getElementById('myReportsSearch')?.value || '').trim().toLowerCase();
+      renderActionBanner(e.detail);
+      renderMyReports(e.detail, q);
+      renderQuickStats(e.detail);
+    });
   } catch (e) {
     console.error('Home load error', e);
     const el = document.getElementById('myReportsList');
@@ -65,7 +81,7 @@ function renderInsGrid() {
   `).join('');
 }
 
-function renderMyReports(reports) {
+function renderMyReports(reports, query = '') {
   const el  = document.getElementById('myReportsList');
   if (!el) return;
   const user = getCurrentUser();
@@ -83,12 +99,19 @@ function renderMyReports(reports) {
     const d = new Date(v);
     return isNaN(d) ? 0 : d.getTime();
   };
-  const recent = pool.sort((a, b) => getTs(b) - getTs(a)).slice(0, 5);
+  const sorted = pool.sort((a, b) => getTs(b) - getTs(a));
+  const recent = query
+    ? sorted.filter(r => {
+        const id   = (getReportId(r) || '').toLowerCase();
+        const desc = (r.deskripsi_bahaya || r.temuan || '').toLowerCase();
+        return id.includes(query) || desc.includes(query);
+      }).slice(0, 10)
+    : sorted.slice(0, 5);
 
   if (!recent.length) {
     el.innerHTML = `<div class="reports-empty">
       <i class="fa-regular fa-folder-open"></i>
-      Belum ada laporan
+      ${query ? 'Tidak ada laporan yang cocok' : 'Belum ada laporan'}
     </div>`;
     return;
   }
@@ -98,12 +121,15 @@ function renderMyReports(reports) {
     const id      = escapeHTML(getReportId(r) || '-');
     const desc    = escapeHTML((r.deskripsi_bahaya || r.temuan || '-').substring(0, 60));
     const date    = r.tanggal_laporan ? new Date(r.tanggal_laporan).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '-';
+    const due     = r.batas_waktu || r.due_date || '';
+    const dueDate = due ? new Date(due) : null;
+    const isOverdue = dueDate && !isNaN(dueDate) && status !== 'CLOSED' && dueDate < new Date();
     const dotCls  = `dot-${status.toLowerCase()}`;
     const badgeCls = `badge-${status.toLowerCase()}`;
-    return `<a class="report-item" href="laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}">
+    return `<a class="report-item${isOverdue ? ' report-item--overdue' : ''}" href="laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}">
       <div class="report-item-dot ${dotCls}"></div>
       <div class="report-item-body">
-        <div class="report-item-id">${id}</div>
+        <div class="report-item-id">${id}${isOverdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</div>
         <div class="report-item-desc">${desc}</div>
         <div class="report-item-meta">${date}</div>
       </div>
@@ -223,11 +249,18 @@ function renderActionBanner(reports) {
 
   const reportRow = r => {
     const id   = escapeHTML(getReportId(r) || '-');
-    const desc = escapeHTML((r.deskripsi_bahaya || r.temuan_inspeksi || r.temuan || '').substring(0, 55) || '-');
+    const desc = escapeHTML((r.deskripsi_bahaya || r.temuan_inspeksi || r.temuan || '').substring(0, 45) || '-');
     const href = `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
-    return `<a href="${href}" class="ab-report-row">
+    const due  = r.batas_waktu || r.due_date || '';
+    const dueDate = due ? new Date(due) : null;
+    const isOverdue = dueDate && !isNaN(dueDate) && dueDate < new Date();
+    const dueStr = dueDate && !isNaN(dueDate)
+      ? dueDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
+      : '';
+    return `<a href="${href}" class="ab-report-row${isOverdue ? ' ab-report-row--overdue' : ''}">
       <span class="ab-report-id">${id}</span>
       <span class="ab-report-desc">${desc}</span>
+      ${dueStr ? `<span class="ab-report-due${isOverdue ? ' ab-report-due--over' : ''}">${isOverdue ? '⚠ ' : ''}${dueStr}</span>` : ''}
       <i class="fa-solid fa-arrow-right"></i>
     </a>`;
   };
