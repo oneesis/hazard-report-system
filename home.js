@@ -212,7 +212,7 @@ function computeActionItems(reports, user) {
   const nama = String(user?.nama || '').trim().toLowerCase();
   const wa   = String(user?.no_whatsapp || '').replace(/\D/g, '');
 
-  const rencana = [], review = [], closing = [];
+  const rencana = [], review = [], closing = [], rejected = [];
 
   for (const r of (reports || [])) {
     const status     = String(r.status_perbaikan || 'OPEN').toUpperCase();
@@ -228,15 +228,17 @@ function computeActionItems(reports, user) {
     const namaRep = String(r.nama || r.nama_pelapor || '').trim().toLowerCase();
     const asRep   = (nik && nikRep === nik) || (nama && namaRep === nama);
 
-    if (asPic && status === 'OPEN' && !planStatus) rencana.push(r);
-    if (asRep && planStatus === 'pending_review')   review.push(r);
-    if (asPic && planStatus === 'approved')         closing.push(r);
+    if (asPic && planStatus === 'rejected')         rejected.push(r);
+    if (asPic && status === 'OPEN' && !planStatus)  rencana.push(r);
+    if (asRep && planStatus === 'pending_review')    review.push(r);
+    if (asPic && planStatus === 'approved')          closing.push(r);
   }
 
   const items = [];
-  if (rencana.length) items.push({ reports: rencana, label: 'menunggu rencana tindakan kamu', color: 'orange', icon: 'fa-pen-to-square' });
-  if (review.length)  items.push({ reports: review,  label: 'rencana PIC menunggu review kamu', color: 'blue', icon: 'fa-magnifying-glass' });
-  if (closing.length) items.push({ reports: closing, label: 'siap untuk closing kamu', color: 'green', icon: 'fa-flag-checkered' });
+  if (rejected.length) items.push({ reports: rejected, label: 'rencana kamu ditolak, perlu revisi segera', color: 'red', icon: 'fa-circle-xmark' });
+  if (rencana.length)  items.push({ reports: rencana,  label: 'menunggu rencana tindakan kamu', color: 'orange', icon: 'fa-pen-to-square' });
+  if (review.length)   items.push({ reports: review,   label: 'rencana PIC menunggu review kamu', color: 'blue', icon: 'fa-magnifying-glass' });
+  if (closing.length)  items.push({ reports: closing,  label: 'siap untuk closing kamu', color: 'green', icon: 'fa-flag-checkered' });
   return items;
 }
 

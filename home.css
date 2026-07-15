@@ -87,6 +87,7 @@
   overflow: hidden;
 }
 .action-banner-item:last-child { margin-bottom: 0; }
+.action-banner-item--red    { background: #fff1f2; color: #be123c; }
 .action-banner-item--orange { background: #fff7ed; color: #c2410c; }
 .action-banner-item--blue   { background: #eff6ff; color: #1d4ed8; }
 .action-banner-item--green  { background: #f0fdf4; color: #15803d; }

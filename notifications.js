@@ -66,7 +66,10 @@ function seedNotificationsFromReports(reports) {
   getVisibleReports(reports).forEach(report => {
     const id = getReportId(report);
     if (!id) return;
-    snapshot[id] = { status: getReportStatus(report) };
+    snapshot[id] = {
+      status: getReportStatus(report),
+      planStatus: String(report.plan_status || '').trim().toLowerCase(),
+    };
   });
   saveSnapshot(snapshot);
   localStorage.setItem(storageKey("init"), "1");
@@ -98,6 +101,7 @@ function syncNotificationHistory(reports) {
     if (!id) return;
 
     const status = getReportStatus(report);
+    const planStatus = String(report.plan_status || '').trim().toLowerCase();
     const relation = getUserRelation(report) || "admin";
     const prev = snapshot[id];
     let kind = null;
@@ -109,6 +113,9 @@ function syncNotificationHistory(reports) {
     } else if (prev.status !== status) {
       kind = "status";
       readIds.delete(id);
+    } else if (prev.planStatus !== undefined && prev.planStatus !== planStatus && planStatus === 'rejected') {
+      kind = "plan_rejected";
+      readIds.delete(id);
     } else if (!inHistory && isRecentReport(report)) {
       // PIC / user lain yang baru login tetap dapat notifikasi laporan baru
       kind = "new";
@@ -116,7 +123,7 @@ function syncNotificationHistory(reports) {
 
     if (!kind) return;
 
-    snapshot[id] = { status };
+    snapshot[id] = { status, planStatus };
 
     upsertHistoryEntry(history, {
       id,
@@ -178,6 +185,9 @@ function buildNotificationMessage(report, kind, relation) {
 
   if (kind === "status") {
     return `Status laporan ${id} diperbarui menjadi ${status}`;
+  }
+  if (kind === "plan_rejected") {
+    return `Rencana tindakan laporan ${id} ditolak pelapor. Silakan revisi rencana kamu.`;
   }
 
   const typeLabel = getReportTypeLabel(report);
