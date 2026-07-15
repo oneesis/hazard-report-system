@@ -270,18 +270,32 @@ async function sendPushToNik(sheets, nik, payload) {
   if (!nik || !ensureVapid()) return;
   try {
     const allSubs = await getSheetData(sheets, 'Push_Subscriptions');
-    const userSubs = allSubs.filter(r => String(r['NIK'] || '').trim() === String(nik).trim() && r['ENDPOINT']);
+    const nikStr = String(nik).trim();
+    const userSubs = allSubs.filter(r => String(r['NIK'] || '').trim() === nikStr && r['ENDPOINT']);
+    console.log(`[push] sendPushToNik nik="${nikStr}" subs=${userSubs.length}`);
     for (const sub of userSubs) {
       try {
         await webPush.sendNotification(
           { endpoint: sub['ENDPOINT'], keys: { p256dh: sub['P256DH'], auth: sub['AUTH'] } },
           JSON.stringify(payload)
         );
+        console.log(`[push] sent ok to nik="${nikStr}"`);
       } catch (err) {
+        console.error(`[push] send error nik="${nikStr}" status=${err.statusCode} msg=${err.message}`);
         if (err.statusCode === 410) await removePushSubscriptionByEndpoint(sheets, sub['ENDPOINT']).catch(() => {});
       }
     }
-  } catch { /* jangan crash jika push gagal */ }
+  } catch (err) { console.error('[push] sendPushToNik error:', err.message); }
+}
+
+// Resolve NIK dari nomor WA — untuk hazard report yang tidak menyimpan nik_pic
+async function resolveNikFromWa(sheets, wa) {
+  if (!wa) return '';
+  const phone = String(wa).replace(/\D/g, '');
+  if (!phone) return '';
+  const karyawan = await getSheetData(sheets, 'Master_Karyawan');
+  const match = karyawan.find(r => String(r['NO WHATSAPP'] || '').replace(/\D/g, '') === phone);
+  return String(match?.['NIK'] || '').trim();
 }
 // [PUSH-END]
 
@@ -611,8 +625,9 @@ async function submitHazardReport(sheets, data) {
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
   await writeWaStatusToSheet(sheets, 'Hazard_Report', id, waStatus);
-  // [PUSH-START]
-  if (data.nik_pic) await sendPushToNik(sheets, data.nik_pic, {
+  // [PUSH-START] — nik_pic tidak ada di form hazard, resolve via WA
+  const picNikHazard = data.nik_pic || await resolveNikFromWa(sheets, data.no_whatsapp_pic).catch(() => '');
+  if (picNikHazard) await sendPushToNik(sheets, picNikHazard, {
     title: 'Kamu Ditunjuk sebagai PIC 📋',
     body: `Laporan baru ${id} membutuhkan tindakan kamu. Batas: ${data.batas_waktu || '-'}`,
     url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`
@@ -709,7 +724,9 @@ async function submitActionPlan(sheets, data, sheetName) {
     await sendWaNotification(noWa, msg).catch(() => {});
   }
   // [PUSH-START]
-  const reporterNik = reportRow['nik'] || reportRow['nik_pelapor'] || '';
+  const reporterNik = reportRow['nik'] || reportRow['nik_pelapor'] ||
+    await resolveNikFromWa(sheets, reportRow['no_whatsapp']).catch(() => '');
+  console.log(`[push] submitActionPlan reporterNik="${reporterNik}" id=${data.id}`);
   if (reporterNik) await sendPushToNik(sheets, reporterNik, {
     title: 'Rencana Tindakan Masuk 📋',
     body: `PIC telah submit rencana untuk laporan ${data.id}. Silakan review.`,
@@ -739,8 +756,9 @@ async function reviewActionPlan(sheets, data, sheetName) {
     await sendWaNotification(noWaPic, msg).catch(() => {});
   }
   // [PUSH-START]
-  const picNik = reportRow['nik_pic'] || '';
-  if (picNik) await sendPushToNik(sheets, picNik, decision === 'approved'
+  const picNikReview = reportRow['nik_pic'] ||
+    await resolveNikFromWa(sheets, reportRow['no_whatsapp_pic']).catch(() => '');
+  if (picNikReview) await sendPushToNik(sheets, picNikReview, decision === 'approved'
     ? { title: 'Rencana Disetujui ✅', body: `Laporan ${data.id}: rencana kamu disetujui. Mulai perbaikan!`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
     : { title: 'Rencana Ditolak ❌', body: `Laporan ${data.id}: rencana kamu ditolak. Silakan revisi.`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
   ).catch(() => {});
