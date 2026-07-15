@@ -13,8 +13,8 @@
   font-family: 'Inter', sans-serif;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
-.toast.error { background: #ef4444; }
-.toast.warning { background: #f59e0b; }
+.toast.error { background: #ef4444 !important; color: #fff !important; border: none !important; }
+.toast.warning { background: #f59e0b !important; color: #fff !important; border: none !important; }
 
 /* ===== CHANGE PASSWORD MODAL ===== */
 #changePasswordModal { display: none; position: fixed; inset: 0; z-index: 9999; align-items: center; justify-content: center; }
