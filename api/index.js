@@ -293,8 +293,11 @@ async function resolveNikFromWa(sheets, wa) {
   if (!wa) return '';
   const phone = String(wa).replace(/\D/g, '');
   if (!phone) return '';
+  // Normalise ke 62-prefix agar "081x" == "6281x" == "81x"
+  const norm = p => p.replace(/^0/, '62').replace(/^(?!62)/, '62');
+  const target = norm(phone);
   const karyawan = await getSheetData(sheets, 'Master_Karyawan');
-  const match = karyawan.find(r => String(r['NO WHATSAPP'] || '').replace(/\D/g, '') === phone);
+  const match = karyawan.find(r => norm(String(r['NO WHATSAPP'] || '').replace(/\D/g, '')) === target);
   return String(match?.['NIK'] || '').trim();
 }
 // [PUSH-END]
@@ -756,8 +759,10 @@ async function reviewActionPlan(sheets, data, sheetName) {
     await sendWaNotification(noWaPic, msg).catch(() => {});
   }
   // [PUSH-START]
+  const picWaReview = reportRow['no_whatsapp_pic'] || reportRow['no_whattsapp_pic'] || '';
   const picNikReview = reportRow['nik_pic'] ||
-    await resolveNikFromWa(sheets, reportRow['no_whatsapp_pic']).catch(() => '');
+    await resolveNikFromWa(sheets, picWaReview).catch(() => '');
+  console.log(`[push] reviewActionPlan decision=${decision} picWa="${picWaReview}" picNik="${picNikReview}" id=${data.id}`);
   if (picNikReview) await sendPushToNik(sheets, picNikReview, decision === 'approved'
     ? { title: 'Rencana Disetujui ✅', body: `Laporan ${data.id}: rencana kamu disetujui. Mulai perbaikan!`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
     : { title: 'Rencana Ditolak ❌', body: `Laporan ${data.id}: rencana kamu ditolak. Silakan revisi.`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
