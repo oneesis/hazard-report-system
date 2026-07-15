@@ -81,3 +81,31 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+
+// [PUSH-START] — Hapus blok ini untuk menonaktifkan push notifications
+self.addEventListener('push', event => {
+  if (!event.data) return;
+  let payload = {};
+  try { payload = event.data.json(); } catch { payload = { title: 'ONE-SAP', body: event.data.text() }; }
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'ONE-SAP', {
+      body: payload.body || '',
+      icon: './assets/Logo EBL.png',
+      badge: './assets/Logo EBL.png',
+      data: { url: payload.url || 'https://sap-ebl.vercel.app/index-home.html' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || 'https://sap-ebl.vercel.app/index-home.html';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes('sap-ebl') && 'focus' in c);
+      if (existing) { existing.focus(); existing.postMessage({ type: 'navigate', url }); }
+      else return clients.openWindow(url);
+    })
+  );
+});
+// [PUSH-END]

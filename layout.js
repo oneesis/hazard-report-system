@@ -86,6 +86,9 @@
         </div>
         <div class="sidebar-user-actions">
           <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>
+          <button class="sidebar-logout-btn push-notif-btn" onclick="togglePushNotification()" title="Aktifkan push notification">
+            <i class="fa-solid fa-bell-slash"></i>
+          </button>
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password">
             <i class="fa-solid fa-key"></i>
           </button>
@@ -203,6 +206,7 @@
     renderMobileNav();
     injectAdminStrip();
     if (typeof initNotificationBell === 'function') initNotificationBell();
+    if (typeof initPushNotifications === 'function') initPushNotifications();
     if (typeof refreshNotifications === 'function') {
       refreshNotifications().catch(() => {});
       // auto-refresh tiap 5 menit, hanya saat tab aktif

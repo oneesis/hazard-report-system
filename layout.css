@@ -301,6 +301,9 @@ body:has(.app-layout) {
   background: rgba(255,255,255,.08);
 }
 
+.push-notif-btn.push-notif-active { color: #fbbf24; }
+.push-notif-btn.push-notif-active:hover { color: #fde68a; background: rgba(251,191,36,.12); }
+
 /* Mobile overlay backdrop */
 .sidebar-overlay {
   display: none;

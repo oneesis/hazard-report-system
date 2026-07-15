@@ -2,6 +2,21 @@ const { google } = require('googleapis');
 const https = require('https');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const webPush = require('web-push');
+
+// [PUSH-START] VAPID setup — lazy init agar tidak crash jika env belum diset
+let _vapidSet = false;
+function ensureVapid() {
+  if (_vapidSet || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
+  webPush.setVapidDetails(
+    `mailto:${process.env.VAPID_EMAIL || 'admin@sap-ebl.vercel.app'}`,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+  _vapidSet = true;
+  return true;
+}
+// [PUSH-END]
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_TTL = '12h'; // sesi berlaku 12 jam
@@ -196,6 +211,78 @@ async function ensurePendingHeaders(sheets) {
     });
   }
 }
+
+// [PUSH-START] Push Notification helpers
+const PUSH_SUB_HEADERS = ['NIK', 'ENDPOINT', 'P256DH', 'AUTH', 'CREATED_AT'];
+
+async function ensurePushSubsSheet(sheets) {
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Push_Subscriptions!1:1' });
+    if (!(res.data.values?.[0]?.length)) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID, range: 'Push_Subscriptions!A1',
+        valueInputOption: 'RAW', requestBody: { values: [PUSH_SUB_HEADERS] }
+      });
+    }
+  } catch {
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'Push_Subscriptions' } } }] }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID, range: 'Push_Subscriptions!A1',
+        valueInputOption: 'RAW', requestBody: { values: [PUSH_SUB_HEADERS] }
+      });
+    } catch { /* sheet creation failed */ }
+  }
+}
+
+async function savePushSubscription(sheets, nik, endpoint, p256dh, auth) {
+  await ensurePushSubsSheet(sheets);
+  await removePushSubscriptionByEndpoint(sheets, endpoint).catch(() => {});
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID, range: 'Push_Subscriptions',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [[nik, endpoint, p256dh, auth, new Date().toISOString()]] }
+  });
+}
+
+async function removePushSubscriptionByEndpoint(sheets, endpoint) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Push_Subscriptions' });
+  const rows = res.data.values || [];
+  if (rows.length < 2) return;
+  const headers = rows[0].map(h => String(h).trim().toUpperCase());
+  const endpointCol = headers.indexOf('ENDPOINT');
+  if (endpointCol === -1) return;
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][endpointCol] || '').trim() === endpoint) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID, range: `Push_Subscriptions!A${i + 1}:E${i + 1}`,
+        valueInputOption: 'RAW', requestBody: { values: [['', '', '', '', '']] }
+      });
+    }
+  }
+}
+
+async function sendPushToNik(sheets, nik, payload) {
+  if (!nik || !ensureVapid()) return;
+  try {
+    const allSubs = await getSheetData(sheets, 'Push_Subscriptions');
+    const userSubs = allSubs.filter(r => String(r['NIK'] || '').trim() === String(nik).trim() && r['ENDPOINT']);
+    for (const sub of userSubs) {
+      try {
+        await webPush.sendNotification(
+          { endpoint: sub['ENDPOINT'], keys: { p256dh: sub['P256DH'], auth: sub['AUTH'] } },
+          JSON.stringify(payload)
+        );
+      } catch (err) {
+        if (err.statusCode === 410) await removePushSubscriptionByEndpoint(sheets, sub['ENDPOINT']).catch(() => {});
+      }
+    }
+  } catch { /* jangan crash jika push gagal */ }
+}
+// [PUSH-END]
 
 async function getKaryawan(sheets, auth) {
   if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
@@ -523,7 +610,13 @@ async function submitHazardReport(sheets, data) {
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
   await writeWaStatusToSheet(sheets, 'Hazard_Report', id, waStatus);
-
+  // [PUSH-START]
+  if (data.nik_pic) await sendPushToNik(sheets, data.nik_pic, {
+    title: 'Kamu Ditunjuk sebagai PIC 📋',
+    body: `Laporan baru ${id} membutuhkan tindakan kamu. Batas: ${data.batas_waktu || '-'}`,
+    url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`
+  }).catch(() => {});
+  // [PUSH-END]
   return { status: 'success', message: 'Hazard Report berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
@@ -567,7 +660,13 @@ async function submitInspectionReport(sheets, data) {
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
   await writeWaStatusToSheet(sheets, sheetName, id, waStatus);
-
+  // [PUSH-START]
+  if (data.nik_pic) await sendPushToNik(sheets, data.nik_pic, {
+    title: 'Kamu Ditunjuk sebagai PIC 📋',
+    body: `Laporan inspeksi baru ${id} membutuhkan tindakan kamu. Batas: ${data.batas_waktu || '-'}`,
+    url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`
+  }).catch(() => {});
+  // [PUSH-END]
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
@@ -608,6 +707,14 @@ async function submitActionPlan(sheets, data, sheetName) {
       `Silakan berikan persetujuan:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
     await sendWaNotification(noWa, msg).catch(() => {});
   }
+  // [PUSH-START]
+  const reporterNik = reportRow['nik'] || reportRow['nik_pelapor'] || '';
+  if (reporterNik) await sendPushToNik(sheets, reporterNik, {
+    title: 'Rencana Tindakan Masuk 📋',
+    body: `PIC telah submit rencana untuk laporan ${data.id}. Silakan review.`,
+    url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+  }).catch(() => {});
+  // [PUSH-END]
   return { status: 'success', message: 'Rencana tindakan berhasil dikirim ke pelapor.' };
 }
 
@@ -630,6 +737,13 @@ async function reviewActionPlan(sheets, data, sheetName) {
       : `Halo ${namaPic}, rencana tindakan untuk laporan *${data.id}* ❌ *DITOLAK* oleh pelapor.\n\n💬 Komentar: ${data.comment}\n\nSilakan revisi rencana:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
     await sendWaNotification(noWaPic, msg).catch(() => {});
   }
+  // [PUSH-START]
+  const picNik = reportRow['nik_pic'] || '';
+  if (picNik) await sendPushToNik(sheets, picNik, decision === 'approved'
+    ? { title: 'Rencana Disetujui ✅', body: `Laporan ${data.id}: rencana kamu disetujui. Mulai perbaikan!`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
+    : { title: 'Rencana Ditolak ❌', body: `Laporan ${data.id}: rencana kamu ditolak. Silakan revisi.`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
+  ).catch(() => {});
+  // [PUSH-END]
   return { status: 'success', message: decision === 'approved' ? 'Rencana disetujui.' : 'Rencana ditolak, PIC akan merevisi.' };
 }
 
@@ -668,6 +782,18 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
       requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
     });
   }
+  // [PUSH-START] — push ke pelapor saat laporan CLOSED
+  if (data.status_perbaikan === 'CLOSED') {
+    const rowData = {};
+    headers.forEach((h, i) => { rowData[h] = rows[rowIndex][i] ?? ''; });
+    const reporterNik = rowData['nik'] || rowData['nik_pelapor'] || '';
+    if (reporterNik) await sendPushToNik(sheets, reporterNik, {
+      title: 'Laporan Selesai ✅',
+      body: `Laporan ${data.id} telah berhasil ditutup.`,
+      url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+    }).catch(() => {});
+  }
+  // [PUSH-END]
   return { status: 'success', message: 'Laporan berhasil diperbarui.', id: data.id, foto_perbaikan_url: fotoPerbaikanUrl };
 }
 
@@ -780,6 +906,16 @@ module.exports = async (req, res) => {
           result = await reviewActionPlan(sheets, data, sheetName);
           break;
         }
+        // [PUSH-START]
+        case 'push_subscribe':
+          await savePushSubscription(sheets, authUser.nik, data.endpoint, data.p256dh, data.auth);
+          result = { status: 'success', message: 'Push subscription saved.' };
+          break;
+        case 'push_unsubscribe':
+          await removePushSubscriptionByEndpoint(sheets, data.endpoint);
+          result = { status: 'success', message: 'Push subscription removed.' };
+          break;
+        // [PUSH-END]
         default: throw new Error('Action tidak dikenali: ' + action);
       }
       return res.status(200).json(result);
