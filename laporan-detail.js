@@ -18,7 +18,10 @@ function isPic(r) {
   if (nikPic && nikPic === String(u.nik || '').trim()) return true;
   const waPic = String(getReportValue(r, ['no_whatsapp_pic'], '') || '').replace(/\D/g, '');
   const uWa   = String(u.no_whatsapp || '').replace(/\D/g, '');
-  return !!(waPic && uWa && waPic === uWa);
+  if (waPic && uWa && waPic === uWa) return true;
+  const namaPic = String(getReportValue(r, ['nama_pic'], '') || '').trim().toLowerCase();
+  const uNama   = String(u.nama || '').trim().toLowerCase();
+  return !!(namaPic && uNama && namaPic === uNama);
 }
 
 function renderWaBadge(r, isInspection) {
