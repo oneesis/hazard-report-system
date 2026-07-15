@@ -89,14 +89,18 @@ async function initDetailPage() {
       document.getElementById('photoZoomOverlay')?.classList.remove('active');
     });
   } catch (e) {
-    showError('Gagal memuat data: ' + e.message);
+    if (typeof invalidateReportsCache === 'function') invalidateReportsCache();
+    showError('Gagal memuat data: ' + e.message, true);
   }
 }
 
-function showError(msg) {
+function showError(msg, canRetry = false) {
   document.getElementById('detailLoading').style.display = 'none';
-  document.getElementById('detailError').style.display = '';
+  const errEl = document.getElementById('detailError');
+  errEl.style.display = '';
   document.getElementById('detailErrorMsg').textContent = msg;
+  const retryBtn = document.getElementById('detailErrorRetry');
+  if (retryBtn) retryBtn.style.display = canRetry ? '' : 'none';
 }
 
 function renderDetail(r) {

@@ -157,8 +157,15 @@ async function fetchHazardReports() {
 }
 
 let _fetchAllReportsInFlight = null;
+let _fetchAllReportsCache = null; // { data, ts }
+const _REPORTS_TTL = 60_000;
+
+function invalidateReportsCache() { _fetchAllReportsCache = null; }
 
 async function fetchAllReports() {
+  if (_fetchAllReportsCache && Date.now() - _fetchAllReportsCache.ts < _REPORTS_TTL) {
+    return _fetchAllReportsCache.data;
+  }
   if (_fetchAllReportsInFlight) return _fetchAllReportsInFlight;
   _fetchAllReportsInFlight = (async () => {
     let response;
@@ -191,7 +198,9 @@ async function fetchAllReports() {
       throw new Error(result.message || "Gagal memuat data.");
     }
 
-    return result.data || [];
+    const data = result.data || [];
+    _fetchAllReportsCache = { data, ts: Date.now() };
+    return data;
   })().finally(() => { _fetchAllReportsInFlight = null; });
   return _fetchAllReportsInFlight;
 }

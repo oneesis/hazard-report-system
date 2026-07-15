@@ -85,7 +85,7 @@
           <div class="sidebar-user-role">${safe(role || 'USER')}</div>
         </div>
         <div class="sidebar-user-actions">
-          <div id="notificationBell" class="sidebar-notif-bell"></div>
+          <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password">
             <i class="fa-solid fa-key"></i>
           </button>
@@ -182,12 +182,22 @@
     sheet.style.display = 'flex';
   };
 
+  function closeSidebar() {
+    document.getElementById('appSidebar')?.classList.remove('open');
+    document.getElementById('sidebarOverlay')?.classList.remove('active');
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    const overlay = document.getElementById('sidebarOverlay');
-    overlay?.addEventListener('click', () => {
-      document.getElementById('appSidebar')?.classList.remove('open');
-      overlay.classList.remove('active');
-    });
+    document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
+
+    // Swipe kiri untuk tutup sidebar
+    let _touchStartX = 0;
+    document.addEventListener('touchstart', e => { _touchStartX = e.touches[0].clientX; }, { passive: true });
+    document.addEventListener('touchend', e => {
+      const sidebar = document.getElementById('appSidebar');
+      if (!sidebar?.classList.contains('open')) return;
+      if (_touchStartX - e.changedTouches[0].clientX > 72) closeSidebar();
+    }, { passive: true });
 
     renderSidebar();
     renderMobileNav();

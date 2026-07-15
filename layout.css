@@ -395,6 +395,13 @@ body:has(.app-layout) {
   .app-topbar {
     display: flex;
   }
+  /* Topbar bell: tampilkan sebagai item nav kecil */
+  #notificationBell .notification-button {
+    color: var(--color-text);
+  }
+  #notificationBell .notification-button:hover {
+    background: #f1f5f9;
+  }
 }
 
 /* =============================================
