@@ -22,6 +22,7 @@ async function initHomePage() {
 
   try {
     const reports = await refreshNotifications();
+    renderActionBanner(reports);
     renderMyReports(reports);
     renderQuickStats(reports);
   } catch (e) {
@@ -178,4 +179,59 @@ function renderQuickStats(reports) {
     set('dailyClosed', closed);
     set('dailyOpen',   open);
   }
+}
+
+function computeActionItems(reports, user) {
+  const nik  = String(user?.nik  || '').trim().toLowerCase();
+  const nama = String(user?.nama || '').trim().toLowerCase();
+  const wa   = String(user?.no_whatsapp || '').replace(/\D/g, '');
+
+  let rencana = 0, review = 0, closing = 0;
+
+  for (const r of (reports || [])) {
+    const status     = String(r.status_perbaikan || 'OPEN').toUpperCase();
+    const planStatus = String(r.plan_status || '').trim().toLowerCase();
+    if (status === 'CLOSED') continue;
+
+    const nikPic  = String(r.nik_pic  || '').trim().toLowerCase();
+    const namaPic = String(r.nama_pic || '').trim().toLowerCase();
+    const waPic   = String(r.no_whatsapp_pic || '').replace(/\D/g, '');
+    const asPic   = (nik && nikPic === nik) || (wa && waPic && waPic === wa) || (nama && namaPic === nama);
+
+    const nikRep  = String(r.nik  || r.nik_pelapor  || '').trim().toLowerCase();
+    const namaRep = String(r.nama || r.nama_pelapor || '').trim().toLowerCase();
+    const asRep   = (nik && nikRep === nik) || (nama && namaRep === nama);
+
+    if (asPic && status === 'OPEN' && !planStatus)          rencana++;
+    if (asRep && planStatus === 'pending_review')            review++;
+    if (asPic && planStatus === 'approved')                  closing++;
+  }
+
+  const items = [];
+  if (rencana) items.push({ count: rencana, label: `laporan menunggu rencana tindakan${rencana > 1 ? '' : ''} kamu`, color: 'orange', icon: 'fa-pen-to-square' });
+  if (review)  items.push({ count: review,  label: `rencana PIC menunggu review kamu`,                               color: 'blue',   icon: 'fa-magnifying-glass' });
+  if (closing) items.push({ count: closing, label: `laporan siap untuk closing kamu`,                                color: 'green',  icon: 'fa-flag-checkered' });
+  return items;
+}
+
+function renderActionBanner(reports) {
+  const el = document.getElementById('actionBanner');
+  if (!el) return;
+  const user  = getCurrentUser();
+  const role  = String(user?.role || '').toUpperCase().replace(/\s+/g, '_');
+  const isAdm = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const items = computeActionItems(reports, user);
+  if (!items.length) { el.style.display = 'none'; return; }
+
+  const href = isAdm ? 'laporan-admin.html' : 'dashboard.html';
+  el.style.display = '';
+  el.innerHTML = `<div class="action-banner">
+    <div class="action-banner-title"><i class="fa-solid fa-circle-exclamation"></i> Perlu Tindakan Kamu</div>
+    ${items.map(it => `
+      <a href="${href}" class="action-banner-item action-banner-item--${it.color}">
+        <span class="action-banner-count">${it.count}</span>
+        <span class="action-banner-label"><i class="fa-solid ${it.icon}"></i> ${it.count} ${it.label}</span>
+        <i class="fa-solid fa-arrow-right action-banner-arrow"></i>
+      </a>`).join('')}
+  </div>`;
 }
