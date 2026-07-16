@@ -264,9 +264,7 @@ body:has(.app-layout) {
   font-size: .82rem;
   font-weight: 600;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .sidebar-user-role {
