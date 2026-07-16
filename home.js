@@ -120,7 +120,8 @@ function renderMyReports(reports, query = '') {
     const status  = (getReportStatus(r) || 'OPEN').toUpperCase();
     const id      = escapeHTML(getReportId(r) || '-');
     const desc    = escapeHTML((r.deskripsi_bahaya || r.temuan || '-').substring(0, 60));
-    const date    = r.tanggal_laporan ? new Date(r.tanggal_laporan).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '-';
+    const dateVal = r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || r.timestamp || '';
+    const date    = dateVal ? new Date(dateVal).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '';
     const due     = r.batas_waktu || r.due_date || '';
     const dueDate = due ? new Date(due) : null;
     const isOverdue = dueDate && !isNaN(dueDate) && status !== 'CLOSED' && dueDate < new Date();
@@ -131,7 +132,7 @@ function renderMyReports(reports, query = '') {
       <div class="report-item-body">
         <div class="report-item-id">${id}${isOverdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</div>
         <div class="report-item-desc">${desc}</div>
-        <div class="report-item-meta">${date}</div>
+        ${date ? `<div class="report-item-meta">${date}</div>` : ''}
       </div>
       <span class="report-item-badge ${badgeCls}">${status}</span>
     </a>`;
