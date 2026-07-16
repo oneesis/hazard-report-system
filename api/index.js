@@ -297,8 +297,10 @@ async function resolveNikFromWa(sheets, wa) {
   const norm = p => p.replace(/^0/, '62').replace(/^(?!62)/, '62');
   const target = norm(phone);
   const karyawan = await getSheetData(sheets, 'Master_Karyawan');
-  const match = karyawan.find(r => norm(String(r['NO WHATSAPP'] || '').replace(/\D/g, '')) === target);
-  return String(match?.['NIK'] || '').trim();
+  const match = karyawan.find(r => norm(String(r['no_whatsapp'] || '').replace(/\D/g, '')) === target);
+  const nik = String(match?.['nik'] || '').trim();
+  console.log(`[push] resolveNikFromWa wa="${wa}" target="${target}" found=${!!match} nik="${nik}"`);
+  return nik;
 }
 // [PUSH-END]
 

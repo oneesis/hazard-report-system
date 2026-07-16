@@ -113,8 +113,8 @@ function syncNotificationHistory(reports) {
     } else if (prev.status !== status) {
       kind = "status";
       readIds.delete(id);
-    } else if (prev.planStatus !== undefined && prev.planStatus !== planStatus && planStatus === 'rejected') {
-      kind = "plan_rejected";
+    } else if (prev.planStatus !== undefined && prev.planStatus !== planStatus && (planStatus === 'rejected' || planStatus === 'approved')) {
+      kind = planStatus === 'rejected' ? "plan_rejected" : "plan_approved";
       readIds.delete(id);
     } else if (!inHistory && isRecentReport(report)) {
       // PIC / user lain yang baru login tetap dapat notifikasi laporan baru
@@ -188,6 +188,9 @@ function buildNotificationMessage(report, kind, relation) {
   }
   if (kind === "plan_rejected") {
     return `Rencana tindakan laporan ${id} ditolak pelapor. Silakan revisi rencana kamu.`;
+  }
+  if (kind === "plan_approved") {
+    return `Rencana tindakan laporan ${id} disetujui. Silakan lanjutkan perbaikan.`;
   }
 
   const typeLabel = getReportTypeLabel(report);
