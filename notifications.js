@@ -245,8 +245,10 @@ function buildNotificationItems(reports) {
     })
     .filter(Boolean)
     .sort((a, b) => {
-      const da = new Date(a.date);
-      const db = new Date(b.date);
+      // prioritas: updatedAt (waktu aktivitas terbaru), fallback ke date (tanggal laporan)
+      const ua = b.updatedAt || 0, ub = a.updatedAt || 0;
+      if (ua !== ub) return ua - ub;
+      const da = new Date(a.date), db = new Date(b.date);
       if (!isNaN(da) && !isNaN(db)) return db - da;
       return String(b.id).localeCompare(String(a.id));
     });
