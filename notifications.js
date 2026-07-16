@@ -232,6 +232,7 @@ function buildNotificationItems(reports) {
         relation,
         status,
         unread: !readIds.has(entry.id),
+        updatedAt: entry.updatedAt || 0,
         message:
           entry.message ||
           buildNotificationMessage(report, entry.kind, relation),
