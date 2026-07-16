@@ -6,7 +6,7 @@ function getNotificationUserKey() {
 }
 
 function storageKey(suffix) {
-  return `report_notification_${suffix}_v3_${getNotificationUserKey()}`;
+  return `report_notification_${suffix}_v4_${getNotificationUserKey()}`;
 }
 
 function loadReadIds() {
@@ -66,10 +66,7 @@ function seedNotificationsFromReports(reports) {
   getVisibleReports(reports).forEach(report => {
     const id = getReportId(report);
     if (!id) return;
-    snapshot[id] = {
-      status: getReportStatus(report),
-      planStatus: String(report.plan_status || '').trim().toLowerCase(),
-    };
+    snapshot[id] = { status: getReportStatus(report) };
   });
   saveSnapshot(snapshot);
   localStorage.setItem(storageKey("init"), "1");
@@ -104,30 +101,38 @@ function syncNotificationHistory(reports) {
     const planStatus = String(report.plan_status || '').trim().toLowerCase();
     const relation = getUserRelation(report) || "admin";
     const prev = snapshot[id];
+    // planStatus tracking via history entry (bukan snapshot) agar tahan reset
+    const existingEntry = history.find(e => e.id === id);
     let kind = null;
-
-    const inHistory = history.some(item => item.id === id);
 
     if (!prev) {
       kind = "new";
     } else if (prev.status !== status) {
       kind = "status";
       readIds.delete(id);
-    } else if (prev.planStatus !== undefined && prev.planStatus !== planStatus && (planStatus === 'rejected' || planStatus === 'approved')) {
+    } else if ((existingEntry?.planStatus ?? '') !== planStatus && (planStatus === 'rejected' || planStatus === 'approved')) {
       kind = planStatus === 'rejected' ? "plan_rejected" : "plan_approved";
       readIds.delete(id);
-    } else if (!inHistory && isRecentReport(report)) {
+    } else if (!existingEntry && isRecentReport(report)) {
       // PIC / user lain yang baru login tetap dapat notifikasi laporan baru
       kind = "new";
     }
 
-    if (!kind) return;
+    if (!kind) {
+      // Update planStatus di history entry untuk deteksi perubahan berikutnya
+      if (existingEntry && (existingEntry.planStatus ?? '') !== planStatus) {
+        existingEntry.planStatus = planStatus;
+        changed = true;
+      }
+      return;
+    }
 
-    snapshot[id] = { status, planStatus };
+    snapshot[id] = { status };
 
     upsertHistoryEntry(history, {
       id,
       kind,
+      planStatus,
       relation,
       status,
       message: buildNotificationMessage(report, kind, relation),
