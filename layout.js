@@ -79,10 +79,12 @@
       <div class="sidebar-spacer"></div>
 
       <div class="sidebar-user-card">
-        <div class="sidebar-user-avatar">${safe(initials)}</div>
-        <div class="sidebar-user-info">
-          <div class="sidebar-user-name">${safe(user?.nama || 'User')}</div>
-          <div class="sidebar-user-role">${safe(role || 'USER')}</div>
+        <div class="sidebar-user-top">
+          <div class="sidebar-user-avatar">${safe(initials)}</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name">${safe(user?.nama || 'User')}</div>
+            <div class="sidebar-user-role">${safe(role || 'USER')}</div>
+          </div>
         </div>
         <div class="sidebar-user-actions">
           <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>

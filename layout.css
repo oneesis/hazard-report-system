@@ -234,11 +234,17 @@ body:has(.app-layout) {
 /* User card at bottom */
 .sidebar-user-card {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
   border-top: 1px solid rgba(255,255,255,.1);
   flex-shrink: 0;
+}
+
+.sidebar-user-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .sidebar-user-avatar {
@@ -264,7 +270,9 @@ body:has(.app-layout) {
   font-size: .82rem;
   font-weight: 600;
   color: #fff;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-user-role {
@@ -279,7 +287,7 @@ body:has(.app-layout) {
 .sidebar-user-actions {
   display: flex;
   gap: 2px;
-  flex-shrink: 0;
+  align-items: center;
 }
 
 .sidebar-logout-btn {
