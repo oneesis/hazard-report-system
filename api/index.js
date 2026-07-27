@@ -20,9 +20,51 @@ function ensureVapid() {
 // [PUSH-END]
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const TOKEN_TTL = '12h'; // sesi berlaku 12 jam
+const TOKEN_TTL = '12h';
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+
+// ===== RATE LIMITING =====
+// In-memory per instance — efektif untuk throttle brute-force pada satu instance
+const _loginAttempts = new Map(); // nik → { count, firstAt, lockedUntil }
+const RATE_WINDOW_MS  = 15 * 60 * 1000; // 15 menit
+const MAX_ATTEMPTS    = 5;
+const LOCKOUT_MS      = 15 * 60 * 1000;
+
+function checkLoginRateLimit(nik) {
+  const key = String(nik || '').trim().toLowerCase();
+  const now = Date.now();
+  const e = _loginAttempts.get(key);
+  if (!e) return { ok: true };
+  if (e.lockedUntil && now < e.lockedUntil) {
+    const mnt = Math.ceil((e.lockedUntil - now) / 60000);
+    return { ok: false, message: `Terlalu banyak percobaan. Coba lagi dalam ${mnt} menit.` };
+  }
+  if (now - e.firstAt > RATE_WINDOW_MS) { _loginAttempts.delete(key); return { ok: true }; }
+  return { ok: true };
+}
+
+function recordFailedLogin(nik) {
+  const key = String(nik || '').trim().toLowerCase();
+  const now = Date.now();
+  const e = _loginAttempts.get(key) || { count: 0, firstAt: now };
+  if (now - e.firstAt > RATE_WINDOW_MS) { _loginAttempts.set(key, { count: 1, firstAt: now }); return; }
+  e.count++;
+  if (e.count >= MAX_ATTEMPTS) e.lockedUntil = now + LOCKOUT_MS;
+  _loginAttempts.set(key, e);
+}
+
+function clearFailedLogins(nik) {
+  _loginAttempts.delete(String(nik || '').trim().toLowerCase());
+}
+
+// Password lemah yang wajib diganti
+const WEAK_PASSWORDS = new Set(['12345','123456','1234567','12345678','123456789','1234567890',
+  'password','password1','qwerty','qwerty123','abc123','111111','000000','admin','admin123']);
+
+function isWeakPassword(pw) {
+  return WEAK_PASSWORDS.has(String(pw || '').trim().toLowerCase());
+}
 const INSPECTION_SHEETS = ['INS_CB', 'INS_JA', 'INS_MD', 'INS_KG', 'INS_SP', 'INS_T', 'INS_TB', 'INS_WS'];
 
 function getClients() {
@@ -138,13 +180,25 @@ function requireAuth(req) {
 }
 
 async function login(sheets, nik, password) {
+  const rateCheck = checkLoginRateLimit(nik);
+  if (!rateCheck.ok) return { status: 'error', message: rateCheck.message };
+
   const data = await getSheetData(sheets, 'Master_Karyawan');
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
-  // Pesan error disamakan agar tidak membocorkan NIK mana yang terdaftar
-  if (!user || normalizeRole(user['ROLE']) === 'DELETED' || !verifyPassword(password, user['PASSWORD']))
+  if (!user || normalizeRole(user['ROLE']) === 'DELETED' || !verifyPassword(password, user['PASSWORD'])) {
+    recordFailedLogin(nik);
     return { status: 'error', message: 'NIK atau password salah.' };
+  }
+  clearFailedLogins(nik);
+
+  const storedPw = String(user['PASSWORD'] || '');
+  // Password dianggap lemah jika masih plaintext (belum di-hash) ATAU termasuk daftar password umum
+  const isPlaintext = !/^\$2[aby]\$/.test(storedPw);
+  const forceChange = isPlaintext || isWeakPassword(password);
+
   return {
     status: 'success',
+    ...(forceChange ? { force_change_password: true } : {}),
     user: {
       nik: String(user['NIK'] || '').trim(),
       nama: String(user['NAMA'] || '').trim(),
@@ -159,8 +213,10 @@ async function login(sheets, nik, password) {
 }
 
 async function changePassword(sheets, nik, oldPassword, newPassword) {
-  if (!newPassword || newPassword.length < 6)
-    throw Object.assign(new Error('Password baru minimal 6 karakter.'), { httpStatus: 400 });
+  if (!newPassword || newPassword.length < 8)
+    throw Object.assign(new Error('Password baru minimal 8 karakter.'), { httpStatus: 400 });
+  if (isWeakPassword(newPassword))
+    throw Object.assign(new Error('Password terlalu umum. Gunakan kombinasi huruf, angka, atau simbol.'), { httpStatus: 400 });
 
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
   const rows = res.data.values || [];

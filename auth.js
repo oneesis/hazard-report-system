@@ -256,7 +256,7 @@ function openChangePasswordModal() {
         </div>
         <div class="cp-field">
           <label>Password Baru</label>
-          <input type="password" id="cpNew" placeholder="Minimal 6 karakter" autocomplete="new-password">
+          <input type="password" id="cpNew" placeholder="Minimal 8 karakter" autocomplete="new-password">
         </div>
         <div class="cp-field">
           <label>Konfirmasi Password Baru</label>
@@ -292,7 +292,7 @@ async function submitChangePassword() {
 
   msg.className = 'cp-msg';
   if (!oldPw || !newPw || !confirm) { msg.textContent = 'Semua kolom wajib diisi.'; return; }
-  if (newPw.length < 6) { msg.textContent = 'Password baru minimal 6 karakter.'; return; }
+  if (newPw.length < 8) { msg.textContent = 'Password baru minimal 8 karakter.'; return; }
   if (newPw !== confirm) { msg.textContent = 'Konfirmasi password tidak cocok.'; return; }
 
   const btn = document.querySelector('.cp-btn-submit');
@@ -317,6 +317,24 @@ async function submitChangePassword() {
     btn.textContent = 'Simpan';
   }
 }
+
+// Force password change jika login dengan password lemah/default
+document.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('onesap_force_pw')) {
+    sessionStorage.removeItem('onesap_force_pw');
+    // Tampilkan banner peringatan + buka modal ganti password
+    const banner = document.createElement('div');
+    banner.id = 'forcePwBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;' +
+      'padding:10px 16px;font-size:.85rem;font-weight:600;text-align:center;';
+    banner.innerHTML = '⚠️ Password kamu terlalu lemah atau masih default. Wajib ganti sekarang untuk keamanan akun.';
+    document.body.prepend(banner);
+    // Buka modal setelah layout siap
+    setTimeout(() => {
+      if (typeof openChangePasswordModal === 'function') openChangePasswordModal();
+    }, 500);
+  }
+});
 
 // Register Service Worker for PWA offline capability
 if ("serviceWorker" in navigator) {

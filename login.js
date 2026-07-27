@@ -47,6 +47,9 @@ if (loginForm) {
       }
 
       saveUserSession(result.user, result.token);
+      if (result.force_change_password) {
+        sessionStorage.setItem('onesap_force_pw', '1');
+      }
       window.location.href = "index-home.html";
     } catch (err) {
       errorMessage.textContent = err.message;
