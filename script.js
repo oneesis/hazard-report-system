@@ -169,7 +169,6 @@ function autoFillData() {
   document.getElementById("nik").value = selected["NIK"] || "";
   document.getElementById("jabatan").value = selected["JABATAN"] || "";
   document.getElementById("departemen").value = selected["DEPARTEMEN"] || "";
-  document.getElementById("no_whatsapp").value = selected["NO WHATSAPP"] || "";
 }
 
 function clearAutoFill() {
@@ -327,11 +326,10 @@ function autoFillDataPic() {
 
   document.getElementById("jabatan_pic").value = selected["JABATAN"] || "";
   document.getElementById("departemen_pic").value = selected["DEPARTEMEN"] || "";
-  document.getElementById("no_whatsapp_pic").value = selected["NO WHATSAPP"] || "";
 }
 
 function clearAutoFillPic() {
-  ["jabatan_pic", "departemen_pic", "no_whatsapp_pic"].forEach(id => {
+  ["jabatan_pic", "departemen_pic"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -1186,7 +1184,12 @@ function getFormData() {
     nama_pic: document.getElementById("nama_pic")?.value || "",
     jabatan_pic: document.getElementById("jabatan_pic")?.value || "",
     departemen_pic: document.getElementById("departemen_pic")?.value || "",
-    no_whatsapp_pic: document.getElementById("no_whatsapp_pic")?.value || "",
+    nik_pic: (() => {
+      const p = document.getElementById("perusahaan_pic")?.value || "";
+      const s = document.getElementById("subcont2")?.value || "";
+      const n = document.getElementById("nama_pic")?.value || "";
+      return masterKaryawan.find(r => r["PERUSAHAAN"] === p && r["SUBCONT"] === s && r["NAMA"] === n)?.["NIK"] || "";
+    })(),
     batas_waktu: document.getElementById("batas_waktu")?.value || "",
 
     pernyataan: document.getElementById("pernyataan")?.checked ? "Ya" : "Tidak",
@@ -1294,7 +1297,6 @@ async function autofillDataPelapor() {
     const nikField = document.getElementById("nik");
     const jabatanField = document.getElementById("jabatan");
     const departemanField = document.getElementById("departemen");
-    const noWaField = document.getElementById("no_whatsapp");
 
     // Set dropdown values without triggering clearAutoFill
     if (perusahaan && userRecord["PERUSAHAAN"]) {
@@ -1334,9 +1336,8 @@ async function autofillDataPelapor() {
     if (nikField) nikField.value = userRecord["NIK"] || "";
     if (jabatanField) jabatanField.value = userRecord["JABATAN"] || "";
     if (departemanField) departemanField.value = userRecord["DEPARTEMEN"] || "";
-    if (noWaField) noWaField.value = userRecord["NO WHATSAPP"] || "";
 
-    [nikField, jabatanField, departemanField, noWaField].forEach(el => {
+    [nikField, jabatanField, departemanField].forEach(el => {
       if (el) el.readOnly = true;
     });
 

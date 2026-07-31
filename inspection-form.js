@@ -241,10 +241,7 @@ function populatePelaporOptions() {
     getEmployeeValue(employee || {}, ["JABATAN"]) || user.jabatan || "";
   document.getElementById("departemen").value =
     getEmployeeValue(employee || {}, ["DEPARTEMEN"]) || user.departemen || "";
-  document.getElementById("no_whatsapp").value =
-    getEmployeeValue(employee || {}, ["NO WHATSAPP", "NO_WHATSAPP"]) || user.no_whatsapp || "";
-
-  ["nik", "jabatan", "departemen", "no_whatsapp"].forEach(id => {
+  ["nik", "jabatan", "departemen"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.readOnly = true;
   });
@@ -405,7 +402,7 @@ function autoFillData() {
     item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont && item["NAMA"] === nama
   );
   if (!selected) {
-    ["nik", "jabatan", "departemen", "no_whatsapp"].forEach(id => {
+    ["nik", "jabatan", "departemen"].forEach(id => {
       const field = document.getElementById(id);
       if (field) field.value = "";
     });
@@ -414,11 +411,10 @@ function autoFillData() {
   document.getElementById("nik").value = selected["NIK"] || "";
   document.getElementById("jabatan").value = selected["JABATAN"] || "";
   document.getElementById("departemen").value = selected["DEPARTEMEN"] || "";
-  document.getElementById("no_whatsapp").value = selected["NO WHATSAPP"] || "";
 }
 
 function clearAutoFill() {
-  ["nik", "jabatan", "departemen", "no_whatsapp"].forEach(id => {
+  ["nik", "jabatan", "departemen"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -1081,11 +1077,10 @@ function autoFillDataPic() {
   if (!selected) return;
   document.getElementById("jabatan_pic").value = selected["JABATAN"] || "";
   document.getElementById("departemen_pic").value = selected["DEPARTEMEN"] || "";
-  document.getElementById("no_whatsapp_pic").value = selected["NO WHATSAPP"] || "";
 }
 
 function clearAutoFillPic() {
-  ["jabatan_pic", "departemen_pic", "no_whatsapp_pic"].forEach(id => {
+  ["jabatan_pic", "departemen_pic"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });

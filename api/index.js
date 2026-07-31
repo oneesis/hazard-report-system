@@ -583,6 +583,25 @@ function mapInspectionValue(header, data) {
   return '';
 }
 
+async function resolveWaFromNik(sheets, nik) {
+  if (!nik) return '';
+  const rows = await getSheetData(sheets, 'Master_Karyawan');
+  const match = rows.find(r => String(r['NIK'] || '').trim() === String(nik).trim());
+  return String(match?.['NO WHATSAPP'] || '').replace(/\D/g, '');
+}
+
+async function resolveWaByIdentity(sheets, perusahaan, subcont, nama) {
+  if (!nama) return '';
+  const rows = await getSheetData(sheets, 'Master_Karyawan');
+  const norm = s => String(s || '').trim().toUpperCase();
+  const match = rows.find(r =>
+    norm(r['NAMA']) === norm(nama) &&
+    norm(r['PERUSAHAAN']) === norm(perusahaan) &&
+    norm(r['SUBCONT'] || r['PERUSAHAAN']) === norm(subcont || perusahaan)
+  );
+  return String(match?.['NO WHATSAPP'] || '').replace(/\D/g, '');
+}
+
 async function sendWaNotification(target, message) {
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return false;
@@ -658,6 +677,16 @@ async function submitHazardReport(sheets, data) {
   if (data.upload_foto_bahaya)
     fotoBahayaUrl = await saveMultipleImagesToDrive(data.upload_foto_bahaya, process.env.FOLDER_HAZARD_ID, id + '-Hazard');
 
+  // Resolve WA dari master data jika tidak dikirim dari form
+  if (!data.no_whatsapp && data.nik)
+    data.no_whatsapp = await resolveWaFromNik(sheets, data.nik).catch(() => '');
+  if (!data.no_whatsapp_pic) {
+    if (data.nik_pic)
+      data.no_whatsapp_pic = await resolveWaFromNik(sheets, data.nik_pic).catch(() => '');
+    else if (data.nama_pic)
+      data.no_whatsapp_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont2, data.nama_pic).catch(() => '');
+  }
+
   const row = [
     id, new Date().toISOString(), data.perusahaan, data.subcont1, data.nama, data.nik,
     data.jabatan, data.departemen, data.no_whatsapp, data.tanggal_kejadian, data.shift_kejadian,
@@ -712,6 +741,16 @@ async function submitInspectionReport(sheets, data) {
   let fotoInspeksiUrl = '';
   if (data.upload_foto_inspeksi)
     fotoInspeksiUrl = await saveMultipleImagesToDrive(data.upload_foto_inspeksi, process.env.FOLDER_HAZARD_ID, id + '-Inspection');
+
+  // Resolve WA dari master data jika tidak dikirim dari form
+  if (!data.no_whatsapp && data.nik)
+    data.no_whatsapp = await resolveWaFromNik(sheets, data.nik).catch(() => '');
+  if (!data.no_whatsapp_pic) {
+    if (data.nik_pic)
+      data.no_whatsapp_pic = await resolveWaFromNik(sheets, data.nik_pic).catch(() => '');
+    else if (data.nama_pic)
+      data.no_whatsapp_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont2, data.nama_pic).catch(() => '');
+  }
 
   const headers = await getSheetHeaders(sheets, sheetName);
   const rowData = { ...data, id, timestamp: new Date().toISOString(), upload_foto_inspeksi: fotoInspeksiUrl, status_perbaikan: 'OPEN' };
@@ -910,14 +949,13 @@ module.exports = async (req, res) => {
                 if (!isAdminOrAbove(auth.role)) delete r['ROLE'];
                 return r;
               }
-              // Perusahaan lain: hanya field yang dibutuhkan form & notifikasi PIC
+              // Perusahaan lain: hanya field minimum untuk dropdown PIC (tanpa WA)
               return {
-                PERUSAHAAN:    r['PERUSAHAAN']   || '',
-                SUBCONT:       r['SUBCONT']       || '',
-                NAMA:          r['NAMA']          || '',
-                NIK:           r['NIK']           || '',
-                JABATAN:       r['JABATAN']       || '',
-                'NO WHATSAPP': r['NO WHATSAPP']   || '',
+                PERUSAHAAN: r['PERUSAHAAN'] || '',
+                SUBCONT:    r['SUBCONT']    || '',
+                NAMA:       r['NAMA']       || '',
+                NIK:        r['NIK']        || '',
+                JABATAN:    r['JABATAN']    || '',
               };
             });
           }
