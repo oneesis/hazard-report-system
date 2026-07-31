@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', initHomePage);
 
+let _currentObj = null;
+
 const INSPECTION_AREAS = [
   { type: 'INS_CB', name: 'Conveyor Belt',     sub: 'Area Produksi',    icon: 'fa-gears' },
   { type: 'INS_JA', name: 'Jalan Angkut',       sub: 'Main Hauling',     icon: 'fa-truck' },
@@ -21,10 +23,13 @@ async function initHomePage() {
   initNotificationBell();
 
   try {
-    const reports = await refreshNotifications();
+    const [reports, obj] = await Promise.all([refreshNotifications(), fetchMyObj()]);
+    _currentObj = obj;
+
     renderActionBanner(reports);
     renderMyReports(reports);
     renderQuickStats(reports);
+    renderSapAchievement(reports, obj);
 
     // search filter
     let _allReports = reports;
@@ -40,12 +45,22 @@ async function initHomePage() {
       renderActionBanner(e.detail);
       renderMyReports(e.detail, q);
       renderQuickStats(e.detail);
+      renderSapAchievement(e.detail, _currentObj);
     });
   } catch (e) {
     console.error('Home load error', e);
     const el = document.getElementById('myReportsList');
     if (el) el.innerHTML = '<p class="reports-loading">Gagal memuat laporan.</p>';
   }
+}
+
+async function fetchMyObj() {
+  try {
+    const res = await fetch('/api?action=getMyObj');
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch { return null; }
 }
 
 function renderGreeting() {
@@ -283,6 +298,65 @@ function renderActionBanner(reports) {
         </div>
       </div>`).join('')}
   </div>`;
+}
+
+function renderSapAchievement(reports, obj) {
+  const el = document.getElementById('sapAchievement');
+  if (!el || !obj) { if (el) el.style.display = 'none'; return; }
+
+  const user   = getCurrentUser();
+  const myNik  = String(user?.nik  || '').trim();
+  const myNama = String(user?.nama || '').trim().toLowerCase();
+  const now    = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+
+  // Hanya laporan bulan ini di mana user adalah PELAPOR
+  const mine = (reports || []).filter(r => {
+    const rNik  = String(r.nik_pelapor || r.nik || '').trim();
+    const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
+    if (!((myNik && rNik === myNik) || (myNama && rNama === myNama))) return false;
+    const d = new Date(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || '');
+    return !isNaN(d) && d.getFullYear() === y && d.getMonth() === m;
+  });
+
+  const hrCount  = mine.filter(r => r.report_type === 'HAZARD').length;
+  const insCount = mine.filter(r => r.report_type === 'INSPECTION').length;
+
+  const rows = [
+    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: hrCount,  target: obj.hr  },
+    { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: insCount, target: obj.ins },
+    { label: 'SBO',           icon: 'fa-eye',                   count: 0,        target: obj.sbo },
+    { label: 'Positive Comment', icon: 'fa-thumbs-up',          count: 0,        target: obj.pc  },
+  ].filter(r => r.target > 0);
+
+  if (!rows.length) { el.style.display = 'none'; return; }
+
+  const pct      = (c, t) => t > 0 ? Math.min(100, Math.round(c / t * 100)) : 0;
+  const barColor = p => p >= 100 ? '#22c55e' : p >= 50 ? '#F2A900' : '#3b82f6';
+
+  el.style.display = '';
+  el.innerHTML = `
+    <div class="sap-ach-card">
+      <div class="sap-ach-header">
+        <span class="sap-ach-title"><i class="fa-solid fa-trophy"></i> Capaian SAP Bulan Ini</span>
+        <span class="sap-ach-month">${MONTHS_ID[m]} ${y}</span>
+      </div>
+      <div class="sap-ach-rows">
+        ${rows.map(r => {
+          const p     = pct(r.count, r.target);
+          const color = barColor(p);
+          const done  = p >= 100;
+          return `<div class="sap-obj-row">
+            <div class="sap-obj-label"><i class="fa-solid ${r.icon}"></i> ${r.label}</div>
+            <div class="sap-obj-bar-wrap">
+              <div class="sap-obj-bar" style="width:${p}%;background:${color}"></div>
+            </div>
+            <div class="sap-obj-count" style="color:${color}">${r.count}<span class="sap-obj-sep">/</span>${r.target}</div>
+            ${done ? '<i class="fa-solid fa-circle-check sap-obj-done"></i>' : `<span class="sap-obj-pct">${p}%</span>`}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
 }
 
 window.toggleActionItem = function(idx) {

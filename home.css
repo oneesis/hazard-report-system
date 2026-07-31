@@ -59,6 +59,90 @@
   box-shadow: 0 4px 12px rgba(242,169,0,.35);
 }
 
+/* ── SAP Achievement ── */
+#sapAchievement { margin-bottom: 20px; }
+
+.sap-ach-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 20px 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  border: 1.5px solid #e8edf5;
+}
+.sap-ach-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.sap-ach-title {
+  font-size: .75rem;
+  font-weight: 700;
+  color: #00205B;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sap-ach-title i { color: #F2A900; }
+.sap-ach-month {
+  font-size: .72rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.sap-ach-rows { display: flex; flex-direction: column; gap: 10px; }
+.sap-obj-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sap-obj-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: #475569;
+  width: 140px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sap-obj-label i { color: #94a3b8; font-size: .7rem; }
+.sap-obj-bar-wrap {
+  flex: 1;
+  height: 7px;
+  background: #f1f5f9;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.sap-obj-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+.sap-obj-count {
+  font-size: .8rem;
+  font-weight: 800;
+  width: 42px;
+  text-align: right;
+  flex-shrink: 0;
+  letter-spacing: -.02em;
+}
+.sap-obj-sep { font-weight: 400; color: #cbd5e1; margin: 0 1px; }
+.sap-obj-done { color: #22c55e; font-size: .8rem; flex-shrink: 0; }
+.sap-obj-pct {
+  font-size: .68rem;
+  color: #94a3b8;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .sap-obj-label { width: 110px; font-size: .7rem; }
+  .sap-obj-pct { display: none; }
+}
+
 /* ── Action Banner ── */
 .action-banner {
   background: #fff;

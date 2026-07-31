@@ -1031,6 +1031,20 @@ module.exports = async (req, res) => {
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
+        case 'getMyObj': {
+          const rows = await getCachedSheet(sheets, 'Master_Karyawan', 60_000);
+          const me = rows.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
+          result = {
+            status: 'success',
+            data: {
+              hr:  parseInt(me?.['OBJ HR']  || 0) || 0,
+              ins: parseInt(me?.['OBJ INS'] || 0) || 0,
+              sbo: parseInt(me?.['OBJ SBO'] || 0) || 0,
+              pc:  parseInt(me?.['OBJ PC']  || 0) || 0,
+            }
+          };
+          break;
+        }
         default: throw new Error('Action tidak dikenali: ' + action);
       }
       return res.status(200).json(result);
