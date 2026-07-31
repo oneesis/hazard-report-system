@@ -254,9 +254,11 @@ function openChangePasswordModal() {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'changePasswordModal';
+    // Inline styles kritis agar tidak bergantung pada CSS class loading order
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:999999;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.6);box-sizing:border-box;';
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeChangePasswordModal(); });
     modal.innerHTML = `
-      <div class="cp-overlay" onclick="closeChangePasswordModal()"></div>
-      <div class="cp-box" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
+      <div class="cp-box" role="dialog" aria-modal="true" aria-labelledby="cpTitle" style="position:relative;background:#fff;border-radius:16px;width:min(420px,100%);box-shadow:0 24px 64px rgba(0,0,0,.3);overflow:hidden;max-height:90vh;overflow-y:auto;">
         <div class="cp-header">
           <span class="cp-header-icon"><i class="fa-solid fa-lock"></i></span>
           <div>
@@ -312,7 +314,7 @@ function openChangePasswordModal() {
   document.getElementById('cpMsg').textContent = '';
   document.getElementById('cpMsg').className = 'cp-msg';
   modal.style.display = 'flex';
-  document.getElementById('cpOld').focus();
+  setTimeout(() => document.getElementById('cpOld')?.focus(), 100);
 }
 
 function closeChangePasswordModal() {
