@@ -898,19 +898,29 @@ module.exports = async (req, res) => {
       switch (action) {
         case 'masterKaryawan': {
           const allRows = await getSheetData(sheets, 'Master_Karyawan');
-          // SUPER_ADMIN lihat semua; selainnya hanya perusahaan sendiri
-          const scoped = isSuperAdmin(auth.role)
-            ? allRows
-            : allRows.filter(r =>
-                String(r['PERUSAHAAN'] || '').trim().toUpperCase() ===
-                String(auth.perusahaan || '').trim().toUpperCase()
-              );
-          const cleaned = stripSensitiveKaryawan(scoped);
-          // USER biasa tidak perlu tahu ROLE orang lain
-          if (!isAdminOrAbove(auth.role)) {
-            cleaned.forEach(r => { delete r['ROLE']; });
+          if (isSuperAdmin(auth.role)) {
+            // SUPER_ADMIN: semua data lengkap
+            result = stripSensitiveKaryawan(allRows);
+          } else {
+            const ownCo = String(auth.perusahaan || '').trim().toUpperCase();
+            result = stripSensitiveKaryawan(allRows).map(r => {
+              const isOwn = String(r['PERUSAHAAN'] || '').trim().toUpperCase() === ownCo;
+              if (isOwn) {
+                // Perusahaan sendiri: data lengkap, ROLE disembunyikan untuk non-admin
+                if (!isAdminOrAbove(auth.role)) delete r['ROLE'];
+                return r;
+              }
+              // Perusahaan lain: hanya field yang dibutuhkan form & notifikasi PIC
+              return {
+                PERUSAHAAN:    r['PERUSAHAAN']   || '',
+                SUBCONT:       r['SUBCONT']       || '',
+                NAMA:          r['NAMA']          || '',
+                NIK:           r['NIK']           || '',
+                JABATAN:       r['JABATAN']       || '',
+                'NO WHATSAPP': r['NO WHATSAPP']   || '',
+              };
+            });
           }
-          result = cleaned;
           break;
         }
         case 'masterLokasi':         result = await getSheetData(sheets, 'Master_Lokasi'); break;
