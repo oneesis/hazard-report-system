@@ -240,6 +240,14 @@ document.addEventListener("keydown", function (e) {
 });
 
 // ===== GANTI PASSWORD =====
+function _cpToggleVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+}
+
 function openChangePasswordModal() {
   closeUserMenu();
   let modal = document.getElementById('changePasswordModal');
@@ -249,23 +257,51 @@ function openChangePasswordModal() {
     modal.innerHTML = `
       <div class="cp-overlay" onclick="closeChangePasswordModal()"></div>
       <div class="cp-box" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
-        <h3 id="cpTitle"><i class="fa-solid fa-key"></i> Ganti Password</h3>
-        <div class="cp-field">
-          <label>Password Lama</label>
-          <input type="password" id="cpOld" placeholder="Password saat ini" autocomplete="current-password">
+        <div class="cp-header">
+          <span class="cp-header-icon"><i class="fa-solid fa-lock"></i></span>
+          <div>
+            <h3 id="cpTitle">Ganti Password</h3>
+            <p class="cp-subtitle">Pastikan password baru minimal 8 karakter</p>
+          </div>
+          <button class="cp-close" onclick="closeChangePasswordModal()" aria-label="Tutup">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
-        <div class="cp-field">
-          <label>Password Baru</label>
-          <input type="password" id="cpNew" placeholder="Minimal 8 karakter" autocomplete="new-password">
-        </div>
-        <div class="cp-field">
-          <label>Konfirmasi Password Baru</label>
-          <input type="password" id="cpConfirm" placeholder="Ulangi password baru" autocomplete="new-password">
-        </div>
-        <p id="cpMsg" class="cp-msg"></p>
-        <div class="cp-actions">
-          <button type="button" class="cp-btn-cancel" onclick="closeChangePasswordModal()">Batal</button>
-          <button type="button" class="cp-btn-submit" onclick="submitChangePassword()">Simpan</button>
+        <div class="cp-body">
+          <div class="cp-field">
+            <label for="cpOld">Password Saat Ini</label>
+            <div class="cp-input-wrap">
+              <input type="password" id="cpOld" placeholder="Masukkan password saat ini" autocomplete="current-password">
+              <button type="button" class="cp-eye" onclick="_cpToggleVis('cpOld',this)" aria-label="Tampilkan password">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="cp-field">
+            <label for="cpNew">Password Baru</label>
+            <div class="cp-input-wrap">
+              <input type="password" id="cpNew" placeholder="Minimal 8 karakter" autocomplete="new-password">
+              <button type="button" class="cp-eye" onclick="_cpToggleVis('cpNew',this)" aria-label="Tampilkan password">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="cp-field">
+            <label for="cpConfirm">Konfirmasi Password Baru</label>
+            <div class="cp-input-wrap">
+              <input type="password" id="cpConfirm" placeholder="Ulangi password baru" autocomplete="new-password">
+              <button type="button" class="cp-eye" onclick="_cpToggleVis('cpConfirm',this)" aria-label="Tampilkan password">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <p id="cpMsg" class="cp-msg"></p>
+          <div class="cp-actions">
+            <button type="button" class="cp-btn-cancel" onclick="closeChangePasswordModal()">Batal</button>
+            <button type="button" class="cp-btn-submit" onclick="submitChangePassword()">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan
+            </button>
+          </div>
         </div>
       </div>`;
     document.body.appendChild(modal);
