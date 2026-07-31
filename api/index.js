@@ -896,7 +896,23 @@ module.exports = async (req, res) => {
 
       let result;
       switch (action) {
-        case 'masterKaryawan':       result = stripSensitiveKaryawan(await getSheetData(sheets, 'Master_Karyawan')); break;
+        case 'masterKaryawan': {
+          const allRows = await getSheetData(sheets, 'Master_Karyawan');
+          // SUPER_ADMIN lihat semua; selainnya hanya perusahaan sendiri
+          const scoped = isSuperAdmin(auth.role)
+            ? allRows
+            : allRows.filter(r =>
+                String(r['PERUSAHAAN'] || '').trim().toUpperCase() ===
+                String(auth.perusahaan || '').trim().toUpperCase()
+              );
+          const cleaned = stripSensitiveKaryawan(scoped);
+          // USER biasa tidak perlu tahu ROLE orang lain
+          if (!isAdminOrAbove(auth.role)) {
+            cleaned.forEach(r => { delete r['ROLE']; });
+          }
+          result = cleaned;
+          break;
+        }
         case 'masterLokasi':         result = await getSheetData(sheets, 'Master_Lokasi'); break;
         case 'masterJenisInspeksi':  result = await getSheetData(sheets, 'Jenis_Inspeksi'); break;
         case 'inspectionChecklist': {
