@@ -326,7 +326,7 @@ function renderSapAchievement(reports, obj) {
     { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: hrCount,  target: obj.hr  },
     { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: insCount, target: obj.ins },
     { label: 'SBO',           icon: 'fa-eye',                   count: 0,        target: obj.sbo },
-    { label: 'Positive Comment', icon: 'fa-thumbs-up',          count: 0,        target: obj.pc  },
+    { label: 'Personal Contact', icon: 'fa-handshake',           count: 0,        target: obj.pc  },
   ].filter(r => r.target > 0);
 
   if (!rows.length) { el.style.display = 'none'; return; }
