@@ -254,53 +254,66 @@ function openChangePasswordModal() {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'changePasswordModal';
-    // Inline styles kritis agar tidak bergantung pada CSS class loading order
-    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:999999;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.6);box-sizing:border-box;';
-    modal.addEventListener('click', function(e) { if (e.target === modal) closeChangePasswordModal(); });
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:999999;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65);box-sizing:border-box;font-family:Inter,system-ui,sans-serif;';
+    modal.addEventListener('click', e => { if (e.target === modal) closeChangePasswordModal(); });
+
+    const S = {
+      box:   'position:relative;background:#fff;border-radius:20px;width:min(440px,100%);box-shadow:0 32px 80px rgba(0,0,0,.35);overflow:hidden;',
+      hdr:   'display:flex;align-items:center;gap:14px;padding:22px 22px 18px;border-bottom:1px solid #e8edf5;',
+      icon:  'width:44px;height:44px;border-radius:12px;background:#eff6ff;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;',
+      titWrap:'flex:1;min-width:0;',
+      tit:   'margin:0;font-size:1.05rem;font-weight:700;color:#0f172a;',
+      sub:   'margin:3px 0 0;font-size:.78rem;color:#64748b;',
+      close: 'background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;padding:6px 8px;border-radius:8px;line-height:1;flex-shrink:0;',
+      body:  'padding:22px;',
+      field: 'margin-bottom:16px;',
+      lbl:   'display:block;font-size:.78rem;font-weight:600;margin-bottom:7px;color:#475569;',
+      wrap:  'position:relative;display:flex;align-items:center;',
+      inp:   'flex:1;padding:11px 44px 11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.9rem;color:#0f172a;background:#fff;box-sizing:border-box;width:100%;font-family:inherit;outline:none;transition:border-color .2s;',
+      eye:   'position:absolute;right:11px;background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;font-size:.88rem;line-height:1;',
+      msg:   'font-size:.8rem;color:#ef4444;min-height:18px;margin:0 0 14px;',
+      acts:  'display:flex;gap:10px;justify-content:flex-end;margin-top:6px;',
+      cancel:'padding:10px 20px;border:1.5px solid #e2e8f0;background:#fff;border-radius:10px;cursor:pointer;font-weight:600;font-size:.85rem;color:#475569;font-family:inherit;',
+      save:  'display:flex;align-items:center;gap:7px;padding:10px 22px;background:#F2A900;color:#00205B;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:.85rem;font-family:inherit;',
+    };
+
+    const field = (id, lbl, ph, ac) => `
+      <div style="${S.field}">
+        <label for="${id}" style="${S.lbl}">${lbl}</label>
+        <div style="${S.wrap}">
+          <input type="password" id="${id}" placeholder="${ph}" autocomplete="${ac}"
+            style="${S.inp}"
+            onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'"
+            onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">
+          <button type="button" style="${S.eye}" onclick="_cpToggleVis('${id}',this)" aria-label="Tampilkan password">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>`;
+
     modal.innerHTML = `
-      <div class="cp-box" role="dialog" aria-modal="true" aria-labelledby="cpTitle" style="position:relative;background:#fff;border-radius:16px;width:min(420px,100%);box-shadow:0 24px 64px rgba(0,0,0,.3);overflow:hidden;max-height:90vh;overflow-y:auto;">
-        <div class="cp-header">
-          <span class="cp-header-icon"><i class="fa-solid fa-lock"></i></span>
-          <div>
-            <h3 id="cpTitle">Ganti Password</h3>
-            <p class="cp-subtitle">Pastikan password baru minimal 8 karakter</p>
+      <div style="${S.box}" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
+        <div style="${S.hdr}">
+          <span style="${S.icon}"><i class="fa-solid fa-lock"></i></span>
+          <div style="${S.titWrap}">
+            <h3 id="cpTitle" style="${S.tit}">Ganti Password</h3>
+            <p style="${S.sub}">Password baru minimal 8 karakter</p>
           </div>
-          <button class="cp-close" onclick="closeChangePasswordModal()" aria-label="Tutup">
+          <button style="${S.close}" onclick="closeChangePasswordModal()" aria-label="Tutup"
+            onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
-        <div class="cp-body">
-          <div class="cp-field">
-            <label for="cpOld">Password Saat Ini</label>
-            <div class="cp-input-wrap">
-              <input type="password" id="cpOld" placeholder="Masukkan password saat ini" autocomplete="current-password">
-              <button type="button" class="cp-eye" onclick="_cpToggleVis('cpOld',this)" aria-label="Tampilkan password">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-            </div>
-          </div>
-          <div class="cp-field">
-            <label for="cpNew">Password Baru</label>
-            <div class="cp-input-wrap">
-              <input type="password" id="cpNew" placeholder="Minimal 8 karakter" autocomplete="new-password">
-              <button type="button" class="cp-eye" onclick="_cpToggleVis('cpNew',this)" aria-label="Tampilkan password">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-            </div>
-          </div>
-          <div class="cp-field">
-            <label for="cpConfirm">Konfirmasi Password Baru</label>
-            <div class="cp-input-wrap">
-              <input type="password" id="cpConfirm" placeholder="Ulangi password baru" autocomplete="new-password">
-              <button type="button" class="cp-eye" onclick="_cpToggleVis('cpConfirm',this)" aria-label="Tampilkan password">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-            </div>
-          </div>
-          <p id="cpMsg" class="cp-msg"></p>
-          <div class="cp-actions">
-            <button type="button" class="cp-btn-cancel" onclick="closeChangePasswordModal()">Batal</button>
-            <button type="button" class="cp-btn-submit" onclick="submitChangePassword()">
+        <div style="${S.body}">
+          ${field('cpOld',    'Password Saat Ini',        'Masukkan password saat ini', 'current-password')}
+          ${field('cpNew',    'Password Baru',            'Minimal 8 karakter',         'new-password')}
+          ${field('cpConfirm','Konfirmasi Password Baru', 'Ulangi password baru',       'new-password')}
+          <p id="cpMsg" style="${S.msg}"></p>
+          <div style="${S.acts}">
+            <button type="button" style="${S.cancel}" onclick="closeChangePasswordModal()"
+              onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">Batal</button>
+            <button type="button" id="cpSubmitBtn" style="${S.save}" onclick="submitChangePassword()"
+              onmouseover="this.style.background='#d99500'" onmouseout="this.style.background='#F2A900'">
               <i class="fa-solid fa-floppy-disk"></i> Simpan
             </button>
           </div>
@@ -311,8 +324,9 @@ function openChangePasswordModal() {
   document.getElementById('cpOld').value = '';
   document.getElementById('cpNew').value = '';
   document.getElementById('cpConfirm').value = '';
-  document.getElementById('cpMsg').textContent = '';
-  document.getElementById('cpMsg').className = 'cp-msg';
+  const msg = document.getElementById('cpMsg');
+  msg.textContent = '';
+  msg.style.color = '#ef4444';
   modal.style.display = 'flex';
   setTimeout(() => document.getElementById('cpOld')?.focus(), 100);
 }
@@ -333,9 +347,10 @@ async function submitChangePassword() {
   if (newPw.length < 8) { msg.textContent = 'Password baru minimal 8 karakter.'; return; }
   if (newPw !== confirm) { msg.textContent = 'Konfirmasi password tidak cocok.'; return; }
 
-  const btn = document.querySelector('.cp-btn-submit');
+  const btn = document.getElementById('cpSubmitBtn');
   btn.disabled = true;
-  btn.textContent = 'Menyimpan...';
+  btn.style.opacity = '.6';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
   try {
     const res = await fetch('/api', {
@@ -348,14 +363,15 @@ async function submitChangePassword() {
     window.__onesapForcePw = false;
     document.getElementById('forcePwBanner')?.remove();
     document.querySelectorAll('.pw-force-dot').forEach(el => el.remove());
-    msg.className = 'cp-msg cp-success';
+    msg.style.color = '#16a34a';
     msg.textContent = 'Password berhasil diubah! Silakan login ulang.';
     setTimeout(() => { logout(); }, 2000);
   } catch (err) {
     msg.textContent = err.message || 'Gagal mengubah password.';
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Simpan';
+    btn.style.opacity = '1';
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
   }
 }
 
