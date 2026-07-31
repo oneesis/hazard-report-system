@@ -290,6 +290,23 @@ body:has(.app-layout) {
   align-items: center;
 }
 
+.pw-force-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid #1e293b;
+  animation: pw-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pw-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .6; transform: scale(.85); }
+}
+
 .sidebar-logout-btn {
   background: none;
   border: none;

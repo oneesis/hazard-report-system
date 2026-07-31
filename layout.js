@@ -91,8 +91,9 @@
           <button class="sidebar-logout-btn push-notif-btn" onclick="togglePushNotification()" title="Aktifkan push notification">
             <i class="fa-solid fa-bell-slash"></i>
           </button>
-          <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password">
+          <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password" style="position:relative">
             <i class="fa-solid fa-key"></i>
+            ${window.__onesapForcePw ? '<span class="pw-force-dot"></span>' : ''}
           </button>
           <button class="sidebar-logout-btn" onclick="confirmLogout()" title="Logout">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -173,8 +174,9 @@
           <div class="profile-sheet-name">${safe(user?.nama || 'User')}</div>
           <div class="profile-sheet-role">${safe(role || 'USER')}</div>
           <div class="profile-sheet-actions">
-            <button class="btn-secondary" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; openChangePasswordModal()">
+            <button class="btn-secondary" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; openChangePasswordModal()" style="position:relative">
               <i class="fa-solid fa-key"></i> Ganti Password
+              ${window.__onesapForcePw ? '<span class="pw-force-dot" style="top:6px;right:6px"></span>' : ''}
             </button>
             <button class="btn-danger" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; confirmLogout()">
               <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout

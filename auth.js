@@ -343,6 +343,9 @@ async function submitChangePassword() {
     });
     const result = await res.json();
     if (result.status !== 'success') throw new Error(result.message);
+    window.__onesapForcePw = false;
+    document.getElementById('forcePwBanner')?.remove();
+    document.querySelectorAll('.pw-force-dot').forEach(el => el.remove());
     msg.className = 'cp-msg cp-success';
     msg.textContent = 'Password berhasil diubah! Silakan login ulang.';
     setTimeout(() => { logout(); }, 2000);
@@ -357,15 +360,14 @@ async function submitChangePassword() {
 // Force password change jika login dengan password lemah/default
 document.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('onesap_force_pw')) {
+    window.__onesapForcePw = true;
     sessionStorage.removeItem('onesap_force_pw');
-    // Tampilkan banner peringatan + buka modal ganti password
     const banner = document.createElement('div');
     banner.id = 'forcePwBanner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;' +
       'padding:10px 16px;font-size:.85rem;font-weight:600;text-align:center;';
-    banner.innerHTML = '⚠️ Password kamu terlalu lemah atau masih default. Wajib ganti sekarang untuk keamanan akun.';
+    banner.innerHTML = '⚠️ Password kamu terlalu lemah atau masih default. Wajib ganti sekarang. Klik ikon kunci di sidebar.';
     document.body.prepend(banner);
-    // Buka modal setelah layout siap
     setTimeout(() => {
       if (typeof openChangePasswordModal === 'function') openChangePasswordModal();
     }, 500);
