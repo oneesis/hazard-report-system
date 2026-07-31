@@ -27,35 +27,53 @@ const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 // ===== RATE LIMITING =====
 // In-memory per instance — efektif untuk throttle brute-force pada satu instance
 const _loginAttempts = new Map(); // nik → { count, firstAt, lockedUntil }
-const RATE_WINDOW_MS  = 15 * 60 * 1000; // 15 menit
-const MAX_ATTEMPTS    = 5;
-const LOCKOUT_MS      = 15 * 60 * 1000;
+const _ipAttempts    = new Map(); // ip  → { count, firstAt, lockedUntil }
+const RATE_WINDOW_MS = 15 * 60 * 1000; // 15 menit
+const MAX_ATTEMPTS   = 5;
+const LOCKOUT_MS     = 15 * 60 * 1000;
+const IP_MAX         = 20; // maks percobaan login dari 1 IP per window
 
-function checkLoginRateLimit(nik) {
-  const key = String(nik || '').trim().toLowerCase();
+function _checkLimit(map, key, max) {
   const now = Date.now();
-  const e = _loginAttempts.get(key);
+  const e = map.get(key);
   if (!e) return { ok: true };
   if (e.lockedUntil && now < e.lockedUntil) {
     const mnt = Math.ceil((e.lockedUntil - now) / 60000);
-    return { ok: false, message: `Terlalu banyak percobaan. Coba lagi dalam ${mnt} menit.` };
+    return { ok: false, mnt };
   }
-  if (now - e.firstAt > RATE_WINDOW_MS) { _loginAttempts.delete(key); return { ok: true }; }
+  if (now - e.firstAt > RATE_WINDOW_MS) { map.delete(key); return { ok: true }; }
   return { ok: true };
 }
 
-function recordFailedLogin(nik) {
-  const key = String(nik || '').trim().toLowerCase();
+function _recordFail(map, key, max) {
   const now = Date.now();
-  const e = _loginAttempts.get(key) || { count: 0, firstAt: now };
-  if (now - e.firstAt > RATE_WINDOW_MS) { _loginAttempts.set(key, { count: 1, firstAt: now }); return; }
+  const e = map.get(key) || { count: 0, firstAt: now };
+  if (now - e.firstAt > RATE_WINDOW_MS) { map.set(key, { count: 1, firstAt: now }); return; }
   e.count++;
-  if (e.count >= MAX_ATTEMPTS) e.lockedUntil = now + LOCKOUT_MS;
-  _loginAttempts.set(key, e);
+  if (e.count >= max) e.lockedUntil = now + LOCKOUT_MS;
+  map.set(key, e);
+}
+
+function checkLoginRateLimit(nik) {
+  const r = _checkLimit(_loginAttempts, String(nik || '').trim().toLowerCase(), MAX_ATTEMPTS);
+  if (!r.ok) return { ok: false, message: `Terlalu banyak percobaan. Coba lagi dalam ${r.mnt} menit.` };
+  return { ok: true };
+}
+
+function checkIpRateLimit(ip) {
+  const r = _checkLimit(_ipAttempts, String(ip || 'unknown'), IP_MAX);
+  if (!r.ok) return { ok: false, message: `Terlalu banyak percobaan dari perangkat ini. Coba lagi dalam ${r.mnt} menit.` };
+  return { ok: true };
+}
+
+function recordFailedLogin(nik, ip) {
+  _recordFail(_loginAttempts, String(nik || '').trim().toLowerCase(), MAX_ATTEMPTS);
+  if (ip) _recordFail(_ipAttempts, String(ip), IP_MAX);
 }
 
 function clearFailedLogins(nik) {
   _loginAttempts.delete(String(nik || '').trim().toLowerCase());
+  // ponytail: sengaja TIDAK hapus IP entry saat sukses — IP bersih hanya lewat expiry
 }
 
 // Password lemah yang wajib diganti
@@ -67,13 +85,37 @@ function isWeakPassword(pw) {
 }
 const INSPECTION_SHEETS = ['INS_CB', 'INS_JA', 'INS_MD', 'INS_KG', 'INS_SP', 'INS_T', 'INS_TB', 'INS_WS'];
 
+// ===== CLIENT + DATA CACHE =====
+// ponytail: in-memory, per-instance — mengurangi auth overhead dan Sheets API calls
+let _cachedClient = null;
+let _clientExpiry = 0;
+const _dataCache  = new Map(); // key → { data, expAt }
+
 function getClients() {
+  const now = Date.now();
+  if (_cachedClient && now < _clientExpiry) return _cachedClient;
   const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   const auth = new google.auth.GoogleAuth({
     credentials: creds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets']
   });
-  return { sheets: google.sheets({ version: 'v4', auth }) };
+  _cachedClient = { sheets: google.sheets({ version: 'v4', auth }) };
+  _clientExpiry = now + 55 * 60 * 1000; // token bertahan 1 jam, refresh 5 menit sebelum expiry
+  return _cachedClient;
+}
+
+async function getCachedSheet(sheets, sheetName, ttlMs = 60_000) {
+  const key = `sheet:${sheetName}`;
+  const now = Date.now();
+  const hit = _dataCache.get(key);
+  if (hit && now < hit.expAt) return hit.data;
+  const data = await getSheetData(sheets, sheetName);
+  _dataCache.set(key, { data, expAt: now + ttlMs });
+  return data;
+}
+
+function invalidateCache(sheetName) {
+  _dataCache.delete(`sheet:${sheetName}`);
 }
 
 function normalizeHeader(h) {
@@ -179,14 +221,17 @@ function requireAuth(req) {
   }
 }
 
-async function login(sheets, nik, password) {
+async function login(sheets, nik, password, ip) {
+  const ipCheck = checkIpRateLimit(ip);
+  if (!ipCheck.ok) return { status: 'error', message: ipCheck.message };
+
   const rateCheck = checkLoginRateLimit(nik);
   if (!rateCheck.ok) return { status: 'error', message: rateCheck.message };
 
-  const data = await getSheetData(sheets, 'Master_Karyawan');
+  const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
   if (!user || normalizeRole(user['ROLE']) === 'DELETED' || !verifyPassword(password, user['PASSWORD'])) {
-    recordFailedLogin(nik);
+    recordFailedLogin(nik, ip);
     return { status: 'error', message: 'NIK atau password salah.' };
   }
   clearFailedLogins(nik);
@@ -241,6 +286,7 @@ async function changePassword(sheets, nik, oldPassword, newPassword) {
     valueInputOption: 'RAW',
     requestBody: { values: [[hash]] }
   });
+  invalidateCache('Master_Karyawan');
   return { status: 'success', message: 'Password berhasil diubah.' };
 }
 
@@ -453,7 +499,7 @@ async function reviewChange(sheets, auth, changeId, decision, reason) {
 
   const action = String(rows[rowIdx][col('ACTION')] || '');
   const data   = JSON.parse(rows[rowIdx][col('DATA')] || '{}');
-  if (decision === 'APPROVE') await applyUserChange(sheets, action, data);
+  if (decision === 'APPROVE') { await applyUserChange(sheets, action, data); invalidateCache('Master_Karyawan'); }
 
   const newStatus = decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
   await sheets.spreadsheets.values.batchUpdate({
@@ -936,7 +982,7 @@ module.exports = async (req, res) => {
       let result;
       switch (action) {
         case 'masterKaryawan': {
-          const allRows = await getSheetData(sheets, 'Master_Karyawan');
+          const allRows = await getCachedSheet(sheets, 'Master_Karyawan', 60_000);
           if (isSuperAdmin(auth.role)) {
             // SUPER_ADMIN: semua data lengkap
             result = stripSensitiveKaryawan(allRows);
@@ -998,7 +1044,8 @@ module.exports = async (req, res) => {
 
       // Login: satu-satunya POST tanpa token — kredensial di body, bukan di URL
       if (action === 'login') {
-        const result = await login(sheets, data?.nik, data?.password);
+        const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
+        const result = await login(sheets, data?.nik, data?.password, ip);
         if (result.status === 'success') result.token = issueToken(result.user);
         return res.status(200).json(result);
       }
