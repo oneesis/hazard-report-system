@@ -229,6 +229,37 @@
   .um-search { width: 100%; }
 }
 
+/* CAPAIAN SAP KPI ROW */
+.ach-kpi-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.ach-kpi-cell {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+}
+.ach-kpi-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.ach-kpi-label {
+  font-size: .75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
 /* App is light-mode only — no dark mode overrides */
 .admin-layout { color-scheme: light; }
 .admin-card   { color-scheme: light; }

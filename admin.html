@@ -40,6 +40,9 @@
         <i class="fa-solid fa-clock"></i> Pending Approval
         <span class="sidebar-badge" id="pendingBadge" style="display:none">0</span>
       </button>
+      <button class="admin-subnav-btn" data-section="sectionAchievement" onclick="showSection('sectionAchievement', this)" id="sidebarAchievement" style="display:none">
+        <i class="fa-solid fa-trophy"></i> Capaian SAP
+      </button>
     </div>
 
     <!-- MANAJEMEN USER -->
@@ -111,6 +114,39 @@
       </div>
     </section>
 
+    <!-- CAPAIAN SAP (ADMIN dan SUPER_ADMIN) -->
+    <section id="sectionAchievement" class="admin-section" style="display:none">
+      <div class="um-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="month" id="achMonth" class="um-search" style="width:160px" onchange="computeAndRenderAchievement()">
+          <select id="achDept" class="um-search" style="width:180px" onchange="computeAndRenderAchievement()">
+            <option value="">Semua Departemen</option>
+          </select>
+          <select id="achPerusahaan" class="um-search" style="width:180px;display:none" onchange="computeAndRenderAchievement()">
+            <option value="">Semua Perusahaan</option>
+          </select>
+        </div>
+        <div class="um-header-actions">
+          <button class="btn-secondary" onclick="exportAchievementCsv()">
+            <i class="fa-solid fa-file-arrow-down"></i> Download CSV
+          </button>
+          <button class="btn-secondary btn-icon" onclick="loadAchievement()" title="Refresh">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+      <div id="achKpi" class="ach-kpi-row" style="display:none"></div>
+      <div class="admin-card" style="overflow-x:auto;margin-top:12px">
+        <table id="achTable" class="admin-table">
+          <thead id="achTableHead"></thead>
+          <tbody id="achTableBody">
+            <tr><td colspan="12" class="um-loading">Pilih bulan untuk melihat capaian SAP</td></tr>
+          </tbody>
+        </table>
+        <div id="achPagination" class="table-pagination"></div>
+      </div>
+    </section>
+
     <!-- hidden file input for CSV import -->
     <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvFile(this)">
 
@@ -141,6 +177,8 @@
     if (isSuperAdminRole(user?.role)) {
       document.getElementById('sidebarPending').style.display = 'flex';
     }
+    // Capaian SAP: semua admin+
+    document.getElementById('sidebarAchievement').style.display = 'flex';
     initUserManagement();
   });
 
@@ -150,13 +188,15 @@
     document.getElementById(sectionId).style.display = 'block';
     btn.classList.add('active');
     const titles = {
-      sectionUsers:   'Manajemen User',
-      sectionHistory: 'Riwayat Pengajuan',
-      sectionPending: 'Pending Approval',
+      sectionUsers:       'Manajemen User',
+      sectionHistory:     'Riwayat Pengajuan',
+      sectionPending:     'Pending Approval',
+      sectionAchievement: 'Capaian SAP',
     };
     document.getElementById('appTopbarTitle').textContent = titles[sectionId] || '';
-    if (sectionId === 'sectionPending') loadPendingChanges();
-    if (sectionId === 'sectionHistory') loadMyHistory();
+    if (sectionId === 'sectionPending')     loadPendingChanges();
+    if (sectionId === 'sectionHistory')     loadMyHistory();
+    if (sectionId === 'sectionAchievement') loadAchievement();
   }
 </script>
 </body>

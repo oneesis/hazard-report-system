@@ -524,3 +524,237 @@ function parseCsvLine(line) {
   result.push(cur);
   return result;
 }
+
+// ===== CAPAIAN SAP ACHIEVEMENT =====
+let _achKaryawan = [];
+let _achHazardReports = [];
+let _achInsReports = [];
+let _achReportsLoaded = false;
+let _achFiltered = [];
+let _achComputed = [];
+let _achPage = 1;
+const ACH_PAGE_SIZE = 25;
+
+function _achSameMonth(ts, monthStr) {
+  if (!ts || !monthStr) return false;
+  const d = new Date(ts);
+  if (isNaN(d)) return false;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthStr;
+}
+
+async function loadAchievement() {
+  const tbody = document.getElementById('achTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px">Memuat data...</td></tr>';
+
+  const user = getCurrentUser();
+  const isSA = isSuperAdminRole(user?.role);
+  const coSel = document.getElementById('achPerusahaan');
+  if (coSel) coSel.style.display = isSA ? '' : 'none';
+
+  try {
+    const [karRes, hrRes, insRes] = await Promise.all([
+      fetch('/api?action=getKaryawan').then(r => r.json()),
+      fetch('/api?action=getHazardReports').then(r => r.json()),
+      fetch('/api?action=getInspectionReports').then(r => r.json()),
+    ]);
+
+    _achKaryawan = (karRes.data || []).filter(r =>
+      String(r['ROLE'] || '').toUpperCase().replace(/\s+/g, '_') !== 'DELETED'
+    );
+    _achHazardReports = hrRes.data || [];
+    _achInsReports    = insRes.data || [];
+    _achReportsLoaded = true;
+
+    const depts = [...new Set(_achKaryawan.map(k => k['DEPARTEMEN'] || '').filter(Boolean))].sort();
+    const deptSel = document.getElementById('achDept');
+    if (deptSel) {
+      const cur = deptSel.value;
+      deptSel.innerHTML = '<option value="">Semua Departemen</option>' +
+        depts.map(d => `<option value="${escapeHTML(d)}"${d === cur ? ' selected' : ''}>${escapeHTML(d)}</option>`).join('');
+    }
+
+    if (isSA && coSel) {
+      const cos = [...new Set(_achKaryawan.map(k => k['PERUSAHAAN'] || '').filter(Boolean))].sort();
+      const cur = coSel.value;
+      coSel.innerHTML = '<option value="">Semua Perusahaan</option>' +
+        cos.map(c => `<option value="${escapeHTML(c)}"${c === cur ? ' selected' : ''}>${escapeHTML(c)}</option>`).join('');
+    }
+
+    const thead = document.getElementById('achTableHead');
+    if (thead) {
+      thead.innerHTML = `<tr>
+        ${isSA ? '<th>Perusahaan</th>' : ''}
+        <th>Nama</th><th>NIK</th><th>Jabatan</th><th>Departemen</th>
+        <th class="um-center">OBJ HR</th><th class="um-center">Capaian HR</th><th class="um-center">% HR</th>
+        <th class="um-center">OBJ INS</th><th class="um-center">Capaian INS</th><th class="um-center">% INS</th>
+        <th class="um-center">% Total</th>
+      </tr>`;
+    }
+
+    computeAndRenderAchievement();
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ef4444;padding:20px">${escapeHTML(e.message)}</td></tr>`;
+  }
+}
+
+function computeAndRenderAchievement() {
+  if (!_achReportsLoaded) return;
+
+  const monthStr = document.getElementById('achMonth')?.value || '';
+  const deptF    = (document.getElementById('achDept')?.value || '').toLowerCase();
+  const coF      = (document.getElementById('achPerusahaan')?.value || '').toLowerCase();
+  const allRep   = [..._achHazardReports, ..._achInsReports];
+
+  _achComputed = _achKaryawan.map(k => {
+    const nik  = String(k['NIK']  || '').trim();
+    const nama = String(k['NAMA'] || '').trim().toLowerCase();
+    const mine = monthStr ? allRep.filter(r => {
+      const rNik  = String(r.nik || r.nik_pelapor || '').trim();
+      const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
+      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+             _achSameMonth(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi, monthStr);
+    }) : [];
+
+    const achHR    = mine.filter(r => r.report_type === 'HAZARD').length;
+    const achINS   = mine.filter(r => r.report_type === 'INSPECTION').length;
+    const objHR    = parseInt(k['OBJ HR']  || 0) || 0;
+    const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
+    const pctHR    = objHR  > 0 ? Math.round(achHR  / objHR  * 100) : null;
+    const pctINS   = objINS > 0 ? Math.round(achINS / objINS * 100) : null;
+    const totalObj = objHR + objINS;
+    const pctTotal = totalObj > 0 ? Math.round((achHR + achINS) / totalObj * 100) : null;
+    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal };
+  });
+
+  _achFiltered = _achComputed.filter(row => {
+    const dept = String(row.k['DEPARTEMEN'] || '').toLowerCase();
+    const co   = String(row.k['PERUSAHAAN'] || '').toLowerCase();
+    return (!deptF || dept.includes(deptF)) && (!coF || co.includes(coF));
+  });
+
+  _achPage = 1;
+  renderAchTable();
+  renderAchKpi();
+}
+
+function _achPctCell(pct) {
+  if (pct === null) return '<td class="um-center" style="color:#cbd5e1">-</td>';
+  const color = pct >= 100 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  const bg    = pct >= 100 ? '#f0fdf4' : pct >= 50 ? '#fffbeb' : '#fff1f2';
+  return `<td class="um-center"><span style="background:${bg};color:${color};font-weight:700;padding:2px 8px;border-radius:6px;font-size:.78rem">${pct}%</span></td>`;
+}
+
+function renderAchTable() {
+  const tbody = document.getElementById('achTableBody');
+  if (!tbody) return;
+
+  const monthStr = document.getElementById('achMonth')?.value || '';
+  const isSA     = isSuperAdminRole(getCurrentUser()?.role);
+  const colSpan  = isSA ? 12 : 11;
+
+  if (!monthStr) {
+    tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center;padding:24px;color:#94a3b8">Pilih bulan untuk melihat capaian SAP</td></tr>`;
+    document.getElementById('achPagination').innerHTML = '';
+    return;
+  }
+
+  if (!_achFiltered.length) {
+    tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>`;
+    renderAchPagination();
+    return;
+  }
+
+  const start = (_achPage - 1) * ACH_PAGE_SIZE;
+  tbody.innerHTML = _achFiltered.slice(start, start + ACH_PAGE_SIZE).map(row => `
+    <tr>
+      ${isSA ? `<td>${escapeHTML(row.k['PERUSAHAAN'] || '')}</td>` : ''}
+      <td>${escapeHTML(row.k['NAMA'] || '')}</td>
+      <td>${escapeHTML(String(row.k['NIK'] || '-'))}</td>
+      <td>${escapeHTML(row.k['JABATAN'] || '')}</td>
+      <td>${escapeHTML(row.k['DEPARTEMEN'] || '')}</td>
+      <td class="um-center">${row.objHR || '-'}</td>
+      <td class="um-center"><b>${row.achHR}</b></td>
+      ${_achPctCell(row.pctHR)}
+      <td class="um-center">${row.objINS || '-'}</td>
+      <td class="um-center"><b>${row.achINS}</b></td>
+      ${_achPctCell(row.pctINS)}
+      ${_achPctCell(row.pctTotal)}
+    </tr>`).join('');
+
+  renderAchPagination();
+}
+
+function renderAchPagination() {
+  const el    = document.getElementById('achPagination');
+  if (!el) return;
+  const pages = Math.ceil(_achFiltered.length / ACH_PAGE_SIZE);
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = Array.from({length: pages}, (_, i) => i + 1)
+    .map(p => `<button class="um-page-btn${p === _achPage ? ' active' : ''}" onclick="_achGoPage(${p})">${p}</button>`)
+    .join('');
+}
+
+window._achGoPage = function(p) { _achPage = p; renderAchTable(); };
+
+function renderAchKpi() {
+  const el = document.getElementById('achKpi');
+  if (!el) return;
+  const monthStr = document.getElementById('achMonth')?.value || '';
+  if (!monthStr || !_achFiltered.length) { el.style.display = 'none'; return; }
+
+  const avg = (key) => {
+    const valid = _achFiltered.filter(r => r[key] !== null);
+    return valid.length ? Math.round(valid.reduce((s, r) => s + r[key], 0) / valid.length) : null;
+  };
+
+  const kpiItem = (label, val, icon) => {
+    if (val === null) return '';
+    const color = val >= 100 ? '#22c55e' : val >= 50 ? '#f59e0b' : '#ef4444';
+    return `<div class="ach-kpi-cell">
+      <i class="fa-solid ${icon}" style="color:${color};font-size:1.1rem"></i>
+      <div class="ach-kpi-num" style="color:${color}">${val}%</div>
+      <div class="ach-kpi-label">${label}</div>
+    </div>`;
+  };
+
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="ach-kpi-cell">
+      <i class="fa-solid fa-users" style="color:#64748b;font-size:1.1rem"></i>
+      <div class="ach-kpi-num" style="color:#0f172a">${_achFiltered.length}</div>
+      <div class="ach-kpi-label">Total Karyawan</div>
+    </div>
+    ${kpiItem('Rata-rata HR',    avg('pctHR'),    'fa-triangle-exclamation')}
+    ${kpiItem('Rata-rata INS',   avg('pctINS'),   'fa-clipboard-check')}
+    ${kpiItem('Rata-rata Total', avg('pctTotal'), 'fa-trophy')}`;
+}
+
+function exportAchievementCsv() {
+  if (!_achFiltered.length) { alert('Tidak ada data untuk di-export.'); return; }
+  const monthStr = document.getElementById('achMonth')?.value || 'semua';
+  const isSA     = isSuperAdminRole(getCurrentUser()?.role);
+
+  const headers = [
+    ...(isSA ? ['Perusahaan'] : []),
+    'Nama', 'NIK', 'Jabatan', 'Departemen',
+    'OBJ HR', 'Capaian HR', '% HR',
+    'OBJ INS', 'Capaian INS', '% INS', '% Total',
+  ];
+
+  const rows = _achFiltered.map(r => [
+    ...(isSA ? [r.k['PERUSAHAAN'] || ''] : []),
+    r.k['NAMA'] || '', String(r.k['NIK'] || ''), r.k['JABATAN'] || '', r.k['DEPARTEMEN'] || '',
+    r.objHR, r.achHR, r.pctHR    !== null ? r.pctHR    + '%' : '-',
+    r.objINS, r.achINS, r.pctINS !== null ? r.pctINS   + '%' : '-',
+    r.pctTotal !== null ? r.pctTotal + '%' : '-',
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = `capaian_sap_${monthStr}.csv`;
+  a.click();
+}
