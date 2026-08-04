@@ -17,7 +17,7 @@ async function loadUsers() {
   const tbody = document.getElementById('umTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px">Memuat...</td></tr>';
   try {
-    const res = await fetch('/api?action=getKaryawan');
+    const res = await fetch('/api?action=getKaryawan', { cache: 'no-store' });
     const result = await res.json();
     umUsers = (result.data || []).filter(r => String(r['ROLE'] || '').toUpperCase() !== 'DELETED');
     umFiltered = [...umUsers];
@@ -256,7 +256,17 @@ async function submitPropose(action, payload) {
     const result = await res.json();
     showAdminToast(result.message || (result.status === 'success' ? 'Permohonan terkirim.' : 'Gagal.'),
       result.status === 'success' ? 'success' : 'error');
-    if (result.status === 'success') loadUsers();
+    if (result.status === 'success') {
+      if (action === 'DELETE' && payload.NIK) {
+        // Hapus optimistis — tidak perlu tunggu SUPER_ADMIN approve untuk hilang dari tabel
+        const nik = String(payload.NIK);
+        umUsers    = umUsers.filter(u => String(u['NIK'] || '') !== nik);
+        umFiltered = umFiltered.filter(u => String(u['NIK'] || '') !== nik);
+        renderUMTable();
+      } else {
+        loadUsers();
+      }
+    }
   } catch (e) { showAdminToast(e.message || 'Terjadi kesalahan.', 'error'); }
 }
 
