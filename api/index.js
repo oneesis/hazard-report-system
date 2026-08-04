@@ -966,7 +966,7 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
       requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
     });
   }
-  // [PUSH-START] — push/WA ke pelapor saat laporan CLOSED (admin bypass) atau FOLLOWUP
+  // [PUSH-START] — push/WA ke pelapor saat laporan FOLLOWUP atau CLOSED
   if (data.status_perbaikan === 'CLOSED' || data.status_perbaikan === 'FOLLOWUP') {
     const rowData = {};
     headers.forEach((h, i) => { rowData[h] = rows[rowIndex][i] ?? ''; });
@@ -1175,7 +1175,7 @@ module.exports = async (req, res) => {
         case 'submitHazardReport':     result = await submitHazardReport(sheets, data); break;
         case 'submitInspectionReport': result = await submitInspectionReport(sheets, data); break;
         case 'updateHazardReport': {
-          if (data.status_perbaikan === 'CLOSED' && !isAdminOrAbove(auth?.role)) {
+          if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, 'Hazard_Report');
             data.status_perbaikan = 'FOLLOWUP';
             data.closing_status   = 'pending_review';
@@ -1186,7 +1186,7 @@ module.exports = async (req, res) => {
         case 'updateInspectionReport': {
           const sheetName = String(data.inspection_sheet || '').trim().toUpperCase();
           if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          if (data.status_perbaikan === 'CLOSED' && !isAdminOrAbove(auth?.role)) {
+          if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, sheetName);
             data.status_perbaikan = 'FOLLOWUP';
             data.closing_status   = 'pending_review';

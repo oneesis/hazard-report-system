@@ -224,7 +224,7 @@ function renderDetail(r) {
     document.getElementById('reviewTanggal').textContent = tanggalR ? fmt(tanggalR) : '-';
   }
 
-  // Panel C: Closing form — admin bypass (kecuali saat planning); PIC setelah plan approved; read-only saat FOLLOWUP/CLOSED
+  // Panel C: Closing form — admin/PIC saat plan approved; read-only saat FOLLOWUP/CLOSED
   const showClosingForm = (isAdmin && !inPlanningPhase && status !== 'CLOSED' && status !== 'FOLLOWUP') ||
     (isPic(r) && planStatus === 'approved' && status !== 'CLOSED') ||
     status === 'CLOSED' || status === 'FOLLOWUP';
