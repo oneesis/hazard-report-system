@@ -463,9 +463,18 @@ async function applyUserChange(sheets, action, data) {
     const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
     const rows = res.data.values || [];
     const headers = rows[0].map(h => String(h).trim().toUpperCase());
-    const nikCol = headers.indexOf('NIK');
-    const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(data.NIK || '').trim());
-    if (rowIdx === -1) throw new Error('User tidak ditemukan.');
+    const nikCol  = headers.indexOf('NIK');
+    const namaCol = headers.indexOf('NAMA');
+    const dataNik  = String(data.NIK  || '').trim();
+    const dataNama = String(data.NAMA || '').trim().toLowerCase();
+    const rowIdx = rows.findIndex((r, i) => {
+      if (i === 0) return false;
+      const nikMatch  = String(r[nikCol]  || '').trim() === dataNik;
+      const namaMatch = namaCol !== -1 && String(r[namaCol] || '').trim().toLowerCase() === dataNama;
+      // Cocokkan NIK + NAMA sekaligus — cegah hapus orang yang salah
+      return nikMatch && namaMatch;
+    });
+    if (rowIdx === -1) throw new Error(`User ${data.NAMA || data.NIK || '?'} tidak ditemukan di sheet.`);
     if (action === 'DELETE') {
       // Hapus baris secara fisik agar tidak perlu filter client-side
       const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties' });
