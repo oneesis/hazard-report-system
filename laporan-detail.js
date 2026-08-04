@@ -119,8 +119,9 @@ function renderDetail(r) {
   heroType.textContent = isInspection ? 'Inspeksi' : 'Hazard';
   heroType.className   = `report-type-badge ${isInspection ? 'inspection' : 'hazard'}`;
 
+  const STATUS_LABELS = { OPEN: 'Open', PROGRESS: 'In Progress', CLOSED: 'Closed', FOLLOWUP: 'Menunggu Konfirmasi' };
   const heroStatus = document.getElementById('heroStatusBadge');
-  heroStatus.textContent = status;
+  heroStatus.textContent = STATUS_LABELS[status] || status;
   heroStatus.className   = `status-badge status-${status.toLowerCase()}`;
 
   const due = new Date(r.batas_waktu || r.due_date || '');
@@ -176,7 +177,7 @@ function renderDetail(r) {
   renderWaBadge(r, isInspection);
 
   const statusBadge = document.getElementById('dfStatusBadge');
-  statusBadge.textContent = status;
+  statusBadge.textContent = STATUS_LABELS[status] || status;
   statusBadge.className   = `status-badge status-${status.toLowerCase()}`;
 
   if (status === 'CLOSED') {
@@ -192,12 +193,13 @@ function renderDetail(r) {
   renderGallery('galleryAfter',  getImages(r, ['upload_foto_perbaikan_pic','upload_foto_perbaikan','foto_perbaikan','foto_after','foto_after_url','after_photo']));
 
   // Workflow panels
-  const user      = getCurrentUser();
-  const isAdmin   = isAdminOrAbove(user?.role);
-  const planStatus = String(getReportValue(r, ['plan_status', 'PLAN_STATUS'], '') || '').trim().toLowerCase();
-  const rencana    = getReportValue(r, ['rencana_tindakan', 'RENCANA_TINDAKAN'], '') || '';
-  const tanggalR   = getReportValue(r, ['tanggal_rencana', 'TANGGAL_RENCANA'], '') || '';
-  const rejComment = getReportValue(r, ['plan_review_comment', 'PLAN_REVIEW_COMMENT'], '') || '';
+  const user         = getCurrentUser();
+  const isAdmin      = isAdminOrAbove(user?.role);
+  const planStatus   = String(getReportValue(r, ['plan_status', 'PLAN_STATUS'], '') || '').trim().toLowerCase();
+  const closingStatus = String(getReportValue(r, ['closing_status', 'CLOSING_STATUS'], '') || '').trim().toLowerCase();
+  const rencana      = getReportValue(r, ['rencana_tindakan', 'RENCANA_TINDAKAN'], '') || '';
+  const tanggalR     = getReportValue(r, ['tanggal_rencana', 'TANGGAL_RENCANA'], '') || '';
+  const rejComment   = getReportValue(r, ['plan_review_comment', 'PLAN_REVIEW_COMMENT'], '') || '';
 
   // Panel A: untuk PIC atau admin, status OPEN, belum ada rencana
   const showPlanForm = (isAdmin || isPic(r)) && status === 'OPEN' &&
@@ -213,24 +215,34 @@ function renderDetail(r) {
   }
 
   // Panel B: Pelapor review saat plan pending_review
-  const showReviewForm = status !== 'CLOSED' && (isAdmin || isPelapor(r)) && planStatus === 'pending_review';
+  const showReviewForm = status !== 'CLOSED' && status !== 'FOLLOWUP' &&
+    (isAdmin || isPelapor(r)) && planStatus === 'pending_review';
   if (showReviewForm) {
     document.getElementById('reviewForm').style.display = '';
     document.getElementById('reviewRencana').textContent = rencana || '-';
     document.getElementById('reviewTanggal').textContent = tanggalR ? fmt(tanggalR) : '-';
   }
 
-  // Closing form: admin bypass workflow langsung; PIC setelah plan approved; atau sudah CLOSED
-  const showClosingForm = (isAdmin && status !== 'CLOSED') ||
+  // Panel C: Closing form — admin bypass; PIC setelah plan approved; read-only saat FOLLOWUP/CLOSED
+  const showClosingForm = (isAdmin && status !== 'CLOSED' && status !== 'FOLLOWUP') ||
     (isPic(r) && planStatus === 'approved' && status !== 'CLOSED') ||
-    status === 'CLOSED';
+    status === 'CLOSED' || status === 'FOLLOWUP';
   if (showClosingForm) {
     document.getElementById('closingForm').style.display = '';
     wireClosingForm(r, status);
   }
 
+  // Panel D: Pelapor konfirmasi closing saat FOLLOWUP
+  const showClosingReviewForm = (isAdmin || isPelapor(r)) &&
+    status === 'FOLLOWUP' && closingStatus === 'pending_review';
+  if (showClosingReviewForm) {
+    document.getElementById('closingReviewForm').style.display = '';
+    const cNote = getReportValue(r, ['catatan_closing', 'closing_note', 'catatan_closing_pic'], '');
+    document.getElementById('closingReviewNote').textContent = cNote || '(tidak ada catatan)';
+  }
+
   // Timeline
-  renderTimeline(r, status, isInspection, planStatus, rencana, tanggalR, rejComment);
+  renderTimeline(r, status, isInspection, planStatus, closingStatus, rencana, tanggalR, rejComment);
 }
 
 // ── Action Plan ──
@@ -319,10 +331,67 @@ async function reviewActionPlan(decision) {
   }
 }
 
+function toggleClosingRejectForm() {
+  const show = document.getElementById('closingRejectComment').style.display === 'none';
+  document.getElementById('closingRejectComment').style.display    = show ? '' : 'none';
+  document.getElementById('closingRejectLabel').style.display      = show ? '' : 'none';
+  document.getElementById('btnSubmitClosingReject').style.display  = show ? '' : 'none';
+}
+
+async function reviewClosing(decision) {
+  if (!detailReport) return;
+  const comment = document.getElementById('closingRejectComment').value.trim();
+  if (decision === 'rejected' && !comment) {
+    showToast('Catatan wajib diisi jika menolak closing.', 'error');
+    return;
+  }
+
+  const btn = decision === 'confirmed'
+    ? document.getElementById('btnClosingConfirm')
+    : document.getElementById('btnSubmitClosingReject');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+  try {
+    const isInspection = (detailReport.report_type || '').toUpperCase() === 'INSPECTION';
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reviewClosing', data: {
+        id: detailReport.id,
+        inspection_sheet: isInspection ? (detailReport.inspection_sheet || '') : '',
+        decision,
+        comment,
+      }})
+    });
+    const result = await res.json();
+    if (result.status !== 'success') throw new Error(result.message);
+    showToast(result.message);
+    setTimeout(() => window.location.reload(), 1200);
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = decision === 'confirmed'
+      ? '<i class="fa-solid fa-check"></i> Konfirmasi Selesai'
+      : '<i class="fa-solid fa-paper-plane"></i> Konfirmasi Penolakan';
+  }
+}
+
 // ── Closing form wiring ──
 function wireClosingForm(r, status) {
   const noteTa = document.getElementById('detailClosingNote');
   noteTa.value = getReportValue(r, ['catatan_closing','closing_note','catatan','catatan_closing_pic'], '');
+
+  const isFollowup = status === 'FOLLOWUP';
+
+  // FOLLOWUP: read-only — hide controls, show pending notice
+  document.getElementById('closingPendingNotice').style.display = isFollowup ? '' : 'none';
+  document.getElementById('detailStatusButtons').style.display  = isFollowup ? 'none' : '';
+  document.getElementById('btnDetailSubmit').style.display      = isFollowup ? 'none' : '';
+  document.getElementById('detailAfterPhoto')?.closest('label')?.style && (
+    document.getElementById('detailAfterPhoto').closest('label').style.display = isFollowup ? 'none' : ''
+  );
+  noteTa.readOnly = isFollowup;
+
+  if (isFollowup) return;
 
   // Status buttons
   document.querySelectorAll('#detailStatusButtons .status-button').forEach(btn => {
@@ -413,7 +482,7 @@ async function submitDetailClosing() {
 }
 
 // ── Timeline ──
-function renderTimeline(r, status, isInspection, planStatus, rencana, tanggalR, rejComment) {
+function renderTimeline(r, status, isInspection, planStatus, closingStatus, rencana, tanggalR, rejComment) {
   const el = document.getElementById('detailTimeline');
   if (!el) return;
 
@@ -446,11 +515,16 @@ function renderTimeline(r, status, isInspection, planStatus, rencana, tanggalR, 
     items.push({ dot: 'done', label: 'Rencana Disetujui Pelapor', date: fmt(tanggalR) || '-', note: rencana });
   }
 
-  if (status === 'PROGRESS' || status === 'CLOSED') {
+  if (status === 'PROGRESS' || status === 'CLOSED' || status === 'FOLLOWUP') {
     items.push({ dot: status === 'CLOSED' ? 'done' : 'progress', label: 'Sedang Perbaikan (IN PROGRESS)', date: '-' });
   }
 
-  if (status === 'CLOSED') {
+  if (status === 'FOLLOWUP') {
+    const rejectNote = closingStatus === 'rejected'
+      ? getReportValue(r, ['closing_review_comment', 'CLOSING_REVIEW_COMMENT'], '') : '';
+    items.push({ dot: 'progress', label: 'Closing Disubmit — Menunggu Konfirmasi Pelapor', date: '-', note: closingNote || '' });
+    if (rejectNote) items.push({ dot: 'overdue', label: 'Closing Ditolak Pelapor', date: '-', note: rejectNote });
+  } else if (status === 'CLOSED') {
     items.push({
       dot: 'closed', label: 'Laporan Ditutup',
       date: fmt(dateClosing) || '-',

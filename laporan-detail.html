@@ -231,9 +231,49 @@
               </button>
             </div>
 
+          <!-- Panel D: Pelapor konfirmasi closing -->
+            <div id="closingReviewForm" class="closing-form" style="display:none">
+              <div class="closing-form-title">
+                <i class="fa-solid fa-circle-check"></i> Konfirmasi Closing
+              </div>
+              <p style="font-size:.88rem;color:#475569;margin-bottom:12px">
+                PIC telah menyelesaikan perbaikan. Apakah perbaikan sudah benar-benar selesai dan sesuai?
+              </p>
+              <div class="plan-rencana-display">
+                <div class="plan-rencana-label">Catatan Closing dari PIC:</div>
+                <div id="closingReviewNote" class="plan-rencana-text">-</div>
+              </div>
+              <label id="closingRejectLabel" class="closing-label" style="display:none">
+                Alasan Penolakan <span class="required">*</span>
+              </label>
+              <textarea id="closingRejectComment" class="closing-textarea" rows="3"
+                placeholder="Jelaskan mengapa closing ditolak..." style="display:none"></textarea>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button id="btnClosingConfirm" class="btn-primary" style="flex:1"
+                  onclick="reviewClosing('confirmed')">
+                  <i class="fa-solid fa-check"></i> Konfirmasi Selesai
+                </button>
+                <button id="btnClosingReject" class="btn-danger" style="flex:1"
+                  onclick="toggleClosingRejectForm()">
+                  <i class="fa-solid fa-xmark"></i> Tolak
+                </button>
+              </div>
+              <button id="btnSubmitClosingReject" class="btn-danger"
+                style="width:100%;margin-top:8px;display:none"
+                onclick="reviewClosing('rejected')">
+                <i class="fa-solid fa-paper-plane"></i> Konfirmasi Penolakan
+              </button>
+            </div>
+
           <!-- Closing form (hanya setelah rencana disetujui) -->
             <div id="closingForm" class="closing-form" style="display:none">
               <div class="closing-form-title">Update Status</div>
+
+              <!-- Notice: menunggu konfirmasi pelapor (tampil saat FOLLOWUP) -->
+              <div id="closingPendingNotice" style="display:none;margin-bottom:10px;padding:10px 12px;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;color:#92400e;font-size:.85rem">
+                <i class="fa-solid fa-clock" style="color:#f59e0b"></i>
+                Closing telah disubmit — menunggu konfirmasi dari pelapor.
+              </div>
 
               <div class="status-buttons" id="detailStatusButtons">
                 <button type="button" class="status-button" data-status="OPEN">Open</button>

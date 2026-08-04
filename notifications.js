@@ -189,6 +189,17 @@ function buildNotificationMessage(report, kind, relation) {
     desc.length > 60 ? `${desc.slice(0, 57)}...` : desc || "Tanpa deskripsi";
 
   if (kind === "status") {
+    if (status === 'FOLLOWUP') {
+      if (relation === 'reporter') return `PIC laporan ${id} telah submit closing. Silakan konfirmasi apakah perbaikan sudah sesuai.`;
+      if (relation === 'pic')     return `Laporan ${id} menunggu konfirmasi dari pelapor.`;
+    }
+    const closingStatus = String(report.closing_status || '').toLowerCase();
+    if (status === 'PROGRESS' && closingStatus === 'rejected' && relation === 'pic') {
+      return `Closing laporan ${id} ditolak pelapor. Harap revisi dan submit ulang.`;
+    }
+    if (status === 'CLOSED' && closingStatus === 'confirmed' && relation === 'pic') {
+      return `Laporan ${id} dikonfirmasi selesai oleh pelapor.`;
+    }
     return `Status laporan ${id} diperbarui menjadi ${status}`;
   }
   if (kind === "plan_rejected") {

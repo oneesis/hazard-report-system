@@ -941,7 +941,8 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
   setCell('STATUS PERBAIKAN', data.status_perbaikan || 'OPEN');
   if (fotoPerbaikanUrl) setCell('UPLOAD FOTO PERBAIKAN PIC', fotoPerbaikanUrl);
   setCell('CATATAN CLOSING', data.catatan_closing || '');
-  if (data.status_perbaikan === 'CLOSED') setCell('TANGGAL CLOSING', new Date().toISOString());
+  if (data.status_perbaikan === 'CLOSED')   setCell('TANGGAL CLOSING',  new Date().toISOString());
+  if (data.closing_status)                  setCell('CLOSING_STATUS',   data.closing_status);
 
   if (updates.length) {
     await sheets.spreadsheets.values.batchUpdate({
@@ -949,19 +950,82 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
       requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
     });
   }
-  // [PUSH-START] — push ke pelapor saat laporan CLOSED
-  if (data.status_perbaikan === 'CLOSED') {
+  // [PUSH-START] — push/WA ke pelapor saat laporan CLOSED (admin bypass) atau FOLLOWUP
+  if (data.status_perbaikan === 'CLOSED' || data.status_perbaikan === 'FOLLOWUP') {
     const rowData = {};
     headers.forEach((h, i) => { rowData[h] = rows[rowIndex][i] ?? ''; });
     const reporterNik = rowData['nik'] || rowData['nik_pelapor'] || '';
-    if (reporterNik) await sendPushToNik(sheets, reporterNik, {
-      title: 'Laporan Selesai ✅',
-      body: `Laporan ${data.id} telah berhasil ditutup.`,
-      url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
-    }).catch(() => {});
+    if (data.status_perbaikan === 'CLOSED') {
+      if (reporterNik) await sendPushToNik(sheets, reporterNik, {
+        title: 'Laporan Selesai ✅',
+        body: `Laporan ${data.id} telah berhasil ditutup.`,
+        url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+      }).catch(() => {});
+    } else {
+      const noWa = rowData['no_whatsapp'] || '';
+      const nama  = rowData['nama'] || '';
+      if (noWa) {
+        const msg = `Halo ${nama}, PIC laporan *${data.id}* telah menyelesaikan perbaikan dan meminta konfirmasimu.\n\nSilakan konfirmasi apakah perbaikan sudah sesuai:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
+        await sendWaNotification(noWa, msg).catch(() => {});
+      }
+      if (reporterNik) await sendPushToNik(sheets, reporterNik, {
+        title: 'Perlu Konfirmasi Closing 🔔',
+        body: `PIC laporan ${data.id} telah submit closing. Silakan konfirmasi.`,
+        url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+      }).catch(() => {});
+    }
   }
   // [PUSH-END]
   return { status: 'success', message: 'Laporan berhasil diperbarui.', id: data.id, foto_perbaikan_url: fotoPerbaikanUrl };
+}
+
+async function ensureClosingColumns(sheets, sheetName) {
+  const needed = ['CLOSING_STATUS', 'CLOSING_REVIEW_COMMENT', 'CLOSING_REVIEWED_AT'];
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!1:1` });
+  const existing = (res.data.values?.[0] || []).map(h => normalizeHeader(h));
+  const toAdd = needed.filter(c => !existing.includes(normalizeHeader(c)));
+  if (!toAdd.length) return;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${sheetName}!${colIndexToLetter(existing.length)}1`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [toAdd] }
+  });
+}
+
+async function reviewClosing(sheets, data, sheetName) {
+  const { decision } = data;
+  if (decision !== 'confirmed' && decision !== 'rejected') throw new Error('Decision harus confirmed atau rejected.');
+  if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Catatan wajib diisi jika menolak closing.');
+
+  await ensureClosingColumns(sheets, sheetName);
+
+  const fields = {
+    'CLOSING_STATUS':         decision,
+    'CLOSING_REVIEW_COMMENT': data.comment || '',
+    'CLOSING_REVIEWED_AT':    new Date().toISOString(),
+    'STATUS PERBAIKAN':       decision === 'confirmed' ? 'CLOSED' : 'PROGRESS',
+  };
+  if (decision === 'confirmed') fields['TANGGAL CLOSING'] = new Date().toISOString();
+
+  const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, fields);
+
+  const noWaPic = reportRow['no_whatsapp_pic'] || '';
+  const namaPic = reportRow['nama_pic'] || '';
+  if (noWaPic) {
+    const msg = decision === 'confirmed'
+      ? `Halo ${namaPic}, closing laporan *${data.id}* telah ✅ *DIKONFIRMASI* oleh pelapor. Laporan dinyatakan selesai.\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+      : `Halo ${namaPic}, closing laporan *${data.id}* ❌ *DITOLAK* oleh pelapor.\n\n💬 Catatan: ${data.comment}\n\nSilakan revisi dan submit ulang:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
+    await sendWaNotification(noWaPic, msg).catch(() => {});
+  }
+  const picWa  = reportRow['no_whatsapp_pic'] || reportRow['no_whattsapp_pic'] || '';
+  const picNik = reportRow['nik_pic'] || await resolveNikFromWa(sheets, picWa).catch(() => '');
+  if (picNik) await sendPushToNik(sheets, picNik, decision === 'confirmed'
+    ? { title: 'Closing Dikonfirmasi ✅', body: `Laporan ${data.id} dinyatakan selesai oleh pelapor.`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
+    : { title: 'Closing Ditolak ❌', body: `Laporan ${data.id}: closing ditolak. Silakan revisi dan submit ulang.`, url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}` }
+  ).catch(() => {});
+
+  return { status: 'success', message: decision === 'confirmed' ? 'Closing dikonfirmasi. Laporan selesai.' : 'Closing ditolak. PIC akan diminta submit ulang.' };
 }
 
 // ===== HANDLER =====
@@ -1094,10 +1158,23 @@ module.exports = async (req, res) => {
         }
         case 'submitHazardReport':     result = await submitHazardReport(sheets, data); break;
         case 'submitInspectionReport': result = await submitInspectionReport(sheets, data); break;
-        case 'updateHazardReport':     result = await updateReport(sheets, data, 'Hazard_Report', '-Closing'); break;
+        case 'updateHazardReport': {
+          if (data.status_perbaikan === 'CLOSED' && !isAdminOrAbove(auth?.role)) {
+            await ensureClosingColumns(sheets, 'Hazard_Report');
+            data.status_perbaikan = 'FOLLOWUP';
+            data.closing_status   = 'pending_review';
+          }
+          result = await updateReport(sheets, data, 'Hazard_Report', '-Closing');
+          break;
+        }
         case 'updateInspectionReport': {
           const sheetName = String(data.inspection_sheet || '').trim().toUpperCase();
           if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
+          if (data.status_perbaikan === 'CLOSED' && !isAdminOrAbove(auth?.role)) {
+            await ensureClosingColumns(sheets, sheetName);
+            data.status_perbaikan = 'FOLLOWUP';
+            data.closing_status   = 'pending_review';
+          }
           result = await updateReport(sheets, data, sheetName, '-Inspection-Closing');
           break;
         }
@@ -1111,6 +1188,12 @@ module.exports = async (req, res) => {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
           result = await reviewActionPlan(sheets, data, sheetName);
+          break;
+        }
+        case 'reviewClosing': {
+          const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
+          if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
+          result = await reviewClosing(sheets, data, sheetName);
           break;
         }
         // [PUSH-START]
