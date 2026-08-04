@@ -43,6 +43,9 @@
       <button class="admin-subnav-btn" data-section="sectionAchievement" onclick="showSection('sectionAchievement', this)" id="sidebarAchievement" style="display:none">
         <i class="fa-solid fa-trophy"></i> Capaian SAP
       </button>
+      <button class="admin-subnav-btn" data-section="sectionExport" onclick="showSection('sectionExport', this)" id="sidebarExport" style="display:none">
+        <i class="fa-solid fa-file-excel"></i> Penarikan Data
+      </button>
     </div>
 
     <!-- MANAJEMEN USER -->
@@ -147,6 +150,46 @@
       </div>
     </section>
 
+    <!-- PENARIKAN DATA -->
+    <section id="sectionExport" class="admin-section" style="display:none">
+      <div class="um-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <select id="expType" class="um-search" style="width:160px" onchange="filterExportData()">
+            <option value="">Semua Jenis</option>
+            <option value="HAZARD">Hazard Report</option>
+            <option value="INSPECTION">Inspeksi</option>
+          </select>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <label style="font-size:.82rem;color:#64748b">Dari</label>
+            <input type="date" id="expFrom" class="um-search" style="width:140px" onchange="filterExportData()">
+            <label style="font-size:.82rem;color:#64748b">s/d</label>
+            <input type="date" id="expTo" class="um-search" style="width:140px" onchange="filterExportData()">
+          </div>
+        </div>
+        <div class="um-header-actions">
+          <span id="expCount" style="font-size:.82rem;color:#64748b"></span>
+          <button class="btn-primary" onclick="exportToExcel()">
+            <i class="fa-solid fa-file-excel"></i> Download Excel
+          </button>
+          <button class="btn-secondary btn-icon" onclick="loadExportData()" title="Refresh">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+      <div class="admin-card" style="overflow-x:auto">
+        <table id="expTable" class="admin-table">
+          <thead><tr>
+            <th>Tipe</th><th>ID</th><th>Tanggal</th><th>Perusahaan</th>
+            <th>Nama Pelapor</th><th>Departemen</th><th>Deskripsi / Temuan</th><th>Status</th><th>PIC</th>
+          </tr></thead>
+          <tbody id="expTableBody">
+            <tr><td colspan="9" class="um-loading">Pilih filter lalu klik Refresh</td></tr>
+          </tbody>
+        </table>
+        <div id="expPagination" class="table-pagination"></div>
+      </div>
+    </section>
+
     <!-- hidden file input for CSV import -->
     <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvFile(this)">
 
@@ -179,6 +222,8 @@
     }
     // Capaian SAP: semua admin+
     document.getElementById('sidebarAchievement').style.display = 'flex';
+    // Penarikan Data: semua admin+
+    document.getElementById('sidebarExport').style.display = 'flex';
     initUserManagement();
   });
 
@@ -192,11 +237,13 @@
       sectionHistory:     'Riwayat Pengajuan',
       sectionPending:     'Pending Approval',
       sectionAchievement: 'Capaian SAP',
+      sectionExport:      'Penarikan Data',
     };
     document.getElementById('appTopbarTitle').textContent = titles[sectionId] || '';
     if (sectionId === 'sectionPending')     loadPendingChanges();
     if (sectionId === 'sectionHistory')     loadMyHistory();
     if (sectionId === 'sectionAchievement') loadAchievement();
+    if (sectionId === 'sectionExport')      loadExportData();
   }
 </script>
 </body>

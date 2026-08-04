@@ -758,3 +758,208 @@ function exportAchievementCsv() {
   a.download = `capaian_sap_${monthStr}.csv`;
   a.click();
 }
+
+// ===== PENARIKAN DATA / EXPORT LAPORAN =====
+
+let _expAllReports = [];
+let _expFiltered   = [];
+let _expPage       = 1;
+const EXP_PAGE_SIZE = 50;
+
+// Kolom untuk preview tabel (9 kolom)
+const EXP_PREVIEW_COLS = [
+  { keys: ['report_type'],                                                  label: 'Tipe' },
+  { keys: ['id'],                                                           label: 'ID' },
+  { keys: ['timestamp','tanggal_laporan','tgl_laporan','tanggal_kejadian'], label: 'Tanggal' },
+  { keys: ['perusahaan'],                                                   label: 'Perusahaan' },
+  { keys: ['nama'],                                                         label: 'Nama Pelapor' },
+  { keys: ['departemen'],                                                   label: 'Departemen' },
+  { keys: ['deskripsi_bahaya','temuan_inspeksi','deskripsi'],               label: 'Deskripsi / Temuan' },
+  { keys: ['status_perbaikan'],                                             label: 'Status' },
+  { keys: ['nama_pic'],                                                     label: 'PIC' },
+];
+
+// Kolom untuk export (semua, tanpa WA)
+const EXP_ALL_COLS = [
+  { keys: ['report_type'],                                                         label: 'Tipe Laporan' },
+  { keys: ['id'],                                                                  label: 'ID Laporan' },
+  { keys: ['timestamp','tanggal_laporan','tgl_laporan'],                           label: 'Tanggal Laporan' },
+  { keys: ['perusahaan'],                                                          label: 'Perusahaan' },
+  { keys: ['perusahaan_subcont1','subcont1','subcont'],                            label: 'Subcont' },
+  { keys: ['nama'],                                                                label: 'Nama Pelapor' },
+  { keys: ['nik'],                                                                 label: 'NIK Pelapor' },
+  { keys: ['jabatan'],                                                             label: 'Jabatan Pelapor' },
+  { keys: ['departemen'],                                                          label: 'Departemen Pelapor' },
+  // NO WHATSAPP: dihilangkan
+  { keys: ['tanggal_kejadian','tanggal_inspeksi'],                                 label: 'Tanggal Kejadian / Inspeksi' },
+  { keys: ['shift_kejadian','shift_inspeksi'],                                     label: 'Shift' },
+  { keys: ['lokasi_bahaya','lokasi_inspeksi','lokasi'],                            label: 'Lokasi' },
+  { keys: ['detail_lokasi_bahaya','detail_lokasi_inspeksi'],                       label: 'Detail Lokasi' },
+  { keys: ['jenis_bahaya','jenis_inspeksi'],                                       label: 'Jenis' },
+  { keys: ['ketidaksesuaian_bahaya'],                                              label: 'Ketidaksesuaian' },
+  { keys: ['sub_ketidaksesuaian','subketidaksesuaian'],                            label: 'Sub Ketidaksesuaian' },
+  { keys: ['deskripsi_bahaya','temuan_inspeksi','deskripsi'],                      label: 'Deskripsi / Temuan' },
+  { keys: ['tingkat_risiko','tingkat_resiko'],                                     label: 'Tingkat Risiko' },
+  { keys: ['tindakan_langsung'],                                                   label: 'Tindakan Langsung' },
+  { keys: ['tindakan_usulan_pic','rekomendasi_perbaikan'],                         label: 'Tindakan Usulan PIC' },
+  { keys: ['perusahaan_pic'],                                                      label: 'Perusahaan PIC' },
+  { keys: ['nama_pic'],                                                            label: 'Nama PIC' },
+  { keys: ['nik_pic'],                                                             label: 'NIK PIC' },
+  { keys: ['jabatan_pic'],                                                         label: 'Jabatan PIC' },
+  { keys: ['departemen_pic'],                                                      label: 'Departemen PIC' },
+  // NO WHATSAPP PIC: dihilangkan
+  { keys: ['batas_waktu'],                                                         label: 'Batas Waktu' },
+  { keys: ['status_perbaikan'],                                                    label: 'Status' },
+  { keys: ['plan_status'],                                                         label: 'Status Rencana' },
+  { keys: ['rencana_tindakan'],                                                    label: 'Rencana Tindakan' },
+  { keys: ['tanggal_rencana'],                                                     label: 'Tanggal Rencana' },
+  { keys: ['catatan_closing'],                                                     label: 'Catatan Closing' },
+  { keys: ['tanggal_closing'],                                                     label: 'Tanggal Closing' },
+  { keys: ['closing_status'],                                                      label: 'Status Konfirmasi Closing' },
+  { keys: ['closing_review_comment'],                                              label: 'Catatan Penolakan Closing' },
+];
+
+function _expVal(r, keys) {
+  for (const k of keys) {
+    const v = r[k];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+  }
+  return '';
+}
+
+function _expFmtDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  return isNaN(d) ? str : d.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+async function loadExportData() {
+  const tbody = document.getElementById('expTableBody');
+  const countEl = document.getElementById('expCount');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px">Memuat data...</td></tr>';
+  if (countEl) countEl.textContent = '';
+  try {
+    const res  = await fetch('/api?action=getAllReports');
+    const json = await res.json();
+    _expAllReports = json.data || [];
+
+    // Scope ADMIN ke perusahaannya sendiri (SUPER_ADMIN dapat semua)
+    const auth = getCurrentUser();
+    if (!isSuperAdminRole(auth?.role)) {
+      const co = String(auth?.perusahaan || '').trim().toUpperCase();
+      if (co) _expAllReports = _expAllReports.filter(r =>
+        String(r.perusahaan || '').trim().toUpperCase() === co
+      );
+    }
+
+    filterExportData();
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#ef4444;padding:20px">${escapeHTML(e.message)}</td></tr>`;
+  }
+}
+
+function filterExportData() {
+  const type = document.getElementById('expType')?.value  || '';
+  const from = document.getElementById('expFrom')?.value  || '';
+  const to   = document.getElementById('expTo')?.value    || '';
+
+  _expFiltered = _expAllReports.filter(r => {
+    if (type && String(r.report_type || '').toUpperCase() !== type) return false;
+    const dateStr = _expVal(r, ['timestamp','tanggal_laporan','tgl_laporan','tanggal_kejadian','tanggal_inspeksi']);
+    if (dateStr) {
+      const ymd = new Date(dateStr);
+      if (!isNaN(ymd)) {
+        const s = ymd.toISOString().slice(0, 10);
+        if (from && s < from) return false;
+        if (to   && s > to)   return false;
+      }
+    } else if (from || to) {
+      return false;
+    }
+    return true;
+  });
+
+  _expFiltered.sort((a, b) => {
+    const da = new Date(_expVal(a, ['timestamp','tanggal_laporan','tgl_laporan']));
+    const db = new Date(_expVal(b, ['timestamp','tanggal_laporan','tgl_laporan']));
+    return isNaN(db) - isNaN(da) || db - da;
+  });
+
+  _expPage = 1;
+  const n = _expFiltered.length;
+  if (document.getElementById('expCount'))
+    document.getElementById('expCount').textContent = n ? `${n} laporan` : 'Tidak ada data';
+  renderExportTable();
+}
+
+function renderExportTable() {
+  const tbody = document.getElementById('expTableBody');
+  if (!tbody) return;
+  if (!_expFiltered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada laporan sesuai filter</td></tr>';
+    document.getElementById('expPagination').innerHTML = '';
+    return;
+  }
+
+  const STATUS_LABELS = { OPEN:'Open', PROGRESS:'In Progress', CLOSED:'Closed', FOLLOWUP:'Menunggu Konfirmasi' };
+  const start = (_expPage - 1) * EXP_PAGE_SIZE;
+  const rows  = _expFiltered.slice(start, start + EXP_PAGE_SIZE);
+
+  tbody.innerHTML = rows.map(r => {
+    const isIns   = r.report_type === 'INSPECTION';
+    const typeBadge = `<span class="report-type-badge ${isIns ? 'inspection' : 'hazard'}" style="font-size:.72rem;padding:2px 7px">${isIns ? 'Inspeksi' : 'Hazard'}</span>`;
+    const st      = _expVal(r, ['status_perbaikan']) || '-';
+    const stBadge = `<span class="status-badge status-${(st).toLowerCase()}" style="font-size:.72rem;padding:2px 7px">${STATUS_LABELS[st] || st}</span>`;
+    return '<tr>' + EXP_PREVIEW_COLS.map(col => {
+      if (col.keys[0] === 'report_type') return `<td>${typeBadge}</td>`;
+      if (col.keys[0] === 'status_perbaikan') return `<td>${stBadge}</td>`;
+      let v = _expVal(r, col.keys);
+      if (col.keys.some(k => k.includes('timestamp') || k.includes('tanggal') || k.includes('tgl'))) v = _expFmtDate(v) || v;
+      const display = v.length > 80 ? v.slice(0, 77) + '...' : v;
+      return `<td>${escapeHTML(display || '-')}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+
+  renderExpPagination();
+}
+
+function renderExpPagination() {
+  const el    = document.getElementById('expPagination');
+  if (!el) return;
+  const pages = Math.ceil(_expFiltered.length / EXP_PAGE_SIZE);
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = Array.from({ length: pages }, (_, i) => i + 1)
+    .map(p => `<button class="um-page-btn${p === _expPage ? ' active' : ''}" onclick="_expGoPage(${p})">${p}</button>`)
+    .join('');
+}
+
+window._expGoPage = function(p) { _expPage = p; renderExportTable(); };
+
+function exportToExcel() {
+  if (!_expFiltered.length) { alert('Tidak ada data untuk di-export. Pastikan filter sudah dipilih.'); return; }
+
+  const from  = document.getElementById('expFrom')?.value || 'awal';
+  const to    = document.getElementById('expTo')?.value   || 'akhir';
+  const type  = (document.getElementById('expType')?.value || 'semua').toLowerCase();
+
+  const isDateKey = k => k.includes('timestamp') || k.includes('tanggal') || k.includes('tgl');
+
+  const headers = EXP_ALL_COLS.map(c => c.label);
+  const dataRows = _expFiltered.map(r =>
+    EXP_ALL_COLS.map(col => {
+      let v = _expVal(r, col.keys);
+      if (col.keys.some(isDateKey) && v) v = _expFmtDate(v) || v;
+      if (col.keys[0] === 'report_type') v = v === 'INSPECTION' ? 'Inspeksi' : v === 'HAZARD' ? 'Hazard Report' : v;
+      return v;
+    })
+  );
+
+  const csv = [headers, ...dataRows]
+    .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = `laporan_${type}_${from}_${to}.csv`;
+  a.click();
+}
