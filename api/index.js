@@ -467,11 +467,15 @@ async function applyUserChange(sheets, action, data) {
     const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(data.NIK || '').trim());
     if (rowIdx === -1) throw new Error('User tidak ditemukan.');
     if (action === 'DELETE') {
-      // Tandai ROLE=DELETED, login akan otomatis gagal
-      const roleCol = headers.indexOf('ROLE');
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID, range: `Master_Karyawan!${colIndexToLetter(roleCol)}${rowIdx + 1}`,
-        valueInputOption: 'RAW', requestBody: { values: [['DELETED']] }
+      // Hapus baris secara fisik agar tidak perlu filter client-side
+      const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties' });
+      const sheetMeta = meta.data.sheets.find(s => s.properties.title === 'Master_Karyawan');
+      if (!sheetMeta) throw new Error('Sheet Master_Karyawan tidak ditemukan.');
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ deleteDimension: {
+          range: { sheetId: sheetMeta.properties.sheetId, dimension: 'ROWS', startIndex: rowIdx, endIndex: rowIdx + 1 }
+        }}]}
       });
     } else {
       const updates = Object.entries(data)
