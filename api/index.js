@@ -409,8 +409,9 @@ async function resolveNikFromWa(sheets, wa) {
 async function getKaryawan(sheets, auth) {
   if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
   const rows = await getSheetData(sheets, 'Master_Karyawan');
-  const visible = isSuperAdmin(auth.role) ? rows
-    : rows.filter(r => String(r['PERUSAHAAN'] || '').trim().toUpperCase() === String(auth.perusahaan || '').trim().toUpperCase());
+  const active = rows.filter(r => normalizeRole(r['ROLE']) !== 'DELETED');
+  const visible = isSuperAdmin(auth.role) ? active
+    : active.filter(r => String(r['PERUSAHAAN'] || '').trim().toUpperCase() === String(auth.perusahaan || '').trim().toUpperCase());
   return { status: 'success', data: stripSensitiveKaryawan(visible) };
 }
 

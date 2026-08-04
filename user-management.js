@@ -117,8 +117,8 @@ function renderPendingChanges(list) {
         <td><span class="um-action-badge um-action-${(p['ACTION']||'').toLowerCase()}">${escapeHTML(p['ACTION']||'')}</span></td>
         <td class="um-data-cell">${escapeHTML(data.NAMA || data.NIK || '-')}</td>
         <td class="um-review-btns">
-          <button class="um-btn-approve" onclick="reviewChange('${escapeHTML(p['ID'])}','APPROVE')">✅ Setuju</button>
-          <button class="um-btn-reject"  onclick="promptReject('${escapeHTML(p['ID'])}')">❌ Tolak</button>
+          <button class="um-btn-approve" onclick="reviewChange('${escapeHTML(p['ID'])}','APPROVE')"><i class="fa-solid fa-check"></i> Setuju</button>
+          <button class="um-btn-reject"  onclick="promptReject('${escapeHTML(p['ID'])}')"><i class="fa-solid fa-xmark"></i> Tolak</button>
         </td>
       </tr>`;
     }).join('')}</tbody>
@@ -419,11 +419,8 @@ function renderMyHistory(list) {
   const section = document.getElementById('umHistorySection');
   if (!section) return;
   if (!list.length) { section.innerHTML = '<p class="um-empty">Belum ada riwayat pengajuan.</p>'; return; }
-  const statusBadge = s => {
-    const map = { PENDING:'background:#fef9c3;color:#854d0e', APPROVED:'background:#dcfce7;color:#15803d', REJECTED:'background:#fee2e2;color:#dc2626' };
-    const style = map[String(s).toUpperCase()] || 'background:#f1f5f9;color:#475569';
-    return `<span class="um-action-badge" style="${style}">${escapeHTML(s)}</span>`;
-  };
+  const statusBadge = s =>
+    `<span class="um-action-badge um-status-${(s||'unknown').toLowerCase()}">${escapeHTML(s||'-')}</span>`;
   section.innerHTML = `<table class="um-pending-table">
     <thead><tr><th>Waktu</th><th>Action</th><th>Data</th><th>Status</th><th>Catatan</th></tr></thead>
     <tbody>${list.map(p => {

@@ -265,6 +265,12 @@
 .admin-card   { color-scheme: light; }
 .admin-table td { color: #1e293b; }
 
+/* Status badge riwayat pengajuan */
+.um-status-pending  { background:#fef9c3; color:#854d0e; }
+.um-status-approved { background:#dcfce7; color:#15803d; }
+.um-status-rejected { background:#fee2e2; color:#dc2626; }
+.um-status-unknown  { background:#f1f5f9; color:#475569; }
+
 /* Edit/Add user modal — must be fixed overlay */
 #umModal {
   display: none;
