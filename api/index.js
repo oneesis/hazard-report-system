@@ -596,9 +596,9 @@ function stripSensitiveKaryawan(rows) {
   });
 }
 
-async function getHazardReports(sheets) {
+async function getHazardReports(sheets, auth) {
   const data = await getSheetData(sheets, 'Hazard_Report');
-  const result = data
+  let result = data
     .map(obj => {
       const normalized = {};
       Object.keys(obj).forEach(k => { normalized[normalizeHeader(k)] = obj[k]; });
@@ -606,15 +606,20 @@ async function getHazardReports(sheets) {
       return normalized;
     })
     .filter(obj => String(obj.id || '').trim());
+  // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) result = result.filter(r => String(r.perusahaan || '').trim().toUpperCase() === co);
+  }
   return { status: 'success', data: result };
 }
 
-async function getInspectionReports(sheets) {
+async function getInspectionReports(sheets, auth) {
   // ponytail: parallel fetches — 8 sheets sequential was ~8x slower
   const results = await Promise.allSettled(
     INSPECTION_SHEETS.map(sheetName => getSheetData(sheets, sheetName).then(rows => ({ sheetName, rows })))
   );
-  const data = [];
+  let data = [];
   for (const result of results) {
     if (result.status !== 'fulfilled') continue;
     const { sheetName, rows } = result.value;
@@ -626,6 +631,11 @@ async function getInspectionReports(sheets) {
       normalized.inspection_sheet = sheetName;
       data.push(normalized);
     });
+  }
+  // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) data = data.filter(r => String(r.perusahaan || '').trim().toUpperCase() === co);
   }
   return { status: 'success', data };
 }
@@ -646,13 +656,15 @@ function isReportVisibleForUser(report, userNik, userName) {
          (userNik && picNik === userNik) || (userName && picName === userName);
 }
 
-async function getAllReports(sheets, nik, nama, role) {
-  const [h, i] = await Promise.all([getHazardReports(sheets), getInspectionReports(sheets)]);
+async function getAllReports(sheets, nik, nama, role, perusahaan) {
+  const auth = { role, perusahaan };
+  const [h, i] = await Promise.all([getHazardReports(sheets, auth), getInspectionReports(sheets, auth)]);
   let combined = [...(h.data || []), ...(i.data || [])];
   const userNik = String(nik || '').trim().toLowerCase();
   const userName = String(nama || '').trim().toLowerCase();
   const userRole = String(role || '').trim().toUpperCase();
-  if (userRole !== 'ADMIN' && (userNik || userName)) {
+  // USER hanya lihat laporannya sendiri; ADMIN & SUPER_ADMIN sudah di-scope by company oleh getHazardReports/getInspectionReports
+  if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN' && (userNik || userName)) {
     combined = combined.filter(r => isReportVisibleForUser(r, userNik, userName));
   }
   return { status: 'success', data: combined };
@@ -913,8 +925,30 @@ async function updateWorkflowFields(sheets, sheetName, reportId, fields) {
   return reportRow;
 }
 
-async function submitActionPlan(sheets, data, sheetName) {
+// Cek bahwa caller adalah PIC atau pelapor laporan (skip jika NIK tidak tersedia di report lama)
+function assertReportRole(reportRow, auth, requiredRole) {
+  if (isAdminOrAbove(auth.role)) return;
+  const authNik = String(auth.nik || '').trim();
+  if (!authNik) return; // token tanpa NIK = tidak bisa verifikasi
+  if (requiredRole === 'pic') {
+    const picNik = String(reportRow['nik_pic'] || reportRow['nip_pic'] || '').trim();
+    if (picNik && picNik !== authNik)
+      throw Object.assign(new Error('Akses ditolak: kamu bukan PIC laporan ini.'), { httpStatus: 403 });
+  } else {
+    const repNik = String(reportRow['nik'] || reportRow['nik_pelapor'] || '').trim();
+    if (repNik && repNik !== authNik)
+      throw Object.assign(new Error('Akses ditolak: kamu bukan pelapor laporan ini.'), { httpStatus: 403 });
+  }
+}
+
+async function submitActionPlan(sheets, data, sheetName, auth) {
   if (!data.rencana_tindakan?.trim()) throw new Error('Rencana tindakan wajib diisi.');
+  // Baca dulu untuk cek ownership sebelum update
+  const checkRows = await getSheetData(sheets, sheetName);
+  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
+  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
+  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  assertReportRole(checkNorm, auth, 'pic');
   const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, {
     'RENCANA_TINDAKAN':  data.rencana_tindakan.trim(),
     'TANGGAL_RENCANA':   data.tanggal_rencana || '',
@@ -942,10 +976,16 @@ async function submitActionPlan(sheets, data, sheetName) {
   return { status: 'success', message: 'Rencana tindakan berhasil dikirim ke pelapor.' };
 }
 
-async function reviewActionPlan(sheets, data, sheetName) {
+async function reviewActionPlan(sheets, data, sheetName, auth) {
   const decision = data.decision;
   if (decision !== 'approved' && decision !== 'rejected') throw new Error('Decision harus approved atau rejected.');
   if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Komentar wajib diisi jika menolak.');
+  // Cek ownership: harus pelapor atau admin
+  const checkRows = await getSheetData(sheets, sheetName);
+  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
+  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
+  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  assertReportRole(checkNorm, auth, 'reporter');
   const fields = {
     'PLAN_STATUS':          decision,
     'PLAN_REVIEW_COMMENT':  data.comment || '',
@@ -974,7 +1014,7 @@ async function reviewActionPlan(sheets, data, sheetName) {
   return { status: 'success', message: decision === 'approved' ? 'Rencana disetujui.' : 'Rencana ditolak, PIC akan merevisi.' };
 }
 
-async function updateReport(sheets, data, sheetName, folderSuffix) {
+async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
   const rows = res.data.values || [];
   if (rows.length < 2) throw new Error('Data tidak ditemukan.');
@@ -986,6 +1026,13 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
   const rowIndex = rows.findIndex((row, i) => i > 0 && String(row[idCol] || '').trim() === String(data.id || '').trim());
   if (rowIndex === -1) throw new Error('Data tidak ditemukan.');
   const actualRow = rowIndex + 1; // 1-indexed, rows[0]=header=row1, rows[1]=data=row2
+
+  // Cek ownership: PIC yang boleh update status laporan
+  if (auth) {
+    const rowObj = {};
+    headers.forEach((h, i) => { rowObj[h] = rows[rowIndex][i] ?? ''; });
+    assertReportRole(rowObj, auth, 'pic');
+  }
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic)
@@ -1073,10 +1120,16 @@ async function ensureClosingColumns(sheets, sheetName) {
   });
 }
 
-async function reviewClosing(sheets, data, sheetName) {
+async function reviewClosing(sheets, data, sheetName, auth) {
   const { decision } = data;
   if (decision !== 'confirmed' && decision !== 'rejected') throw new Error('Decision harus confirmed atau rejected.');
   if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Catatan wajib diisi jika menolak closing.');
+  // Cek ownership: harus pelapor atau admin
+  const checkRows = await getSheetData(sheets, sheetName);
+  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
+  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
+  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  assertReportRole(checkNorm, auth, 'reporter');
 
   await ensureClosingColumns(sheets, sheetName);
 
@@ -1169,10 +1222,10 @@ module.exports = async (req, res) => {
           }
           break;
         }
-        case 'getHazardReports':    result = await getHazardReports(sheets); break;
-        case 'getInspectionReports':result = await getInspectionReports(sheets); break;
+        case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
+        case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
-        case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role); break;
+        case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         case 'getMyObj': {
@@ -1226,6 +1279,7 @@ module.exports = async (req, res) => {
           result = await reviewChange(sheets, authUser, data?.change_id, data?.decision, data?.reason);
           break;
         case 'resendWaPic': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Hanya admin yang bisa kirim ulang WA PIC.'), { httpStatus: 403 });
           const sheetTarget = data?.sheet_name || 'Hazard_Report';
           const reportRow = (await getSheetData(sheets, sheetTarget)).find(r => r['ID'] === data?.report_id || r['id'] === data?.report_id);
           if (!reportRow) throw new Error('Laporan tidak ditemukan.');
@@ -1239,15 +1293,24 @@ module.exports = async (req, res) => {
           result = { status: 'success', wa_pic_status: newStatus, message: sent ? 'WA berhasil dikirim ulang.' : 'Gagal mengirim WA.' };
           break;
         }
-        case 'submitHazardReport':     result = await submitHazardReport(sheets, data); break;
-        case 'submitInspectionReport': result = await submitInspectionReport(sheets, data); break;
+        case 'submitHazardReport':
+          // Override identitas dari token — cegah spoofing
+          data.nik  = authUser.nik;
+          data.nama = authUser.nama;
+          result = await submitHazardReport(sheets, data);
+          break;
+        case 'submitInspectionReport':
+          data.nik  = authUser.nik;
+          data.nama = authUser.nama;
+          result = await submitInspectionReport(sheets, data);
+          break;
         case 'updateHazardReport': {
           if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, 'Hazard_Report');
             data.status_perbaikan = 'FOLLOWUP';
             data.closing_status   = 'pending_review';
           }
-          result = await updateReport(sheets, data, 'Hazard_Report', '-Closing');
+          result = await updateReport(sheets, data, 'Hazard_Report', '-Closing', authUser);
           break;
         }
         case 'updateInspectionReport': {
@@ -1258,25 +1321,25 @@ module.exports = async (req, res) => {
             data.status_perbaikan = 'FOLLOWUP';
             data.closing_status   = 'pending_review';
           }
-          result = await updateReport(sheets, data, sheetName, '-Inspection-Closing');
+          result = await updateReport(sheets, data, sheetName, '-Inspection-Closing', authUser);
           break;
         }
         case 'submitActionPlan': {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await submitActionPlan(sheets, data, sheetName);
+          result = await submitActionPlan(sheets, data, sheetName, authUser);
           break;
         }
         case 'reviewActionPlan': {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await reviewActionPlan(sheets, data, sheetName);
+          result = await reviewActionPlan(sheets, data, sheetName, authUser);
           break;
         }
         case 'reviewClosing': {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await reviewClosing(sheets, data, sheetName);
+          result = await reviewClosing(sheets, data, sheetName, authUser);
           break;
         }
         // [PUSH-START]
@@ -1284,10 +1347,16 @@ module.exports = async (req, res) => {
           await savePushSubscription(sheets, authUser.nik, data.endpoint, data.p256dh, data.auth);
           result = { status: 'success', message: 'Push subscription saved.' };
           break;
-        case 'push_unsubscribe':
+        case 'push_unsubscribe': {
+          // Verifikasi endpoint milik user yang sedang login
+          const allSubs2 = await getSheetData(sheets, 'Push_Subscriptions').catch(() => []);
+          const sub = allSubs2.find(r => String(r['ENDPOINT'] || '').trim() === String(data.endpoint || '').trim());
+          if (sub && String(sub['NIK'] || '').trim() !== String(authUser.nik || '').trim())
+            throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           await removePushSubscriptionByEndpoint(sheets, data.endpoint);
           result = { status: 'success', message: 'Push subscription removed.' };
           break;
+        }
         case 'push_test': {
           if (!ensureVapid()) {
             result = { status: 'error', message: 'VAPID keys belum dikonfigurasi di env vars (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_EMAIL).' };
