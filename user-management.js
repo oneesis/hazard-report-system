@@ -56,6 +56,7 @@ function renderUMTable() {
   const page  = umFiltered.slice(start, start + UM_PAGE_SIZE);
   const user  = getCurrentUser();
   const canEdit = isAdminOrAbove(user?.role);
+  const canResetPw = isSuperAdminRole(user?.role);
 
   if (!page.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
@@ -79,6 +80,7 @@ function renderUMTable() {
       ${canEdit ? `<td class="um-actions">
         <button class="um-btn-edit" onclick="openEditUser(window._umPageArr[${idx}])">Edit</button>
         <button class="um-btn-delete" onclick="confirmDeleteUser(window._umPageArr[${idx}])">Hapus</button>
+        ${canResetPw ? `<button class="um-btn-edit" style="background:#6366f1;color:#fff" onclick="openResetPwModal(window._umPageArr[${idx}])"><i class="fa-solid fa-key"></i> Reset PW</button>` : ''}
       </td>` : ''}
     </tr>`).join('');
 
@@ -766,6 +768,54 @@ function exportAchievementCsv() {
   a.click();
 }
 
+// ===== RESET PASSWORD (SUPER_ADMIN) =====
+
+let _resetPwTarget = null;
+
+function openResetPwModal(user) {
+  _resetPwTarget = user;
+  document.getElementById('resetPwNama').textContent = user['NAMA'] || '-';
+  document.getElementById('resetPwNik').textContent  = user['NIK']  || '-';
+  document.getElementById('resetPwInput').value = '';
+  document.getElementById('resetPwMsg').textContent = '';
+  document.getElementById('resetPwModal').style.display = 'flex';
+}
+
+function closeResetPwModal() {
+  document.getElementById('resetPwModal').style.display = 'none';
+  _resetPwTarget = null;
+}
+
+async function submitResetPw() {
+  if (!_resetPwTarget) return;
+  const pw  = document.getElementById('resetPwInput').value.trim();
+  const msg = document.getElementById('resetPwMsg');
+  if (!pw) { msg.textContent = 'Password tidak boleh kosong.'; msg.style.color = '#ef4444'; return; }
+  if (pw.length < 8) { msg.textContent = 'Minimal 8 karakter.'; msg.style.color = '#ef4444'; return; }
+  const btn = document.getElementById('btnSubmitResetPw');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'adminResetPassword', data: { nik: _resetPwTarget['NIK'], new_password: pw } })
+    });
+    const json = await res.json();
+    if (json.status === 'success') {
+      msg.textContent = 'Password berhasil direset!';
+      msg.style.color = '#16a34a';
+      setTimeout(closeResetPwModal, 1200);
+    } else {
+      msg.textContent = json.message || 'Gagal reset password.';
+      msg.style.color = '#ef4444';
+    }
+  } catch (e) {
+    msg.textContent = e.message;
+    msg.style.color = '#ef4444';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ===== PENARIKAN DATA / EXPORT LAPORAN =====
 
 let _expAllReports = [];
@@ -889,7 +939,7 @@ function filterExportData() {
   _expFiltered.sort((a, b) => {
     const da = new Date(_expVal(a, ['timestamp','tanggal_laporan','tgl_laporan']));
     const db = new Date(_expVal(b, ['timestamp','tanggal_laporan','tgl_laporan']));
-    return isNaN(db) - isNaN(da) || db - da;
+    return isNaN(da) - isNaN(db) || da - db;
   });
 
   _expPage = 1;

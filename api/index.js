@@ -290,6 +290,36 @@ async function changePassword(sheets, nik, oldPassword, newPassword) {
   return { status: 'success', message: 'Password berhasil diubah.' };
 }
 
+async function adminResetPassword(sheets, auth, targetNik, newPassword) {
+  if (!isSuperAdmin(auth.role)) throw Object.assign(new Error('Hanya SUPER_ADMIN yang bisa reset password.'), { httpStatus: 403 });
+  if (!newPassword || newPassword.length < 8)
+    throw Object.assign(new Error('Password baru minimal 8 karakter.'), { httpStatus: 400 });
+  if (isWeakPassword(newPassword))
+    throw Object.assign(new Error('Password terlalu umum. Gunakan kombinasi huruf, angka, atau simbol.'), { httpStatus: 400 });
+
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
+  const rows = res.data.values || [];
+  if (rows.length < 2) throw new Error('Data karyawan tidak ditemukan.');
+
+  const headers = rows[0].map(h => String(h).trim().toUpperCase());
+  const nikCol = headers.indexOf('NIK');
+  const pwCol  = headers.indexOf('PASSWORD');
+  if (nikCol === -1 || pwCol === -1) throw new Error('Kolom NIK/PASSWORD tidak ditemukan.');
+
+  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(targetNik || '').trim());
+  if (rowIdx === -1) throw new Error('Karyawan tidak ditemukan.');
+
+  const hash = bcrypt.hashSync(newPassword, 10);
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `Master_Karyawan!${colIndexToLetter(pwCol)}${rowIdx + 1}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [[hash]] }
+  });
+  invalidateCache('Master_Karyawan');
+  return { status: 'success', message: 'Password berhasil direset.' };
+}
+
 function issueToken(user) {
   return jwt.sign(
     { nik: user.nik, nama: user.nama, role: user.role, perusahaan: user.perusahaan },
@@ -1165,6 +1195,9 @@ module.exports = async (req, res) => {
       switch (action) {
         case 'changePassword':
           result = await changePassword(sheets, authUser.nik, data?.old_password, data?.new_password);
+          break;
+        case 'adminResetPassword':
+          result = await adminResetPassword(sheets, authUser, data?.nik, data?.new_password);
           break;
         case 'proposeChange':
           result = await proposeChange(sheets, authUser, data?.action, data?.payload);
