@@ -36,83 +36,32 @@ function getUserRelation(report) {
   const user = getCurrentUser();
   if (!user) return null;
 
-  if (String(user.role || "").toUpperCase() === "ADMIN") {
-    return "admin";
-  }
-
   const userName = normalizeString(user.nama || user.name || "");
-  const userNik = normalizeString(user.nik || user.NIK || "");
+  const userNik  = normalizeString(user.nik  || user.NIK  || "");
 
-  // Robust aliasing because backend key normalization may differ.
-  const reporterName = normalizeString(
-    getReportValue(
-      report,
-      [
-        "nama",
-        "pelapor",
-        "reporter",
-        "reporter_name",
-        // aliases that might appear due to sheet/header mismatch
-        "nama_pelapor",
-        "nama_pelapor_laporan"
-      ],
-      ""
-    )
-  );
-  const reporterNik = normalizeString(
-    getReportValue(
-      report,
-      ["nik", "reporter_nik", "nik_reporter", "NIK"],
-      ""
-    )
-  );
+  // Cek PIC/reporter untuk SEMUA role (termasuk ADMIN dan SUPER_ADMIN)
+  const reporterName = normalizeString(getReportValue(report, ["nama","pelapor","reporter","reporter_name","nama_pelapor","nama_pelapor_laporan"], ""));
+  const reporterNik  = normalizeString(getReportValue(report, ["nik","reporter_nik","nik_reporter","NIK"], ""));
+  const picName      = normalizeString(getReportValue(report, ["nama_pic","pic","penanggung_jawab","pic_name","nama_pic_laporan"], ""));
+  const picNik       = normalizeString(getReportValue(report, ["nik_pic","nip_pic","pic_nik","nikpic","nik_pic_pic"], ""));
 
-  const picName = normalizeString(
-    getReportValue(
-      report,
-      [
-        "nama_pic",
-        "pic",
-        "penanggung_jawab",
-        "pic_name",
-        "nama_pic_laporan"
-      ],
-      ""
-    )
-  );
-  const picNik = normalizeString(
-    getReportValue(
-      report,
-      [
-        "nik_pic",
-        "nip_pic",
-        "pic_nik",
-        // possible variations
-        "nikpic",
-        "nik_pic_pic"
-      ],
-      ""
-    )
-  );
+  const isPic      = (userNik && picNik && picNik === userNik) || (userName && picName && picName === userName);
+  const isReporter = (userNik && reporterNik && reporterNik === userNik) || (userName && reporterName && reporterName === userName);
 
-  const isPic =
-    (userNik && picNik && picNik === userNik) ||
-    (userName && picName && picName === userName);
-  const isReporter =
-    (userNik && reporterNik && reporterNik === userNik) ||
-    (userName && reporterName && reporterName === userName);
-
-  if (isPic) return "pic";
+  if (isPic)      return "pic";
   if (isReporter) return "reporter";
 
-  // Fallback: if we cannot map relation but the report contains any user-identifying field,
-  // treat as visible to avoid empty dashboard due to key/header mismatch.
+  const role = String(user.role || "").toUpperCase().replace(/\s+/g, "_");
+  // ADMIN/SUPER_ADMIN tanpa relasi personal = null (tidak ada notifikasi untuk laporan ini)
+  if (role === "ADMIN" || role === "SUPER_ADMIN") return null;
+
+  // USER: fallback broad check untuk laporan lama yang NIK-nya mungkin tidak ter-normalize
   if (userNik) {
-    const maybeNik = normalizeString(getReportValue(report, ["nik", "nik_pic", "nik_pic_pic"], ""));
+    const maybeNik = normalizeString(getReportValue(report, ["nik","nik_pic","nik_pic_pic"], ""));
     if (maybeNik && maybeNik === userNik) return "reporter";
   }
   if (userName) {
-    const maybeName = normalizeString(getReportValue(report, ["nama", "nama_pic"], ""));
+    const maybeName = normalizeString(getReportValue(report, ["nama","nama_pic"], ""));
     if (maybeName && maybeName === userName) return "reporter";
   }
 

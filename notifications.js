@@ -99,7 +99,9 @@ function syncNotificationHistory(reports) {
 
     const status = getReportStatus(report);
     const planStatus = String(report.plan_status || '').trim().toLowerCase();
-    const relation = getUserRelation(report) || "admin";
+    const relation = getUserRelation(report);
+    // Admin/SA tanpa relasi personal (bukan pelapor/PIC) tidak perlu notifikasi
+    if (!relation) return;
     const prev = snapshot[id];
     // planStatus tracking via history entry (bukan snapshot) agar tahan reset
     const existingEntry = history.find(e => e.id === id);
@@ -230,10 +232,10 @@ function buildNotificationItems(reports) {
       const report = reports.find(r => getReportId(r) === entry.id);
       if (!report) return null;
 
-      // Only show notifications that match current user's visibility/role
+      // Hanya tampilkan notifikasi laporan yang user punya relasi personal (pelapor/PIC)
       if (!isReportVisible(report)) return null;
-
-      const relation = getUserRelation(report) || entry.relation || "admin";
+      const relation = getUserRelation(report);
+      if (!relation) return null;
       const status = getReportStatus(report);
 
       return {

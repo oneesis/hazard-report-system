@@ -75,8 +75,23 @@ function computeAndRender() {
   if (!_capLoaded) return;
 
   const monthStr = document.getElementById('capMonth')?.value || '';
-  const deptF    = (document.getElementById('capDept')?.value || '').toLowerCase();
   const coF      = (document.getElementById('capPerusahaan')?.value || '').toLowerCase();
+
+  // Update dropdown departemen berdasarkan perusahaan yang dipilih
+  const deptSel = document.getElementById('capDept');
+  if (deptSel) {
+    const prevDept = deptSel.value;
+    const coKaryawan = coF
+      ? _capKaryawan.filter(k => String(k['PERUSAHAAN'] || '').toLowerCase() === coF)
+      : _capKaryawan;
+    const depts = [...new Set(coKaryawan.map(k => k['DEPARTEMEN'] || '').filter(Boolean))].sort();
+    deptSel.innerHTML = '<option value="">Semua Departemen</option>' +
+      depts.map(d => `<option value="${escapeHTML(d)}"${d === prevDept ? ' selected' : ''}>${escapeHTML(d)}</option>`).join('');
+    // Reset jika dept sebelumnya tidak ada di perusahaan yang baru dipilih
+    if (prevDept && !depts.includes(prevDept)) deptSel.value = '';
+  }
+
+  const deptF = (deptSel?.value || '').toLowerCase();
   const allRep   = [..._capHazardReports, ..._capInsReports];
 
   _capComputed = _capKaryawan.map(k => {
