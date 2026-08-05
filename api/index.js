@@ -1045,6 +1045,26 @@ async function ensureClosingColumns(sheets, sheetName) {
   const existing = (res.data.values?.[0] || []).map(h => normalizeHeader(h));
   const toAdd = needed.filter(c => !existing.includes(normalizeHeader(c)));
   if (!toAdd.length) return;
+
+  // Expand grid columns jika sheet belum punya cukup kolom
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: 'sheets(properties(sheetId,title,gridProperties))'
+  });
+  const sheetMeta = meta.data.sheets.find(s => s.properties.title === sheetName);
+  const currentCols = sheetMeta?.properties?.gridProperties?.columnCount || 0;
+  const neededCols = existing.length + toAdd.length;
+  if (neededCols > currentCols) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ appendDimension: {
+        sheetId: sheetMeta.properties.sheetId,
+        dimension: 'COLUMNS',
+        length: neededCols - currentCols
+      }}]}
+    });
+  }
+
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${sheetName}!${colIndexToLetter(existing.length)}1`,
