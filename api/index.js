@@ -413,11 +413,20 @@ async function getKaryawan(sheets, auth) {
   let visible;
   if (isSuperAdmin(auth.role)) {
     visible = active;
-  } else {
-    // ADMIN, USER, dan role lain: hanya karyawan se-perusahaan
+  } else if (isAdminOrAbove(auth.role)) {
+    // ADMIN: semua karyawan di perusahaan mereka
     const co = String(auth.perusahaan || '').trim().toUpperCase();
     if (!co) throw Object.assign(new Error('Perusahaan tidak ditemukan untuk akun ini.'), { httpStatus: 403 });
     visible = active.filter(r => String(r['PERUSAHAAN'] || '').trim().toUpperCase() === co);
+  } else {
+    // USER: hanya karyawan di departemen mereka (lebih ringan)
+    const co   = String(auth.perusahaan  || '').trim().toUpperCase();
+    const dept = String(auth.departemen  || '').trim().toUpperCase();
+    if (!co) throw Object.assign(new Error('Perusahaan tidak ditemukan untuk akun ini.'), { httpStatus: 403 });
+    visible = active.filter(r =>
+      String(r['PERUSAHAAN'] || '').trim().toUpperCase() === co &&
+      String(r['DEPARTEMEN'] || '').trim().toUpperCase() === dept
+    );
   }
   return { status: 'success', data: stripSensitiveKaryawan(visible) };
 }
