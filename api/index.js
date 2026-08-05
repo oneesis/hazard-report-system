@@ -322,7 +322,7 @@ async function adminResetPassword(sheets, auth, targetNik, newPassword) {
 
 function issueToken(user) {
   return jwt.sign(
-    { nik: user.nik, nama: user.nama, role: user.role, perusahaan: user.perusahaan },
+    { nik: user.nik, nama: user.nama, role: user.role, perusahaan: user.perusahaan, departemen: user.departemen },
     JWT_SECRET,
     { expiresIn: TOKEN_TTL }
   );
