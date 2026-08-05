@@ -62,6 +62,7 @@ async function loadCapaian() {
         <th class="um-center">OBJ HR</th><th class="um-center">Capaian HR</th><th class="um-center">% HR</th>
         <th class="um-center">OBJ INS</th><th class="um-center">Capaian INS</th><th class="um-center">% INS</th>
         <th class="um-center">% Total</th>
+        <th class="um-center">PIC Open</th><th class="um-center">% Closing</th>
       </tr>`;
     }
 
@@ -97,12 +98,29 @@ function computeAndRender() {
   _capComputed = _capKaryawan.map(k => {
     const nik  = String(k['NIK']  || '').trim();
     const nama = String(k['NAMA'] || '').trim().toLowerCase();
+
+    // Laporan sebagai PELAPOR (filter by month untuk capaian)
     const mine = monthStr ? allRep.filter(r => {
       const rNik  = String(r.nik || r.nik_pelapor || '').trim();
       const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
       return ((nik && rNik === nik) || (nama && rNama === nama)) &&
              _capSameMonth(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi, monthStr);
     }) : [];
+
+    // Laporan sebagai PIC — all-time untuk "PIC Open", month-filter untuk "%Closing"
+    const isPic = r => {
+      const rNikPic  = String(r.nik_pic || '').trim();
+      const rNamaPic = String(r.nama_pic || r.pic || '').trim().toLowerCase();
+      return (nik && rNikPic === nik) || (nama && rNamaPic === nama);
+    };
+    const picAll   = allRep.filter(isPic);
+    const picMonth = monthStr ? picAll.filter(r =>
+      _capSameMonth(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi, monthStr)
+    ) : [];
+
+    const picOpen    = picAll.filter(r => String(r.status_perbaikan || '').toUpperCase() !== 'CLOSED').length;
+    const picClosed  = picMonth.filter(r => String(r.status_perbaikan || '').toUpperCase() === 'CLOSED').length;
+    const pctClosing = picMonth.length > 0 ? Math.round(picClosed / picMonth.length * 100) : null;
 
     const achHR    = mine.filter(r => r.report_type === 'HAZARD').length;
     const achINS   = mine.filter(r => r.report_type === 'INSPECTION').length;
@@ -112,13 +130,14 @@ function computeAndRender() {
     const pctINS   = objINS > 0 ? Math.round(achINS / objINS * 100) : null;
     const totalObj = objHR + objINS;
     const pctTotal = totalObj > 0 ? Math.round((achHR + achINS) / totalObj * 100) : null;
-    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal };
+    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal, picOpen, pctClosing };
   });
 
   _capFiltered = _capComputed.filter(row => {
+    // Exact match — bukan includes — agar "CA" tidak cocok dengan "HCA"
     const dept = String(row.k['DEPARTEMEN'] || '').toLowerCase();
     const co   = String(row.k['PERUSAHAAN'] || '').toLowerCase();
-    return (!deptF || dept.includes(deptF)) && (!coF || co.includes(coF));
+    return (!deptF || dept === deptF) && (!coF || co === coF);
   });
 
   _capPage = 1;
@@ -139,7 +158,7 @@ function renderTable() {
 
   const monthStr = document.getElementById('capMonth')?.value || '';
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
-  const colSpan  = isSA ? 12 : 11;
+  const colSpan  = isSA ? 14 : 13;
 
   if (!monthStr) {
     tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center;padding:24px;color:#94a3b8">Pilih bulan untuk melihat capaian SAP</td></tr>`;
@@ -154,8 +173,9 @@ function renderTable() {
   }
 
   const start = (_capPage - 1) * CAP_PAGE_SIZE;
-  tbody.innerHTML = _capFiltered.slice(start, start + CAP_PAGE_SIZE).map(row => `
-    <tr>
+  tbody.innerHTML = _capFiltered.slice(start, start + CAP_PAGE_SIZE).map(row => {
+    const picOpenColor = row.picOpen > 0 ? '#ef4444' : '#22c55e';
+    return `<tr>
       ${isSA ? `<td>${escapeHTML(row.k['PERUSAHAAN'] || '')}</td>` : ''}
       <td>${escapeHTML(row.k['NAMA'] || '')}</td>
       <td>${escapeHTML(String(row.k['NIK'] || '-'))}</td>
@@ -168,7 +188,10 @@ function renderTable() {
       <td class="um-center"><b>${row.achINS}</b></td>
       ${_capPctCell(row.pctINS)}
       ${_capPctCell(row.pctTotal)}
-    </tr>`).join('');
+      <td class="um-center"><b style="color:${picOpenColor}">${row.picOpen}</b></td>
+      ${_capPctCell(row.pctClosing)}
+    </tr>`;
+  }).join('');
 
   renderPagination();
 }
@@ -228,6 +251,7 @@ function exportCsv() {
     'Nama', 'NIK', 'Jabatan', 'Departemen',
     'OBJ HR', 'Capaian HR', '% HR',
     'OBJ INS', 'Capaian INS', '% INS', '% Total',
+    'PIC Open', '% Closing',
   ];
 
   const rows = _capFiltered.map(r => [
@@ -235,7 +259,9 @@ function exportCsv() {
     r.k['NAMA'] || '', String(r.k['NIK'] || ''), r.k['JABATAN'] || '', r.k['DEPARTEMEN'] || '',
     r.objHR, r.achHR, r.pctHR    !== null ? r.pctHR    + '%' : '-',
     r.objINS, r.achINS, r.pctINS !== null ? r.pctINS   + '%' : '-',
-    r.pctTotal !== null ? r.pctTotal + '%' : '-',
+    r.pctTotal   !== null ? r.pctTotal   + '%' : '-',
+    r.picOpen,
+    r.pctClosing !== null ? r.pctClosing + '%' : '-',
   ]);
 
   const csv = [headers, ...rows]
