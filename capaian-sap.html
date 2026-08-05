@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capaian SAP - ONE-SAP</title>
+  <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Capaian SAP</span>
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <section class="admin-section">
+      <div class="um-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="month" id="capMonth" class="um-search" style="width:160px" onchange="computeAndRender()">
+          <select id="capDept" class="um-search" style="width:180px" onchange="computeAndRender()">
+            <option value="">Semua Departemen</option>
+          </select>
+          <div id="capPerusahaanWrap">
+            <select id="capPerusahaan" class="um-search" style="width:180px" onchange="computeAndRender()">
+              <option value="">Semua Perusahaan</option>
+            </select>
+          </div>
+        </div>
+        <div class="um-header-actions">
+          <button class="btn-secondary" onclick="exportCsv()">
+            <i class="fa-solid fa-file-arrow-down"></i> Download CSV
+          </button>
+          <button class="btn-secondary btn-icon" onclick="loadCapaian()" title="Refresh">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="capKpi" class="ach-kpi-row" style="display:none"></div>
+
+      <div class="admin-card" style="overflow-x:auto;margin-top:12px">
+        <table id="capTable" class="admin-table">
+          <thead id="capTableHead"></thead>
+          <tbody id="capTableBody">
+            <tr><td colspan="12" class="um-loading">Memuat data...</td></tr>
+          </tbody>
+        </table>
+        <div id="capPagination" class="table-pagination"></div>
+      </div>
+    </section>
+
+    <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="push-notif.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="capaian-sap.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    if (!isSuperAdminRole(user.role)) {
+      document.getElementById('capPerusahaanWrap').style.display = 'none';
+    }
+    // Default ke bulan ini
+    const now = new Date();
+    document.getElementById('capMonth').value =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    loadCapaian();
+  });
+</script>
+</body>
+</html>
