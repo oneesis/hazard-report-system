@@ -584,8 +584,7 @@ function validateStep1() {
     "nama",
     "nik",
     "jabatan",
-    "departemen",
-    "no_whatsapp"
+    "departemen"
   ]);
 }
 
