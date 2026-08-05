@@ -269,37 +269,102 @@ function renderChart() {
 
   wrap.style.display = '';
 
-  let aggMap, title, clickable;
+  let aggMap, title, subtitle, clickable;
 
   if (isSA && _capChartDrillCompany) {
-    // Drill-down: departemen dalam satu perusahaan
     const coRows = _capComputed.filter(r => String(r.k['PERUSAHAAN'] || '').trim() === _capChartDrillCompany);
-    aggMap    = _capAggregateBy(coRows, r => r.k['DEPARTEMEN']);
-    title     = `${_capChartDrillCompany} — Per Departemen`;
+    aggMap   = _capAggregateBy(coRows, r => r.k['DEPARTEMEN']);
+    title    = _capChartDrillCompany;
+    subtitle = 'Rata-rata % Total per departemen';
     clickable = false;
     if (back) back.style.display = '';
   } else if (isSA) {
-    // Top-level: per perusahaan
-    aggMap    = _capAggregateBy(_capComputed, r => r.k['PERUSAHAAN']);
-    title     = 'Capaian SAP per Perusahaan (klik untuk detail departemen)';
+    aggMap   = _capAggregateBy(_capComputed, r => r.k['PERUSAHAAN']);
+    title    = 'Capaian SAP per Perusahaan';
+    subtitle = 'Klik batang untuk lihat rincian per departemen';
     clickable = true;
     if (back) back.style.display = 'none';
   } else {
-    // ADMIN: per departemen perusahaan sendiri
-    aggMap    = _capAggregateBy(_capComputed, r => r.k['DEPARTEMEN']);
-    title     = 'Capaian SAP per Departemen';
+    aggMap   = _capAggregateBy(_capComputed, r => r.k['DEPARTEMEN']);
+    title    = 'Capaian SAP per Departemen';
+    subtitle = 'Rata-rata % Total per departemen';
     clickable = false;
     if (back) back.style.display = 'none';
   }
 
+  document.getElementById('capChartTitle').textContent = title;
+  const subtitleEl = document.getElementById('capChartSubtitle');
+  if (subtitleEl) subtitleEl.textContent = subtitle;
+
   const labels = Object.keys(aggMap).sort();
   const values = labels.map(k => aggMap[k].n > 0 ? Math.round(aggMap[k].sum / aggMap[k].n) : 0);
-  const colors = values.map(v => v >= 100 ? '#22c55e' : v >= 50 ? '#f59e0b' : '#ef4444');
 
-  document.getElementById('capChartTitle').textContent = title;
-
-  const ctx = document.getElementById('capChart').getContext('2d');
+  const canvas = document.getElementById('capChart');
+  const ctx = canvas.getContext('2d');
   if (_capChart) { _capChart.destroy(); _capChart = null; }
+
+  // Gradient fills — dibuat sebelum chart init (height estimasi 260px)
+  const gradH = 260;
+  const bgColors = values.map(v => {
+    const g = ctx.createLinearGradient(0, 0, 0, gradH);
+    if (v >= 100) {
+      g.addColorStop(0, 'rgba(34,197,94,.92)');
+      g.addColorStop(1, 'rgba(16,185,129,.4)');
+    } else if (v >= 50) {
+      g.addColorStop(0, 'rgba(245,158,11,.92)');
+      g.addColorStop(1, 'rgba(251,191,36,.4)');
+    } else {
+      g.addColorStop(0, 'rgba(239,68,68,.92)');
+      g.addColorStop(1, 'rgba(248,113,113,.4)');
+    }
+    return g;
+  });
+  const hoverColors = values.map(v =>
+    v >= 100 ? 'rgba(34,197,94,1)' :
+    v >= 50  ? 'rgba(245,158,11,1)' :
+               'rgba(239,68,68,1)'
+  );
+
+  // Plugin: angka % di atas setiap bar
+  const datalabelPlugin = {
+    id: 'capDatalabels',
+    afterDatasetsDraw(chart) {
+      const { ctx: c, data } = chart;
+      c.save();
+      c.font = 'bold 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'bottom';
+      data.datasets[0].data.forEach((val, i) => {
+        const bar = chart.getDatasetMeta(0).data[i];
+        c.fillStyle = val >= 100 ? '#15803d' : val >= 50 ? '#92400e' : '#991b1b';
+        c.fillText(val + '%', bar.x, bar.y - 4);
+      });
+      c.restore();
+    }
+  };
+
+  // Plugin: garis putus-putus target 100%
+  const targetLinePlugin = {
+    id: 'capTargetLine',
+    afterDraw(chart) {
+      const { ctx: c, scales: { y }, chartArea } = chart;
+      if (!y) return;
+      const yPos = y.getPixelForValue(100);
+      if (yPos < chartArea.top || yPos > chartArea.bottom) return;
+      c.save();
+      c.beginPath();
+      c.setLineDash([5, 4]);
+      c.strokeStyle = 'rgba(99,102,241,.5)';
+      c.lineWidth = 1.5;
+      c.moveTo(chartArea.left, yPos);
+      c.lineTo(chartArea.right, yPos);
+      c.stroke();
+      c.setLineDash([]);
+      c.restore();
+    }
+  };
+
+  const yMax = Math.max(110, Math.max(...(values.length ? values : [0])) + 15);
 
   _capChart = new Chart(ctx, {
     type: 'bar',
@@ -307,24 +372,64 @@ function renderChart() {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: colors,
-        borderRadius: 6,
+        backgroundColor: bgColors,
+        hoverBackgroundColor: hoverColors,
+        borderRadius: { topLeft: 7, topRight: 7 },
         borderSkipped: false,
+        borderWidth: 0,
+        barPercentage: 0.62,
+        categoryPercentage: 0.8,
       }]
     },
+    plugins: [datalabelPlugin, targetLinePlugin],
     options: {
       responsive: true,
+      animation: { duration: 520, easing: 'easeOutQuart' },
+      layout: { padding: { top: 18, right: 6 } },
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: 'rgba(15,23,42,.93)',
+          titleColor: '#f8fafc',
+          bodyColor: '#94a3b8',
+          padding: { x: 13, y: 10 },
+          cornerRadius: 9,
+          displayColors: false,
           callbacks: {
-            label: c => `${c.parsed.y}%${clickable ? ' — klik untuk detail' : ''}`
+            title: items => items[0].label,
+            label: c => {
+              const n = aggMap[labels[c.dataIndex]]?.n || 0;
+              const lines = [` Rata-rata capaian: ${c.parsed.y}%`, ` ${n} karyawan`];
+              if (clickable) lines.push(' · Klik untuk detail departemen');
+              return lines;
+            }
           }
         }
       },
       scales: {
-        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
-        x: { ticks: { maxRotation: 35, font: { size: 11 } } }
+        y: {
+          beginAtZero: true,
+          max: yMax,
+          grid: { color: 'rgba(148,163,184,.12)', drawBorder: false },
+          border: { display: false },
+          ticks: {
+            callback: v => v + '%',
+            color: '#94a3b8',
+            font: { size: 11 },
+            stepSize: 25,
+            padding: 8,
+          }
+        },
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            color: '#475569',
+            font: { size: 11, weight: '600' },
+            maxRotation: 30,
+            padding: 6,
+          }
+        }
       },
       onClick: clickable ? (_, els) => {
         if (!els.length) return;
