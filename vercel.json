@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/", "destination": "/login.html", "permanent": false }
+  ],
   "headers": [
     {
       "source": "/service-worker.js",
