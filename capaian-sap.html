@@ -51,6 +51,19 @@
 
       <div id="capKpi" class="ach-kpi-row" style="display:none"></div>
 
+      <!-- Grafik capaian per perusahaan / departemen (ADMIN ke atas) -->
+      <div id="capChartWrap" style="display:none;margin-top:12px">
+        <div class="admin-card" style="padding:16px 20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span id="capChartTitle" style="font-size:.88rem;font-weight:700;color:#0f172a"></span>
+            <button id="capChartBack" onclick="capChartBack()" style="display:none" class="btn-secondary" style="font-size:.78rem">
+              <i class="fa-solid fa-arrow-left"></i> Kembali
+            </button>
+          </div>
+          <canvas id="capChart" style="max-height:220px"></canvas>
+        </div>
+      </div>
+
       <div class="admin-card" style="overflow-x:auto;margin-top:12px">
         <table id="capTable" class="admin-table">
           <thead id="capTableHead"></thead>
@@ -71,6 +84,7 @@
 <script src="push-notif.js"></script>
 <script src="reports-utils.js"></script>
 <script src="notifications.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="capaian-sap.js"></script>
 <script>
   requireLogin();

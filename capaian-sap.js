@@ -7,6 +7,9 @@ let _capComputed = [];
 let _capPage = 1;
 const CAP_PAGE_SIZE = 25;
 
+let _capChart = null;
+let _capChartDrillCompany = null; // null = top-level, string = drilled into company
+
 function _capSameMonth(ts, monthStr) {
   if (!ts || !monthStr) return false;
   const d = new Date(ts);
@@ -143,6 +146,7 @@ function computeAndRender() {
   _capPage = 1;
   renderTable();
   renderKpi();
+  renderChart();
 }
 
 function _capPctCell(pct) {
@@ -240,6 +244,104 @@ function renderKpi() {
     ${kpiItem('Rata-rata INS',   avg('pctINS'),   'fa-clipboard-check')}
     ${kpiItem('Rata-rata Total', avg('pctTotal'), 'fa-trophy')}`;
 }
+
+function _capAggregateBy(rows, keyFn) {
+  const map = {};
+  rows.forEach(row => {
+    const key = keyFn(row) || 'Lainnya';
+    if (!map[key]) map[key] = { sum: 0, n: 0 };
+    if (row.pctTotal !== null) { map[key].sum += row.pctTotal; map[key].n++; }
+  });
+  return map;
+}
+
+function renderChart() {
+  const wrap = document.getElementById('capChartWrap');
+  const back = document.getElementById('capChartBack');
+  if (!wrap || !_capLoaded || !_capComputed.length) {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+  const user  = getCurrentUser();
+  const isSA  = isSuperAdminRole(user?.role);
+  const isAdm = isAdminOrAbove(user?.role);
+  if (!isAdm) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = '';
+
+  let aggMap, title, clickable;
+
+  if (isSA && _capChartDrillCompany) {
+    // Drill-down: departemen dalam satu perusahaan
+    const coRows = _capComputed.filter(r => String(r.k['PERUSAHAAN'] || '').trim() === _capChartDrillCompany);
+    aggMap    = _capAggregateBy(coRows, r => r.k['DEPARTEMEN']);
+    title     = `${_capChartDrillCompany} — Per Departemen`;
+    clickable = false;
+    if (back) back.style.display = '';
+  } else if (isSA) {
+    // Top-level: per perusahaan
+    aggMap    = _capAggregateBy(_capComputed, r => r.k['PERUSAHAAN']);
+    title     = 'Capaian SAP per Perusahaan (klik untuk detail departemen)';
+    clickable = true;
+    if (back) back.style.display = 'none';
+  } else {
+    // ADMIN: per departemen perusahaan sendiri
+    aggMap    = _capAggregateBy(_capComputed, r => r.k['DEPARTEMEN']);
+    title     = 'Capaian SAP per Departemen';
+    clickable = false;
+    if (back) back.style.display = 'none';
+  }
+
+  const labels = Object.keys(aggMap).sort();
+  const values = labels.map(k => aggMap[k].n > 0 ? Math.round(aggMap[k].sum / aggMap[k].n) : 0);
+  const colors = values.map(v => v >= 100 ? '#22c55e' : v >= 50 ? '#f59e0b' : '#ef4444');
+
+  document.getElementById('capChartTitle').textContent = title;
+
+  const ctx = document.getElementById('capChart').getContext('2d');
+  if (_capChart) { _capChart.destroy(); _capChart = null; }
+
+  _capChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => `${c.parsed.y}%${clickable ? ' — klik untuk detail' : ''}`
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+        x: { ticks: { maxRotation: 35, font: { size: 11 } } }
+      },
+      onClick: clickable ? (_, els) => {
+        if (!els.length) return;
+        _capChartDrillCompany = labels[els[0].index];
+        renderChart();
+      } : undefined,
+      onHover: clickable ? (evt, els) => {
+        evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
+      } : undefined,
+    }
+  });
+}
+
+window.capChartBack = function() {
+  _capChartDrillCompany = null;
+  renderChart();
+};
 
 function exportCsv() {
   if (!_capFiltered.length) { alert('Tidak ada data untuk di-export.'); return; }
