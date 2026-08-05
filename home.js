@@ -185,9 +185,18 @@ function renderHazardDraft() {
           </div>
         </div>
         <span class="hazard-draft-card-cta">Lanjutkan <i class="fa-solid fa-arrow-right"></i></span>
+        <button onclick="event.preventDefault();event.stopPropagation();deleteHazardDraft()" title="Hapus draft" style="margin-left:8px;background:none;border:none;cursor:pointer;color:#ef4444;font-size:1rem;padding:4px 6px;border-radius:6px;line-height:1">
+          <i class="fa-solid fa-trash"></i>
+        </button>
       </a>`;
     section.style.display = '';
   } catch { section.style.display = 'none'; }
+}
+
+function deleteHazardDraft() {
+  localStorage.removeItem('hazard_draft');
+  const section = document.getElementById('hazardDraftSection');
+  if (section) section.style.display = 'none';
 }
 
 function renderQuickStats(reports) {
