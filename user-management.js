@@ -146,37 +146,87 @@ function openEditUser(user) {
 
 function openUMModal(user, action) {
   const isEdit = action === 'EDIT';
+  const isSA   = isSuperAdminRole(getCurrentUser()?.role);
   let modal = document.getElementById('umModal');
   if (!modal) { modal = document.createElement('div'); modal.id = 'umModal'; document.body.appendChild(modal); }
 
+  const roleOpts = ['USER','ADMIN','SUPER_ADMIN']
+    .map(r => `<option value="${r}"${String(user['ROLE']||'USER').toUpperCase()===r?' selected':''}>${r}</option>`)
+    .join('');
+
+  const roleField = isSA
+    ? `<div class="cp-field">
+        <label>Role</label>
+        <select id="umf_ROLE" class="um-field-select">${roleOpts}</select>
+      </div>`
+    : '<input type="hidden" id="umf_ROLE" value="USER">';
+
+  const subtitle = isEdit
+    ? `${escapeHTML(user['NAMA'] || '—')} &nbsp;·&nbsp; NIK ${escapeHTML(user['NIK'] || '—')}`
+    : 'Lengkapi data karyawan baru';
+
+  const iconBg    = isEdit ? '#eff6ff' : '#f0fdf4';
+  const iconColor = isEdit ? '#1d4ed8' : '#16a34a';
+  const iconName  = isEdit ? 'user-pen' : 'user-plus';
+  const btnLabel  = isEdit ? 'Kirim Permohonan' : 'Tambah Karyawan';
+  const btnIcon   = isEdit ? 'paper-plane' : 'user-plus';
+
   modal.innerHTML = `
     <div class="cp-overlay" onclick="closeUMModal()"></div>
-    <div class="cp-box um-modal-box" role="dialog">
-      <h3><i class="fa-solid fa-user${isEdit ? '-pen' : '-plus'}"></i> ${isEdit ? 'Edit' : 'Tambah'} Karyawan</h3>
-      <div class="um-modal-grid">
-        ${umField('PERUSAHAAN','Perusahaan',user['PERUSAHAAN']||'')}
-        ${umField('SUBCONT','Subcont',user['SUBCONT']||'')}
-        ${umField('NAMA','Nama Lengkap',user['NAMA']||'')}
-        ${umField('NIK','NIK',user['NIK']||'', isEdit)}
-        ${umField('JABATAN','Jabatan',user['JABATAN']||'')}
-        ${umField('DEPARTEMEN','Departemen',user['DEPARTEMEN']||'')}
-        ${umField('NO WHATSAPP','No WhatsApp',user['NO WHATSAPP']||'')}
-        ${!isEdit ? umField('PASSWORD','Password (min. 6 karakter)','') : ''}
-        ${isSuperAdminRole(getCurrentUser()?.role) ? `<div class="cp-field">
-          <label>Role</label>
-          <select id="umf_ROLE">
-            ${['USER','ADMIN','SUPER_ADMIN'].map(r => `<option value="${r}"${String(user['ROLE']||'USER').toUpperCase()===r?' selected':''}>${r}</option>`).join('')}
-          </select>
-        </div>` : '<input type="hidden" id="umf_ROLE" value="USER">'}
-        ${umFieldNum('OBJ HR','Target HR/Bulan',user['OBJ HR']||'0')}
-        ${umFieldNum('OBJ INS','Target Inspeksi/Bulan',user['OBJ INS']||'0')}
-        ${umFieldNum('OBJ SBO','Target SBO/Bulan',user['OBJ SBO']||'0')}
-        ${umFieldNum('OBJ PC','Target PC/Bulan',user['OBJ PC']||'0')}
+    <div class="cp-box um-modal-box" role="dialog" aria-modal="true">
+
+      <div class="cp-header">
+        <div class="cp-header-icon" style="background:${iconBg};color:${iconColor}">
+          <i class="fa-solid fa-${iconName}"></i>
+        </div>
+        <div>
+          <h3>${isEdit ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
+          <p class="cp-subtitle">${subtitle}</p>
+        </div>
+        <button class="cp-close" onclick="closeUMModal()" aria-label="Tutup">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
-      <p id="umModalMsg" class="cp-msg"></p>
-      <div class="cp-actions">
+
+      <div class="um-modal-body">
+
+        <p class="um-section-label">Perusahaan</p>
+        <div class="um-modal-grid">
+          ${umField('PERUSAHAAN','Perusahaan',user['PERUSAHAAN']||'')}
+          ${umField('SUBCONT','Subcont',user['SUBCONT']||'')}
+        </div>
+
+        <p class="um-section-label">Identitas</p>
+        <div class="um-modal-grid">
+          ${umField('NAMA','Nama Lengkap',user['NAMA']||'')}
+          ${umField('NIK','NIK',user['NIK']||'', isEdit)}
+          ${umField('JABATAN','Jabatan',user['JABATAN']||'')}
+          ${umField('DEPARTEMEN','Departemen',user['DEPARTEMEN']||'')}
+        </div>
+
+        <p class="um-section-label">Akun &amp; Kontak</p>
+        <div class="um-modal-grid">
+          ${umField('NO WHATSAPP','No WhatsApp',user['NO WHATSAPP']||'')}
+          ${roleField}
+          ${!isEdit ? umField('PASSWORD','Password (min. 6 karakter)','') : ''}
+        </div>
+
+        <p class="um-section-label">Target Bulanan</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 12px">
+          ${umFieldNum('OBJ HR','Hazard Report',user['OBJ HR']||'0')}
+          ${umFieldNum('OBJ INS','Inspeksi',user['OBJ INS']||'0')}
+          ${umFieldNum('OBJ SBO','SBO',user['OBJ SBO']||'0')}
+          ${umFieldNum('OBJ PC','PC',user['OBJ PC']||'0')}
+        </div>
+
+        <p id="umModalMsg" class="cp-msg" style="margin-top:14px;margin-bottom:0"></p>
+      </div>
+
+      <div class="um-modal-footer">
         <button class="cp-btn-cancel" onclick="closeUMModal()">Batal</button>
-        <button class="cp-btn-submit" onclick="submitUMModal('${action}','${escapeHTML(user['NIK']||'')}')">Kirim Permohonan</button>
+        <button class="cp-btn-submit" onclick="submitUMModal('${action}','${escapeHTML(user['NIK']||'')}')">
+          <i class="fa-solid fa-${btnIcon}"></i> ${btnLabel}
+        </button>
       </div>
     </div>`;
   modal.style.display = 'flex';

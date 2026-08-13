@@ -167,9 +167,27 @@
 .um-page-btn { padding:6px 12px; border:1.5px solid #e2e8f0; background:#fff; border-radius:6px; cursor:pointer; font-size:.82rem; margin:2px; }
 .um-page-btn.active { background:#003087; color:#fff; border-color:#003087; }
 .um-empty { color:#94a3b8; font-size:.9rem; padding:16px; }
-.um-modal-box { width: min(720px, 94vw); }
+.um-modal-box { width: min(680px, 94vw); }
 .um-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
-.um-modal-grid .cp-field { margin-bottom:12px; }
+.um-modal-grid .cp-field { margin-bottom:10px; }
+.um-modal-body { overflow-y:auto; max-height:calc(90vh - 140px); padding:20px; }
+.um-section-label {
+  font-size:.7rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.07em; color:#94a3b8; margin:18px 0 10px;
+}
+.um-section-label:first-child { margin-top:0; }
+.um-section-divider { border:none; border-top:1px solid #f1f5f9; margin:4px 0 16px; }
+.um-modal-footer {
+  display:flex; gap:10px; justify-content:flex-end;
+  padding:14px 20px; border-top:1px solid #f1f5f9;
+}
+.um-field-select {
+  width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px;
+  font-size:.88rem; color:#0f172a; background:#fff; cursor:pointer;
+  transition:border-color .15s; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
 .um-action-badge { padding:3px 8px; border-radius:4px; font-size:.75rem; font-weight:700; }
 .um-action-add { background:#dcfce7; color:#16a34a; }
 .um-action-edit { background:#dbeafe; color:#2563eb; }
