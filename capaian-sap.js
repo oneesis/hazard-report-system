@@ -129,10 +129,12 @@ function computeAndRender() {
     const achINS   = mine.filter(r => r.report_type === 'INSPECTION').length;
     const objHR    = parseInt(k['OBJ HR']  || 0) || 0;
     const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
-    const pctHR    = objHR  > 0 ? Math.round(achHR  / objHR  * 100) : null;
-    const pctINS   = objINS > 0 ? Math.round(achINS / objINS * 100) : null;
-    const totalObj = objHR + objINS;
-    const pctTotal = totalObj > 0 ? Math.round((achHR + achINS) / totalObj * 100) : null;
+    // Cap di 100% — kelebihan capaian tidak menambah persentase
+    const pctHR    = objHR  > 0 ? Math.min(100, Math.round(achHR  / objHR  * 100)) : null;
+    const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;
+    // %Total = rata-rata %HR dan %INS (hanya yang memiliki target)
+    const pctVals  = [pctHR, pctINS].filter(v => v !== null);
+    const pctTotal = pctVals.length > 0 ? Math.round(pctVals.reduce((a, b) => a + b, 0) / pctVals.length) : null;
     return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal, picOpen, pctClosing };
   });
 
@@ -447,6 +449,82 @@ window.capChartBack = function() {
   _capChartDrillCompany = null;
   renderChart();
 };
+
+function copyWa() {
+  if (!_capFiltered.length) { alert('Tidak ada data untuk disalin.'); return; }
+
+  const monthStr = document.getElementById('capMonth')?.value || '';
+  const coF      = document.getElementById('capPerusahaan')?.value || '';
+  const deptF    = document.getElementById('capDept')?.value || '';
+
+  // Hanya yang belum 100%
+  const belum = _capFiltered.filter(r => r.pctTotal === null || r.pctTotal < 100);
+  if (!belum.length) {
+    alert('Semua karyawan sudah mencapai 100%! 🎉');
+    return;
+  }
+
+  // Format bulan Indonesia
+  let bulan = monthStr;
+  if (monthStr) {
+    const d = new Date(monthStr + '-01');
+    bulan = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  }
+
+  const filterParts = [coF, deptF].filter(Boolean);
+  let text = `*Rekap Capaian SAP — ${bulan}*\n`;
+  if (filterParts.length) text += `_${filterParts.join(' · ')}_\n`;
+  text += `_Karyawan dengan capaian < 100%_\n`;
+
+  // Group by departemen
+  const byDept = {};
+  belum.forEach(r => {
+    const dept = r.k['DEPARTEMEN'] || 'Lainnya';
+    if (!byDept[dept]) byDept[dept] = [];
+    byDept[dept].push(r);
+  });
+
+  Object.keys(byDept).sort().forEach(dept => {
+    text += `\n*${dept}*\n`;
+    // Urutkan dari capaian terendah
+    byDept[dept]
+      .sort((a, b) => (a.pctTotal ?? -1) - (b.pctTotal ?? -1))
+      .forEach(r => {
+        const nama  = r.k['NAMA'] || '-';
+        const total = r.pctTotal !== null ? r.pctTotal + '%' : '-';
+        const hr    = r.pctHR    !== null ? `HR: ${r.pctHR}%` : '';
+        const ins   = r.pctINS   !== null ? `INS: ${r.pctINS}%` : '';
+        const detail = [hr, ins].filter(Boolean).join(' | ');
+        text += `• ${nama}: *${total}*${detail ? ` (${detail})` : ''}\n`;
+      });
+  });
+
+  text += `\n_Total ${belum.length} karyawan belum mencapai 100%_`;
+
+  const btn = document.getElementById('capWaBtn');
+  const setFeedback = (ok) => {
+    if (!btn) return;
+    const orig = `<i class="fa-brands fa-whatsapp"></i> Salin ke WA`;
+    btn.innerHTML = ok
+      ? '<i class="fa-solid fa-check"></i> Tersalin!'
+      : '<i class="fa-solid fa-xmark"></i> Gagal';
+    btn.style.color = ok ? '#22c55e' : '#ef4444';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2200);
+  };
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => setFeedback(true)).catch(() => setFeedback(false));
+  } else {
+    // fallback untuk browser lama
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); setFeedback(true); } catch { setFeedback(false); }
+    document.body.removeChild(ta);
+  }
+}
 
 function exportCsv() {
   if (!_capFiltered.length) { alert('Tidak ada data untuk di-export.'); return; }
