@@ -9,6 +9,8 @@ const CAP_PAGE_SIZE = 25;
 
 let _capChart = null;
 let _capChartDrillCompany = null; // null = top-level, string = drilled into company
+let _capSortCol = null;
+let _capSortDir = 1; // 1 = asc, -1 = desc
 
 function _capSameMonth(ts, monthStr) {
   if (!ts || !monthStr) return false;
@@ -55,18 +57,6 @@ async function loadCapaian() {
         coSel.innerHTML = '<option value="">Semua Perusahaan</option>' +
           cos.map(c => `<option value="${escapeHTML(c)}"${c === cur ? ' selected' : ''}>${escapeHTML(c)}</option>`).join('');
       }
-    }
-
-    const thead = document.getElementById('capTableHead');
-    if (thead) {
-      thead.innerHTML = `<tr>
-        ${isSA ? '<th>Perusahaan</th>' : ''}
-        <th>Nama</th><th>NIK</th><th>Jabatan</th><th>Departemen</th>
-        <th class="um-center">OBJ HR</th><th class="um-center">Capaian HR</th><th class="um-center">% HR</th>
-        <th class="um-center">OBJ INS</th><th class="um-center">Capaian INS</th><th class="um-center">% INS</th>
-        <th class="um-center">% Total</th>
-        <th class="um-center">PIC Open</th><th class="um-center">% Closing</th>
-      </tr>`;
     }
 
     computeAndRender();
@@ -166,6 +156,21 @@ function renderTable() {
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
   const colSpan  = isSA ? 14 : 13;
 
+  // Thead sortable — re-render setiap kali agar ikon sort update
+  const thead = document.getElementById('capTableHead');
+  if (thead) {
+    const th = (col, label, center) =>
+      `<th class="${center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_capThClick('${col}')">${label}${_capSortIcon(col)}</th>`;
+    thead.innerHTML = `<tr>
+      ${isSA ? th('co', 'Perusahaan') : ''}
+      ${th('nama', 'Nama')}${th('nik', 'NIK')}${th('jabatan', 'Jabatan')}${th('dept', 'Departemen')}
+      ${th('objHR', 'OBJ HR', true)}${th('achHR', 'Capaian HR', true)}${th('pctHR', '% HR', true)}
+      ${th('objINS', 'OBJ INS', true)}${th('achINS', 'Capaian INS', true)}${th('pctINS', '% INS', true)}
+      ${th('pctTotal', '% Total', true)}
+      ${th('picOpen', 'PIC Open', true)}${th('pctClosing', '% Closing', true)}
+    </tr>`;
+  }
+
   if (!monthStr) {
     tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center;padding:24px;color:#94a3b8">Pilih bulan untuk melihat capaian SAP</td></tr>`;
     document.getElementById('capPagination').innerHTML = '';
@@ -178,8 +183,16 @@ function renderTable() {
     return;
   }
 
+  // Sort sebelum paginate
+  const sorted = _capSortCol
+    ? [..._capFiltered].sort((a, b) => {
+        const va = _capSortVal(a, _capSortCol), vb = _capSortVal(b, _capSortCol);
+        return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * _capSortDir;
+      })
+    : _capFiltered;
+
   const start = (_capPage - 1) * CAP_PAGE_SIZE;
-  tbody.innerHTML = _capFiltered.slice(start, start + CAP_PAGE_SIZE).map(row => {
+  tbody.innerHTML = sorted.slice(start, start + CAP_PAGE_SIZE).map(row => {
     const picOpenColor = row.picOpen > 0 ? '#ef4444' : '#22c55e';
     return `<tr>
       ${isSA ? `<td>${escapeHTML(row.k['PERUSAHAAN'] || '')}</td>` : ''}
@@ -247,6 +260,39 @@ function renderKpi() {
     ${kpiItem('Rata-rata Total', avg('pctTotal'), 'fa-trophy')}`;
 }
 
+function _capSortIcon(col) {
+  if (_capSortCol !== col) return '<span style="opacity:.2;font-size:.65rem;margin-left:2px">⇅</span>';
+  return _capSortDir === 1
+    ? '<span style="font-size:.65rem;margin-left:2px;color:#6366f1">▲</span>'
+    : '<span style="font-size:.65rem;margin-left:2px;color:#6366f1">▼</span>';
+}
+
+window._capThClick = function(col) {
+  if (_capSortCol === col) { _capSortDir *= -1; } else { _capSortCol = col; _capSortDir = 1; }
+  _capPage = 1;
+  renderTable();
+};
+
+function _capSortVal(row, col) {
+  switch (col) {
+    case 'co':         return String(row.k['PERUSAHAAN'] || '').toLowerCase();
+    case 'nama':       return String(row.k['NAMA'] || '').toLowerCase();
+    case 'nik':        return String(row.k['NIK'] || '').toLowerCase();
+    case 'jabatan':    return String(row.k['JABATAN'] || '').toLowerCase();
+    case 'dept':       return String(row.k['DEPARTEMEN'] || '').toLowerCase();
+    case 'objHR':      return row.objHR;
+    case 'achHR':      return row.achHR;
+    case 'pctHR':      return row.pctHR      ?? -1;
+    case 'objINS':     return row.objINS;
+    case 'achINS':     return row.achINS;
+    case 'pctINS':     return row.pctINS     ?? -1;
+    case 'pctTotal':   return row.pctTotal   ?? -1;
+    case 'picOpen':    return row.picOpen;
+    case 'pctClosing': return row.pctClosing ?? -1;
+    default:           return 0;
+  }
+}
+
 function _capAggregateBy(rows, keyFn) {
   const map = {};
   rows.forEach(row => {
@@ -277,20 +323,20 @@ function renderChart() {
     const coRows = _capComputed.filter(r => String(r.k['PERUSAHAAN'] || '').trim() === _capChartDrillCompany);
     aggMap   = _capAggregateBy(coRows, r => r.k['DEPARTEMEN']);
     title    = _capChartDrillCompany;
-    subtitle = 'Rata-rata % Total per departemen';
-    clickable = false;
+    subtitle = 'Klik batang untuk filter tabel ke departemen tersebut';
+    clickable = true;
     if (back) back.style.display = '';
   } else if (isSA) {
     aggMap   = _capAggregateBy(_capComputed, r => r.k['PERUSAHAAN']);
     title    = 'Capaian SAP per Perusahaan';
-    subtitle = 'Klik batang untuk lihat rincian per departemen';
+    subtitle = 'Klik batang untuk lihat rincian & filter per perusahaan';
     clickable = true;
     if (back) back.style.display = 'none';
   } else {
     aggMap   = _capAggregateBy(_capComputed, r => r.k['DEPARTEMEN']);
     title    = 'Capaian SAP per Departemen';
-    subtitle = 'Rata-rata % Total per departemen';
-    clickable = false;
+    subtitle = 'Klik batang untuk filter tabel ke departemen tersebut';
+    clickable = true;
     if (back) back.style.display = 'none';
   }
 
@@ -401,9 +447,10 @@ function renderChart() {
             title: items => items[0].label,
             label: c => {
               const n = aggMap[labels[c.dataIndex]]?.n || 0;
-              const lines = [` Rata-rata capaian: ${c.parsed.y}%`, ` ${n} karyawan`];
-              if (clickable) lines.push(' · Klik untuk detail departemen');
-              return lines;
+              const hint = (isSA && !_capChartDrillCompany)
+                ? ' · Klik untuk detail departemen'
+                : ' · Klik untuk filter tabel';
+              return [` Rata-rata capaian: ${c.parsed.y}%`, ` ${n} karyawan${hint}`];
             }
           }
         }
@@ -433,21 +480,36 @@ function renderChart() {
           }
         }
       },
-      onClick: clickable ? (_, els) => {
+      onClick: (_, els) => {
         if (!els.length) return;
-        _capChartDrillCompany = labels[els[0].index];
-        renderChart();
-      } : undefined,
-      onHover: clickable ? (evt, els) => {
+        const picked = labels[els[0].index];
+        if (isSA && !_capChartDrillCompany) {
+          // Top-level: drill-down ke dept + filter tabel ke perusahaan
+          _capChartDrillCompany = picked;
+          const coSel = document.getElementById('capPerusahaan');
+          if (coSel) coSel.value = picked;
+        } else {
+          // Dept chart (SA drill-down atau ADMIN): filter tabel ke dept
+          const deptSel = document.getElementById('capDept');
+          if (deptSel) deptSel.value = picked;
+        }
+        computeAndRender();
+      },
+      onHover: (evt, els) => {
         evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
-      } : undefined,
+      },
     }
   });
 }
 
 window.capChartBack = function() {
   _capChartDrillCompany = null;
-  renderChart();
+  // Reset filter perusahaan & dept agar tabel kembali ke semua data
+  const coSel   = document.getElementById('capPerusahaan');
+  const deptSel = document.getElementById('capDept');
+  if (coSel)   coSel.value   = '';
+  if (deptSel) deptSel.value = '';
+  computeAndRender();
 };
 
 function copyWa() {
