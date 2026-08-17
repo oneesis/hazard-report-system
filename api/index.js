@@ -480,6 +480,7 @@ async function proposeChange(sheets, auth, action, data) {
     if (sa['NO WHATSAPP']) {
       const msg = `Halo ${sa['NAMA']}, ada permohonan *${action.toUpperCase()}* data karyawan dari *${auth.nama}* (${auth.perusahaan}).\n\n👤 User: ${data.NAMA || data.NIK || '-'}\n\nSilakan buka dashboard untuk review dan approval.`;
       await sendWaNotification(sa['NO WHATSAPP'], msg).catch(() => {});
+      await new Promise(r => setTimeout(r, 2500)); // jeda antar SUPER_ADMIN — hindari spam detection
     }
   }
   return { status: 'success', message: 'Permohonan dikirim, menunggu persetujuan SUPER ADMIN.', id };
@@ -724,7 +725,7 @@ async function sendWaNotification(target, message) {
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return false;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
-  const payload = new URLSearchParams({ target: phone, message }).toString();
+  const payload = new URLSearchParams({ target: phone, message, delay: '3', countryCode: '62' }).toString();
   return new Promise(resolve => {
     const req = https.request({
       hostname: 'api.fonnte.com', path: '/send', method: 'POST',
