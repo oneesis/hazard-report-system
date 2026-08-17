@@ -215,10 +215,50 @@ function requireAuth(req) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) throw Object.assign(new Error('Tidak terautentikasi. Silakan login.'), { httpStatus: 401 });
   try {
-    return jwt.verify(token, JWT_SECRET); // { nik, nama, role, ... }
+    return jwt.verify(token, JWT_SECRET); // { nik, nama, role, iat, ... }
   } catch {
     throw Object.assign(new Error('Sesi berakhir. Silakan login ulang.'), { httpStatus: 401 });
   }
+}
+
+// #2 — Cek apakah token sudah di-invalidasi via logout (LAST_LOGOUT_AT di sheet)
+async function checkTokenValid(sheets, auth) {
+  const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const user = data.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
+  if (!user) return;
+  const lastLogout = Number(user['LAST_LOGOUT_AT'] || 0);
+  if (lastLogout && (auth.iat || 0) * 1000 < lastLogout)
+    throw Object.assign(new Error('Sesi tidak valid. Silakan login ulang.'), { httpStatus: 401 });
+}
+
+// Helper: update satu kolom di baris karyawan (dipakai item 1 & 2)
+async function _updateKaryawanCol(sheets, nik, colName, value) {
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
+    const rows = res.data.values || [];
+    if (!rows.length) return;
+    const headers = rows[0].map(h => String(h).trim().toUpperCase());
+    let colIdx = headers.indexOf(colName.toUpperCase());
+    if (colIdx === -1) {
+      // Kolom belum ada — tambah header dulu
+      colIdx = headers.length;
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Master_Karyawan!${colIndexToLetter(colIdx)}1`,
+        valueInputOption: 'RAW', requestBody: { values: [[colName]] }
+      });
+    }
+    const nikStr = String(nik || '').trim();
+    const nikColIdx = headers.indexOf('NIK');
+    const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikColIdx] || '').trim() === nikStr);
+    if (rowIdx === -1) return;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `Master_Karyawan!${colIndexToLetter(colIdx)}${rowIdx + 1}`,
+      valueInputOption: 'RAW', requestBody: { values: [[value]] }
+    });
+    invalidateCache('Master_Karyawan');
+  } catch { /* fail silently — jangan break alur utama */ }
 }
 
 async function login(sheets, nik, password, ip) {
@@ -230,11 +270,27 @@ async function login(sheets, nik, password, ip) {
 
   const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
+
+  // #1 — Persistent lockout check (survives cold start / multi-instance)
+  if (user) {
+    const lockedMs = Number(user['LOGIN_LOCKED_UNTIL'] || 0);
+    if (lockedMs && Date.now() < lockedMs) {
+      const mnt = Math.ceil((lockedMs - Date.now()) / 60000);
+      recordFailedLogin(nik, ip);
+      return { status: 'error', message: `Terlalu banyak percobaan. Coba lagi dalam ${mnt} menit.` };
+    }
+  }
+
   if (!user || normalizeRole(user['ROLE']) === 'DELETED' || !verifyPassword(password, user['PASSWORD'])) {
     recordFailedLogin(nik, ip);
+    // Persist lockout ke sheet jika baru saja mencapai threshold
+    const attempt = _loginAttempts.get(String(nik || '').trim().toLowerCase());
+    if (attempt?.lockedUntil)
+      _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', attempt.lockedUntil).catch(() => {});
     return { status: 'error', message: 'NIK atau password salah.' };
   }
   clearFailedLogins(nik);
+  _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', '').catch(() => {}); // clear persistent lock
 
   const storedPw = String(user['PASSWORD'] || '');
   // Password dianggap lemah jika masih plaintext (belum di-hash) ATAU termasuk daftar password umum
@@ -721,12 +777,12 @@ async function resolveWaByIdentity(sheets, perusahaan, subcont, nama) {
   return String(match?.['NO WHATSAPP'] || '').replace(/\D/g, '');
 }
 
-async function sendWaNotification(target, message) {
+async function sendWaNotification(target, message, _attempt = 0) {
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return false;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
   const payload = new URLSearchParams({ target: phone, message, delay: '3', countryCode: '62' }).toString();
-  return new Promise(resolve => {
+  const ok = await new Promise(resolve => {
     const req = https.request({
       hostname: 'api.fonnte.com', path: '/send', method: 'POST',
       headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
@@ -742,6 +798,12 @@ async function sendWaNotification(target, message) {
     req.write(payload);
     req.end();
   });
+  // #3 — 1x retry setelah 5 detik jika gagal
+  if (!ok && _attempt === 0) {
+    await new Promise(r => setTimeout(r, 5000));
+    return sendWaNotification(target, message, 1);
+  }
+  return ok;
 }
 
 async function ensureWaStatusColumn(sheets, sheetName) {
@@ -1264,9 +1326,16 @@ module.exports = async (req, res) => {
 
       // Semua action POST lainnya wajib token valid
       const authUser = requireAuth(req);
+      // #2 — Cek LAST_LOGOUT_AT — token yang sudah di-logout tidak bisa dipakai lagi
+      await checkTokenValid(sheets, authUser);
 
       let result;
       switch (action) {
+        case 'logout':
+          // Invalidasi token dengan catat waktu logout ke sheet
+          await _updateKaryawanCol(sheets, authUser.nik, 'LAST_LOGOUT_AT', Date.now());
+          result = { status: 'success', message: 'Logout berhasil.' };
+          break;
         case 'changePassword':
           result = await changePassword(sheets, authUser.nik, data?.old_password, data?.new_password);
           break;

@@ -59,14 +59,37 @@ async function loadCapaian() {
       }
     }
 
+    _capRestoreFilter(); // #6 — restore filter sebelumnya
     computeAndRender();
   } catch (e) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ef4444;padding:20px">${escapeHTML(e.message)}</td></tr>`;
   }
 }
 
+function _capSaveFilter() {
+  try {
+    const key = 'cap_filter_' + (getCurrentUser()?.nik || 'guest');
+    sessionStorage.setItem(key, JSON.stringify({
+      month:   document.getElementById('capMonth')?.value || '',
+      company: document.getElementById('capPerusahaan')?.value || '',
+      dept:    document.getElementById('capDept')?.value || '',
+    }));
+  } catch {}
+}
+
+function _capRestoreFilter() {
+  try {
+    const key = 'cap_filter_' + (getCurrentUser()?.nik || 'guest');
+    const s = JSON.parse(sessionStorage.getItem(key) || '{}');
+    if (s.month)   { const el = document.getElementById('capMonth');      if (el) el.value = s.month; }
+    if (s.company) { const el = document.getElementById('capPerusahaan'); if (el) el.value = s.company; }
+    if (s.dept)    { const el = document.getElementById('capDept');        if (el) el.value = s.dept; }
+  } catch {}
+}
+
 function computeAndRender() {
   if (!_capLoaded) return;
+  _capSaveFilter(); // #6 — simpan filter ke sessionStorage
 
   const monthStr = document.getElementById('capMonth')?.value || '';
   const coF      = (document.getElementById('capPerusahaan')?.value || '').toLowerCase();

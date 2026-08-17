@@ -3,6 +3,35 @@ let umUsers = [];
 let umFiltered = [];
 let umPage = 1;
 const UM_PAGE_SIZE = 20;
+// #7 — Sort state
+let umSortCol = null;
+let umSortDir = 1; // 1 = asc, -1 = desc
+
+function _umSortIcon(col) {
+  if (umSortCol !== col) return '<span style="opacity:.2;font-size:.65rem;margin-left:2px">⇅</span>';
+  return umSortDir === 1
+    ? '<span style="font-size:.65rem;margin-left:2px;color:#6366f1">▲</span>'
+    : '<span style="font-size:.65rem;margin-left:2px;color:#6366f1">▼</span>';
+}
+window._umThClick = function(col) {
+  if (umSortCol === col) { umSortDir *= -1; } else { umSortCol = col; umSortDir = 1; }
+  umPage = 1; renderUMTable();
+};
+function _umSortVal(u, col) {
+  switch (col) {
+    case 'co':   return String(u['PERUSAHAAN'] || '').toLowerCase();
+    case 'nama': return String(u['NAMA'] || '').toLowerCase();
+    case 'nik':  return String(u['NIK'] || '').toLowerCase();
+    case 'jbt':  return String(u['JABATAN'] || '').toLowerCase();
+    case 'dept': return String(u['DEPARTEMEN'] || '').toLowerCase();
+    case 'wa':   return String(u['NO WHATSAPP'] || '').toLowerCase();
+    case 'hr':   return Number(u['OBJ HR'] || 0);
+    case 'ins':  return Number(u['OBJ INS'] || 0);
+    case 'sbo':  return Number(u['OBJ SBO'] || 0);
+    case 'pc':   return Number(u['OBJ PC'] || 0);
+    default:     return '';
+  }
+}
 
 async function initUserManagement() {
   const user = getCurrentUser();
@@ -52,11 +81,34 @@ function filterUsers() {
 function renderUMTable() {
   const tbody = document.getElementById('umTableBody');
   if (!tbody) return;
-  const start = (umPage - 1) * UM_PAGE_SIZE;
-  const page  = umFiltered.slice(start, start + UM_PAGE_SIZE);
-  const user  = getCurrentUser();
-  const canEdit = isAdminOrAbove(user?.role);
+  const user     = getCurrentUser();
+  const canEdit  = isAdminOrAbove(user?.role);
   const canResetPw = isSuperAdminRole(user?.role);
+
+  // #7 — Render sortable thead
+  const thead = document.querySelector('#umTable thead');
+  if (thead) {
+    const th = (col, label, center) =>
+      `<th class="${center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${col}')">${label}${_umSortIcon(col)}</th>`;
+    thead.innerHTML = `<tr>
+      ${th('co','Perusahaan')}${th('nama','Nama')}${th('nik','NIK')}
+      ${th('jbt','Jabatan')}${th('dept','Departemen')}${th('wa','WhatsApp')}
+      ${th('hr','OBJ HR',true)}${th('ins','OBJ INS',true)}
+      ${th('sbo','OBJ SBO',true)}${th('pc','OBJ PC',true)}
+      ${canEdit ? '<th>Aksi</th>' : ''}
+    </tr>`;
+  }
+
+  // Sort sebelum paginate
+  const sorted = umSortCol
+    ? [...umFiltered].sort((a, b) => {
+        const va = _umSortVal(a, umSortCol), vb = _umSortVal(b, umSortCol);
+        return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * umSortDir;
+      })
+    : umFiltered;
+
+  const start = (umPage - 1) * UM_PAGE_SIZE;
+  const page  = sorted.slice(start, start + UM_PAGE_SIZE);
 
   if (!page.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
@@ -566,6 +618,7 @@ async function _executeCsvImport(users) {
       const result = await res.json();
       if (result.status === 'success') success++; else failed++;
     } catch { failed++; }
+    await new Promise(r => setTimeout(r, 350)); // #4 — jeda antar baris agar tidak burst ke Sheets API
   }
   showAdminToast(`Import selesai. Berhasil: ${success}, Gagal: ${failed}`, success ? 'success' : 'error');
   if (success) loadUsers();

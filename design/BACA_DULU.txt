@@ -1,0 +1,8 @@
+Folder ini untuk 3 mockup Stitch yang dirujuk REDESIGN_SPEC.md:
+
+  1. dashboard-analitik-desktop.png  -> SUDAH ADA (dashboard analitik penuh)
+  2. dashboard-drilldown-desktop.png -> TAMBAHKAN SENDIRI (state drill-down Pareto)
+  3. dashboard-mobile.png            -> TAMBAHKAN SENDIRI (versi mobile)
+
+Simpan screenshot 2 & 3 dari Stitch dengan nama persis seperti di atas,
+karena spec merujuk nama-nama file ini.
