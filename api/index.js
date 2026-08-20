@@ -150,6 +150,125 @@ async function getSheetHeaders(sheets, sheetName) {
   return (res.data.values?.[0] || []).map(h => String(h).trim());
 }
 
+// ===== CUTI (2026-08-20) =====
+// Master_Karyawan di app ini tidak punya konsep cuti/leave sama sekali —
+// SISTER MINER (repo terpisah) adalah source of truth data karyawan & status
+// cuti. Cross-read langsung ke spreadsheet SISTER MINER (+ SIMANTRA K3 untuk
+// training TR_REINDUKSI), sama pola integrasi Sheets-as-API yang sudah dipakai
+// di seluruh sistem ini (lihat SISTER MINER/src/lib/simantra.ts). Bridge
+// identitas NIK↔karyawan_id di-port read-only dari SIKAP/src/lib/bridge.ts.
+function namaCocok(a, b) {
+  const na = String(a || '').trim().toUpperCase();
+  const nb = String(b || '').trim().toUpperCase();
+  return Boolean(na && nb) && (na.includes(nb) || nb.includes(na));
+}
+
+async function getSheetDataFrom(sheets, spreadsheetId, sheetName) {
+  if (!spreadsheetId) return [];
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: sheetName });
+  const rows = res.data.values || [];
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[String(h).trim()] = row[i] ?? ''; });
+    return obj;
+  });
+}
+
+async function getCachedSheetFrom(sheets, spreadsheetId, sheetName, ttlMs = 30_000) {
+  const key = `xsheet:${spreadsheetId}:${sheetName}`;
+  const now = Date.now();
+  const hit = _dataCache.get(key);
+  if (hit && now < hit.expAt) return hit.data;
+  const data = await getSheetDataFrom(sheets, spreadsheetId, sheetName);
+  _dataCache.set(key, { data, expAt: now + ttlMs });
+  return data;
+}
+
+// Sekali fetch (Karyawan + akun_karyawan + training_records, masing2 sudah
+// di-cache 30s oleh getCachedSheetFrom) dipakai ulang buat resolve 1 NIK atau
+// seluruh roster sekaligus — hindari N request paralel ke Sheets API kalau
+// dipanggil dalam loop (mis. anotasi dropdown PIC untuk semua karyawan).
+async function loadCutiSources(sheets) {
+  const sisterId = process.env.SISTER_MINER_SPREADSHEET_ID;
+  if (!sisterId) return null;
+  const simantraId = process.env.SIMANTRA_SPREADSHEET_ID;
+  try {
+    const [karyawan, bridgeRows, records] = await Promise.all([
+      getCachedSheetFrom(sheets, sisterId, 'Karyawan'),
+      simantraId ? getCachedSheetFrom(sheets, simantraId, 'akun_karyawan') : [],
+      simantraId ? getCachedSheetFrom(sheets, simantraId, 'training_records') : [],
+    ]);
+    return { karyawan, bridgeRows, records };
+  } catch (err) {
+    // Fail-open (2026-08-20): salah ID / akses belum di-share ke spreadsheet
+    // SISTER MINER TIDAK BOLEH bikin login/semua request patah — cuma bikin
+    // fitur cuti mati sementara (semua dianggap "aktif"). Log biar ketauan.
+    console.error('[cuti] gagal baca SISTER MINER/SIMANTRA, fitur cuti nonaktif sementara:', err.message);
+    return null;
+  }
+}
+
+function resolveStatusKerja(src, nik, nama) {
+  if (!src) return 'aktif';
+  const key = String(nik || '').trim();
+  if (!key) return 'aktif';
+
+  const bridged = src.bridgeRows.find(r => String(r.nik || '').trim() === key);
+  let match = bridged && bridged.karyawan_id ? src.karyawan.find(r => r.id === bridged.karyawan_id.trim()) : undefined;
+  if (!match) {
+    match = src.karyawan.find(r => r.status === 'approved' && String(r.nrp || '').trim() === key && namaCocok(r.nama || '', nama));
+  }
+  if (!match) return 'aktif';
+  if (!match.cutiMulai || !match.cutiSelesai) return 'aktif';
+
+  const today = new Date();
+  if (today < new Date(match.cutiMulai)) return 'aktif';
+  if (today <= new Date(match.cutiSelesai)) return 'cuti';
+
+  // Lewat cutiSelesai — sudah reinduksi pasca cuti (TR_REINDUKSI, SIMANTRA K3)?
+  const done = src.records.some(r => r.karyawan_id === match.id && r.training_id === 'TR_REINDUKSI'
+    && r.status === 'Hadir' && (r.tanggal_selesai || '') >= match.cutiSelesai);
+  return done ? 'aktif' : 'wajib_reinduksi';
+}
+
+/** Status kerja real-time ("aktif" | "cuti" | "wajib_reinduksi") dari data
+ * SISTER MINER, dicocokkan by NIK (fallback nrp+nama, sama seperti bridge.ts).
+ * SISTER_MINER_SPREADSHEET_ID belum diset, atau karyawan gak ketemu di sana →
+ * "aktif" (jangan blokir siapa pun gara-gara data tidak lengkap/mismatch). */
+async function getStatusKerjaByNik(sheets, nik, nama) {
+  const src = await loadCutiSources(sheets);
+  return resolveStatusKerja(src, nik, nama);
+}
+
+/** Anotasi STATUS_KERJA ke tiap baris Master_Karyawan sekaligus (1 fetch, bukan
+ * N) — dipakai buat menandai dropdown PIC di frontend. */
+async function annotateStatusKerja(sheets, rows) {
+  const src = await loadCutiSources(sheets);
+  if (!src) return rows; // fitur cuti belum dikonfigurasi — jangan tempel field kosong
+  return rows.map(r => ({ ...r, STATUS_KERJA: resolveStatusKerja(src, r['NIK'], r['NAMA']) }));
+}
+
+/** Lempar 401 kalau NIK ini sedang cuti — dipanggil di kedua choke point auth
+ * (GET & POST) biar akses ke-cut total, bukan cuma di action tertentu. */
+async function assertNotCuti(sheets, auth) {
+  const status = await getStatusKerjaByNik(sheets, auth.nik, auth.nama);
+  if (status === 'cuti')
+    throw Object.assign(new Error('Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali.'), { httpStatus: 401 });
+}
+
+/** PIC yang dipilih tidak boleh sedang cuti/wajib_reinduksi. ponytail: kalau
+ * nik_pic tidak terkirim dari form, skip (tidak cukup data buat verifikasi
+ * aman) — celah ini sudah ada sebelumnya untuk field lain juga. */
+async function assertPicEligible(sheets, nikPic, namaPic) {
+  if (!nikPic) return;
+  const status = await getStatusKerjaByNik(sheets, nikPic, namaPic);
+  if (status === 'aktif') return;
+  const reason = status === 'cuti' ? 'sedang cuti' : 'wajib menyelesaikan Reinduksi Pasca Cuti dulu';
+  throw Object.assign(new Error(`PIC yang dipilih (${namaPic || nikPic}) ${reason}, tidak bisa ditunjuk sebagai PIC.`), { httpStatus: 400 });
+}
+
 function getDriveClient() {
   const oauth2 = new google.auth.OAuth2(
     process.env.GOOGLE_OAUTH_CLIENT_ID,
@@ -229,6 +348,10 @@ async function checkTokenValid(sheets, auth) {
   const lastLogout = Number(user['LAST_LOGOUT_AT'] || 0);
   if (lastLogout && (auth.iat || 0) * 1000 < lastLogout)
     throw Object.assign(new Error('Sesi tidak valid. Silakan login ulang.'), { httpStatus: 401 });
+
+  // Cuti (2026-08-20) — kalau status berubah jadi cuti SETELAH login (token
+  // masih hidup 12 jam), tendang di request berikutnya, jangan tunggu expiry.
+  await assertNotCuti(sheets, auth);
 }
 
 // Helper: update satu kolom di baris karyawan (dipakai item 1 & 2)
@@ -291,6 +414,11 @@ async function login(sheets, nik, password, ip) {
   }
   clearFailedLogins(nik);
   _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', '').catch(() => {}); // clear persistent lock
+
+  // Cuti (2026-08-20) — kredensial benar, tapi sedang cuti = akses ditutup total.
+  const statusKerjaLogin = await getStatusKerjaByNik(sheets, nik, String(user['NAMA'] || '').trim());
+  if (statusKerjaLogin === 'cuti')
+    return { status: 'error', message: 'Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali.' };
 
   const storedPw = String(user['PASSWORD'] || '');
   // Password dianggap lemah jika masih plaintext (belum di-hash) ATAU termasuk daftar password umum
@@ -853,6 +981,7 @@ async function writeWaStatusToSheet(sheets, sheetName, reportId, waStatus) {
 }
 
 async function submitHazardReport(sheets, data) {
+  await assertPicEligible(sheets, data.nik_pic, data.nama_pic); // Cuti (2026-08-20)
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
   if (data.upload_foto_bahaya)
@@ -917,6 +1046,7 @@ const INSPECTION_NAMES = {
 async function submitInspectionReport(sheets, data) {
   const sheetName = String(data.inspection_code || data.jenis_inspeksi || '').trim().toUpperCase();
   if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Jenis inspeksi tidak valid: ' + sheetName);
+  await assertPicEligible(sheets, data.nik_pic, data.nama_pic); // Cuti (2026-08-20)
 
   const id = 'INSP-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoInspeksiUrl = '';
@@ -1238,11 +1368,12 @@ module.exports = async (req, res) => {
 
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
+      await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
 
       let result;
       switch (action) {
         case 'masterKaryawan': {
-          const allRows = await getCachedSheet(sheets, 'Master_Karyawan', 60_000);
+          const allRows = await annotateStatusKerja(sheets, await getCachedSheet(sheets, 'Master_Karyawan', 60_000));
           if (isSuperAdmin(auth.role)) {
             // SUPER_ADMIN: semua data lengkap
             result = stripSensitiveKaryawan(allRows);
@@ -1262,6 +1393,7 @@ module.exports = async (req, res) => {
                 NAMA:       r['NAMA']       || '',
                 NIK:        r['NIK']        || '',
                 JABATAN:    r['JABATAN']    || '',
+                STATUS_KERJA: r['STATUS_KERJA'] || 'aktif', // Cuti (2026-08-20) — dropdown PIC
               };
             });
           }

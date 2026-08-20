@@ -308,7 +308,18 @@ function loadNamaPicOptions() {
     masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont)
       .map(item => item["NAMA"]).filter(Boolean)
   )].sort();
-  list.forEach(item => select.add(new Option(item, item)));
+  list.forEach(item => {
+    const employee = masterKaryawan.find(row =>
+      row["PERUSAHAAN"] === perusahaan && row["SUBCONT"] === subcont && row["NAMA"] === item
+    );
+    // Cuti (2026-08-20) — tidak eligible jadi PIC; tampil disabled + label
+    // status. Ini cuma UX, penolakan sebenarnya tetap di backend saat submit.
+    const status = employee?.["STATUS_KERJA"];
+    const cuti = status === "cuti" || status === "wajib_reinduksi";
+    const opt = new Option(cuti ? `${item} (${status === "cuti" ? "Cuti" : "Wajib Reinduksi"})` : item, item);
+    opt.disabled = cuti;
+    select.add(opt);
+  });
 
   initializeNamaPicChoices();
 }
