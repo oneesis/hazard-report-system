@@ -40,8 +40,8 @@
         <i class="fa-solid fa-clock"></i> Pending Approval
         <span class="sidebar-badge" id="pendingBadge" style="display:none">0</span>
       </button>
-      <button class="admin-subnav-btn" data-section="sectionAchievement" onclick="showSection('sectionAchievement', this)" id="sidebarAchievement" style="display:none">
-        <i class="fa-solid fa-trophy"></i> Capaian SAP
+      <button class="admin-subnav-btn" data-section="sectionExport" onclick="showSection('sectionExport', this)" id="sidebarExport" style="display:none">
+        <i class="fa-solid fa-file-excel"></i> Penarikan Data
       </button>
     </div>
 
@@ -115,40 +115,69 @@
     </section>
 
     <!-- CAPAIAN SAP (ADMIN dan SUPER_ADMIN) -->
-    <section id="sectionAchievement" class="admin-section" style="display:none">
+    <!-- PENARIKAN DATA -->
+    <section id="sectionExport" class="admin-section" style="display:none">
       <div class="um-header">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <input type="month" id="achMonth" class="um-search" style="width:160px" onchange="computeAndRenderAchievement()">
-          <select id="achDept" class="um-search" style="width:180px" onchange="computeAndRenderAchievement()">
-            <option value="">Semua Departemen</option>
+          <select id="expType" class="um-search" style="width:160px" onchange="filterExportData()">
+            <option value="">Semua Jenis</option>
+            <option value="HAZARD">Hazard Report</option>
+            <option value="INSPECTION">Inspeksi</option>
           </select>
-          <select id="achPerusahaan" class="um-search" style="width:180px;display:none" onchange="computeAndRenderAchievement()">
-            <option value="">Semua Perusahaan</option>
-          </select>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <label style="font-size:.82rem;color:#64748b">Dari</label>
+            <input type="date" id="expFrom" class="um-search" style="width:140px" onchange="filterExportData()">
+            <label style="font-size:.82rem;color:#64748b">s/d</label>
+            <input type="date" id="expTo" class="um-search" style="width:140px" onchange="filterExportData()">
+          </div>
         </div>
         <div class="um-header-actions">
-          <button class="btn-secondary" onclick="exportAchievementCsv()">
-            <i class="fa-solid fa-file-arrow-down"></i> Download CSV
+          <span id="expCount" style="font-size:.82rem;color:#64748b"></span>
+          <button class="btn-primary" onclick="exportToExcel()">
+            <i class="fa-solid fa-file-excel"></i> Download Excel
           </button>
-          <button class="btn-secondary btn-icon" onclick="loadAchievement()" title="Refresh">
+          <button class="btn-secondary btn-icon" onclick="loadExportData()" title="Refresh">
             <i class="fa-solid fa-arrows-rotate"></i>
           </button>
         </div>
       </div>
-      <div id="achKpi" class="ach-kpi-row" style="display:none"></div>
-      <div class="admin-card" style="overflow-x:auto;margin-top:12px">
-        <table id="achTable" class="admin-table">
-          <thead id="achTableHead"></thead>
-          <tbody id="achTableBody">
-            <tr><td colspan="12" class="um-loading">Pilih bulan untuk melihat capaian SAP</td></tr>
+      <div class="admin-card" style="overflow-x:auto">
+        <table id="expTable" class="admin-table">
+          <thead><tr>
+            <th>Tipe</th><th>ID</th><th>Tanggal</th><th>Perusahaan</th>
+            <th>Nama Pelapor</th><th>Departemen</th><th>Deskripsi / Temuan</th><th>Status</th><th>PIC</th>
+          </tr></thead>
+          <tbody id="expTableBody">
+            <tr><td colspan="9" class="um-loading">Pilih filter lalu klik Refresh</td></tr>
           </tbody>
         </table>
-        <div id="achPagination" class="table-pagination"></div>
+        <div id="expPagination" class="table-pagination"></div>
       </div>
     </section>
 
     <!-- hidden file input for CSV import -->
     <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvFile(this)">
+
+    <!-- Modal Reset Password (SUPER_ADMIN) -->
+    <div id="resetPwModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,.4)">
+      <div class="um-modal-box" style="background:#fff;border-radius:16px;padding:28px;width:min(420px,94vw)">
+        <h3 style="margin:0 0 4px;font-size:1rem;font-weight:700">Reset Password Karyawan</h3>
+        <p style="font-size:.82rem;color:#64748b;margin:0 0 16px">
+          <b id="resetPwNama">-</b> &nbsp;·&nbsp; NIK: <span id="resetPwNik">-</span>
+        </p>
+        <div class="cp-field">
+          <label style="font-size:.82rem;font-weight:600">Password Baru <span style="color:#ef4444">*</span></label>
+          <input type="password" id="resetPwInput" class="cp-input" placeholder="Min. 8 karakter" style="width:100%;margin-top:4px">
+        </div>
+        <p id="resetPwMsg" style="font-size:.82rem;margin:6px 0 12px;min-height:18px"></p>
+        <div style="display:flex;gap:8px">
+          <button id="btnSubmitResetPw" class="btn-primary" style="flex:1" onclick="submitResetPw()">
+            <i class="fa-solid fa-key"></i> Reset Password
+          </button>
+          <button class="btn-secondary" onclick="closeResetPwModal()">Batal</button>
+        </div>
+      </div>
+    </div>
 
     <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
 
@@ -177,8 +206,8 @@
     if (isSuperAdminRole(user?.role)) {
       document.getElementById('sidebarPending').style.display = 'flex';
     }
-    // Capaian SAP: semua admin+
-    document.getElementById('sidebarAchievement').style.display = 'flex';
+    // Penarikan Data: semua admin+
+    document.getElementById('sidebarExport').style.display = 'flex';
     initUserManagement();
   });
 
@@ -188,15 +217,15 @@
     document.getElementById(sectionId).style.display = 'block';
     btn.classList.add('active');
     const titles = {
-      sectionUsers:       'Manajemen User',
-      sectionHistory:     'Riwayat Pengajuan',
-      sectionPending:     'Pending Approval',
-      sectionAchievement: 'Capaian SAP',
+      sectionUsers:   'Manajemen User',
+      sectionHistory: 'Riwayat Pengajuan',
+      sectionPending: 'Pending Approval',
+      sectionExport:  'Penarikan Data',
     };
     document.getElementById('appTopbarTitle').textContent = titles[sectionId] || '';
-    if (sectionId === 'sectionPending')     loadPendingChanges();
-    if (sectionId === 'sectionHistory')     loadMyHistory();
-    if (sectionId === 'sectionAchievement') loadAchievement();
+    if (sectionId === 'sectionPending') loadPendingChanges();
+    if (sectionId === 'sectionHistory') loadMyHistory();
+    if (sectionId === 'sectionExport')  loadExportData();
   }
 </script>
 </body>

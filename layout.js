@@ -11,6 +11,7 @@
     'laporan-admin.html':'laporan',
     'eskalasi.html':     'eskalasi',
     'laporan-detail.html':'laporan-detail',
+    'capaian-sap.html':  'capaian-sap',
   };
 
   const PAGE_TITLES = {
@@ -22,6 +23,7 @@
     'laporan':        'Manajemen Laporan',
     'eskalasi':       'Monitoring Eskalasi',
     'laporan-detail': 'Detail Laporan',
+    'capaian-sap':    'Capaian SAP',
   };
 
   function getActivePage() {
@@ -65,7 +67,8 @@
         ${navItem('index-home.html', 'fa-house',              'Beranda',       'beranda',   active)}
         ${navItem('index.html',      'fa-triangle-exclamation','Hazard Report','hazard',    active)}
         ${navItem('inspection.html', 'fa-list-check',          'Inspeksi',      'inspeksi',  active)}
-        ${navItem('dashboard.html',  'fa-chart-simple',        'Dashboard',     'dashboard', active)}
+        ${navItem('dashboard.html',   'fa-chart-simple',  'Dashboard',   'dashboard',   active)}
+        ${navItem('capaian-sap.html','fa-trophy',         'Capaian SAP', 'capaian-sap', active)}
       </nav>
 
       ${isAdmin ? `

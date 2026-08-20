@@ -150,6 +150,132 @@ async function getSheetHeaders(sheets, sheetName) {
   return (res.data.values?.[0] || []).map(h => String(h).trim());
 }
 
+// ===== CUTI (2026-08-20) =====
+// Master_Karyawan di app ini tidak punya konsep cuti/leave sama sekali —
+// SISTER MINER (repo terpisah) adalah source of truth data karyawan & status
+// cuti. Cross-read langsung ke spreadsheet SISTER MINER (+ SIMANTRA K3 untuk
+// training TR_REINDUKSI), sama pola integrasi Sheets-as-API yang sudah dipakai
+// di seluruh sistem ini (lihat SISTER MINER/src/lib/simantra.ts). Bridge
+// identitas NIK↔karyawan_id di-port read-only dari SIKAP/src/lib/bridge.ts.
+function namaCocok(a, b) {
+  const na = String(a || '').trim().toUpperCase();
+  const nb = String(b || '').trim().toUpperCase();
+  return Boolean(na && nb) && (na.includes(nb) || nb.includes(na));
+}
+
+async function getSheetDataFrom(sheets, spreadsheetId, sheetName) {
+  if (!spreadsheetId) return [];
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: sheetName });
+  const rows = res.data.values || [];
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[String(h).trim()] = row[i] ?? ''; });
+    return obj;
+  });
+}
+
+async function getCachedSheetFrom(sheets, spreadsheetId, sheetName, ttlMs = 30_000) {
+  const key = `xsheet:${spreadsheetId}:${sheetName}`;
+  const now = Date.now();
+  const hit = _dataCache.get(key);
+  if (hit && now < hit.expAt) return hit.data;
+  const data = await getSheetDataFrom(sheets, spreadsheetId, sheetName);
+  _dataCache.set(key, { data, expAt: now + ttlMs });
+  return data;
+}
+
+// Sekali fetch (Karyawan + akun_karyawan + training_records, masing2 sudah
+// di-cache 30s oleh getCachedSheetFrom) dipakai ulang buat resolve 1 NIK atau
+// seluruh roster sekaligus — hindari N request paralel ke Sheets API kalau
+// dipanggil dalam loop (mis. anotasi dropdown PIC untuk semua karyawan).
+async function loadCutiSources(sheets) {
+  const sisterId = process.env.SISTER_MINER_SPREADSHEET_ID;
+  if (!sisterId) return null;
+  const simantraId = process.env.SIMANTRA_SPREADSHEET_ID;
+  try {
+    const [karyawan, bridgeRows, records] = await Promise.all([
+      getCachedSheetFrom(sheets, sisterId, 'Karyawan'),
+      simantraId ? getCachedSheetFrom(sheets, simantraId, 'akun_karyawan') : [],
+      simantraId ? getCachedSheetFrom(sheets, simantraId, 'training_records') : [],
+    ]);
+    return { karyawan, bridgeRows, records };
+  } catch (err) {
+    // Fail-open (2026-08-20): salah ID / akses belum di-share ke spreadsheet
+    // SISTER MINER TIDAK BOLEH bikin login/semua request patah — cuma bikin
+    // fitur cuti mati sementara (semua dianggap "aktif"). Log biar ketauan.
+    console.error('[cuti] gagal baca SISTER MINER/SIMANTRA, fitur cuti nonaktif sementara:', err.message);
+    return null;
+  }
+}
+
+// Bug (2026-08-21): bandingin Date lengkap (dgn jam) ke new Date(tanggal)
+// (selalu jam 00:00 UTC) bikin cutiSelesai cuma "cuti" di milidetik pertama
+// harinya. Fix: banding string tanggal kalender (YYYY-MM-DD) di zona WIB.
+function todayJakarta() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+}
+
+function resolveStatusKerja(src, nik, nama) {
+  if (!src) return 'aktif';
+  const key = String(nik || '').trim();
+  if (!key) return 'aktif';
+
+  const bridged = src.bridgeRows.find(r => String(r.nik || '').trim() === key);
+  let match = bridged && bridged.karyawan_id ? src.karyawan.find(r => r.id === bridged.karyawan_id.trim()) : undefined;
+  if (!match) {
+    match = src.karyawan.find(r => r.status === 'approved' && String(r.nrp || '').trim() === key && namaCocok(r.nama || '', nama));
+  }
+  if (!match) return 'aktif';
+  if (!match.cutiMulai || !match.cutiSelesai) return 'aktif';
+
+  const today = todayJakarta();
+  if (today < match.cutiMulai) return 'aktif';
+  if (today <= match.cutiSelesai) return 'cuti';
+
+  // Lewat cutiSelesai — sudah reinduksi pasca cuti (TR_REINDUKSI, SIMANTRA K3)?
+  const done = src.records.some(r => r.karyawan_id === match.id && r.training_id === 'TR_REINDUKSI'
+    && r.status === 'Hadir' && (r.tanggal_selesai || '') >= match.cutiSelesai);
+  return done ? 'aktif' : 'wajib_reinduksi';
+}
+
+/** Status kerja real-time ("aktif" | "cuti" | "wajib_reinduksi") dari data
+ * SISTER MINER, dicocokkan by NIK (fallback nrp+nama, sama seperti bridge.ts).
+ * SISTER_MINER_SPREADSHEET_ID belum diset, atau karyawan gak ketemu di sana →
+ * "aktif" (jangan blokir siapa pun gara-gara data tidak lengkap/mismatch). */
+async function getStatusKerjaByNik(sheets, nik, nama) {
+  const src = await loadCutiSources(sheets);
+  return resolveStatusKerja(src, nik, nama);
+}
+
+/** Anotasi STATUS_KERJA ke tiap baris Master_Karyawan sekaligus (1 fetch, bukan
+ * N) — dipakai buat menandai dropdown PIC di frontend. */
+async function annotateStatusKerja(sheets, rows) {
+  const src = await loadCutiSources(sheets);
+  if (!src) return rows; // fitur cuti belum dikonfigurasi — jangan tempel field kosong
+  return rows.map(r => ({ ...r, STATUS_KERJA: resolveStatusKerja(src, r['NIK'], r['NAMA']) }));
+}
+
+/** Lempar 401 kalau NIK ini sedang cuti — dipanggil di kedua choke point auth
+ * (GET & POST) biar akses ke-cut total, bukan cuma di action tertentu. */
+async function assertNotCuti(sheets, auth) {
+  const status = await getStatusKerjaByNik(sheets, auth.nik, auth.nama);
+  if (status === 'cuti')
+    throw Object.assign(new Error('Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali.'), { httpStatus: 401 });
+}
+
+/** PIC yang dipilih tidak boleh sedang cuti/wajib_reinduksi. ponytail: kalau
+ * nik_pic tidak terkirim dari form, skip (tidak cukup data buat verifikasi
+ * aman) — celah ini sudah ada sebelumnya untuk field lain juga. */
+async function assertPicEligible(sheets, nikPic, namaPic) {
+  if (!nikPic) return;
+  const status = await getStatusKerjaByNik(sheets, nikPic, namaPic);
+  if (status === 'aktif') return;
+  const reason = status === 'cuti' ? 'sedang cuti' : 'wajib menyelesaikan Reinduksi Pasca Cuti dulu';
+  throw Object.assign(new Error(`PIC yang dipilih (${namaPic || nikPic}) ${reason}, tidak bisa ditunjuk sebagai PIC.`), { httpStatus: 400 });
+}
+
 function getDriveClient() {
   const oauth2 = new google.auth.OAuth2(
     process.env.GOOGLE_OAUTH_CLIENT_ID,
@@ -215,10 +341,54 @@ function requireAuth(req) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) throw Object.assign(new Error('Tidak terautentikasi. Silakan login.'), { httpStatus: 401 });
   try {
-    return jwt.verify(token, JWT_SECRET); // { nik, nama, role, ... }
+    return jwt.verify(token, JWT_SECRET); // { nik, nama, role, iat, ... }
   } catch {
     throw Object.assign(new Error('Sesi berakhir. Silakan login ulang.'), { httpStatus: 401 });
   }
+}
+
+// #2 — Cek apakah token sudah di-invalidasi via logout (LAST_LOGOUT_AT di sheet)
+async function checkTokenValid(sheets, auth) {
+  const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const user = data.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
+  if (!user) return;
+  const lastLogout = Number(user['LAST_LOGOUT_AT'] || 0);
+  if (lastLogout && (auth.iat || 0) * 1000 < lastLogout)
+    throw Object.assign(new Error('Sesi tidak valid. Silakan login ulang.'), { httpStatus: 401 });
+
+  // Cuti (2026-08-20) — kalau status berubah jadi cuti SETELAH login (token
+  // masih hidup 12 jam), tendang di request berikutnya, jangan tunggu expiry.
+  await assertNotCuti(sheets, auth);
+}
+
+// Helper: update satu kolom di baris karyawan (dipakai item 1 & 2)
+async function _updateKaryawanCol(sheets, nik, colName, value) {
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
+    const rows = res.data.values || [];
+    if (!rows.length) return;
+    const headers = rows[0].map(h => String(h).trim().toUpperCase());
+    let colIdx = headers.indexOf(colName.toUpperCase());
+    if (colIdx === -1) {
+      // Kolom belum ada — tambah header dulu
+      colIdx = headers.length;
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Master_Karyawan!${colIndexToLetter(colIdx)}1`,
+        valueInputOption: 'RAW', requestBody: { values: [[colName]] }
+      });
+    }
+    const nikStr = String(nik || '').trim();
+    const nikColIdx = headers.indexOf('NIK');
+    const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikColIdx] || '').trim() === nikStr);
+    if (rowIdx === -1) return;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `Master_Karyawan!${colIndexToLetter(colIdx)}${rowIdx + 1}`,
+      valueInputOption: 'RAW', requestBody: { values: [[value]] }
+    });
+    invalidateCache('Master_Karyawan');
+  } catch { /* fail silently — jangan break alur utama */ }
 }
 
 async function login(sheets, nik, password, ip) {
@@ -230,11 +400,32 @@ async function login(sheets, nik, password, ip) {
 
   const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
+
+  // #1 — Persistent lockout check (survives cold start / multi-instance)
+  if (user) {
+    const lockedMs = Number(user['LOGIN_LOCKED_UNTIL'] || 0);
+    if (lockedMs && Date.now() < lockedMs) {
+      const mnt = Math.ceil((lockedMs - Date.now()) / 60000);
+      recordFailedLogin(nik, ip);
+      return { status: 'error', message: `Terlalu banyak percobaan. Coba lagi dalam ${mnt} menit.` };
+    }
+  }
+
   if (!user || normalizeRole(user['ROLE']) === 'DELETED' || !verifyPassword(password, user['PASSWORD'])) {
     recordFailedLogin(nik, ip);
+    // Persist lockout ke sheet jika baru saja mencapai threshold
+    const attempt = _loginAttempts.get(String(nik || '').trim().toLowerCase());
+    if (attempt?.lockedUntil)
+      _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', attempt.lockedUntil).catch(() => {});
     return { status: 'error', message: 'NIK atau password salah.' };
   }
   clearFailedLogins(nik);
+  _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', '').catch(() => {}); // clear persistent lock
+
+  // Cuti (2026-08-20) — kredensial benar, tapi sedang cuti = akses ditutup total.
+  const statusKerjaLogin = await getStatusKerjaByNik(sheets, nik, String(user['NAMA'] || '').trim());
+  if (statusKerjaLogin === 'cuti')
+    return { status: 'error', message: 'Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali.' };
 
   const storedPw = String(user['PASSWORD'] || '');
   // Password dianggap lemah jika masih plaintext (belum di-hash) ATAU termasuk daftar password umum
@@ -290,9 +481,39 @@ async function changePassword(sheets, nik, oldPassword, newPassword) {
   return { status: 'success', message: 'Password berhasil diubah.' };
 }
 
+async function adminResetPassword(sheets, auth, targetNik, newPassword) {
+  if (!isSuperAdmin(auth.role)) throw Object.assign(new Error('Hanya SUPER_ADMIN yang bisa reset password.'), { httpStatus: 403 });
+  if (!newPassword || newPassword.length < 8)
+    throw Object.assign(new Error('Password baru minimal 8 karakter.'), { httpStatus: 400 });
+  if (isWeakPassword(newPassword))
+    throw Object.assign(new Error('Password terlalu umum. Gunakan kombinasi huruf, angka, atau simbol.'), { httpStatus: 400 });
+
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
+  const rows = res.data.values || [];
+  if (rows.length < 2) throw new Error('Data karyawan tidak ditemukan.');
+
+  const headers = rows[0].map(h => String(h).trim().toUpperCase());
+  const nikCol = headers.indexOf('NIK');
+  const pwCol  = headers.indexOf('PASSWORD');
+  if (nikCol === -1 || pwCol === -1) throw new Error('Kolom NIK/PASSWORD tidak ditemukan.');
+
+  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(targetNik || '').trim());
+  if (rowIdx === -1) throw new Error('Karyawan tidak ditemukan.');
+
+  const hash = bcrypt.hashSync(newPassword, 10);
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `Master_Karyawan!${colIndexToLetter(pwCol)}${rowIdx + 1}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [[hash]] }
+  });
+  invalidateCache('Master_Karyawan');
+  return { status: 'success', message: 'Password berhasil direset.' };
+}
+
 function issueToken(user) {
   return jwt.sign(
-    { nik: user.nik, nama: user.nama, role: user.role, perusahaan: user.perusahaan },
+    { nik: user.nik, nama: user.nama, role: user.role, perusahaan: user.perusahaan, departemen: user.departemen },
     JWT_SECRET,
     { expiresIn: TOKEN_TTL }
   );
@@ -407,10 +628,27 @@ async function resolveNikFromWa(sheets, wa) {
 // [PUSH-END]
 
 async function getKaryawan(sheets, auth) {
-  if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
   const rows = await getSheetData(sheets, 'Master_Karyawan');
-  const visible = isSuperAdmin(auth.role) ? rows
-    : rows.filter(r => String(r['PERUSAHAAN'] || '').trim().toUpperCase() === String(auth.perusahaan || '').trim().toUpperCase());
+  const roleKey = rows.length ? (Object.keys(rows[0]).find(k => k.trim().toUpperCase() === 'ROLE') || 'ROLE') : 'ROLE';
+  const active = rows.filter(r => normalizeRole(r[roleKey]) !== 'DELETED');
+  let visible;
+  if (isSuperAdmin(auth.role)) {
+    visible = active;
+  } else if (isAdminOrAbove(auth.role)) {
+    // ADMIN: semua karyawan di perusahaan mereka
+    const co = String(auth.perusahaan || '').trim().toUpperCase();
+    if (!co) throw Object.assign(new Error('Perusahaan tidak ditemukan untuk akun ini.'), { httpStatus: 403 });
+    visible = active.filter(r => String(r['PERUSAHAAN'] || '').trim().toUpperCase() === co);
+  } else {
+    // USER: hanya karyawan di departemen mereka (lebih ringan)
+    const co   = String(auth.perusahaan  || '').trim().toUpperCase();
+    const dept = String(auth.departemen  || '').trim().toUpperCase();
+    if (!co) throw Object.assign(new Error('Perusahaan tidak ditemukan untuk akun ini.'), { httpStatus: 403 });
+    visible = active.filter(r =>
+      String(r['PERUSAHAAN'] || '').trim().toUpperCase() === co &&
+      String(r['DEPARTEMEN'] || '').trim().toUpperCase() === dept
+    );
+  }
   return { status: 'success', data: stripSensitiveKaryawan(visible) };
 }
 
@@ -433,6 +671,7 @@ async function proposeChange(sheets, auth, action, data) {
     if (sa['NO WHATSAPP']) {
       const msg = `Halo ${sa['NAMA']}, ada permohonan *${action.toUpperCase()}* data karyawan dari *${auth.nama}* (${auth.perusahaan}).\n\n👤 User: ${data.NAMA || data.NIK || '-'}\n\nSilakan buka dashboard untuk review dan approval.`;
       await sendWaNotification(sa['NO WHATSAPP'], msg).catch(() => {});
+      await new Promise(r => setTimeout(r, 2500)); // jeda antar SUPER_ADMIN — hindari spam detection
     }
   }
   return { status: 'success', message: 'Permohonan dikirim, menunggu persetujuan SUPER ADMIN.', id };
@@ -460,15 +699,28 @@ async function applyUserChange(sheets, action, data) {
     const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
     const rows = res.data.values || [];
     const headers = rows[0].map(h => String(h).trim().toUpperCase());
-    const nikCol = headers.indexOf('NIK');
-    const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(data.NIK || '').trim());
-    if (rowIdx === -1) throw new Error('User tidak ditemukan.');
+    const nikCol  = headers.indexOf('NIK');
+    const namaCol = headers.indexOf('NAMA');
+    const dataNik  = String(data.NIK  || '').trim();
+    const dataNama = String(data.NAMA || '').trim().toLowerCase();
+    const rowIdx = rows.findIndex((r, i) => {
+      if (i === 0) return false;
+      const nikMatch  = String(r[nikCol]  || '').trim() === dataNik;
+      const namaMatch = namaCol !== -1 && String(r[namaCol] || '').trim().toLowerCase() === dataNama;
+      // Cocokkan NIK + NAMA sekaligus — cegah hapus orang yang salah
+      return nikMatch && namaMatch;
+    });
+    if (rowIdx === -1) throw new Error(`User ${data.NAMA || data.NIK || '?'} tidak ditemukan di sheet.`);
     if (action === 'DELETE') {
-      // Tandai ROLE=DELETED, login akan otomatis gagal
-      const roleCol = headers.indexOf('ROLE');
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID, range: `Master_Karyawan!${colIndexToLetter(roleCol)}${rowIdx + 1}`,
-        valueInputOption: 'RAW', requestBody: { values: [['DELETED']] }
+      // Hapus baris secara fisik agar tidak perlu filter client-side
+      const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties' });
+      const sheetMeta = meta.data.sheets.find(s => s.properties.title === 'Master_Karyawan');
+      if (!sheetMeta) throw new Error('Sheet Master_Karyawan tidak ditemukan.');
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ deleteDimension: {
+          range: { sheetId: sheetMeta.properties.sheetId, dimension: 'ROWS', startIndex: rowIdx, endIndex: rowIdx + 1 }
+        }}]}
       });
     } else {
       const updates = Object.entries(data)
@@ -536,9 +788,9 @@ function stripSensitiveKaryawan(rows) {
   });
 }
 
-async function getHazardReports(sheets) {
+async function getHazardReports(sheets, auth) {
   const data = await getSheetData(sheets, 'Hazard_Report');
-  const result = data
+  let result = data
     .map(obj => {
       const normalized = {};
       Object.keys(obj).forEach(k => { normalized[normalizeHeader(k)] = obj[k]; });
@@ -546,15 +798,20 @@ async function getHazardReports(sheets) {
       return normalized;
     })
     .filter(obj => String(obj.id || '').trim());
+  // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) result = result.filter(r => String(r.perusahaan || '').trim().toUpperCase() === co);
+  }
   return { status: 'success', data: result };
 }
 
-async function getInspectionReports(sheets) {
+async function getInspectionReports(sheets, auth) {
   // ponytail: parallel fetches — 8 sheets sequential was ~8x slower
   const results = await Promise.allSettled(
     INSPECTION_SHEETS.map(sheetName => getSheetData(sheets, sheetName).then(rows => ({ sheetName, rows })))
   );
-  const data = [];
+  let data = [];
   for (const result of results) {
     if (result.status !== 'fulfilled') continue;
     const { sheetName, rows } = result.value;
@@ -566,6 +823,11 @@ async function getInspectionReports(sheets) {
       normalized.inspection_sheet = sheetName;
       data.push(normalized);
     });
+  }
+  // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) data = data.filter(r => String(r.perusahaan || '').trim().toUpperCase() === co);
   }
   return { status: 'success', data };
 }
@@ -586,13 +848,15 @@ function isReportVisibleForUser(report, userNik, userName) {
          (userNik && picNik === userNik) || (userName && picName === userName);
 }
 
-async function getAllReports(sheets, nik, nama, role) {
-  const [h, i] = await Promise.all([getHazardReports(sheets), getInspectionReports(sheets)]);
+async function getAllReports(sheets, nik, nama, role, perusahaan) {
+  const auth = { role, perusahaan };
+  const [h, i] = await Promise.all([getHazardReports(sheets, auth), getInspectionReports(sheets, auth)]);
   let combined = [...(h.data || []), ...(i.data || [])];
   const userNik = String(nik || '').trim().toLowerCase();
   const userName = String(nama || '').trim().toLowerCase();
   const userRole = String(role || '').trim().toUpperCase();
-  if (userRole !== 'ADMIN' && (userNik || userName)) {
+  // USER hanya lihat laporannya sendiri; ADMIN & SUPER_ADMIN sudah di-scope by company oleh getHazardReports/getInspectionReports
+  if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN' && (userNik || userName)) {
     combined = combined.filter(r => isReportVisibleForUser(r, userNik, userName));
   }
   return { status: 'success', data: combined };
@@ -648,12 +912,12 @@ async function resolveWaByIdentity(sheets, perusahaan, subcont, nama) {
   return String(match?.['NO WHATSAPP'] || '').replace(/\D/g, '');
 }
 
-async function sendWaNotification(target, message) {
+async function sendWaNotification(target, message, _attempt = 0) {
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return false;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
-  const payload = new URLSearchParams({ target: phone, message }).toString();
-  return new Promise(resolve => {
+  const payload = new URLSearchParams({ target: phone, message, delay: '3', countryCode: '62' }).toString();
+  const ok = await new Promise(resolve => {
     const req = https.request({
       hostname: 'api.fonnte.com', path: '/send', method: 'POST',
       headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(payload) }
@@ -669,6 +933,12 @@ async function sendWaNotification(target, message) {
     req.write(payload);
     req.end();
   });
+  // #3 — 1x retry setelah 5 detik jika gagal
+  if (!ok && _attempt === 0) {
+    await new Promise(r => setTimeout(r, 5000));
+    return sendWaNotification(target, message, 1);
+  }
+  return ok;
 }
 
 async function ensureWaStatusColumn(sheets, sheetName) {
@@ -718,6 +988,7 @@ async function writeWaStatusToSheet(sheets, sheetName, reportId, waStatus) {
 }
 
 async function submitHazardReport(sheets, data) {
+  await assertPicEligible(sheets, data.nik_pic, data.nama_pic); // Cuti (2026-08-20)
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
   if (data.upload_foto_bahaya)
@@ -782,6 +1053,7 @@ const INSPECTION_NAMES = {
 async function submitInspectionReport(sheets, data) {
   const sheetName = String(data.inspection_code || data.jenis_inspeksi || '').trim().toUpperCase();
   if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Jenis inspeksi tidak valid: ' + sheetName);
+  await assertPicEligible(sheets, data.nik_pic, data.nama_pic); // Cuti (2026-08-20)
 
   const id = 'INSP-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoInspeksiUrl = '';
@@ -853,8 +1125,30 @@ async function updateWorkflowFields(sheets, sheetName, reportId, fields) {
   return reportRow;
 }
 
-async function submitActionPlan(sheets, data, sheetName) {
+// Cek bahwa caller adalah PIC atau pelapor laporan (skip jika NIK tidak tersedia di report lama)
+function assertReportRole(reportRow, auth, requiredRole) {
+  if (isAdminOrAbove(auth.role)) return;
+  const authNik = String(auth.nik || '').trim();
+  if (!authNik) return; // token tanpa NIK = tidak bisa verifikasi
+  if (requiredRole === 'pic') {
+    const picNik = String(reportRow['nik_pic'] || reportRow['nip_pic'] || '').trim();
+    if (picNik && picNik !== authNik)
+      throw Object.assign(new Error('Akses ditolak: kamu bukan PIC laporan ini.'), { httpStatus: 403 });
+  } else {
+    const repNik = String(reportRow['nik'] || reportRow['nik_pelapor'] || '').trim();
+    if (repNik && repNik !== authNik)
+      throw Object.assign(new Error('Akses ditolak: kamu bukan pelapor laporan ini.'), { httpStatus: 403 });
+  }
+}
+
+async function submitActionPlan(sheets, data, sheetName, auth) {
   if (!data.rencana_tindakan?.trim()) throw new Error('Rencana tindakan wajib diisi.');
+  // Baca dulu untuk cek ownership sebelum update
+  const checkRows = await getSheetData(sheets, sheetName);
+  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
+  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
+  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  assertReportRole(checkNorm, auth, 'pic');
   const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, {
     'RENCANA_TINDAKAN':  data.rencana_tindakan.trim(),
     'TANGGAL_RENCANA':   data.tanggal_rencana || '',
@@ -882,10 +1176,16 @@ async function submitActionPlan(sheets, data, sheetName) {
   return { status: 'success', message: 'Rencana tindakan berhasil dikirim ke pelapor.' };
 }
 
-async function reviewActionPlan(sheets, data, sheetName) {
+async function reviewActionPlan(sheets, data, sheetName, auth) {
   const decision = data.decision;
   if (decision !== 'approved' && decision !== 'rejected') throw new Error('Decision harus approved atau rejected.');
   if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Komentar wajib diisi jika menolak.');
+  // Cek ownership: harus pelapor atau admin
+  const checkRows = await getSheetData(sheets, sheetName);
+  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
+  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
+  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  assertReportRole(checkNorm, auth, 'reporter');
   const fields = {
     'PLAN_STATUS':          decision,
     'PLAN_REVIEW_COMMENT':  data.comment || '',
@@ -914,7 +1214,7 @@ async function reviewActionPlan(sheets, data, sheetName) {
   return { status: 'success', message: decision === 'approved' ? 'Rencana disetujui.' : 'Rencana ditolak, PIC akan merevisi.' };
 }
 
-async function updateReport(sheets, data, sheetName, folderSuffix) {
+async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
   const rows = res.data.values || [];
   if (rows.length < 2) throw new Error('Data tidak ditemukan.');
@@ -926,6 +1226,13 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
   const rowIndex = rows.findIndex((row, i) => i > 0 && String(row[idCol] || '').trim() === String(data.id || '').trim());
   if (rowIndex === -1) throw new Error('Data tidak ditemukan.');
   const actualRow = rowIndex + 1; // 1-indexed, rows[0]=header=row1, rows[1]=data=row2
+
+  // Cek ownership: PIC yang boleh update status laporan
+  if (auth) {
+    const rowObj = {};
+    headers.forEach((h, i) => { rowObj[h] = rows[rowIndex][i] ?? ''; });
+    assertReportRole(rowObj, auth, 'pic');
+  }
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic)
@@ -950,7 +1257,7 @@ async function updateReport(sheets, data, sheetName, folderSuffix) {
       requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
     });
   }
-  // [PUSH-START] — push/WA ke pelapor saat laporan CLOSED (admin bypass) atau FOLLOWUP
+  // [PUSH-START] — push/WA ke pelapor saat laporan FOLLOWUP atau CLOSED
   if (data.status_perbaikan === 'CLOSED' || data.status_perbaikan === 'FOLLOWUP') {
     const rowData = {};
     headers.forEach((h, i) => { rowData[h] = rows[rowIndex][i] ?? ''; });
@@ -985,6 +1292,26 @@ async function ensureClosingColumns(sheets, sheetName) {
   const existing = (res.data.values?.[0] || []).map(h => normalizeHeader(h));
   const toAdd = needed.filter(c => !existing.includes(normalizeHeader(c)));
   if (!toAdd.length) return;
+
+  // Expand grid columns jika sheet belum punya cukup kolom
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: 'sheets(properties(sheetId,title,gridProperties))'
+  });
+  const sheetMeta = meta.data.sheets.find(s => s.properties.title === sheetName);
+  const currentCols = sheetMeta?.properties?.gridProperties?.columnCount || 0;
+  const neededCols = existing.length + toAdd.length;
+  if (neededCols > currentCols) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ appendDimension: {
+        sheetId: sheetMeta.properties.sheetId,
+        dimension: 'COLUMNS',
+        length: neededCols - currentCols
+      }}]}
+    });
+  }
+
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${sheetName}!${colIndexToLetter(existing.length)}1`,
@@ -993,10 +1320,16 @@ async function ensureClosingColumns(sheets, sheetName) {
   });
 }
 
-async function reviewClosing(sheets, data, sheetName) {
+async function reviewClosing(sheets, data, sheetName, auth) {
   const { decision } = data;
   if (decision !== 'confirmed' && decision !== 'rejected') throw new Error('Decision harus confirmed atau rejected.');
   if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Catatan wajib diisi jika menolak closing.');
+  // Cek ownership: harus pelapor atau admin
+  const checkRows = await getSheetData(sheets, sheetName);
+  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
+  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
+  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  assertReportRole(checkNorm, auth, 'reporter');
 
   await ensureClosingColumns(sheets, sheetName);
 
@@ -1042,11 +1375,12 @@ module.exports = async (req, res) => {
 
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
+      await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
 
       let result;
       switch (action) {
         case 'masterKaryawan': {
-          const allRows = await getCachedSheet(sheets, 'Master_Karyawan', 60_000);
+          const allRows = await annotateStatusKerja(sheets, await getCachedSheet(sheets, 'Master_Karyawan', 60_000));
           if (isSuperAdmin(auth.role)) {
             // SUPER_ADMIN: semua data lengkap
             result = stripSensitiveKaryawan(allRows);
@@ -1066,6 +1400,7 @@ module.exports = async (req, res) => {
                 NAMA:       r['NAMA']       || '',
                 NIK:        r['NIK']        || '',
                 JABATAN:    r['JABATAN']    || '',
+                STATUS_KERJA: r['STATUS_KERJA'] || 'aktif', // Cuti (2026-08-20) — dropdown PIC
               };
             });
           }
@@ -1089,10 +1424,10 @@ module.exports = async (req, res) => {
           }
           break;
         }
-        case 'getHazardReports':    result = await getHazardReports(sheets); break;
-        case 'getInspectionReports':result = await getInspectionReports(sheets); break;
+        case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
+        case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
-        case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role); break;
+        case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         case 'getMyObj': {
@@ -1130,11 +1465,21 @@ module.exports = async (req, res) => {
 
       // Semua action POST lainnya wajib token valid
       const authUser = requireAuth(req);
+      // #2 — Cek LAST_LOGOUT_AT — token yang sudah di-logout tidak bisa dipakai lagi
+      await checkTokenValid(sheets, authUser);
 
       let result;
       switch (action) {
+        case 'logout':
+          // Invalidasi token dengan catat waktu logout ke sheet
+          await _updateKaryawanCol(sheets, authUser.nik, 'LAST_LOGOUT_AT', Date.now());
+          result = { status: 'success', message: 'Logout berhasil.' };
+          break;
         case 'changePassword':
           result = await changePassword(sheets, authUser.nik, data?.old_password, data?.new_password);
+          break;
+        case 'adminResetPassword':
+          result = await adminResetPassword(sheets, authUser, data?.nik, data?.new_password);
           break;
         case 'proposeChange':
           result = await proposeChange(sheets, authUser, data?.action, data?.payload);
@@ -1143,6 +1488,7 @@ module.exports = async (req, res) => {
           result = await reviewChange(sheets, authUser, data?.change_id, data?.decision, data?.reason);
           break;
         case 'resendWaPic': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Hanya admin yang bisa kirim ulang WA PIC.'), { httpStatus: 403 });
           const sheetTarget = data?.sheet_name || 'Hazard_Report';
           const reportRow = (await getSheetData(sheets, sheetTarget)).find(r => r['ID'] === data?.report_id || r['id'] === data?.report_id);
           if (!reportRow) throw new Error('Laporan tidak ditemukan.');
@@ -1156,44 +1502,53 @@ module.exports = async (req, res) => {
           result = { status: 'success', wa_pic_status: newStatus, message: sent ? 'WA berhasil dikirim ulang.' : 'Gagal mengirim WA.' };
           break;
         }
-        case 'submitHazardReport':     result = await submitHazardReport(sheets, data); break;
-        case 'submitInspectionReport': result = await submitInspectionReport(sheets, data); break;
+        case 'submitHazardReport':
+          // Override identitas dari token — cegah spoofing
+          data.nik  = authUser.nik;
+          data.nama = authUser.nama;
+          result = await submitHazardReport(sheets, data);
+          break;
+        case 'submitInspectionReport':
+          data.nik  = authUser.nik;
+          data.nama = authUser.nama;
+          result = await submitInspectionReport(sheets, data);
+          break;
         case 'updateHazardReport': {
-          if (data.status_perbaikan === 'CLOSED' && !isAdminOrAbove(auth?.role)) {
+          if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, 'Hazard_Report');
             data.status_perbaikan = 'FOLLOWUP';
             data.closing_status   = 'pending_review';
           }
-          result = await updateReport(sheets, data, 'Hazard_Report', '-Closing');
+          result = await updateReport(sheets, data, 'Hazard_Report', '-Closing', authUser);
           break;
         }
         case 'updateInspectionReport': {
           const sheetName = String(data.inspection_sheet || '').trim().toUpperCase();
           if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          if (data.status_perbaikan === 'CLOSED' && !isAdminOrAbove(auth?.role)) {
+          if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, sheetName);
             data.status_perbaikan = 'FOLLOWUP';
             data.closing_status   = 'pending_review';
           }
-          result = await updateReport(sheets, data, sheetName, '-Inspection-Closing');
+          result = await updateReport(sheets, data, sheetName, '-Inspection-Closing', authUser);
           break;
         }
         case 'submitActionPlan': {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await submitActionPlan(sheets, data, sheetName);
+          result = await submitActionPlan(sheets, data, sheetName, authUser);
           break;
         }
         case 'reviewActionPlan': {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await reviewActionPlan(sheets, data, sheetName);
+          result = await reviewActionPlan(sheets, data, sheetName, authUser);
           break;
         }
         case 'reviewClosing': {
           const sheetName = data.inspection_sheet ? String(data.inspection_sheet).trim().toUpperCase() : 'Hazard_Report';
           if (data.inspection_sheet && !INSPECTION_SHEETS.includes(sheetName)) throw new Error('Sheet inspeksi tidak valid.');
-          result = await reviewClosing(sheets, data, sheetName);
+          result = await reviewClosing(sheets, data, sheetName, authUser);
           break;
         }
         // [PUSH-START]
@@ -1201,10 +1556,16 @@ module.exports = async (req, res) => {
           await savePushSubscription(sheets, authUser.nik, data.endpoint, data.p256dh, data.auth);
           result = { status: 'success', message: 'Push subscription saved.' };
           break;
-        case 'push_unsubscribe':
+        case 'push_unsubscribe': {
+          // Verifikasi endpoint milik user yang sedang login
+          const allSubs2 = await getSheetData(sheets, 'Push_Subscriptions').catch(() => []);
+          const sub = allSubs2.find(r => String(r['ENDPOINT'] || '').trim() === String(data.endpoint || '').trim());
+          if (sub && String(sub['NIK'] || '').trim() !== String(authUser.nik || '').trim())
+            throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           await removePushSubscriptionByEndpoint(sheets, data.endpoint);
           result = { status: 'success', message: 'Push subscription removed.' };
           break;
+        }
         case 'push_test': {
           if (!ensureVapid()) {
             result = { status: 'error', message: 'VAPID keys belum dikonfigurasi di env vars (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_EMAIL).' };

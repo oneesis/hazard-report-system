@@ -29,6 +29,7 @@ async function initLaporan() {
 
     window.__reportsCache = lmReports;
     populateDeptFilter();
+    _lmRestoreFilter(); // #6 — restore filter sebelumnya
     lmRender();
     wireFilters();
   } catch (e) {
@@ -50,12 +51,31 @@ function populateDeptFilter() {
   });
 }
 
+const _LM_FILTER_KEY = () => 'lm_filter_' + (getCurrentUser()?.nik || 'guest');
+function _lmSaveFilter() {
+  try {
+    const state = {};
+    ['searchInput','statusFilter','typeFilter','deptFilter','slaFilter','dateRange','sortSelect']
+      .forEach(id => { const el = document.getElementById(id); if (el) state[id] = el.value; });
+    sessionStorage.setItem(_LM_FILTER_KEY(), JSON.stringify(state));
+  } catch {}
+}
+function _lmRestoreFilter() {
+  try {
+    const state = JSON.parse(sessionStorage.getItem(_LM_FILTER_KEY()) || '{}');
+    Object.entries(state).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    });
+  } catch {}
+}
+
 function wireFilters() {
   ['searchInput','statusFilter','typeFilter','deptFilter','slaFilter','dateRange'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', () => { lmPage = 1; lmRender(); });
-    document.getElementById(id)?.addEventListener('input',  () => { lmPage = 1; lmRender(); });
+    document.getElementById(id)?.addEventListener('change', () => { lmPage = 1; _lmSaveFilter(); lmRender(); });
+    document.getElementById(id)?.addEventListener('input',  () => { lmPage = 1; _lmSaveFilter(); lmRender(); });
   });
-  document.getElementById('sortSelect')?.addEventListener('change', () => { lmPage = 1; lmRender(); });
+  document.getElementById('sortSelect')?.addEventListener('change', () => { lmPage = 1; _lmSaveFilter(); lmRender(); });
 
   document.getElementById('btnRefresh')?.addEventListener('click', async () => {
     const el = document.getElementById('reportCardList');

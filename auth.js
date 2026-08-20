@@ -47,6 +47,15 @@ function requireLogin(){
 }
 
 function logout(){
+  // #2 — Invalidasi token di server (fire-and-forget)
+  const token = localStorage.getItem('hazard_token');
+  if (token) {
+    fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'logout' })
+    }).catch(() => {});
+  }
   localStorage.removeItem("hazard_user");
   localStorage.removeItem("hazard_token");
   window.location.href = "login.html";

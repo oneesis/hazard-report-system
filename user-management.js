@@ -3,6 +3,35 @@ let umUsers = [];
 let umFiltered = [];
 let umPage = 1;
 const UM_PAGE_SIZE = 20;
+// #7 — Sort state
+let umSortCol = null;
+let umSortDir = 1; // 1 = asc, -1 = desc
+
+function _umSortIcon(col) {
+  if (umSortCol !== col) return '<span style="opacity:.2;font-size:.65rem;margin-left:2px">⇅</span>';
+  return umSortDir === 1
+    ? '<span style="font-size:.65rem;margin-left:2px;color:#6366f1">▲</span>'
+    : '<span style="font-size:.65rem;margin-left:2px;color:#6366f1">▼</span>';
+}
+window._umThClick = function(col) {
+  if (umSortCol === col) { umSortDir *= -1; } else { umSortCol = col; umSortDir = 1; }
+  umPage = 1; renderUMTable();
+};
+function _umSortVal(u, col) {
+  switch (col) {
+    case 'co':   return String(u['PERUSAHAAN'] || '').toLowerCase();
+    case 'nama': return String(u['NAMA'] || '').toLowerCase();
+    case 'nik':  return String(u['NIK'] || '').toLowerCase();
+    case 'jbt':  return String(u['JABATAN'] || '').toLowerCase();
+    case 'dept': return String(u['DEPARTEMEN'] || '').toLowerCase();
+    case 'wa':   return String(u['NO WHATSAPP'] || '').toLowerCase();
+    case 'hr':   return Number(u['OBJ HR'] || 0);
+    case 'ins':  return Number(u['OBJ INS'] || 0);
+    case 'sbo':  return Number(u['OBJ SBO'] || 0);
+    case 'pc':   return Number(u['OBJ PC'] || 0);
+    default:     return '';
+  }
+}
 
 async function initUserManagement() {
   const user = getCurrentUser();
@@ -17,7 +46,7 @@ async function loadUsers() {
   const tbody = document.getElementById('umTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px">Memuat...</td></tr>';
   try {
-    const res = await fetch('/api?action=getKaryawan');
+    const res = await fetch('/api?action=getKaryawan', { cache: 'no-store' });
     const result = await res.json();
     umUsers = (result.data || []).filter(r => String(r['ROLE'] || '').toUpperCase() !== 'DELETED');
     umFiltered = [...umUsers];
@@ -52,10 +81,34 @@ function filterUsers() {
 function renderUMTable() {
   const tbody = document.getElementById('umTableBody');
   if (!tbody) return;
+  const user     = getCurrentUser();
+  const canEdit  = isAdminOrAbove(user?.role);
+  const canResetPw = isSuperAdminRole(user?.role);
+
+  // #7 — Render sortable thead
+  const thead = document.querySelector('#umTable thead');
+  if (thead) {
+    const th = (col, label, center) =>
+      `<th class="${center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${col}')">${label}${_umSortIcon(col)}</th>`;
+    thead.innerHTML = `<tr>
+      ${th('co','Perusahaan')}${th('nama','Nama')}${th('nik','NIK')}
+      ${th('jbt','Jabatan')}${th('dept','Departemen')}${th('wa','WhatsApp')}
+      ${th('hr','OBJ HR',true)}${th('ins','OBJ INS',true)}
+      ${th('sbo','OBJ SBO',true)}${th('pc','OBJ PC',true)}
+      ${canEdit ? '<th>Aksi</th>' : ''}
+    </tr>`;
+  }
+
+  // Sort sebelum paginate
+  const sorted = umSortCol
+    ? [...umFiltered].sort((a, b) => {
+        const va = _umSortVal(a, umSortCol), vb = _umSortVal(b, umSortCol);
+        return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * umSortDir;
+      })
+    : umFiltered;
+
   const start = (umPage - 1) * UM_PAGE_SIZE;
-  const page  = umFiltered.slice(start, start + UM_PAGE_SIZE);
-  const user  = getCurrentUser();
-  const canEdit = isAdminOrAbove(user?.role);
+  const page  = sorted.slice(start, start + UM_PAGE_SIZE);
 
   if (!page.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
@@ -79,6 +132,7 @@ function renderUMTable() {
       ${canEdit ? `<td class="um-actions">
         <button class="um-btn-edit" onclick="openEditUser(window._umPageArr[${idx}])">Edit</button>
         <button class="um-btn-delete" onclick="confirmDeleteUser(window._umPageArr[${idx}])">Hapus</button>
+        ${canResetPw ? `<button class="um-btn-edit" style="background:#6366f1;color:#fff" onclick="openResetPwModal(window._umPageArr[${idx}])"><i class="fa-solid fa-key"></i> Reset PW</button>` : ''}
       </td>` : ''}
     </tr>`).join('');
 
@@ -117,8 +171,8 @@ function renderPendingChanges(list) {
         <td><span class="um-action-badge um-action-${(p['ACTION']||'').toLowerCase()}">${escapeHTML(p['ACTION']||'')}</span></td>
         <td class="um-data-cell">${escapeHTML(data.NAMA || data.NIK || '-')}</td>
         <td class="um-review-btns">
-          <button class="um-btn-approve" onclick="reviewChange('${escapeHTML(p['ID'])}','APPROVE')">✅ Setuju</button>
-          <button class="um-btn-reject"  onclick="promptReject('${escapeHTML(p['ID'])}')">❌ Tolak</button>
+          <button class="um-btn-approve" onclick="reviewChange('${escapeHTML(p['ID'])}','APPROVE')"><i class="fa-solid fa-check"></i> Setuju</button>
+          <button class="um-btn-reject"  onclick="promptReject('${escapeHTML(p['ID'])}')"><i class="fa-solid fa-xmark"></i> Tolak</button>
         </td>
       </tr>`;
     }).join('')}</tbody>
@@ -144,37 +198,87 @@ function openEditUser(user) {
 
 function openUMModal(user, action) {
   const isEdit = action === 'EDIT';
+  const isSA   = isSuperAdminRole(getCurrentUser()?.role);
   let modal = document.getElementById('umModal');
   if (!modal) { modal = document.createElement('div'); modal.id = 'umModal'; document.body.appendChild(modal); }
 
+  const roleOpts = ['USER','ADMIN','SUPER_ADMIN']
+    .map(r => `<option value="${r}"${String(user['ROLE']||'USER').toUpperCase()===r?' selected':''}>${r}</option>`)
+    .join('');
+
+  const roleField = isSA
+    ? `<div class="cp-field">
+        <label>Role</label>
+        <select id="umf_ROLE" class="um-field-select">${roleOpts}</select>
+      </div>`
+    : '<input type="hidden" id="umf_ROLE" value="USER">';
+
+  const subtitle = isEdit
+    ? `${escapeHTML(user['NAMA'] || '—')} &nbsp;·&nbsp; NIK ${escapeHTML(user['NIK'] || '—')}`
+    : 'Lengkapi data karyawan baru';
+
+  const iconBg    = isEdit ? '#eff6ff' : '#f0fdf4';
+  const iconColor = isEdit ? '#1d4ed8' : '#16a34a';
+  const iconName  = isEdit ? 'user-pen' : 'user-plus';
+  const btnLabel  = isEdit ? 'Kirim Permohonan' : 'Tambah Karyawan';
+  const btnIcon   = isEdit ? 'paper-plane' : 'user-plus';
+
   modal.innerHTML = `
     <div class="cp-overlay" onclick="closeUMModal()"></div>
-    <div class="cp-box um-modal-box" role="dialog">
-      <h3><i class="fa-solid fa-user${isEdit ? '-pen' : '-plus'}"></i> ${isEdit ? 'Edit' : 'Tambah'} Karyawan</h3>
-      <div class="um-modal-grid">
-        ${umField('PERUSAHAAN','Perusahaan',user['PERUSAHAAN']||'')}
-        ${umField('SUBCONT','Subcont',user['SUBCONT']||'')}
-        ${umField('NAMA','Nama Lengkap',user['NAMA']||'')}
-        ${umField('NIK','NIK',user['NIK']||'', isEdit)}
-        ${umField('JABATAN','Jabatan',user['JABATAN']||'')}
-        ${umField('DEPARTEMEN','Departemen',user['DEPARTEMEN']||'')}
-        ${umField('NO WHATSAPP','No WhatsApp',user['NO WHATSAPP']||'')}
-        ${!isEdit ? umField('PASSWORD','Password (min. 6 karakter)','') : ''}
-        ${isSuperAdminRole(getCurrentUser()?.role) ? `<div class="cp-field">
-          <label>Role</label>
-          <select id="umf_ROLE">
-            ${['USER','ADMIN','SUPER_ADMIN'].map(r => `<option value="${r}"${String(user['ROLE']||'USER').toUpperCase()===r?' selected':''}>${r}</option>`).join('')}
-          </select>
-        </div>` : '<input type="hidden" id="umf_ROLE" value="USER">'}
-        ${umFieldNum('OBJ HR','Target HR/Bulan',user['OBJ HR']||'0')}
-        ${umFieldNum('OBJ INS','Target Inspeksi/Bulan',user['OBJ INS']||'0')}
-        ${umFieldNum('OBJ SBO','Target SBO/Bulan',user['OBJ SBO']||'0')}
-        ${umFieldNum('OBJ PC','Target PC/Bulan',user['OBJ PC']||'0')}
+    <div class="cp-box um-modal-box" role="dialog" aria-modal="true">
+
+      <div class="cp-header">
+        <div class="cp-header-icon" style="background:${iconBg};color:${iconColor}">
+          <i class="fa-solid fa-${iconName}"></i>
+        </div>
+        <div>
+          <h3>${isEdit ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
+          <p class="cp-subtitle">${subtitle}</p>
+        </div>
+        <button class="cp-close" onclick="closeUMModal()" aria-label="Tutup">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
-      <p id="umModalMsg" class="cp-msg"></p>
-      <div class="cp-actions">
+
+      <div class="um-modal-body">
+
+        <p class="um-section-label">Perusahaan</p>
+        <div class="um-modal-grid">
+          ${umField('PERUSAHAAN','Perusahaan',user['PERUSAHAAN']||'')}
+          ${umField('SUBCONT','Subcont',user['SUBCONT']||'')}
+        </div>
+
+        <p class="um-section-label">Identitas</p>
+        <div class="um-modal-grid">
+          ${umField('NAMA','Nama Lengkap',user['NAMA']||'')}
+          ${umField('NIK','NIK',user['NIK']||'', isEdit)}
+          ${umField('JABATAN','Jabatan',user['JABATAN']||'')}
+          ${umField('DEPARTEMEN','Departemen',user['DEPARTEMEN']||'')}
+        </div>
+
+        <p class="um-section-label">Akun &amp; Kontak</p>
+        <div class="um-modal-grid">
+          ${umField('NO WHATSAPP','No WhatsApp',user['NO WHATSAPP']||'')}
+          ${roleField}
+          ${!isEdit ? umField('PASSWORD','Password (min. 6 karakter)','') : ''}
+        </div>
+
+        <p class="um-section-label">Target Bulanan</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 12px">
+          ${umFieldNum('OBJ HR','Hazard Report',user['OBJ HR']||'0')}
+          ${umFieldNum('OBJ INS','Inspeksi',user['OBJ INS']||'0')}
+          ${umFieldNum('OBJ SBO','SBO',user['OBJ SBO']||'0')}
+          ${umFieldNum('OBJ PC','PC',user['OBJ PC']||'0')}
+        </div>
+
+        <p id="umModalMsg" class="cp-msg" style="margin-top:14px;margin-bottom:0"></p>
+      </div>
+
+      <div class="um-modal-footer">
         <button class="cp-btn-cancel" onclick="closeUMModal()">Batal</button>
-        <button class="cp-btn-submit" onclick="submitUMModal('${action}','${escapeHTML(user['NIK']||'')}')">Kirim Permohonan</button>
+        <button class="cp-btn-submit" onclick="submitUMModal('${action}','${escapeHTML(user['NIK']||'')}')">
+          <i class="fa-solid fa-${btnIcon}"></i> ${btnLabel}
+        </button>
       </div>
     </div>`;
   modal.style.display = 'flex';
@@ -256,7 +360,17 @@ async function submitPropose(action, payload) {
     const result = await res.json();
     showAdminToast(result.message || (result.status === 'success' ? 'Permohonan terkirim.' : 'Gagal.'),
       result.status === 'success' ? 'success' : 'error');
-    if (result.status === 'success') loadUsers();
+    if (result.status === 'success') {
+      if (action === 'DELETE' && payload.NIK) {
+        // Hapus optimistis — tidak perlu tunggu SUPER_ADMIN approve untuk hilang dari tabel
+        const nik = String(payload.NIK);
+        umUsers    = umUsers.filter(u => String(u['NIK'] || '') !== nik);
+        umFiltered = umFiltered.filter(u => String(u['NIK'] || '') !== nik);
+        renderUMTable();
+      } else {
+        loadUsers();
+      }
+    }
   } catch (e) { showAdminToast(e.message || 'Terjadi kesalahan.', 'error'); }
 }
 
@@ -419,11 +533,8 @@ function renderMyHistory(list) {
   const section = document.getElementById('umHistorySection');
   if (!section) return;
   if (!list.length) { section.innerHTML = '<p class="um-empty">Belum ada riwayat pengajuan.</p>'; return; }
-  const statusBadge = s => {
-    const map = { PENDING:'background:#fef9c3;color:#854d0e', APPROVED:'background:#dcfce7;color:#15803d', REJECTED:'background:#fee2e2;color:#dc2626' };
-    const style = map[String(s).toUpperCase()] || 'background:#f1f5f9;color:#475569';
-    return `<span class="um-action-badge" style="${style}">${escapeHTML(s)}</span>`;
-  };
+  const statusBadge = s =>
+    `<span class="um-action-badge um-status-${(s||'unknown').toLowerCase()}">${escapeHTML(s||'-')}</span>`;
   section.innerHTML = `<table class="um-pending-table">
     <thead><tr><th>Waktu</th><th>Action</th><th>Data</th><th>Status</th><th>Catatan</th></tr></thead>
     <tbody>${list.map(p => {
@@ -507,6 +618,7 @@ async function _executeCsvImport(users) {
       const result = await res.json();
       if (result.status === 'success') success++; else failed++;
     } catch { failed++; }
+    await new Promise(r => setTimeout(r, 350)); // #4 — jeda antar baris agar tidak burst ke Sheets API
   }
   showAdminToast(`Import selesai. Berhasil: ${success}, Gagal: ${failed}`, success ? 'success' : 'error');
   if (success) loadUsers();
@@ -756,5 +868,258 @@ function exportAchievementCsv() {
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
   a.download = `capaian_sap_${monthStr}.csv`;
+  a.click();
+}
+
+// ===== RESET PASSWORD (SUPER_ADMIN) =====
+
+let _resetPwTarget = null;
+
+function openResetPwModal(user) {
+  _resetPwTarget = user;
+  document.getElementById('resetPwNama').textContent = user['NAMA'] || '-';
+  document.getElementById('resetPwNik').textContent  = user['NIK']  || '-';
+  document.getElementById('resetPwInput').value = '';
+  document.getElementById('resetPwMsg').textContent = '';
+  document.getElementById('resetPwModal').style.display = 'flex';
+}
+
+function closeResetPwModal() {
+  document.getElementById('resetPwModal').style.display = 'none';
+  _resetPwTarget = null;
+}
+
+async function submitResetPw() {
+  if (!_resetPwTarget) return;
+  const pw  = document.getElementById('resetPwInput').value.trim();
+  const msg = document.getElementById('resetPwMsg');
+  if (!pw) { msg.textContent = 'Password tidak boleh kosong.'; msg.style.color = '#ef4444'; return; }
+  if (pw.length < 8) { msg.textContent = 'Minimal 8 karakter.'; msg.style.color = '#ef4444'; return; }
+  const btn = document.getElementById('btnSubmitResetPw');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'adminResetPassword', data: { nik: _resetPwTarget['NIK'], new_password: pw } })
+    });
+    const json = await res.json();
+    if (json.status === 'success') {
+      msg.textContent = 'Password berhasil direset!';
+      msg.style.color = '#16a34a';
+      setTimeout(closeResetPwModal, 1200);
+    } else {
+      msg.textContent = json.message || 'Gagal reset password.';
+      msg.style.color = '#ef4444';
+    }
+  } catch (e) {
+    msg.textContent = e.message;
+    msg.style.color = '#ef4444';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ===== PENARIKAN DATA / EXPORT LAPORAN =====
+
+let _expAllReports = [];
+let _expFiltered   = [];
+let _expPage       = 1;
+const EXP_PAGE_SIZE = 50;
+
+// Kolom untuk preview tabel (9 kolom)
+const EXP_PREVIEW_COLS = [
+  { keys: ['report_type'],                                                  label: 'Tipe' },
+  { keys: ['id'],                                                           label: 'ID' },
+  { keys: ['timestamp','tanggal_laporan','tgl_laporan','tanggal_kejadian'], label: 'Tanggal' },
+  { keys: ['perusahaan'],                                                   label: 'Perusahaan' },
+  { keys: ['nama'],                                                         label: 'Nama Pelapor' },
+  { keys: ['departemen'],                                                   label: 'Departemen' },
+  { keys: ['deskripsi_bahaya','temuan_inspeksi','deskripsi'],               label: 'Deskripsi / Temuan' },
+  { keys: ['status_perbaikan'],                                             label: 'Status' },
+  { keys: ['nama_pic'],                                                     label: 'PIC' },
+];
+
+// Kolom untuk export (semua, tanpa WA)
+const EXP_ALL_COLS = [
+  { keys: ['report_type'],                                                         label: 'Tipe Laporan' },
+  { keys: ['id'],                                                                  label: 'ID Laporan' },
+  { keys: ['timestamp','tanggal_laporan','tgl_laporan'],                           label: 'Tanggal Laporan' },
+  { keys: ['perusahaan'],                                                          label: 'Perusahaan' },
+  { keys: ['perusahaan_subcont1','subcont1','subcont'],                            label: 'Subcont' },
+  { keys: ['nama'],                                                                label: 'Nama Pelapor' },
+  { keys: ['nik'],                                                                 label: 'NIK Pelapor' },
+  { keys: ['jabatan'],                                                             label: 'Jabatan Pelapor' },
+  { keys: ['departemen'],                                                          label: 'Departemen Pelapor' },
+  // NO WHATSAPP: dihilangkan
+  { keys: ['tanggal_kejadian','tanggal_inspeksi'],                                 label: 'Tanggal Kejadian / Inspeksi' },
+  { keys: ['shift_kejadian','shift_inspeksi'],                                     label: 'Shift' },
+  { keys: ['lokasi_bahaya','lokasi_inspeksi','lokasi'],                            label: 'Lokasi' },
+  { keys: ['detail_lokasi_bahaya','detail_lokasi_inspeksi'],                       label: 'Detail Lokasi' },
+  { keys: ['jenis_bahaya','jenis_inspeksi'],                                       label: 'Jenis' },
+  { keys: ['ketidaksesuaian_bahaya'],                                              label: 'Ketidaksesuaian' },
+  { keys: ['sub_ketidaksesuaian','subketidaksesuaian'],                            label: 'Sub Ketidaksesuaian' },
+  { keys: ['deskripsi_bahaya','temuan_inspeksi','deskripsi'],                      label: 'Deskripsi / Temuan' },
+  { keys: ['tingkat_risiko','tingkat_resiko'],                                     label: 'Tingkat Risiko' },
+  { keys: ['tindakan_langsung'],                                                   label: 'Tindakan Langsung' },
+  { keys: ['tindakan_usulan_pic','rekomendasi_perbaikan'],                         label: 'Tindakan Usulan PIC' },
+  { keys: ['perusahaan_pic'],                                                      label: 'Perusahaan PIC' },
+  { keys: ['nama_pic'],                                                            label: 'Nama PIC' },
+  { keys: ['nik_pic'],                                                             label: 'NIK PIC' },
+  { keys: ['jabatan_pic'],                                                         label: 'Jabatan PIC' },
+  { keys: ['departemen_pic'],                                                      label: 'Departemen PIC' },
+  // NO WHATSAPP PIC: dihilangkan
+  { keys: ['batas_waktu'],                                                         label: 'Batas Waktu' },
+  { keys: ['status_perbaikan'],                                                    label: 'Status' },
+  { keys: ['plan_status'],                                                         label: 'Status Rencana' },
+  { keys: ['rencana_tindakan'],                                                    label: 'Rencana Tindakan' },
+  { keys: ['tanggal_rencana'],                                                     label: 'Tanggal Rencana' },
+  { keys: ['catatan_closing'],                                                     label: 'Catatan Closing' },
+  { keys: ['tanggal_closing'],                                                     label: 'Tanggal Closing' },
+  { keys: ['closing_status'],                                                      label: 'Status Konfirmasi Closing' },
+  { keys: ['closing_review_comment'],                                              label: 'Catatan Penolakan Closing' },
+];
+
+function _expVal(r, keys) {
+  for (const k of keys) {
+    const v = r[k];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+  }
+  return '';
+}
+
+function _expFmtDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  return isNaN(d) ? str : d.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+async function loadExportData() {
+  const tbody = document.getElementById('expTableBody');
+  const countEl = document.getElementById('expCount');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px">Memuat data...</td></tr>';
+  if (countEl) countEl.textContent = '';
+  try {
+    const res  = await fetch('/api?action=getAllReports');
+    const json = await res.json();
+    _expAllReports = json.data || [];
+
+    // Scope ADMIN ke perusahaannya sendiri (SUPER_ADMIN dapat semua)
+    const auth = getCurrentUser();
+    if (!isSuperAdminRole(auth?.role)) {
+      const co = String(auth?.perusahaan || '').trim().toUpperCase();
+      if (co) _expAllReports = _expAllReports.filter(r =>
+        String(r.perusahaan || '').trim().toUpperCase() === co
+      );
+    }
+
+    filterExportData();
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#ef4444;padding:20px">${escapeHTML(e.message)}</td></tr>`;
+  }
+}
+
+function filterExportData() {
+  const type = document.getElementById('expType')?.value  || '';
+  const from = document.getElementById('expFrom')?.value  || '';
+  const to   = document.getElementById('expTo')?.value    || '';
+
+  _expFiltered = _expAllReports.filter(r => {
+    if (type && String(r.report_type || '').toUpperCase() !== type) return false;
+    const dateStr = _expVal(r, ['timestamp','tanggal_laporan','tgl_laporan','tanggal_kejadian','tanggal_inspeksi']);
+    if (dateStr) {
+      const ymd = new Date(dateStr);
+      if (!isNaN(ymd)) {
+        const s = ymd.toISOString().slice(0, 10);
+        if (from && s < from) return false;
+        if (to   && s > to)   return false;
+      }
+    } else if (from || to) {
+      return false;
+    }
+    return true;
+  });
+
+  _expFiltered.sort((a, b) => {
+    const da = new Date(_expVal(a, ['timestamp','tanggal_laporan','tgl_laporan']));
+    const db = new Date(_expVal(b, ['timestamp','tanggal_laporan','tgl_laporan']));
+    return isNaN(da) - isNaN(db) || da - db;
+  });
+
+  _expPage = 1;
+  const n = _expFiltered.length;
+  if (document.getElementById('expCount'))
+    document.getElementById('expCount').textContent = n ? `${n} laporan` : 'Tidak ada data';
+  renderExportTable();
+}
+
+function renderExportTable() {
+  const tbody = document.getElementById('expTableBody');
+  if (!tbody) return;
+  if (!_expFiltered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada laporan sesuai filter</td></tr>';
+    document.getElementById('expPagination').innerHTML = '';
+    return;
+  }
+
+  const STATUS_LABELS = { OPEN:'Open', PROGRESS:'In Progress', CLOSED:'Closed', FOLLOWUP:'Menunggu Konfirmasi' };
+  const start = (_expPage - 1) * EXP_PAGE_SIZE;
+  const rows  = _expFiltered.slice(start, start + EXP_PAGE_SIZE);
+
+  tbody.innerHTML = rows.map(r => {
+    const isIns   = r.report_type === 'INSPECTION';
+    const typeBadge = `<span class="report-type-badge ${isIns ? 'inspection' : 'hazard'}" style="font-size:.72rem;padding:2px 7px">${isIns ? 'Inspeksi' : 'Hazard'}</span>`;
+    const st      = _expVal(r, ['status_perbaikan']) || '-';
+    const stBadge = `<span class="status-badge status-${(st).toLowerCase()}" style="font-size:.72rem;padding:2px 7px">${STATUS_LABELS[st] || st}</span>`;
+    return '<tr>' + EXP_PREVIEW_COLS.map(col => {
+      if (col.keys[0] === 'report_type') return `<td>${typeBadge}</td>`;
+      if (col.keys[0] === 'status_perbaikan') return `<td>${stBadge}</td>`;
+      let v = _expVal(r, col.keys);
+      if (col.keys.some(k => k.includes('timestamp') || k.includes('tanggal') || k.includes('tgl'))) v = _expFmtDate(v) || v;
+      const display = v.length > 80 ? v.slice(0, 77) + '...' : v;
+      return `<td>${escapeHTML(display || '-')}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+
+  renderExpPagination();
+}
+
+function renderExpPagination() {
+  const el    = document.getElementById('expPagination');
+  if (!el) return;
+  const pages = Math.ceil(_expFiltered.length / EXP_PAGE_SIZE);
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = Array.from({ length: pages }, (_, i) => i + 1)
+    .map(p => `<button class="um-page-btn${p === _expPage ? ' active' : ''}" onclick="_expGoPage(${p})">${p}</button>`)
+    .join('');
+}
+
+window._expGoPage = function(p) { _expPage = p; renderExportTable(); };
+
+function exportToExcel() {
+  if (!_expFiltered.length) { alert('Tidak ada data untuk di-export. Pastikan filter sudah dipilih.'); return; }
+
+  const from  = document.getElementById('expFrom')?.value || 'awal';
+  const to    = document.getElementById('expTo')?.value   || 'akhir';
+  const type  = (document.getElementById('expType')?.value || 'semua').toLowerCase();
+
+  const isDateKey = k => k.includes('timestamp') || k.includes('tanggal') || k.includes('tgl');
+
+  const headers = EXP_ALL_COLS.map(c => c.label);
+  const dataRows = _expFiltered.map(r =>
+    EXP_ALL_COLS.map(col => {
+      let v = _expVal(r, col.keys);
+      if (col.keys.some(isDateKey) && v) v = _expFmtDate(v) || v;
+      if (col.keys[0] === 'report_type') v = v === 'INSPECTION' ? 'Inspeksi' : v === 'HAZARD' ? 'Hazard Report' : v;
+      return v;
+    })
+  );
+
+  const csv = [headers, ...dataRows]
+    .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = `laporan_${type}_${from}_${to}.csv`;
   a.click();
 }

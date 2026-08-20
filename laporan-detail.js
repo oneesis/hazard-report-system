@@ -202,8 +202,9 @@ function renderDetail(r) {
   const rejComment   = getReportValue(r, ['plan_review_comment', 'PLAN_REVIEW_COMMENT'], '') || '';
 
   // Panel A: untuk PIC atau admin, status OPEN, belum ada rencana
-  const showPlanForm = (isAdmin || isPic(r)) && status === 'OPEN' &&
+  const inPlanningPhase = (isAdmin || isPic(r)) && status === 'OPEN' &&
     planStatus !== 'pending_review' && planStatus !== 'approved';
+  const showPlanForm = inPlanningPhase;
   if (showPlanForm) {
     document.getElementById('planForm').style.display = '';
     if (rencana) document.getElementById('planRencana').value = rencana;
@@ -223,8 +224,8 @@ function renderDetail(r) {
     document.getElementById('reviewTanggal').textContent = tanggalR ? fmt(tanggalR) : '-';
   }
 
-  // Panel C: Closing form — admin bypass; PIC setelah plan approved; read-only saat FOLLOWUP/CLOSED
-  const showClosingForm = (isAdmin && status !== 'CLOSED' && status !== 'FOLLOWUP') ||
+  // Panel C: Closing form — admin/PIC saat plan approved; read-only saat FOLLOWUP/CLOSED
+  const showClosingForm = (isAdmin && !inPlanningPhase && status !== 'CLOSED' && status !== 'FOLLOWUP') ||
     (isPic(r) && planStatus === 'approved' && status !== 'CLOSED') ||
     status === 'CLOSED' || status === 'FOLLOWUP';
   if (showClosingForm) {

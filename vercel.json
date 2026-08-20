@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/", "destination": "/login.html", "permanent": false }
+  ],
   "headers": [
     {
       "source": "/service-worker.js",
@@ -9,8 +12,10 @@
     }
   ],
   "functions": {
-    "api/index.js": {
-      "maxDuration": 30
-    }
-  }
+    "api/index.js":           { "maxDuration": 30 },
+    "api/cron-deadline.js":   { "maxDuration": 60 }
+  },
+  "crons": [
+    { "path": "/api/cron-deadline", "schedule": "0 1 * * *" }
+  ]
 }

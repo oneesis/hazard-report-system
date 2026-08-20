@@ -94,6 +94,8 @@ Aplikasi pelaporan hazard dan inspeksi berbasis web (PWA) untuk PT EBL, dibangun
 | `FOLDER_CLOSING_ID` | ID folder Drive untuk foto closing |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | JSON key Service Account Google |
 | `FONNTE_TOKEN` | Token device Fonnte untuk WA notifikasi |
+| `SISTER_MINER_SPREADSHEET_ID` | ID spreadsheet SISTER MINER — cross-read status cuti karyawan (2026-08-20). Service account harus punya akses baca. Kosong = fitur cuti tidak aktif (semua dianggap "aktif"). |
+| `SIMANTRA_SPREADSHEET_ID` | ID spreadsheet SIMANTRA K3 — cross-read bridge `akun_karyawan` & training `TR_REINDUKSI` buat gate Reinduksi Pasca Cuti (2026-08-20). Opsional; tanpa ini fallback bridge nrp+nama tetap jalan tapi status pasca-cuti selalu "wajib_reinduksi" sampai var ini diisi. |
 
 ---
 
