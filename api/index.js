@@ -210,6 +210,13 @@ async function loadCutiSources(sheets) {
   }
 }
 
+// Bug (2026-08-21): bandingin Date lengkap (dgn jam) ke new Date(tanggal)
+// (selalu jam 00:00 UTC) bikin cutiSelesai cuma "cuti" di milidetik pertama
+// harinya. Fix: banding string tanggal kalender (YYYY-MM-DD) di zona WIB.
+function todayJakarta() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+}
+
 function resolveStatusKerja(src, nik, nama) {
   if (!src) return 'aktif';
   const key = String(nik || '').trim();
@@ -223,9 +230,9 @@ function resolveStatusKerja(src, nik, nama) {
   if (!match) return 'aktif';
   if (!match.cutiMulai || !match.cutiSelesai) return 'aktif';
 
-  const today = new Date();
-  if (today < new Date(match.cutiMulai)) return 'aktif';
-  if (today <= new Date(match.cutiSelesai)) return 'cuti';
+  const today = todayJakarta();
+  if (today < match.cutiMulai) return 'aktif';
+  if (today <= match.cutiSelesai) return 'cuti';
 
   // Lewat cutiSelesai — sudah reinduksi pasca cuti (TR_REINDUKSI, SIMANTRA K3)?
   const done = src.records.some(r => r.karyawan_id === match.id && r.training_id === 'TR_REINDUKSI'
