@@ -1,4 +1,5 @@
 const BASE_URL = "/api";
+const SIKAP_URL = "https://sikap.oneesis.my.id";
 
 const loginForm = document.getElementById("loginForm");
 const passwordToggle = document.getElementById("passwordToggle");
@@ -26,6 +27,7 @@ if (loginForm) {
     const password = passwordInput ? passwordInput.value.trim() : "";
 
     errorMessage.textContent = "";
+    document.getElementById("sikapCutiLink")?.remove();
     btnLogin.disabled = true;
     btnLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Memproses...</span>';
 
@@ -43,7 +45,7 @@ if (loginForm) {
       const result = await res.json();
 
       if (result.status !== "success") {
-        throw new Error(result.message || "Login gagal.");
+        throw Object.assign(new Error(result.message || "Login gagal."), { code: result.code });
       }
 
       saveUserSession(result.user, result.token);
@@ -53,6 +55,16 @@ if (loginForm) {
       window.location.href = "index-home.html";
     } catch (err) {
       errorMessage.textContent = err.message;
+      if (err.code === "CUTI_BLOCKED") {
+        const link = document.createElement("a");
+        link.id = "sikapCutiLink";
+        link.href = SIKAP_URL;
+        link.className = "btn-masuk"; // reuse gaya tombol Masuk yang sudah ada
+        link.style.marginTop = "10px";
+        link.style.textDecoration = "none";
+        link.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i><span>Kelola Cuti di SIKAP</span>';
+        errorMessage.after(link);
+      }
     } finally {
       btnLogin.disabled = false;
       btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Masuk</span>';

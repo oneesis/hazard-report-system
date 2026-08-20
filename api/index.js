@@ -425,7 +425,7 @@ async function login(sheets, nik, password, ip) {
   // Cuti (2026-08-20) — kredensial benar, tapi sedang cuti = akses ditutup total.
   const statusKerjaLogin = await getStatusKerjaByNik(sheets, nik, String(user['NAMA'] || '').trim());
   if (statusKerjaLogin === 'cuti')
-    return { status: 'error', message: 'Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali.' };
+    return { status: 'error', code: 'CUTI_BLOCKED', message: 'Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali. Kelola cuti kamu lewat SIKAP.' };
 
   const storedPw = String(user['PASSWORD'] || '');
   // Password dianggap lemah jika masih plaintext (belum di-hash) ATAU termasuk daftar password umum
