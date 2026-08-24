@@ -279,8 +279,6 @@ function buildStep4() {
       <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
     </div>`;
 
-  // Muat master karyawan untuk dropdown PIC
-  loadMasterForPic();
 }
 
 let _sboMasterKaryawan = [];
@@ -323,10 +321,43 @@ function selectPic(k) {
   if (dd) dd.style.display = 'none';
 }
 
-// Close dropdown on outside click
+function filterObserveeDropdown() {
+  const q = (document.getElementById('observeeSearch')?.value || '').trim().toLowerCase();
+  const dd = document.getElementById('observeeDropdown');
+  if (!dd) return;
+  if (!q) { dd.style.display = 'none'; return; }
+  const matches = _sboMasterKaryawan.filter(k =>
+    String(k['NAMA'] || '').toLowerCase().includes(q) || String(k['NIK'] || '').includes(q)
+  ).slice(0, 10);
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.style.display = '';
+  dd.innerHTML = matches.map(k => `
+    <div onclick='selectObservee(${JSON.stringify(k)})' style="padding:10px 14px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between">
+      <span>${k['NAMA'] || '-'}</span>
+      <span style="color:#94a3b8;font-size:.78rem">${k['PERUSAHAAN']||''} · ${k['DEPARTEMEN']||''}</span>
+    </div>`).join('');
+}
+
+function selectObservee(k) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('nama_observee', k['NAMA']);
+  set('perusahaan_observee', k['PERUSAHAAN']);
+  set('subcont_observee', k['SUBCONT'] || '');
+  set('jabatan_observee', k['JABATAN']);
+  set('departemen_observee', k['DEPARTEMEN']);
+  set('observeeSearch', k['NAMA']);
+  const dd = document.getElementById('observeeDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+// Close dropdowns on outside click
 document.addEventListener('click', e => {
   if (!e.target.closest('#picSearch') && !e.target.closest('#picDropdown')) {
     const dd = document.getElementById('picDropdown');
+    if (dd) dd.style.display = 'none';
+  }
+  if (!e.target.closest('#observeeSearch') && !e.target.closest('#observeeDropdown')) {
+    const dd = document.getElementById('observeeDropdown');
     if (dd) dd.style.display = 'none';
   }
 });
@@ -500,4 +531,6 @@ window.addEventListener('DOMContentLoaded', () => {
   buildChecklist();
   updateChecklistCounter();
   updateStepUI();
+  // Muat master karyawan lebih awal — tersedia untuk Step 2 (observee) dan Step 4 (PIC)
+  loadMasterForPic();
 });
