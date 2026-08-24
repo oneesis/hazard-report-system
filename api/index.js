@@ -1387,24 +1387,32 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
   if (data.status_perbaikan === 'CLOSED' || data.status_perbaikan === 'FOLLOWUP') {
     const rowData = {};
     headers.forEach((h, i) => { rowData[h] = rows[rowIndex][i] ?? ''; });
-    const reporterNik = rowData['nik'] || rowData['nik_pelapor'] || '';
+    // nik_observer = SBO, nik_pelapor = Inspeksi, nik = Hazard
+    const reporterNik = rowData['nik_observer'] || rowData['nik'] || rowData['nik_pelapor'] || '';
+    const isSBO = sheetName === 'SBO_Report';
+    const detailUrl = isSBO
+      ? `https://sap-ebl.vercel.app/sbo.html`
+      : `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
     if (data.status_perbaikan === 'CLOSED') {
       if (reporterNik) await sendPushToNik(sheets, reporterNik, {
         title: 'Laporan Selesai ✅',
         body: `Laporan ${data.id} telah berhasil ditutup.`,
-        url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+        url: detailUrl
       }).catch(() => {});
     } else {
+      // no_whatsapp = Hazard; no_wa_observer tidak ada di SBO (tidak simpan WA observer)
       const noWa = rowData['no_whatsapp'] || '';
-      const nama  = rowData['nama'] || '';
-      if (noWa) {
-        const msg = `Halo ${nama}, PIC laporan *${data.id}* telah menyelesaikan perbaikan dan meminta konfirmasimu.\n\nSilakan konfirmasi apakah perbaikan sudah sesuai:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
+      const nama  = rowData['nama'] || rowData['nama_observer'] || '';
+      if (noWa && !isSBO) {
+        const msg = `Halo ${nama}, PIC laporan *${data.id}* telah menyelesaikan perbaikan dan meminta konfirmasimu.\n\nSilakan konfirmasi apakah perbaikan sudah sesuai:\n🔗 ${detailUrl}`;
         await sendWaNotification(noWa, msg).catch(() => {});
       }
       if (reporterNik) await sendPushToNik(sheets, reporterNik, {
-        title: 'Perlu Konfirmasi Closing 🔔',
-        body: `PIC laporan ${data.id} telah submit closing. Silakan konfirmasi.`,
-        url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+        title: isSBO ? 'PIC SBO Telah Submit Perbaikan 📸' : 'Perlu Konfirmasi Closing 🔔',
+        body: isSBO
+          ? `PIC laporan SBO ${data.id} telah upload foto perbaikan.`
+          : `PIC laporan ${data.id} telah submit closing. Silakan konfirmasi.`,
+        url: detailUrl
       }).catch(() => {});
     }
   }

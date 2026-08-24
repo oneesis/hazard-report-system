@@ -472,6 +472,9 @@ h2 {
   margin-bottom: 20px;
 }
 
+/* Tanda wajib isi */
+span.required { color: #dc2626; margin-left: 2px; font-weight: 800; }
+
 /* ========================================
    LABEL
 ======================================== */

@@ -352,7 +352,14 @@ function onSboFotoChange(input) {
 function updateStepUI() {
   for (let i = 1; i <= SBO_TOTAL_STEPS; i++) {
     const stepEl = document.getElementById(`sboStep${i}`);
-    if (stepEl) stepEl.style.display = i === sboStep ? '' : 'none';
+    if (!stepEl) continue;
+    if (i === sboStep) {
+      stepEl.classList.add('active');
+      stepEl.style.display = 'block';
+    } else {
+      stepEl.classList.remove('active');
+      stepEl.style.display = 'none';
+    }
   }
   document.querySelectorAll('#sboStepIndicator .step').forEach(el => {
     const n = parseInt(el.dataset.step);
