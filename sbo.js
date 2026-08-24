@@ -224,8 +224,8 @@ function openSboModal(id) {
         <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px">Foto Perbaikan</label>
         <input type="file" id="sboUpdateFoto" accept="image/*" multiple>
       </div>
-      <button onclick="submitSboUpdate('${id}')" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:9px;font-size:.85rem;font-weight:700;cursor:pointer">
-        <i class="fa-solid fa-paper-plane"></i> Submit Perbaikan
+      <button id="sboUpdateBtn" onclick="submitSboUpdate('${id}')" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:9px;font-size:.85rem;font-weight:700;cursor:pointer">
+        <i class="fa-solid fa-paper-plane"></i> Kirim Perbaikan ke Review
       </button>
     </div>` : ''}
   `;
@@ -240,7 +240,7 @@ function closeSboModal() {
 async function submitSboUpdate(id) {
   const catatan = document.getElementById('sboUpdateCatatan')?.value?.trim() || '';
   const fileInput = document.getElementById('sboUpdateFoto');
-  const btn = document.querySelector('#sboModal .sbo-update-section button');
+  const btn = document.getElementById('sboUpdateBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
 
   let fotoBase64 = '';
@@ -266,12 +266,12 @@ async function submitSboUpdate(id) {
     });
     const json = await res.json();
     if (json.status !== 'success') throw new Error(json.message || 'Gagal');
-    alert('✅ Perbaikan berhasil disubmit!');
+    showToast('Perbaikan berhasil disubmit! Status menunggu review admin.');
     closeSboModal();
     await loadSboReports();
   } catch (e) {
-    alert('❌ ' + e.message);
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Perbaikan'; }
+    showToast('Gagal: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Perbaikan'; }
   }
 }
 

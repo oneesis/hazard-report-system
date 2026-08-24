@@ -536,7 +536,7 @@ window.capChartBack = function() {
 };
 
 function copyWa() {
-  if (!_capFiltered.length) { alert('Tidak ada data untuk disalin.'); return; }
+  if (!_capFiltered.length) { showToast('Tidak ada data untuk disalin.', 'error'); return; }
 
   const monthStr = document.getElementById('capMonth')?.value || '';
   const coF      = document.getElementById('capPerusahaan')?.value || '';
@@ -545,7 +545,7 @@ function copyWa() {
   // Hanya yang belum 100%
   const belum = _capFiltered.filter(r => r.pctTotal === null || r.pctTotal < 100);
   if (!belum.length) {
-    alert('Semua karyawan sudah mencapai 100%! 🎉');
+    showToast('Semua karyawan sudah mencapai 100%! 🎉');
     return;
   }
 
@@ -612,7 +612,7 @@ function copyWa() {
 }
 
 function exportCsv() {
-  if (!_capFiltered.length) { alert('Tidak ada data untuk di-export.'); return; }
+  if (!_capFiltered.length) { showToast('Tidak ada data untuk di-export.', 'error'); return; }
   const monthStr = document.getElementById('capMonth')?.value || 'semua';
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
 

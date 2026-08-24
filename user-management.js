@@ -842,7 +842,7 @@ function renderAchKpi() {
 }
 
 function exportAchievementCsv() {
-  if (!_achFiltered.length) { alert('Tidak ada data untuk di-export.'); return; }
+  if (!_achFiltered.length) { showToast('Tidak ada data untuk di-export.', 'error'); return; }
   const monthStr = document.getElementById('achMonth')?.value || 'semua';
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
 
@@ -1096,7 +1096,7 @@ function renderExpPagination() {
 window._expGoPage = function(p) { _expPage = p; renderExportTable(); };
 
 function exportToExcel() {
-  if (!_expFiltered.length) { alert('Tidak ada data untuk di-export. Pastikan filter sudah dipilih.'); return; }
+  if (!_expFiltered.length) { showToast('Tidak ada data untuk di-export. Pastikan filter sudah dipilih.', 'error'); return; }
 
   const from  = document.getElementById('expFrom')?.value || 'awal';
   const to    = document.getElementById('expTo')?.value   || 'akhir';
