@@ -1104,6 +1104,132 @@ async function submitInspectionReport(sheets, data) {
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
+const SBO_HEADERS = [
+  'ID','TIMESTAMP','TGL_OBSERVASI','NAMA_PEKERJAAN','LOKASI',
+  'NAMA_OBSERVER','NIK_OBSERVER','JABATAN_OBSERVER','DEPARTEMEN_OBSERVER','PERUSAHAAN_OBSERVER',
+  'NAMA_OBSERVEE','PERUSAHAAN_OBSERVEE','SUBCONT_OBSERVEE','JABATAN_OBSERVEE','DEPARTEMEN_OBSERVEE',
+  'TINDAKAN_SEGERA','POTENSI_BAHAYA','APD','ALAT_PERALATAN','PROSEDUR','KEBERSIHAN',
+  'STATUS_OBSERVASI','JENIS_TEMUAN','KATEGORI_TEMUAN','DESKRIPSI_TEMUAN','FOTO_TEMUAN',
+  'RENCANA_TINDAKAN','REFERENSI_SOP',
+  'NAMA_PIC','NIK_PIC','PERUSAHAAN_PIC','SUBCONT_PIC','DEPARTEMEN_PIC','JABATAN_PIC','NO_WA_PIC',
+  'BATAS_WAKTU','UPLOAD_FOTO_PERBAIKAN_PIC','STATUS_PERBAIKAN','PERNYATAAN','WA_PIC_STATUS',
+];
+
+async function ensureSBOSheet(sheets) {
+  // Cek apakah sheet SBO_Report sudah ada
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties.title' });
+    const exists = meta.data.sheets.some(s => s.properties.title === 'SBO_Report');
+    if (!exists) {
+      // Buat sheet baru
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'SBO_Report' } } }] }
+      });
+      // Tulis header
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'SBO_Report!A1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [SBO_HEADERS] }
+      });
+    }
+  } catch (err) { console.error('ensureSBOSheet error:', err?.message || err); }
+}
+
+async function submitSBOReport(sheets, data) {
+  await ensureSBOSheet(sheets);
+  const id = 'SBO-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
+  const hasFinding = data.status_observasi === 'ADA_TEMUAN';
+
+  if (hasFinding) await assertPicEligible(sheets, data.nik_pic, data.nama_pic);
+
+  let fotoUrl = '';
+  if (hasFinding && data.foto_temuan)
+    fotoUrl = await saveMultipleImagesToDrive(data.foto_temuan, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, id + '-SBO');
+
+  if (hasFinding && !data.no_wa_pic && data.nik_pic)
+    data.no_wa_pic = await resolveWaFromNik(sheets, data.nik_pic).catch(() => '');
+  if (hasFinding && !data.no_wa_pic && data.nama_pic)
+    data.no_wa_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont_pic, data.nama_pic).catch(() => '');
+
+  const row = [
+    id, new Date().toISOString(), data.tgl_observasi || '', data.nama_pekerjaan || '', data.lokasi || '',
+    data.nama_observer || '', data.nik_observer || '', data.jabatan_observer || '',
+    data.departemen_observer || '', data.perusahaan_observer || '',
+    data.nama_observee || '', data.perusahaan_observee || '', data.subcont_observee || '',
+    data.jabatan_observee || '', data.departemen_observee || '',
+    data.tindakan_segera || '', data.potensi_bahaya || '', data.apd || '',
+    data.alat_peralatan || '', data.prosedur || '', data.kebersihan || '',
+    data.status_observasi || 'AMAN',
+    hasFinding ? (data.jenis_temuan || '') : '',
+    hasFinding ? (data.kategori_temuan || '') : '',
+    hasFinding ? (data.deskripsi_temuan || '') : '',
+    fotoUrl,
+    hasFinding ? (data.rencana_tindakan || '') : '',
+    hasFinding ? (data.referensi_sop || '') : '',
+    hasFinding ? (data.nama_pic || '') : '',
+    hasFinding ? (data.nik_pic || '') : '',
+    hasFinding ? (data.perusahaan_pic || '') : '',
+    hasFinding ? (data.subcont_pic || '') : '',
+    hasFinding ? (data.departemen_pic || '') : '',
+    hasFinding ? (data.jabatan_pic || '') : '',
+    hasFinding ? (data.no_wa_pic || '') : '',
+    hasFinding ? (data.batas_waktu || '') : '',
+    '',                            // UPLOAD_FOTO_PERBAIKAN_PIC
+    hasFinding ? 'OPEN' : 'AMAN', // STATUS_PERBAIKAN
+    data.pernyataan || '',
+    '',                            // WA_PIC_STATUS — diisi oleh writeWaStatusToSheet
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: 'SBO_Report',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [row] }
+  });
+  invalidateCache('SBO_Report');
+
+  let waStatus = 'TIDAK ADA WA';
+  if (hasFinding && data.no_wa_pic && data.nama_pic) {
+    const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan SBO baru.\n\n` +
+      `📋 *${id}*\n` +
+      `👷 Observer: ${data.nama_observer}\n` +
+      `👤 Observee: ${data.nama_observee || '-'}\n` +
+      `📍 Lokasi: ${data.lokasi || '-'}\n` +
+      `🔍 Temuan: ${data.jenis_temuan || '-'}\n` +
+      `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
+      `🔗 Detail: https://sap-ebl.vercel.app/sbo.html`;
+    const sent = await sendWaNotification(data.no_wa_pic, msg).catch(() => false);
+    waStatus = sent ? 'TERKIRIM' : 'GAGAL';
+  }
+  await writeWaStatusToSheet(sheets, 'SBO_Report', id, waStatus);
+
+  if (hasFinding && data.nik_pic) await sendPushToNik(sheets, data.nik_pic, {
+    title: 'Kamu Ditunjuk sebagai PIC SBO 📋',
+    body: `Laporan SBO baru ${id} membutuhkan tindakan kamu. Batas: ${data.batas_waktu || '-'}`,
+    url: `https://sap-ebl.vercel.app/sbo.html`
+  }).catch(() => {});
+
+  return { status: 'success', message: 'Laporan SBO berhasil disimpan.', id, wa_pic_status: waStatus };
+}
+
+async function getSBOReports(sheets, auth) {
+  let rows;
+  try { rows = await getSheetData(sheets, 'SBO_Report'); } catch { return { status: 'success', data: [] }; }
+  let data = rows.map(obj => {
+    const n = {};
+    Object.keys(obj).forEach(k => { n[normalizeHeader(k)] = obj[k]; });
+    n.report_type = 'SBO';
+    return n;
+  }).filter(r => String(r.id || '').trim());
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) data = data.filter(r => String(r.perusahaan_observer || '').trim().toUpperCase() === co);
+  }
+  return { status: 'success', data };
+}
+
 async function updateWorkflowFields(sheets, sheetName, reportId, fields) {
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
   const rows = res.data.values || [];
@@ -1426,6 +1552,7 @@ module.exports = async (req, res) => {
         }
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
+        case 'getSBOReports':       result = await getSBOReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
@@ -1513,6 +1640,23 @@ module.exports = async (req, res) => {
           data.nama = authUser.nama;
           result = await submitInspectionReport(sheets, data);
           break;
+        case 'submitSBOReport':
+          data.nik_observer  = authUser.nik;
+          data.nama_observer = authUser.nama;
+          data.perusahaan_observer = authUser.perusahaan;
+          data.jabatan_observer    = authUser.jabatan;
+          data.departemen_observer = authUser.departemen;
+          result = await submitSBOReport(sheets, data);
+          break;
+        case 'updateSBOReport': {
+          if (data.status_perbaikan === 'CLOSED') {
+            await ensureClosingColumns(sheets, 'SBO_Report');
+            data.status_perbaikan = 'FOLLOWUP';
+            data.closing_status   = 'pending_review';
+          }
+          result = await updateReport(sheets, data, 'SBO_Report', '-SBO-Closing', authUser);
+          break;
+        }
         case 'updateHazardReport': {
           if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, 'Hazard_Report');

@@ -12,6 +12,8 @@
     'eskalasi.html':     'eskalasi',
     'laporan-detail.html':'laporan-detail',
     'capaian-sap.html':  'capaian-sap',
+    'sbo.html':          'sbo',
+    'sbo-form.html':     'sbo',
   };
 
   const PAGE_TITLES = {
@@ -24,6 +26,7 @@
     'eskalasi':       'Monitoring Eskalasi',
     'laporan-detail': 'Detail Laporan',
     'capaian-sap':    'Capaian SAP',
+    'sbo':            'Safe Behavior Observation',
   };
 
   function getActivePage() {
@@ -69,6 +72,7 @@
         ${navItem('inspection.html', 'fa-list-check',          'Inspeksi',      'inspeksi',  active)}
         ${navItem('dashboard.html',   'fa-chart-simple',  'Dashboard',   'dashboard',   active)}
         ${navItem('capaian-sap.html','fa-trophy',         'Capaian SAP', 'capaian-sap', active)}
+        ${navItem('sbo.html',       'fa-eye',            'SBO',         'sbo',         active)}
       </nav>
 
       ${isAdmin ? `
