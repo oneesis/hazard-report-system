@@ -236,42 +236,41 @@ function buildStep4() {
     </div>
 
     <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-user-tie"></i> Data PIC</div>
-    <p style="font-size:.8rem;color:#64748b;margin-bottom:12px">Pilih dari daftar karyawan atau isi manual.</p>
-    <div class="form-group pic-search-wrap">
-      <label>Cari Karyawan PIC</label>
-      <input type="text" id="picSearch" placeholder="Ketik nama atau NIK..." oninput="filterPicDropdown()" autocomplete="off" />
-      <div id="picDropdown" class="pic-dropdown"></div>
-    </div>
     <div class="sbo-form-grid">
       <div class="form-group">
-        <label>Nama PIC <span class="required">*</span></label>
-        <input type="text" id="nama_pic" placeholder="Nama lengkap PIC" required />
-      </div>
-      <div class="form-group">
-        <label>NIK PIC</label>
-        <input type="text" id="nik_pic" placeholder="NIK (opsional)" />
-      </div>
-      <div class="form-group">
         <label>Perusahaan PIC <span class="required">*</span></label>
-        <input type="text" id="perusahaan_pic" required />
+        <select id="perusahaan_pic" onchange="loadSboSubcontPic()" required>
+          <option value="">Pilih Perusahaan PIC</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Subcont PIC</label>
-        <input type="text" id="subcont_pic" />
+        <select id="subcont_pic" onchange="loadSboNamaPic()">
+          <option value="">Pilih Subcont PIC</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Nama PIC <span class="required">*</span></label>
+      <select id="nama_pic" onchange="autoFillSboPic()" required>
+        <option value="">Pilih Nama PIC</option>
+      </select>
+    </div>
+    <div class="sbo-form-grid">
+      <div class="form-group">
+        <label>Jabatan PIC</label>
+        <input type="text" id="jabatan_pic" readonly />
       </div>
       <div class="form-group">
-        <label>Departemen PIC <span class="required">*</span></label>
-        <input type="text" id="departemen_pic" required />
-      </div>
-      <div class="form-group">
-        <label>Jabatan PIC <span class="required">*</span></label>
-        <input type="text" id="jabatan_pic" required />
+        <label>Departemen PIC</label>
+        <input type="text" id="departemen_pic" readonly />
       </div>
     </div>
     <div class="form-group">
       <label>No WhatsApp PIC <span class="required">*</span></label>
       <input type="tel" id="no_wa_pic" placeholder="08xx atau 62xx" required />
     </div>
+    <input type="hidden" id="nik_pic" />
 
     <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-pen"></i> Pernyataan</div>
     <div class="form-group">
@@ -290,35 +289,78 @@ async function loadMasterForPic() {
   } catch { _sboMasterKaryawan = []; }
 }
 
-function filterPicDropdown() {
-  const q = (document.getElementById('picSearch')?.value || '').trim().toLowerCase();
-  const dd = document.getElementById('picDropdown');
-  if (!dd) return;
-  if (!q) { dd.style.display = 'none'; return; }
-  const matches = _sboMasterKaryawan.filter(k => {
-    return String(k['NAMA'] || '').toLowerCase().includes(q) || String(k['NIK'] || '').includes(q);
-  }).slice(0, 10);
-  if (!matches.length) { dd.style.display = 'none'; return; }
-  dd.style.display = '';
-  dd.innerHTML = matches.map(k => `
-    <div onclick='selectPic(${JSON.stringify(k)})' style="padding:10px 14px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between">
-      <span>${k['NAMA'] || '-'}</span>
-      <span style="color:#94a3b8;font-size:.78rem">${k['PERUSAHAAN']||''} · ${k['DEPARTEMEN']||''}</span>
-    </div>`).join('');
+// ── PIC cascade (Choices.js) ──────────────────────────────────
+let _sboPicChoices;
+
+function loadSboPerusahaanPic() {
+  const sel = document.getElementById('perusahaan_pic');
+  if (!sel) return;
+  const companies = [...new Set(_sboMasterKaryawan.map(k => k['PERUSAHAAN']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Pilih Perusahaan PIC</option>' +
+    companies.map(c => `<option value="${c}">${c}</option>`).join('');
+  loadSboSubcontPic();
 }
 
-function selectPic(k) {
+function loadSboSubcontPic() {
+  const perusahaan = document.getElementById('perusahaan_pic')?.value;
+  const sel = document.getElementById('subcont_pic');
+  if (!sel) return;
+  const subconts = [...new Set(
+    _sboMasterKaryawan.filter(k => k['PERUSAHAAN'] === perusahaan).map(k => k['SUBCONT']).filter(Boolean)
+  )].sort();
+  sel.innerHTML = '<option value="">Pilih Subcont PIC</option>' +
+    subconts.map(s => `<option value="${s}">${s}</option>`).join('');
+  loadSboNamaPic();
+}
+
+function loadSboNamaPic() {
+  const perusahaan = document.getElementById('perusahaan_pic')?.value;
+  const subcont    = document.getElementById('subcont_pic')?.value;
+  const sel        = document.getElementById('nama_pic');
+  if (!sel) return;
+
+  // Reset auto-fill
+  ['jabatan_pic','departemen_pic','no_wa_pic','nik_pic'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
+  const filtered = _sboMasterKaryawan.filter(k =>
+    (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
+    (!subcont    || k['SUBCONT']    === subcont)
+  );
+  const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
+
+  sel.innerHTML = '<option value="">Pilih Nama PIC</option>' +
+    names.map(n => `<option value="${n}">${n}</option>`).join('');
+
+  if (_sboPicChoices) _sboPicChoices.destroy();
+  _sboPicChoices = new Choices('#nama_pic', {
+    searchEnabled: true,
+    itemSelectText: '',
+    shouldSort: false,
+    placeholder: true,
+    placeholderValue: 'Cari dan pilih nama PIC',
+    noResultsText: 'Tidak ditemukan',
+    noChoicesText: 'Pilih perusahaan dulu',
+    searchFloor: 1
+  });
+}
+
+function autoFillSboPic() {
+  const perusahaan = document.getElementById('perusahaan_pic')?.value;
+  const subcont    = document.getElementById('subcont_pic')?.value;
+  const nama       = document.getElementById('nama_pic')?.value;
+  const found = _sboMasterKaryawan.find(k =>
+    k['NAMA'] === nama &&
+    (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
+    (!subcont    || k['SUBCONT']    === subcont)
+  );
+  if (!found) return;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-  set('nama_pic', k['NAMA']);
-  set('nik_pic', k['NIK']);
-  set('perusahaan_pic', k['PERUSAHAAN']);
-  set('subcont_pic', k['SUBCONT'] || '');
-  set('departemen_pic', k['DEPARTEMEN']);
-  set('jabatan_pic', k['JABATAN']);
-  set('no_wa_pic', k['NO WHATSAPP'] || '');
-  set('picSearch', k['NAMA']);
-  const dd = document.getElementById('picDropdown');
-  if (dd) dd.style.display = 'none';
+  set('jabatan_pic',  found['JABATAN']);
+  set('departemen_pic', found['DEPARTEMEN']);
+  set('no_wa_pic',    found['NO WHATSAPP'] || '');
+  set('nik_pic',      found['NIK'] || '');
 }
 
 function filterObserveeDropdown() {
@@ -350,12 +392,8 @@ function selectObservee(k) {
   if (dd) dd.style.display = 'none';
 }
 
-// Close dropdowns on outside click
+// Close observee dropdown on outside click
 document.addEventListener('click', e => {
-  if (!e.target.closest('#picSearch') && !e.target.closest('#picDropdown')) {
-    const dd = document.getElementById('picDropdown');
-    if (dd) dd.style.display = 'none';
-  }
   if (!e.target.closest('#observeeSearch') && !e.target.closest('#observeeDropdown')) {
     const dd = document.getElementById('observeeDropdown');
     if (dd) dd.style.display = 'none';
@@ -435,7 +473,7 @@ function validateStep(step) {
 
 function sboNext() {
   if (!validateStep(sboStep)) return;
-  if (sboStep === 3) buildStep4();
+  if (sboStep === 3) { buildStep4(); if (hasTidakAman()) loadSboPerusahaanPic(); }
   sboStep++;
   updateStepUI();
   window.scrollTo({ top: 0, behavior: 'smooth' });
