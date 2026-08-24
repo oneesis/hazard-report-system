@@ -120,8 +120,30 @@ function buildChecklist() {
 }
 
 function onChecklistChange(catKey, idx, radio) {
-  const el = document.getElementById(`ci_${catKey}_${idx}`);
-  if (el) el.classList.toggle('has-tidak', radio.value === 'TIDAK_AMAN');
+  const row = document.getElementById(`ci_${catKey}_${idx}`);
+  if (row) row.classList.toggle('has-tidak', radio.value === 'TIDAK_AMAN');
+  // Style the labels
+  const labels = radio.closest('.sbo-radio-group')?.querySelectorAll('.sbo-radio-label');
+  if (labels) labels.forEach(lbl => {
+    lbl.classList.remove('checked-aman', 'checked-tidak', 'checked-na');
+    const r = lbl.querySelector('input[type=radio]');
+    if (r?.checked) {
+      if (r.value === 'AMAN')       lbl.classList.add('checked-aman');
+      else if (r.value === 'TIDAK_AMAN') lbl.classList.add('checked-tidak');
+      else if (r.value === 'NA')    lbl.classList.add('checked-na');
+    }
+  });
+  updateChecklistCounter();
+}
+
+function updateChecklistCounter() {
+  const total = SBO_CATEGORIES.reduce((s, c) => s + c.items.length, 0);
+  const done  = SBO_CATEGORIES.reduce((s, c) =>
+    s + c.items.filter((_, i) => document.querySelector(`input[name="cl_${c.key}_${i}"]:checked`)).length, 0);
+  const el = document.getElementById('counterText');
+  if (el) el.textContent = `${done} dari ${total} poin dinilai`;
+  const cnt = document.getElementById('sboChecklistCounter');
+  if (cnt) { cnt.classList.toggle('all-done', done === total); cnt.classList.toggle('partial', done < total); }
 }
 
 function getChecklistData() {
@@ -159,8 +181,8 @@ function buildStep4() {
 
   if (!hasFinding) {
     content.innerHTML = `
-      <div class="no-finding-alert"><i class="fa-solid fa-circle-check"></i> Semua poin dinilai Aman. Tidak ada temuan yang perlu dilaporkan.</div>
-      <div class="form-section-title"><i class="fa-solid fa-pen"></i> Pernyataan</div>
+      <div class="sbo-safe-alert"><i class="fa-solid fa-circle-check"></i>&nbsp; Semua poin dinilai Aman — tidak ada temuan yang perlu dilaporkan.</div>
+      <div class="sbo-section-title"><i class="fa-solid fa-pen"></i> Pernyataan</div>
       <div class="form-group">
         <label>Pernyataan Observer <span class="required">*</span></label>
         <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
@@ -169,10 +191,10 @@ function buildStep4() {
   }
 
   content.innerHTML = `
-    <div class="finding-alert"><i class="fa-solid fa-triangle-exclamation"></i> Terdapat poin Tidak Aman. Lengkapi data temuan dan PIC di bawah.</div>
+    <div class="sbo-finding-alert"><i class="fa-solid fa-triangle-exclamation"></i>&nbsp; Terdapat poin Tidak Aman. Lengkapi data temuan dan PIC di bawah.</div>
 
-    <div class="form-section-title"><i class="fa-solid fa-magnifying-glass"></i> Detail Temuan</div>
-    <div class="form-row">
+    <div class="sbo-section-title"><i class="fa-solid fa-magnifying-glass"></i> Detail Temuan</div>
+    <div class="sbo-form-grid">
       <div class="form-group">
         <label>Jenis Temuan <span class="required">*</span></label>
         <select id="jenis_temuan" required>
@@ -194,31 +216,33 @@ function buildStep4() {
     <div class="form-group">
       <label>Foto Temuan</label>
       <input type="file" id="foto_temuan" accept="image/*" multiple onchange="onSboFotoChange(this)" />
-      <div id="sboFotoPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+      <div id="sboFotoPreview" class="foto-preview-wrap"></div>
     </div>
 
-    <div class="form-section-title" style="margin-top:20px"><i class="fa-solid fa-clipboard-check"></i> Rencana Tindakan</div>
+    <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-clipboard-check"></i> Rencana Tindakan</div>
     <div class="form-group">
       <label>Rencana Tindakan Perbaikan <span class="required">*</span></label>
       <textarea id="rencana_tindakan" rows="3" placeholder="Tindakan apa yang harus dilakukan PIC..." required></textarea>
     </div>
-    <div class="form-group">
-      <label>Referensi SOP Terkait <em style="font-weight:400">(opsional)</em></label>
-      <input type="text" id="referensi_sop" placeholder="Nomor/nama SOP terkait" />
-    </div>
-    <div class="form-group">
-      <label>Batas Waktu <span class="required">*</span></label>
-      <input type="date" id="batas_waktu" required />
+    <div class="sbo-form-grid">
+      <div class="form-group">
+        <label>Referensi SOP Terkait <em style="font-weight:400">(opsional)</em></label>
+        <input type="text" id="referensi_sop" placeholder="Nomor/nama SOP terkait" />
+      </div>
+      <div class="form-group">
+        <label>Batas Waktu <span class="required">*</span></label>
+        <input type="date" id="batas_waktu" required />
+      </div>
     </div>
 
-    <div class="form-section-title" style="margin-top:20px"><i class="fa-solid fa-user-tie"></i> Data PIC</div>
+    <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-user-tie"></i> Data PIC</div>
     <p style="font-size:.8rem;color:#64748b;margin-bottom:12px">Pilih dari daftar karyawan atau isi manual.</p>
-    <div class="form-group">
+    <div class="form-group pic-search-wrap">
       <label>Cari Karyawan PIC</label>
       <input type="text" id="picSearch" placeholder="Ketik nama atau NIK..." oninput="filterPicDropdown()" autocomplete="off" />
-      <div id="picDropdown" style="display:none;border:1.5px solid #e2e8f0;border-radius:10px;max-height:200px;overflow-y:auto;background:#fff;position:absolute;z-index:100;width:100%;margin-top:4px"></div>
+      <div id="picDropdown" class="pic-dropdown"></div>
     </div>
-    <div class="form-row">
+    <div class="sbo-form-grid">
       <div class="form-group">
         <label>Nama PIC <span class="required">*</span></label>
         <input type="text" id="nama_pic" placeholder="Nama lengkap PIC" required />
@@ -227,8 +251,6 @@ function buildStep4() {
         <label>NIK PIC</label>
         <input type="text" id="nik_pic" placeholder="NIK (opsional)" />
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>Perusahaan PIC <span class="required">*</span></label>
         <input type="text" id="perusahaan_pic" required />
@@ -237,8 +259,6 @@ function buildStep4() {
         <label>Subcont PIC</label>
         <input type="text" id="subcont_pic" />
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>Departemen PIC <span class="required">*</span></label>
         <input type="text" id="departemen_pic" required />
@@ -253,7 +273,7 @@ function buildStep4() {
       <input type="tel" id="no_wa_pic" placeholder="08xx atau 62xx" required />
     </div>
 
-    <div class="form-section-title" style="margin-top:20px"><i class="fa-solid fa-pen"></i> Pernyataan</div>
+    <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-pen"></i> Pernyataan</div>
     <div class="form-group">
       <label>Pernyataan Observer <span class="required">*</span></label>
       <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
@@ -457,12 +477,13 @@ window.addEventListener('DOMContentLoaded', () => {
   requireLogin();
   const user = getCurrentUser();
   if (user) {
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-    set('nama_observer',       user.nama);
-    set('nik_observer',        user.nik);
-    set('jabatan_observer',    user.jabatan);
-    set('departemen_observer', user.departemen);
-    set('perusahaan_observer', user.perusahaan);
+    // Populate observer card
+    const initEl = document.getElementById('observerInitial');
+    if (initEl) initEl.textContent = (user.nama || '?').charAt(0).toUpperCase();
+    const nameEl = document.getElementById('observerName');
+    if (nameEl) nameEl.textContent = user.nama || '-';
+    const subEl = document.getElementById('observerSub');
+    if (subEl) subEl.textContent = `${user.jabatan || ''} • ${user.departemen || ''} • ${user.perusahaan || ''}`;
   }
   // Default tanggal hari ini
   const today = new Date().toISOString().slice(0, 10);
@@ -470,5 +491,6 @@ window.addEventListener('DOMContentLoaded', () => {
   if (tglEl) tglEl.value = today;
 
   buildChecklist();
+  updateChecklistCounter();
   updateStepUI();
 });
