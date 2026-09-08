@@ -54,7 +54,6 @@ function validateStep(step) {
   if (step === 2) {
     if (!val('perusahaan_coachee')) return showStepErr(2,'Perusahaan Coachee wajib dipilih.'), false;
     if (!val('nama_coachee'))       return showStepErr(2,'Nama Coachee wajib dipilih.'), false;
-    if (!val('no_wa_coachee'))      return showStepErr(2,'No WhatsApp Coachee wajib diisi.'), false;
   }
   if (step === 3) {
     if (!val('topik_coaching'))    return showStepErr(3,'Topik Coaching wajib dipilih.'), false;
