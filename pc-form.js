@@ -52,10 +52,8 @@ function validateStep(step) {
     if (!val('lokasi_pc')) return showStepErr(1,'Lokasi wajib diisi.'), false;
   }
   if (step === 2) {
-    if (!val('nama_coachee'))       return showStepErr(2,'Nama Coachee wajib diisi.'), false;
-    if (!val('perusahaan_coachee')) return showStepErr(2,'Perusahaan Coachee wajib diisi.'), false;
-    if (!val('jabatan_coachee'))    return showStepErr(2,'Jabatan Coachee wajib diisi.'), false;
-    if (!val('departemen_coachee')) return showStepErr(2,'Departemen Coachee wajib diisi.'), false;
+    if (!val('perusahaan_coachee')) return showStepErr(2,'Perusahaan Coachee wajib dipilih.'), false;
+    if (!val('nama_coachee'))       return showStepErr(2,'Nama Coachee wajib dipilih.'), false;
     if (!val('no_wa_coachee'))      return showStepErr(2,'No WhatsApp Coachee wajib diisi.'), false;
   }
   if (step === 3) {
@@ -97,7 +95,9 @@ function onPcFotoChange(input) {
   });
 }
 
-// ── Coachee autocomplete ─────────────────────────────────────
+// ── Coachee cascade (Perusahaan → Subcont → Nama) ────────────
+let _pcCoacheeChoices;
+
 async function loadPcMaster() {
   try {
     const res  = await fetch(`${BASE_URL}?action=masterKaryawan`);
@@ -106,45 +106,66 @@ async function loadPcMaster() {
   } catch { _pcMaster = []; }
 }
 
-function filterCoacheeDropdown() {
-  const q  = (document.getElementById('coacheeSearch')?.value || '').trim().toLowerCase();
-  const dd = document.getElementById('coacheeDropdown');
-  if (!dd) return;
-  if (!q) { dd.style.display = 'none'; return; }
-  const matches = _pcMaster.filter(k =>
-    String(k['NAMA']||'').toLowerCase().includes(q) || String(k['NIK']||'').includes(q)
-  ).slice(0, 10);
-  if (!matches.length) { dd.style.display = 'none'; return; }
-  dd.style.display = '';
-  dd.innerHTML = matches.map(k => `
-    <div class="pic-dropdown-item" onclick='selectCoachee(${JSON.stringify(k)})'>
-      <div>
-        <div style="font-weight:600">${k['NAMA']||'-'}</div>
-        <div class="pic-dropdown-meta">${k['JABATAN']||''}</div>
-      </div>
-      <div class="pic-dropdown-meta" style="text-align:right">
-        ${k['PERUSAHAAN']||''}<br>${k['DEPARTEMEN']||''}
-      </div>
-    </div>`).join('');
+function loadCoacheePerusahaan() {
+  const sel = document.getElementById('perusahaan_coachee');
+  if (!sel) return;
+  const companies = [...new Set(_pcMaster.map(k => k['PERUSAHAAN']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Pilih Perusahaan</option>' +
+    companies.map(c => `<option value="${c}">${c}</option>`).join('');
+  loadCoacheeSubcont();
 }
 
-function selectCoachee(k) {
+function loadCoacheeSubcont() {
+  const perusahaan = document.getElementById('perusahaan_coachee')?.value;
+  const sel = document.getElementById('subcont_coachee');
+  if (!sel) return;
+  const subconts = [...new Set(
+    _pcMaster.filter(k => k['PERUSAHAAN'] === perusahaan).map(k => k['SUBCONT']).filter(Boolean)
+  )].sort();
+  sel.innerHTML = '<option value="">Semua / Tidak ada</option>' +
+    subconts.map(s => `<option value="${s}">${s}</option>`).join('');
+  loadCoacheeNama();
+}
+
+function loadCoacheeNama() {
+  const perusahaan = document.getElementById('perusahaan_coachee')?.value;
+  const subcont    = document.getElementById('subcont_coachee')?.value;
+  const sel        = document.getElementById('nama_coachee');
+  if (!sel) return;
+  ['jabatan_coachee','departemen_coachee','nik_coachee'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const filtered = _pcMaster.filter(k =>
+    (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
+    (!subcont    || k['SUBCONT']    === subcont)
+  );
+  const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Pilih Nama Coachee</option>' +
+    names.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (_pcCoacheeChoices) _pcCoacheeChoices.destroy();
+  _pcCoacheeChoices = new Choices('#nama_coachee', {
+    searchEnabled: true, itemSelectText: '', shouldSort: false,
+    placeholder: true, placeholderValue: 'Cari dan pilih nama coachee',
+    noResultsText: 'Tidak ditemukan', noChoicesText: 'Pilih perusahaan dulu', searchFloor: 1
+  });
+}
+
+function autoFillCoachee() {
+  const perusahaan = document.getElementById('perusahaan_coachee')?.value;
+  const subcont    = document.getElementById('subcont_coachee')?.value;
+  const nama       = document.getElementById('nama_coachee')?.value;
+  const found = _pcMaster.find(k =>
+    k['NAMA'] === nama &&
+    (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
+    (!subcont    || k['SUBCONT']    === subcont)
+  );
+  if (!found) return;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-  set('nama_coachee',       k['NAMA']);
-  set('perusahaan_coachee', k['PERUSAHAAN']);
-  set('subcont_coachee',    k['SUBCONT'] || '');
-  set('jabatan_coachee',    k['JABATAN']);
-  set('departemen_coachee', k['DEPARTEMEN']);
-  set('no_wa_coachee',      k['NO WHATSAPP'] || '');
-  set('nik_coachee',        k['NIK'] || '');
-  set('coacheeSearch',      k['NAMA']);
-  document.getElementById('coacheeDropdown').style.display = 'none';
+  set('jabatan_coachee',   found['JABATAN']);
+  set('departemen_coachee',found['DEPARTEMEN']);
+  set('no_wa_coachee',     found['NO WHATSAPP'] || '');
+  set('nik_coachee',       found['NIK'] || '');
 }
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('#coacheeSearch') && !e.target.closest('#coacheeDropdown'))
-    document.getElementById('coacheeDropdown')?.style && (document.getElementById('coacheeDropdown').style.display = 'none');
-});
 
 // ── Submit ────────────────────────────────────────────────────
 async function submitPcReport() {
@@ -216,5 +237,5 @@ window.addEventListener('DOMContentLoaded', () => {
   if (tgl && !tgl.value) tgl.value = today;
 
   updatePcStepUI();
-  loadPcMaster();
+  loadPcMaster().then(loadCoacheePerusahaan);
 });

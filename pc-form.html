@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="style.css" />
 <link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/10.2.0/styles/choices.min.css" />
 <style>
   /* ── Samakan dengan SBO form ── */
 
@@ -240,37 +241,35 @@
       <div id="pcStep2" class="form-step">
         <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 2 dari 3 — Identitas Coachee</div>
 
-        <div class="sbo-section-title"><i class="fa-solid fa-user"></i> Cari dari Data Karyawan</div>
-        <div class="form-group pic-search-wrap" style="margin-bottom:16px">
-          <label>Cari Nama atau NIK <small style="font-weight:400;color:#94a3b8">(opsional, untuk auto-isi)</small></label>
-          <input type="text" id="coacheeSearch"
-            placeholder="Ketik nama atau NIK coachee..."
-            oninput="filterCoacheeDropdown()"
-            autocomplete="off" />
-          <div id="coacheeDropdown" class="pic-dropdown"></div>
-        </div>
-
         <div class="sbo-section-title"><i class="fa-solid fa-id-card"></i> Data Coachee</div>
+        <div class="sbo-form-grid">
+          <div class="form-group">
+            <label>Perusahaan Coachee <span class="required">*</span></label>
+            <select id="perusahaan_coachee" onchange="loadCoacheeSubcont()" required>
+              <option value="">Pilih Perusahaan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Subcont <small style="font-weight:400;color:#94a3b8">(jika ada)</small></label>
+            <select id="subcont_coachee" onchange="loadCoacheeNama()">
+              <option value="">Semua / Tidak ada</option>
+            </select>
+          </div>
+        </div>
         <div class="form-group">
           <label>Nama Coachee <span class="required">*</span></label>
-          <input type="text" id="nama_coachee" placeholder="Nama lengkap" required />
+          <select id="nama_coachee" onchange="autoFillCoachee()" required>
+            <option value="">— Pilih perusahaan dulu —</option>
+          </select>
         </div>
         <div class="sbo-form-grid">
           <div class="form-group">
-            <label>Perusahaan <span class="required">*</span></label>
-            <input type="text" id="perusahaan_coachee" required />
+            <label>Jabatan</label>
+            <input type="text" id="jabatan_coachee" readonly placeholder="(otomatis terisi)" />
           </div>
           <div class="form-group">
-            <label>Subkontraktor</label>
-            <input type="text" id="subcont_coachee" placeholder="(jika ada)" />
-          </div>
-          <div class="form-group">
-            <label>Jabatan <span class="required">*</span></label>
-            <input type="text" id="jabatan_coachee" required />
-          </div>
-          <div class="form-group">
-            <label>Departemen <span class="required">*</span></label>
-            <input type="text" id="departemen_coachee" required />
+            <label>Departemen</label>
+            <input type="text" id="departemen_coachee" readonly placeholder="(otomatis terisi)" />
           </div>
         </div>
         <div class="form-group">
@@ -381,6 +380,7 @@
 <script src="push-notif.js"></script>
 <script src="reports-utils.js"></script>
 <script src="offline-sync.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/10.2.0/scripts/choices.min.js"></script>
 <script src="pc-form.js"></script>
 </body>
 </html>

@@ -363,42 +363,68 @@ function autoFillSboPic() {
   set('nik_pic',      found['NIK'] || '');
 }
 
-function filterObserveeDropdown() {
-  const q = (document.getElementById('observeeSearch')?.value || '').trim().toLowerCase();
-  const dd = document.getElementById('observeeDropdown');
-  if (!dd) return;
-  if (!q) { dd.style.display = 'none'; return; }
-  const matches = _sboMasterKaryawan.filter(k =>
-    String(k['NAMA'] || '').toLowerCase().includes(q) || String(k['NIK'] || '').includes(q)
-  ).slice(0, 10);
-  if (!matches.length) { dd.style.display = 'none'; return; }
-  dd.style.display = '';
-  dd.innerHTML = matches.map(k => `
-    <div onclick='selectObservee(${JSON.stringify(k)})' style="padding:10px 14px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between">
-      <span>${k['NAMA'] || '-'}</span>
-      <span style="color:#94a3b8;font-size:.78rem">${k['PERUSAHAAN']||''} · ${k['DEPARTEMEN']||''}</span>
-    </div>`).join('');
+// ── Observee cascade (Perusahaan → Subcont → Nama) ────────────
+let _sboObserveeChoices;
+
+function loadObserveePerusahaan() {
+  const sel = document.getElementById('perusahaan_observee');
+  if (!sel) return;
+  const companies = [...new Set(_sboMasterKaryawan.map(k => k['PERUSAHAAN']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Pilih Perusahaan</option>' +
+    companies.map(c => `<option value="${c}">${c}</option>`).join('');
+  loadObserveeSubcont();
 }
 
-function selectObservee(k) {
+function loadObserveeSubcont() {
+  const perusahaan = document.getElementById('perusahaan_observee')?.value;
+  const sel = document.getElementById('subcont_observee');
+  if (!sel) return;
+  const subconts = [...new Set(
+    _sboMasterKaryawan.filter(k => k['PERUSAHAAN'] === perusahaan).map(k => k['SUBCONT']).filter(Boolean)
+  )].sort();
+  sel.innerHTML = '<option value="">Semua / Tidak ada</option>' +
+    subconts.map(s => `<option value="${s}">${s}</option>`).join('');
+  loadObserveeNama();
+}
+
+function loadObserveeNama() {
+  const perusahaan = document.getElementById('perusahaan_observee')?.value;
+  const subcont    = document.getElementById('subcont_observee')?.value;
+  const sel        = document.getElementById('nama_observee');
+  if (!sel) return;
+  ['jabatan_observee','departemen_observee','nik_observee'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const filtered = _sboMasterKaryawan.filter(k =>
+    (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
+    (!subcont    || k['SUBCONT']    === subcont)
+  );
+  const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Pilih Nama Observee</option>' +
+    names.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (_sboObserveeChoices) _sboObserveeChoices.destroy();
+  _sboObserveeChoices = new Choices('#nama_observee', {
+    searchEnabled: true, itemSelectText: '', shouldSort: false,
+    placeholder: true, placeholderValue: 'Cari dan pilih nama observee',
+    noResultsText: 'Tidak ditemukan', noChoicesText: 'Pilih perusahaan dulu', searchFloor: 1
+  });
+}
+
+function autoFillObservee() {
+  const perusahaan = document.getElementById('perusahaan_observee')?.value;
+  const subcont    = document.getElementById('subcont_observee')?.value;
+  const nama       = document.getElementById('nama_observee')?.value;
+  const found = _sboMasterKaryawan.find(k =>
+    k['NAMA'] === nama &&
+    (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
+    (!subcont    || k['SUBCONT']    === subcont)
+  );
+  if (!found) return;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-  set('nama_observee', k['NAMA']);
-  set('perusahaan_observee', k['PERUSAHAAN']);
-  set('subcont_observee', k['SUBCONT'] || '');
-  set('jabatan_observee', k['JABATAN']);
-  set('departemen_observee', k['DEPARTEMEN']);
-  set('observeeSearch', k['NAMA']);
-  const dd = document.getElementById('observeeDropdown');
-  if (dd) dd.style.display = 'none';
+  set('jabatan_observee',   found['JABATAN']);
+  set('departemen_observee',found['DEPARTEMEN']);
+  set('nik_observee',       found['NIK'] || '');
 }
-
-// Close observee dropdown on outside click
-document.addEventListener('click', e => {
-  if (!e.target.closest('#observeeSearch') && !e.target.closest('#observeeDropdown')) {
-    const dd = document.getElementById('observeeDropdown');
-    if (dd) dd.style.display = 'none';
-  }
-});
 
 function onSboFotoChange(input) {
   const preview = document.getElementById('sboFotoPreview');
@@ -445,10 +471,8 @@ function validateStep(step) {
     if (!val('lokasi')) return showErr('Lokasi wajib diisi.'), false;
   }
   if (step === 2) {
-    if (!val('nama_observee')) return showErr('Nama observee wajib diisi.'), false;
-    if (!val('perusahaan_observee')) return showErr('Perusahaan observee wajib diisi.'), false;
-    if (!val('jabatan_observee')) return showErr('Jabatan observee wajib diisi.'), false;
-    if (!val('departemen_observee')) return showErr('Departemen observee wajib diisi.'), false;
+    if (!val('perusahaan_observee')) return showErr('Perusahaan observee wajib dipilih.'), false;
+    if (!val('nama_observee')) return showErr('Nama observee wajib dipilih.'), false;
   }
   if (step === 3) {
     if (!allChecklistAnswered()) return showErr('Semua poin checklist harus dinilai (Aman / Tidak Aman / N.A.).'), false;
@@ -569,6 +593,6 @@ window.addEventListener('DOMContentLoaded', () => {
   buildChecklist();
   updateChecklistCounter();
   updateStepUI();
-  // Muat master karyawan lebih awal — tersedia untuk Step 2 (observee) dan Step 4 (PIC)
-  loadMasterForPic();
+  // Muat master karyawan — tersedia untuk Step 2 (observee) dan Step 4 (PIC)
+  loadMasterForPic().then(loadObserveePerusahaan);
 });

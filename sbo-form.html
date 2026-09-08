@@ -274,38 +274,37 @@
 
         <div class="sbo-section-title"><i class="fa-solid fa-user"></i> Identitas Observee</div>
 
-        <!-- Pencarian dari master karyawan -->
-        <div class="form-group pic-search-wrap">
-          <label>Cari dari Data Karyawan <small style="font-weight:400;color:#94a3b8;text-transform:none">(opsional — atau isi manual di bawah)</small></label>
-          <input type="text" id="observeeSearch"
-            placeholder="Ketik nama atau NIK observee..."
-            oninput="filterObserveeDropdown()"
-            autocomplete="off" />
-          <div id="observeeDropdown" class="pic-dropdown"></div>
-        </div>
-
-        <div class="form-group">
-          <label>Nama Observee <span class="required">*</span></label>
-          <input type="text" id="nama_observee" placeholder="Nama lengkap karyawan yang diobservasi" required />
-        </div>
         <div class="sbo-form-grid">
           <div class="form-group">
             <label>Perusahaan Observee <span class="required">*</span></label>
-            <input type="text" id="perusahaan_observee" placeholder="Nama perusahaan / kontraktor" required />
+            <select id="perusahaan_observee" onchange="loadObserveeSubcont()" required>
+              <option value="">Pilih Perusahaan</option>
+            </select>
           </div>
           <div class="form-group">
-            <label>Subkontraktor <small style="font-weight:400;color:#94a3b8">(jika ada)</small></label>
-            <input type="text" id="subcont_observee" placeholder="Nama subkontraktor (opsional)" />
-          </div>
-          <div class="form-group">
-            <label>Jabatan Observee <span class="required">*</span></label>
-            <input type="text" id="jabatan_observee" placeholder="Mis: Operator, Helper, Mekanik" required />
-          </div>
-          <div class="form-group">
-            <label>Departemen Observee <span class="required">*</span></label>
-            <input type="text" id="departemen_observee" placeholder="Mis: Mining, Engineering, HSE" required />
+            <label>Subcont <small style="font-weight:400;color:#94a3b8">(jika ada)</small></label>
+            <select id="subcont_observee" onchange="loadObserveeNama()">
+              <option value="">Semua / Tidak ada</option>
+            </select>
           </div>
         </div>
+        <div class="form-group">
+          <label>Nama Observee <span class="required">*</span></label>
+          <select id="nama_observee" onchange="autoFillObservee()" required>
+            <option value="">— Pilih perusahaan dulu —</option>
+          </select>
+        </div>
+        <div class="sbo-form-grid">
+          <div class="form-group">
+            <label>Jabatan</label>
+            <input type="text" id="jabatan_observee" readonly placeholder="(otomatis terisi)" />
+          </div>
+          <div class="form-group">
+            <label>Departemen</label>
+            <input type="text" id="departemen_observee" readonly placeholder="(otomatis terisi)" />
+          </div>
+        </div>
+        <input type="hidden" id="nik_observee" />
 
         <div class="sbo-button-group">
           <button type="button" class="btn-secondary-sbo" onclick="sboPrev()">
