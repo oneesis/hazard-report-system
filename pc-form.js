@@ -134,9 +134,11 @@ function loadCoacheeNama() {
   ['jabatan_coachee','departemen_coachee','nik_coachee'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  const me = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   const filtered = _pcMaster.filter(k =>
     (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
-    (!subcont    || k['SUBCONT']    === subcont)
+    (!subcont    || k['SUBCONT']    === subcont) &&
+    !(me && (k['NIK'] === me.nik || k['NAMA'] === me.nama))  // exclude diri sendiri
   );
   const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Pilih Nama Coachee</option>' +

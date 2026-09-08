@@ -395,9 +395,11 @@ function loadObserveeNama() {
   ['jabatan_observee','departemen_observee','nik_observee'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  const me = getCurrentUser();
   const filtered = _sboMasterKaryawan.filter(k =>
     (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
-    (!subcont    || k['SUBCONT']    === subcont)
+    (!subcont    || k['SUBCONT']    === subcont) &&
+    !(me && (k['NIK'] === me.nik || k['NAMA'] === me.nama))  // exclude diri sendiri
   );
   const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Pilih Nama Observee</option>' +
