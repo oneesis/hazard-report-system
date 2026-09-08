@@ -969,7 +969,14 @@ function showStep(stepNumber) {
 // VALIDATION
 // ========================================
 function validateSection1() {
-  return validateRequiredFields(["perusahaan", "subcont1", "nama"]);
+  // Data pelapor auto-fill dari akun — cukup pastikan nama terisi
+  const nama = document.getElementById("nama")?.value || "";
+  if (!nama) {
+    if (typeof showToast === "function") showToast("Data pelapor belum termuat. Coba refresh halaman.", "error");
+    showAlert();
+    return false;
+  }
+  return true;
 }
 
 function validateSection2() {
@@ -1277,97 +1284,41 @@ async function submitForm() {
 }
 
 // ========================================
-// AUTO-FILL DATA PELAPOR
+// AUTO-FILL DATA PELAPOR — dari akun login, langsung tanpa lookup
 // ========================================
-async function autofillDataPelapor() {
+function fillReporterCard() {
   const user = getCurrentUser();
-  if (!user || !masterKaryawan || masterKaryawan.length === 0) return;
+  if (!user) return;
 
-  const loadingAutofillOverlay = document.getElementById("loadingAutofill");
-  if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "flex";
+  // Cari record di master untuk ambil subcont & no_wa (fallback ke user object)
+  const rec = (masterKaryawan || []).find(item => {
+    const nik  = String(item["NIK"]  || "").trim().toUpperCase();
+    const nama = String(item["NAMA"] || "").trim().toUpperCase();
+    return (user.nik  && nik  === String(user.nik  || "").toUpperCase()) ||
+           (user.nama && nama === String(user.nama || "").toUpperCase());
+  }) || {};
 
-  try {
-    const userRecord = masterKaryawan.find(item => {
-      const itemNik = String(item["NIK"] || "").trim();
-      const itemNama = String(item["NAMA"] || "").trim();
-      const userNik = String(user.nik || "").trim();
-      const userNama = String(user.nama || "").trim();
+  const set = id => v => { const el = document.getElementById(id); if (el) el.value = v || ""; };
+  set("perusahaan")(rec["PERUSAHAAN"]  || user.perusahaan || "");
+  set("subcont1"  )(rec["SUBCONT"]     || user.subcont    || "N/A");
+  set("nama"      )(rec["NAMA"]        || user.nama       || "");
+  set("nik"       )(rec["NIK"]         || user.nik        || "");
+  set("jabatan"   )(rec["JABATAN"]     || user.jabatan    || "");
+  set("departemen")(rec["DEPARTEMEN"]  || user.departemen || "");
+  set("no_whatsapp")(rec["NO WHATSAPP"] || user.no_whatsapp || "");
 
-      return (userNik && itemNik.toUpperCase() === userNik.toUpperCase()) ||
-             (userNama && itemNama.toUpperCase() === userNama.toUpperCase());
-    });
-
-    if (!userRecord) {
-      if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "none";
-      return;
-    }
-
-    const perusahaan = document.getElementById("perusahaan");
-    const subcont = document.getElementById("subcont1");
-    const nama = document.getElementById("nama");
-    const nikField = document.getElementById("nik");
-    const jabatanField = document.getElementById("jabatan");
-    const departemanField = document.getElementById("departemen");
-
-    // Set dropdown values without triggering clearAutoFill
-    if (perusahaan && userRecord["PERUSAHAAN"]) {
-      const opt = Array.from(perusahaan.options).find(o =>
-        String(o.value).trim().toUpperCase() === String(userRecord["PERUSAHAAN"]).trim().toUpperCase()
-      );
-      if (opt) {
-        perusahaan.value = opt.value;
-        perusahaan.disabled = true;
-        loadSubcontOptions(true);
-      }
-    }
-
-    if (subcont && userRecord["SUBCONT"]) {
-      const opt = Array.from(subcont.options).find(o =>
-        String(o.value).trim().toUpperCase() === String(userRecord["SUBCONT"]).trim().toUpperCase()
-      );
-      if (opt) {
-        subcont.value = opt.value;
-        subcont.disabled = true;
-        loadNamaOptions(true);
-      }
-    }
-
-    if (nama && userRecord["NAMA"]) {
-      const opt = Array.from(nama.options).find(o =>
-        String(o.value).trim().toUpperCase() === String(userRecord["NAMA"]).trim().toUpperCase()
-      );
-      if (opt) {
-        nama.value = opt.value;
-        nama.disabled = true;
-        if (namaChoices) namaChoices.setChoiceByValue(opt.value);
-        autoFillData();
-      }
-    }
-
-    if (nikField) nikField.value = userRecord["NIK"] || "";
-    if (jabatanField) jabatanField.value = userRecord["JABATAN"] || "";
-    if (departemanField) departemanField.value = userRecord["DEPARTEMEN"] || "";
-
-    [nikField, jabatanField, departemanField].forEach(el => {
-      if (el) el.readOnly = true;
-    });
-
-    if (perusahaan) perusahaan.disabled = true;
-    if (subcont) subcont.disabled = true;
-    if (nama) {
-      nama.disabled = true;
-      nama.addEventListener("change", (e) => {
-        e.preventDefault();
-        return false;
-      }, true);
-    }
-
-    if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "none";
-
-  } catch (error) {
-    console.error("Error saat autofill data pelapor:", error);
-    if (loadingAutofillOverlay) loadingAutofillOverlay.style.display = "none";
-  }
+  // Tampilkan card
+  const nm = rec["NAMA"] || user.nama || "-";
+  const initial = document.getElementById("reporterInitial");
+  if (initial) initial.textContent = nm.charAt(0).toUpperCase();
+  const nameEl = document.getElementById("reporterName");
+  if (nameEl) nameEl.textContent = nm;
+  const subEl = document.getElementById("reporterSub");
+  if (subEl) subEl.textContent = [
+    rec["JABATAN"]    || user.jabatan,
+    rec["DEPARTEMEN"] || user.departemen,
+    rec["PERUSAHAAN"] || user.perusahaan
+  ].filter(Boolean).join(" • ");
 }
 
 // ========================================
@@ -1377,12 +1328,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('step1')?.classList.add('section-1-skeleton');
   try {
     await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadMasterTemuan()]);
-    loadPerusahaanOptions();
+    fillReporterCard();
     loadLokasiOptions();
     loadKetidaksesuaianOptions();
     loadPerusahaanPicOptions();
 
-    initializeNamaChoices();
     initializeLokasiChoices();
     initializeKetidaksesuaianChoices();
     initializeSubKetidaksesuaianChoices();
@@ -1395,11 +1345,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const batasWaktuInput = document.getElementById("batas_waktu");
     if (batasWaktuInput) batasWaktuInput.min = today;
-
-    // Event listeners
-    document.getElementById("perusahaan")?.addEventListener("change", loadSubcontOptions);
-    document.getElementById("subcont1")?.addEventListener("change", loadNamaOptions);
-    document.getElementById("nama")?.addEventListener("change", autoFillData);
 
     // Photo upload preview
     document.getElementById("upload_foto_bahaya")?.addEventListener("change", previewFotoBahaya);
@@ -1439,8 +1384,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     showStep(1);
 
-    if (!isAdmin()) setSection1Editable(false);
-    autofillDataPelapor();
+    // ponytail: fillReporterCard already called above after masterKaryawan loaded
     document.getElementById('step1')?.classList.remove('section-1-skeleton');
 
     // Initialize enhancements
