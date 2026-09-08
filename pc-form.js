@@ -192,19 +192,28 @@ async function submitPcReport() {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+function fillCoachCard() {
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  if (!user) return false;
+  const el = id => document.getElementById(id);
+  if (el('coachInitial')) el('coachInitial').textContent = (user.nama || '?').charAt(0).toUpperCase();
+  if (el('coachName'))    el('coachName').textContent    = user.nama || '-';
+  if (el('coachSub'))     el('coachSub').textContent     =
+    [user.jabatan, user.departemen, user.perusahaan].filter(Boolean).join(' • ');
+  return true;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   requireLogin();
-  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-  if (user) {
-    const el = id => document.getElementById(id);
-    if (el('coachInitial')) el('coachInitial').textContent = (user.nama || '?').charAt(0).toUpperCase();
-    if (el('coachName'))    el('coachName').textContent    = user.nama || '-';
-    if (el('coachSub'))     el('coachSub').textContent     =
-      [user.jabatan, user.departemen, user.perusahaan].filter(Boolean).join(' • ');
+
+  // Isi coach card — retry sekali jika belum ready
+  if (!fillCoachCard()) {
+    setTimeout(fillCoachCard, 300);
   }
+
   const today = new Date().toISOString().slice(0, 10);
   const tgl = document.getElementById('tgl_pc');
-  if (tgl) tgl.value = today;
+  if (tgl && !tgl.value) tgl.value = today;
 
   updatePcStepUI();
   loadPcMaster();
