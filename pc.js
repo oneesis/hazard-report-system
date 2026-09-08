@@ -1,5 +1,5 @@
 // Personal Contact List — ONE-SAP
-const BASE_URL = '/api';
+// BASE_URL sudah dideklarasikan di reports-utils.js
 let _pcData = [];
 let _pcTab  = 'semua';   // 'semua' | 'coach' | 'coachee'
 let _buktiFotos = [];

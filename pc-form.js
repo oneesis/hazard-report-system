@@ -1,5 +1,5 @@
 // Personal Contact Form — ONE-SAP
-const BASE_URL = '/api';
+// BASE_URL sudah dideklarasikan di reports-utils.js
 const PC_STEPS = 3;
 let pcStep = 1;
 let pcPhotos = [];
