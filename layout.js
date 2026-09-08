@@ -14,6 +14,8 @@
     'capaian-sap.html':  'capaian-sap',
     'sbo.html':          'sbo',
     'sbo-form.html':     'sbo',
+    'pc.html':           'pc',
+    'pc-form.html':      'pc',
   };
 
   const PAGE_TITLES = {
@@ -73,6 +75,7 @@
         ${navItem('dashboard.html',   'fa-chart-simple',  'Dashboard',   'dashboard',   active)}
         ${navItem('capaian-sap.html','fa-trophy',         'Capaian SAP', 'capaian-sap', active)}
         ${navItem('sbo.html',       'fa-eye',            'SBO',         'sbo',         active)}
+        ${navItem('pc.html',        'fa-comments',       'Personal Contact', 'pc',     active)}
       </nav>
 
       ${isAdmin ? `

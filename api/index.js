@@ -1104,6 +1104,154 @@ async function submitInspectionReport(sheets, data) {
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
+// ══════════════════════════════════════════════════════
+// PERSONAL CONTACT (PC)
+// ══════════════════════════════════════════════════════
+const PC_HEADERS = [
+  'ID','TIMESTAMP','TGL_PC','LOKASI_PC',
+  'NAMA_COACH','NIK_COACH','JABATAN_COACH','DEPARTEMEN_COACH','PERUSAHAAN_COACH',
+  'NAMA_COACHEE','NIK_COACHEE','JABATAN_COACHEE','DEPARTEMEN_COACHEE','PERUSAHAAN_COACHEE','SUBCONT_COACHEE','NO_WA_COACHEE',
+  'TOPIK_COACHING','JUDUL_COACHING','DESKRIPSI_COACHING','KOMITMEN_PERBAIKAN','BATAS_WAKTU_PC',
+  'FOTO_PC','STATUS','FOTO_KOMITMEN','PESAN_KOMITMEN','TIMESTAMP_CLOSE','WA_COACHEE_STATUS',
+];
+
+async function ensurePCSheet(sheets) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties.title' });
+    const exists = meta.data.sheets.some(s => s.properties.title === 'PC_Report');
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'PC_Report' } } }] }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'PC_Report!A1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [PC_HEADERS] }
+      });
+    }
+  } catch (err) { console.error('ensurePCSheet error:', err?.message || err); }
+}
+
+async function submitPCReport(sheets, data) {
+  await ensurePCSheet(sheets);
+  const id = 'PC-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
+
+  let fotoUrl = '';
+  if (data.foto_pc)
+    fotoUrl = await saveMultipleImagesToDrive(data.foto_pc, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, id + '-PC');
+
+  const row = [
+    id, new Date().toISOString(), data.tgl_pc || '', data.lokasi_pc || '',
+    data.nama_coach || '', data.nik_coach || '', data.jabatan_coach || '',
+    data.departemen_coach || '', data.perusahaan_coach || '',
+    data.nama_coachee || '', data.nik_coachee || '', data.jabatan_coachee || '',
+    data.departemen_coachee || '', data.perusahaan_coachee || '',
+    data.subcont_coachee || '', data.no_wa_coachee || '',
+    data.topik_coaching || '', data.judul_coaching || '',
+    data.deskripsi_coaching || '', data.komitmen_perbaikan || '',
+    data.batas_waktu_pc || '',
+    fotoUrl, 'OPEN', '', '', '', '',
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: 'PC_Report',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [row] }
+  });
+  invalidateCache('PC_Report');
+
+  // Kirim WA ke coachee
+  let waStatus = 'TIDAK ADA WA';
+  if (data.no_wa_coachee && data.nama_coachee) {
+    const msg = `Halo ${data.nama_coachee}, kamu mendapat Personal Contact dari ${data.nama_coach || 'Coach'}.\n\n` +
+      `📋 *${id}*\n` +
+      `🏷️ Topik: ${data.topik_coaching || '-'}\n` +
+      `📌 Judul: ${data.judul_coaching || '-'}\n` +
+      `🤝 Komitmen: ${data.komitmen_perbaikan || '-'}\n` +
+      `⏰ Batas waktu: ${data.batas_waktu_pc || '-'}\n\n` +
+      `🔗 Lihat & konfirmasi: https://sap-ebl.vercel.app/pc.html`;
+    const sent = await sendWaNotification(data.no_wa_coachee, msg).catch(() => false);
+    waStatus = sent ? 'TERKIRIM' : 'GAGAL';
+  }
+  await writeWaStatusToSheet(sheets, 'PC_Report', id, waStatus);
+
+  // Push notif ke coachee
+  if (data.nik_coachee) await sendPushToNik(sheets, data.nik_coachee, {
+    title: 'Kamu Mendapat Personal Contact 💬',
+    body: `${data.nama_coach || 'Coach'} membuat PC untuk kamu: ${data.judul_coaching || '-'}`,
+    url: `https://sap-ebl.vercel.app/pc.html`
+  }).catch(() => {});
+
+  return { status: 'success', message: `PC ${id} berhasil disimpan. Notifikasi dikirim ke coachee.`, id, wa_coachee_status: waStatus };
+}
+
+async function getPCReports(sheets, auth) {
+  let rows;
+  try { rows = await getSheetData(sheets, 'PC_Report'); } catch { return { status: 'success', data: [] }; }
+  let data = rows.map(obj => {
+    const n = {};
+    Object.keys(obj).forEach(k => { n[normalizeHeader(k)] = obj[k]; });
+    n.report_type = 'PC';
+    return n;
+  }).filter(r => String(r.id || '').trim());
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) data = data.filter(r =>
+      String(r.perusahaan_coach || '').trim().toUpperCase() === co ||
+      String(r.perusahaan_coachee || '').trim().toUpperCase() === co
+    );
+  }
+  return { status: 'success', data };
+}
+
+async function updatePCReport(sheets, data, auth) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'PC_Report' });
+  const rows = res.data.values || [];
+  if (rows.length < 2) throw new Error('Data PC tidak ditemukan.');
+  const headers = rows[0].map(normalizeHeader);
+  const idIdx = headers.indexOf('id');
+  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[idIdx] || '').trim() === String(data.id || '').trim());
+  if (rowIdx < 0) throw new Error(`PC ${data.id} tidak ditemukan.`);
+
+  let fotoUrl = '';
+  if (data.foto_komitmen)
+    fotoUrl = await saveMultipleImagesToDrive(data.foto_komitmen, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, data.id + '-Komitmen');
+
+  const updates = {
+    status:           'CLOSED',
+    foto_komitmen:    fotoUrl,
+    pesan_komitmen:   data.pesan_komitmen || '',
+    timestamp_close:  new Date().toISOString(),
+  };
+
+  for (const [key, val] of Object.entries(updates)) {
+    const colIdx = headers.indexOf(key);
+    if (colIdx < 0) continue;
+    const col = String.fromCharCode(65 + colIdx);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `PC_Report!${col}${rowIdx + 1}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [[val]] }
+    });
+  }
+  invalidateCache('PC_Report');
+
+  // Notif ke coach bahwa coachee sudah konfirmasi
+  const coachRow = rows[rowIdx];
+  const nikCoach = String(coachRow[headers.indexOf('nik_coach')] || '').trim();
+  if (nikCoach) await sendPushToNik(sheets, nikCoach, {
+    title: 'Coachee Telah Konfirmasi Komitmen ✅',
+    body:  `Coachee untuk PC ${data.id} telah mengkonfirmasi komitmennya.`,
+    url:   `https://sap-ebl.vercel.app/pc.html`
+  }).catch(() => {});
+
+  return { status: 'success', message: 'Komitmen berhasil dikonfirmasi.' };
+}
+
 const SBO_HEADERS = [
   'ID','TIMESTAMP','TGL_OBSERVASI','NAMA_PEKERJAAN','LOKASI',
   'NAMA_OBSERVER','NIK_OBSERVER','JABATAN_OBSERVER','DEPARTEMEN_OBSERVER','PERUSAHAAN_OBSERVER',
@@ -1561,6 +1709,7 @@ module.exports = async (req, res) => {
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         case 'getSBOReports':       result = await getSBOReports(sheets, auth); break;
+        case 'getPCReports':        result = await getPCReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
@@ -1647,6 +1796,17 @@ module.exports = async (req, res) => {
           data.nik  = authUser.nik;
           data.nama = authUser.nama;
           result = await submitInspectionReport(sheets, data);
+          break;
+        case 'submitPCReport':
+          data.nik_coach        = authUser.nik;
+          data.nama_coach       = authUser.nama;
+          data.jabatan_coach    = authUser.jabatan;
+          data.departemen_coach = authUser.departemen;
+          data.perusahaan_coach = authUser.perusahaan;
+          result = await submitPCReport(sheets, data);
+          break;
+        case 'updatePCReport':
+          result = await updatePCReport(sheets, data, authUser);
           break;
         case 'submitSBOReport':
           data.nik_observer  = authUser.nik;

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Form Personal Contact - ONE-SAP</title>
+<link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="home.css" />
+<link rel="manifest" href="manifest.json" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<style>
+  /* ── PC Form ── */
+  .pc-wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 80px; }
+
+  .pc-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+    border-radius: 16px; margin-bottom: 20px;
+  }
+  .pc-header-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(153,246,228,.2); border: 1.5px solid rgba(153,246,228,.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: #99f6e4; flex-shrink: 0;
+  }
+  .pc-header-title { font-size: 1.1rem; font-weight: 800; color: #fff; }
+  .pc-header-sub   { font-size: .8rem; color: rgba(255,255,255,.7); margin-top: 2px; }
+
+  /* Step indicator */
+  .pc-step-indicator {
+    display: flex; gap: 0; margin-bottom: 20px;
+    background: #f1f5f9; border-radius: 12px; padding: 4px; overflow: hidden;
+  }
+  .pc-step-indicator .step {
+    flex: 1; text-align: center; padding: 8px 4px; font-size: .72rem;
+    font-weight: 600; color: #94a3b8; border-radius: 9px; transition: .2s;
+  }
+  .pc-step-indicator .step.active { background: #fff; color: #0f766e; font-weight: 800; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .pc-step-indicator .step.completed { color: #0d9488; }
+
+  .pc-step-progress {
+    font-size: .78rem; color: #64748b; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Steps */
+  .form-step { display: none; }
+  .form-step.active { display: block; }
+
+  /* Coach card */
+  .pc-coach-card {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 14px 16px; margin-bottom: 20px;
+  }
+  .pc-coach-initial {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .pc-coach-name  { font-size: .95rem; font-weight: 700; color: #0f766e; }
+  .pc-coach-sub   { font-size: .78rem; color: #6b7280; margin-top: 2px; }
+
+  /* Section title */
+  .pc-section-title {
+    font-size: .78rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .07em; color: #0d9488; margin: 20px 0 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pc-section-title::after { content:''; flex:1; height:1.5px; background:#ccfbf1; }
+
+  /* Grid */
+  .pc-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .pc-form-grid { grid-template-columns: 1fr; } }
+
+  /* Buttons */
+  .pc-button-group { display: flex; gap: 10px; margin-top: 24px; }
+  .btn-primary-pc {
+    flex: 1; padding: 13px 20px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    color: #fff; font-size: .9rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary-pc:hover { opacity: .9; }
+  .btn-primary-pc:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-secondary-pc {
+    padding: 13px 18px; border: 1.5px solid #cbd5e1; border-radius: 10px;
+    background: #fff; color: #475569; font-size: .9rem; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+  }
+  .btn-secondary-pc:hover { background: #f8fafc; }
+
+  /* Foto preview */
+  .foto-preview-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+  /* Modal sukses */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
+  }
+  .modal {
+    background: #fff; border-radius: 20px; padding: 32px 28px; max-width: 400px; width: 100%; text-align: center;
+  }
+  .modal-icon { font-size: 3rem; margin-bottom: 12px; }
+  .modal-title { font-size: 1.2rem; font-weight: 800; color: #0f766e; margin-bottom: 8px; }
+  .modal-msg   { font-size: .9rem; color: #64748b; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span class="app-topbar-title">Form Personal Contact</span>
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <div class="pc-wrap">
+
+      <!-- Header -->
+      <div class="pc-header">
+        <div class="pc-header-icon"><i class="fa-solid fa-comments"></i></div>
+        <div>
+          <div class="pc-header-title">Personal Contact</div>
+          <div class="pc-header-sub">Coaching keselamatan kerja satu-satu</div>
+        </div>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="pc-step-indicator" id="pcStepIndicator">
+        <div class="step active" data-step="1">1 · Info Sesi</div>
+        <div class="step" data-step="2">2 · Coachee</div>
+        <div class="step" data-step="3">3 · Coaching</div>
+      </div>
+
+      <!-- ═══ STEP 1 ═══ -->
+      <div id="pcStep1" class="form-step active" style="display:block">
+        <div class="pc-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 1 dari 3 — Info Sesi</div>
+
+        <!-- Coach card -->
+        <div class="pc-coach-card">
+          <div class="pc-coach-initial" id="coachInitial">?</div>
+          <div>
+            <div class="pc-coach-name" id="coachName">-</div>
+            <div class="pc-coach-sub" id="coachSub">-</div>
+          </div>
+        </div>
+
+        <div class="pc-form-grid">
+          <div class="form-group">
+            <label>Tanggal PC <span class="required">*</span></label>
+            <input type="date" id="tgl_pc" required />
+          </div>
+          <div class="form-group">
+            <label>Lokasi / Area <span class="required">*</span></label>
+            <input type="text" id="lokasi_pc" placeholder="Mis: Pit North, Workshop" required />
+          </div>
+        </div>
+
+        <div class="pc-button-group">
+          <button type="button" class="btn-primary-pc" onclick="pcNext()">
+            Selanjutnya <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 2 ═══ -->
+      <div id="pcStep2" class="form-step" style="display:none">
+        <div class="pc-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 2 dari 3 — Data Coachee</div>
+
+        <div class="pc-section-title"><i class="fa-solid fa-user"></i> Identitas Coachee</div>
+
+        <!-- Autocomplete dari master_karyawan -->
+        <div class="form-group pic-search-wrap">
+          <label>Cari dari Data Karyawan <small style="font-weight:400;color:#94a3b8;text-transform:none">(opsional — atau isi manual di bawah)</small></label>
+          <input type="text" id="coacheeSearch"
+            placeholder="Ketik nama atau NIK coachee..."
+            oninput="filterCoacheeDropdown()"
+            autocomplete="off" />
+          <div id="coacheeDropdown" class="pic-dropdown"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Nama Coachee <span class="required">*</span></label>
+          <input type="text" id="nama_coachee" placeholder="Nama lengkap" required />
+        </div>
+        <div class="pc-form-grid">
+          <div class="form-group">
+            <label>Perusahaan <span class="required">*</span></label>
+            <input type="text" id="perusahaan_coachee" required />
+          </div>
+          <div class="form-group">
+            <label>Subkontraktor</label>
+            <input type="text" id="subcont_coachee" />
+          </div>
+          <div class="form-group">
+            <label>Jabatan <span class="required">*</span></label>
+            <input type="text" id="jabatan_coachee" required />
+          </div>
+          <div class="form-group">
+            <label>Departemen <span class="required">*</span></label>
+            <input type="text" id="departemen_coachee" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>No WhatsApp Coachee <span class="required">*</span></label>
+          <input type="tel" id="no_wa_coachee" placeholder="08xx atau 62xx" required />
+        </div>
+        <input type="hidden" id="nik_coachee" />
+
+        <div class="pc-button-group">
+          <button type="button" class="btn-secondary-pc" onclick="pcPrev()">
+            <i class="fa-solid fa-arrow-left"></i> Kembali
+          </button>
+          <button type="button" class="btn-primary-pc" onclick="pcNext()">
+            Selanjutnya <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 3 ═══ -->
+      <div id="pcStep3" class="form-step" style="display:none">
+        <div class="pc-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 3 dari 3 — Isi Coaching</div>
+
+        <div class="pc-section-title"><i class="fa-solid fa-comment-dots"></i> Materi Coaching</div>
+        <div class="pc-form-grid">
+          <div class="form-group">
+            <label>Topik Coaching <span class="required">*</span></label>
+            <select id="topik_coaching" required>
+              <option value="">-- Pilih --</option>
+              <option value="Pekerjaan">Pekerjaan</option>
+              <option value="Pribadi">Pribadi</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Judul Coaching <span class="required">*</span></label>
+            <input type="text" id="judul_coaching" placeholder="Mis: Penggunaan APD di ketinggian" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Deskripsi Coaching <span class="required">*</span></label>
+          <textarea id="deskripsi_coaching" rows="4"
+            placeholder="Jelaskan isi coaching secara ringkas dan jelas..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Komitmen Perbaikan <span class="required">*</span></label>
+          <textarea id="komitmen_perbaikan" rows="3"
+            placeholder="Apa yang dikomitmenkan coachee untuk diperbaiki..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Batas Waktu Komitmen <span class="required">*</span></label>
+          <input type="date" id="batas_waktu_pc" required />
+        </div>
+
+        <div class="pc-section-title"><i class="fa-solid fa-camera"></i> Foto Dokumentasi</div>
+        <div class="form-group">
+          <label>Foto Sesi Coaching <small style="font-weight:400;color:#94a3b8">(opsional)</small></label>
+          <input type="file" id="foto_pc" accept="image/*" multiple onchange="onPcFotoChange(this)" />
+          <div id="pcFotoPreview" class="foto-preview-wrap"></div>
+        </div>
+
+        <div id="pcErrMsg" style="color:#dc2626;font-size:.85rem;margin-top:8px;display:none"></div>
+
+        <div class="pc-button-group">
+          <button type="button" class="btn-secondary-pc" onclick="pcPrev()">
+            <i class="fa-solid fa-arrow-left"></i> Kembali
+          </button>
+          <button type="button" class="btn-primary-pc" id="pcSubmitBtn" onclick="submitPcReport()">
+            <i class="fa-solid fa-paper-plane"></i> Kirim PC
+          </button>
+        </div>
+      </div>
+
+    </div><!-- end pc-wrap -->
+
+    <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
+  </div>
+</div>
+
+<!-- Modal Sukses -->
+<div class="modal-overlay" id="pcSuccessModal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <div class="modal-title">Personal Contact Tersimpan!</div>
+    <div class="modal-msg" id="pcSuccessMsg">Notifikasi WA telah dikirim ke coachee.</div>
+    <button class="btn-primary-pc" style="width:100%;justify-content:center" onclick="location.href='pc.html'">
+      Lihat Semua PC <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="push-notif.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="offline-sync.js"></script>
+<script src="pc-form.js"></script>
+</body>
+</html>
