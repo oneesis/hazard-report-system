@@ -7,234 +7,216 @@
 <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
 <link rel="stylesheet" href="tokens.css" />
 <link rel="stylesheet" href="style.css" />
-<link rel="stylesheet" href="layout.css" />
-<link rel="stylesheet" href="home.css" />
 <link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <style>
-/* ═══════════════════════════════════════════════
-   PC FORM — inline styles
-═══════════════════════════════════════════════ */
-.pc-wrap { max-width: 640px; margin: 0 auto; padding: 12px 14px 100px; }
+  /* ── Samakan dengan SBO form ── */
 
-/* ── Header banner ── */
-.pc-banner {
-  display: flex; align-items: center; gap: 14px;
-  padding: 20px 22px;
-  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
-  border-radius: 18px; margin-bottom: 22px; position: relative; overflow: hidden;
-}
-.pc-banner::before {
-  content:''; position:absolute; top:-40px; right:-40px;
-  width:160px; height:160px;
-  background: radial-gradient(circle, rgba(204,251,241,.2) 0%, transparent 70%);
-}
-.pc-banner-icon {
-  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
-  background: rgba(204,251,241,.2); border: 1.5px solid rgba(204,251,241,.4);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem; color: #ccfbf1;
-}
-.pc-banner-title { font-size: 1.05rem; font-weight: 800; color: #fff; }
-.pc-banner-sub   { font-size: .78rem; color: rgba(255,255,255,.75); margin-top: 3px; }
+  /* Step progress info */
+  .sbo-step-progress {
+    background: #f0fdfa; border-radius: 8px; padding: 8px 14px;
+    font-size: .78rem; color: #0f766e; font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
 
-/* ── Step progress ── */
-.pc-progress-wrap { margin-bottom: 22px; }
-.pc-steps {
-  display: flex; align-items: center; justify-content: space-between;
-  position: relative; margin-bottom: 8px;
-}
-.pc-steps::before {
-  content:''; position:absolute; top:18px; left:calc(33.33% - 8px); right:calc(33.33% - 8px);
-  height: 2px; background: #e2e8f0; z-index: 0;
-}
-.pc-step-dot {
-  display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;
-  position: relative; z-index: 1;
-}
-.pc-step-circle {
-  width: 36px; height: 36px; border-radius: 50%; border: 2px solid #e2e8f0;
-  background: #fff; display: flex; align-items: center; justify-content: center;
-  font-size: .82rem; font-weight: 800; color: #94a3b8; transition: all .25s;
-}
-.pc-step-dot.active   .pc-step-circle { border-color: #0d9488; background: #0d9488; color: #fff; }
-.pc-step-dot.done     .pc-step-circle { border-color: #0d9488; background: #ccfbf1; color: #0f766e; }
-.pc-step-label { font-size: .68rem; font-weight: 600; color: #94a3b8; text-align: center; transition: color .25s; }
-.pc-step-dot.active .pc-step-label { color: #0d9488; font-weight: 800; }
-.pc-step-dot.done   .pc-step-label { color: #14b8a6; }
+  /* Section titles */
+  .sbo-section-title {
+    font-size: .82rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .06em; color: #374151; margin: 22px 0 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sbo-section-title i { color: #0d9488; }
+  .sbo-section-title:first-child { margin-top: 0; }
 
-.pc-progress-bar-wrap { height: 4px; background: #e2e8f0; border-radius: 4px; }
-.pc-progress-bar      { height: 100%; background: linear-gradient(90deg,#0f766e,#14b8a6); border-radius: 4px; transition: width .35s ease; }
+  /* Grid */
+  .sbo-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .sbo-form-grid { grid-template-columns: 1fr; } }
 
-/* ── Section titles ── */
-.pc-section-title {
-  font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
-  color: #0d9488; margin: 22px 0 12px;
-  display: flex; align-items: center; gap: 8px;
-}
-.pc-section-title::after { content:''; flex:1; height: 1.5px; background: #ccfbf1; }
+  /* Buttons — teal theme */
+  .btn-primary-sbo {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; background: linear-gradient(135deg,#0f766e,#0d9488);
+    color: #fff; border: none; border-radius: 10px;
+    font-size: .9rem; font-weight: 700; cursor: pointer;
+    transition: opacity .15s;
+  }
+  .btn-primary-sbo:hover { opacity: .9; }
+  .btn-primary-sbo:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ── Coach card ── */
-.pc-coach-card {
-  display: flex; align-items: center; gap: 14px;
-  background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
-  border: 1.5px solid #99f6e4; border-radius: 14px;
-  padding: 14px 16px; margin-bottom: 20px;
-}
-.pc-coach-avatar {
-  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.15rem; font-weight: 800; color: #fff;
-}
-.pc-coach-name { font-size: .95rem; font-weight: 700; color: #0f766e; }
-.pc-coach-sub  { font-size: .75rem; color: #5eead4; margin-top: 2px; }
-.pc-coach-badge {
-  margin-left: auto; padding: 4px 10px; background: #ccfbf1; color: #0f766e;
-  border-radius: 20px; font-size: .7rem; font-weight: 700; white-space: nowrap;
-}
+  .btn-secondary-sbo {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; background: #f1f5f9; color: #475569;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    font-size: .9rem; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-secondary-sbo:hover { background: #e2e8f0; }
 
-/* ── Form grid ── */
-.pc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 480px) { .pc-grid { grid-template-columns: 1fr; } }
+  .sbo-button-group {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 28px; padding-top: 20px;
+    border-top: 1.5px solid #f1f5f9;
+  }
 
-/* ── Autocomplete dropdown ── */
-.pc-search-wrap { position: relative; }
-.pc-dropdown {
-  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  border: 1.5px solid #99f6e4; border-radius: 10px; max-height: 220px;
-  overflow-y: auto; background: #fff; z-index: 300;
-  box-shadow: 0 8px 24px rgba(15,118,110,.12);
-}
-.pc-dropdown-item {
-  padding: 10px 14px; cursor: pointer; font-size: .85rem;
-  border-bottom: 1px solid #f0fdfa; display: flex;
-  justify-content: space-between; align-items: center; gap: 8px;
-}
-.pc-dropdown-item:last-child { border-bottom: none; }
-.pc-dropdown-item:hover { background: #f0fdfa; }
-.pc-dropdown-meta { font-size: .75rem; color: #5eead4; text-align: right; }
+  /* Coach card — mirip observer card SBO tapi warna teal */
+  .observer-card {
+    background: #f0fdfa; border: 1.5px solid #99f6e4; border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
+  }
+  .observer-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg,#0f766e,#14b8a6);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1rem; flex-shrink: 0;
+  }
+  .observer-info-name { font-size: .9rem; font-weight: 700; color: #0f172a; }
+  .observer-info-sub  { font-size: .78rem; color: #5eead4; margin-top: 2px; }
 
-/* ── Foto preview ── */
-.foto-preview-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  /* Autocomplete coachee */
+  .pic-search-wrap { position: relative; }
+  .pic-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    border: 1.5px solid #99f6e4; border-radius: 10px; max-height: 220px;
+    overflow-y: auto; background: #fff; z-index: 200;
+    box-shadow: 0 8px 24px rgba(15,118,110,.12);
+  }
+  .pic-dropdown-item {
+    padding: 10px 14px; cursor: pointer; font-size: .85rem;
+    border-bottom: 1px solid #f0fdfa; display: flex;
+    justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .pic-dropdown-item:last-child { border-bottom: none; }
+  .pic-dropdown-item:hover { background: #f0fdfa; }
+  .pic-dropdown-meta { font-size: .75rem; color: #5eead4; text-align: right; }
 
-/* ── Buttons ── */
-.pc-btn-group { display: flex; gap: 10px; margin-top: 28px; }
-.btn-pc-primary {
-  flex: 1; padding: 14px 20px; border: none; border-radius: 12px;
-  background: linear-gradient(135deg, #0f766e, #0d9488);
-  color: #fff; font-size: .9rem; font-weight: 700; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 4px 12px rgba(15,118,110,.25); transition: opacity .15s;
-}
-.btn-pc-primary:hover    { opacity: .9; }
-.btn-pc-primary:disabled { opacity: .5; cursor: not-allowed; }
-.btn-pc-secondary {
-  padding: 14px 18px; border: 1.5px solid #b2f5ea; border-radius: 12px;
-  background: #fff; color: #0f766e; font-size: .9rem; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .15s;
-}
-.btn-pc-secondary:hover { background: #f0fdfa; }
+  /* Topik pill selector */
+  .topik-pills { display: flex; gap: 10px; }
+  .topik-pill {
+    flex: 1; padding: 14px 10px; border: 2px solid #e2e8f0; border-radius: 12px;
+    background: #f8fafc; text-align: center; cursor: pointer; transition: all .2s; user-select: none;
+  }
+  .topik-pill .pill-icon  { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+  .topik-pill .pill-label { font-size: .85rem; font-weight: 700; color: #64748b; display: block; }
+  .topik-pill.selected { border-color: #0d9488; background: #f0fdfa; }
+  .topik-pill.selected .pill-label { color: #0d9488; }
 
-/* ── Step container ── */
-.form-step { display: none; animation: fadeIn .2s ease; }
-.form-step.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  /* Foto preview */
+  .foto-preview-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .foto-preview-wrap img { height: 72px; width: 72px; object-fit: cover; border-radius: 8px; border: 1.5px solid #e2e8f0; }
 
-/* ── Topik pill selector ── */
-.topik-pills { display: flex; gap: 10px; }
-.topik-pill {
-  flex: 1; padding: 12px 10px; border: 2px solid #e2e8f0; border-radius: 12px;
-  background: #f8fafc; text-align: center; cursor: pointer; transition: all .2s; user-select: none;
-}
-.topik-pill input[type=radio] { display: none; }
-.topik-pill .pill-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
-.topik-pill .pill-label { font-size: .82rem; font-weight: 700; color: #64748b; display: block; }
-.topik-pill.selected { border-color: #0d9488; background: #f0fdfa; }
-.topik-pill.selected .pill-label { color: #0d9488; }
+  /* Error inline */
+  .pc-err {
+    display: none; margin-top: 10px; padding: 9px 14px;
+    background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px;
+    color: #dc2626; font-size: .83rem;
+  }
 
-/* ── Success modal ── */
-.pc-modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5);
-  display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
-}
-.pc-modal-overlay.show { display: flex; }
-.pc-modal {
-  background: #fff; border-radius: 20px; padding: 36px 28px;
-  max-width: 380px; width: 100%; text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,.15);
-}
-.pc-modal-icon  { font-size: 3.2rem; margin-bottom: 14px; }
-.pc-modal-title { font-size: 1.2rem; font-weight: 800; color: #0f766e; margin-bottom: 8px; }
-.pc-modal-msg   { font-size: .88rem; color: #64748b; margin-bottom: 22px; line-height: 1.5; }
+  /* Step indicator override — teal for PC */
+  .step-indicator .step.active {
+    background: linear-gradient(135deg,#0f766e,#0d9488) !important;
+    border-color: #0d9488 !important;
+  }
+  .step-indicator .step.active .step-circle {
+    background-color: #fff !important;
+    color: #0f766e !important;
+  }
+  .step-indicator .step.completed {
+    background: #f0fdfa !important;
+    border-color: #99f6e4 !important;
+  }
+  .step-indicator .step.completed .step-circle {
+    background-color: #0d9488 !important;
+    color: #fff !important;
+  }
+  .step-indicator .step.completed .step-label {
+    color: #0f766e !important;
+  }
+  .step-indicator { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-/* ── Error msg ── */
-.pc-err {
-  display: none; margin-top: 12px; padding: 10px 14px;
-  background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px;
-  color: #dc2626; font-size: .83rem;
-}
+  /* Success modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 9000; display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal {
+    background: #fff; border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    width: 100%; max-width: 420px;
+  }
 </style>
 </head>
-<body>
-<div class="app-layout">
-  <aside id="appSidebar" class="app-sidebar"></aside>
-  <div id="sidebarOverlay" class="sidebar-overlay"></div>
-  <div class="app-main">
+<body class="inspection-form-page">
+<div class="container">
+  <div class="card">
 
-    <div class="app-topbar">
-      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
-      <span class="app-topbar-title">Form Personal Contact</span>
-      <div id="notificationBell"></div>
-      <div id="userProfile" class="user-menu"></div>
+    <div class="header-top">
+      <a href="pc.html" class="nav-home-btn">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 7l-5 5 5 5V7z"/></svg>
+        </span>
+        Kembali ke Daftar PC
+      </a>
     </div>
 
-    <div class="pc-wrap">
+    <div class="header-logos">
+      <img src="assets/Logo Hasnur.png" alt="Logo Hasnur" class="logo" />
+      <img src="assets/Nilai Inti - Indonesia.png" alt="Nilai Inti Indonesia" class="logo nilai-inti" />
+    </div>
 
-      <!-- Banner -->
-      <div class="pc-banner">
-        <div class="pc-banner-icon"><i class="fa-solid fa-comments"></i></div>
+    <h1 class="main-title">Form Personal Contact</h1>
+    <p class="main-subtitle">Coaching keselamatan kerja satu-satu antara Coach dan Coachee</p>
+
+    <div id="alertError" class="alert-error" style="display:none">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>
+      <span id="alertErrorMsg">Masih ada field yang belum diisi.</span>
+    </div>
+
+    <!-- Step Indicator (3 steps) -->
+    <div class="step-indicator" id="pcStepIndicator">
+      <div class="step active" data-step="1">
+        <div class="step-circle">1</div>
         <div>
-          <div class="pc-banner-title">Personal Contact</div>
-          <div class="pc-banner-sub">Coaching keselamatan kerja satu-satu</div>
+          <div class="step-label">Info Sesi</div>
+          <div class="step-subtitle">Tanggal & lokasi</div>
         </div>
       </div>
-
-      <!-- Step progress -->
-      <div class="pc-progress-wrap">
-        <div class="pc-steps">
-          <div class="pc-step-dot active" id="dot1">
-            <div class="pc-step-circle" id="circ1">1</div>
-            <div class="pc-step-label">Info Sesi</div>
-          </div>
-          <div class="pc-step-dot" id="dot2">
-            <div class="pc-step-circle" id="circ2">2</div>
-            <div class="pc-step-label">Coachee</div>
-          </div>
-          <div class="pc-step-dot" id="dot3">
-            <div class="pc-step-circle" id="circ3">3</div>
-            <div class="pc-step-label">Coaching</div>
-          </div>
-        </div>
-        <div class="pc-progress-bar-wrap">
-          <div class="pc-progress-bar" id="pcProgressBar" style="width:16%"></div>
+      <div class="step" data-step="2">
+        <div class="step-circle">2</div>
+        <div>
+          <div class="step-label">Coachee</div>
+          <div class="step-subtitle">Yang di-coaching</div>
         </div>
       </div>
+      <div class="step" data-step="3">
+        <div class="step-circle">3</div>
+        <div>
+          <div class="step-label">Coaching</div>
+          <div class="step-subtitle">Topik & komitmen</div>
+        </div>
+      </div>
+    </div>
 
-      <!-- ═══ STEP 1 — Info Sesi ═══ -->
+    <form id="pcForm" autocomplete="off">
+
+      <!-- ═══════════ STEP 1 ═══════════ -->
       <div id="pcStep1" class="form-step active">
+        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 1 dari 3 — Informasi Sesi</div>
 
-        <div class="pc-coach-card">
-          <div class="pc-coach-avatar" id="coachInitial">?</div>
-          <div style="flex:1;min-width:0">
-            <div class="pc-coach-name" id="coachName">-</div>
-            <div class="pc-coach-sub" id="coachSub">-</div>
+        <div class="sbo-section-title"><i class="fa-solid fa-user-tie"></i> Identitas Coach (kamu)</div>
+        <div id="coachCard" class="observer-card">
+          <div class="observer-avatar" id="coachInitial">?</div>
+          <div>
+            <div class="observer-info-name" id="coachName">Memuat...</div>
+            <div class="observer-info-sub" id="coachSub"></div>
           </div>
-          <div class="pc-coach-badge"><i class="fa-solid fa-user-tie"></i> Coach</div>
         </div>
+        <p style="font-size:.75rem;color:#94a3b8;margin-top:4px;margin-bottom:18px">
+          <i class="fa-solid fa-lock" style="margin-right:4px"></i>Data coach diambil otomatis dari akunmu dan tidak dapat diubah.
+        </p>
 
-        <div class="pc-section-title"><i class="fa-solid fa-calendar-days"></i> Informasi Sesi</div>
-        <div class="pc-grid">
+        <div class="sbo-section-title"><i class="fa-solid fa-calendar-days"></i> Informasi Sesi</div>
+        <div class="sbo-form-grid">
           <div class="form-group">
             <label>Tanggal PC <span class="required">*</span></label>
             <input type="date" id="tgl_pc" required />
@@ -246,34 +228,34 @@
         </div>
 
         <div id="pcErr1" class="pc-err"></div>
-        <div class="pc-btn-group">
-          <button type="button" class="btn-pc-primary" onclick="pcNext()">
+        <div class="sbo-button-group">
+          <div></div>
+          <button type="button" class="btn-primary-sbo" onclick="pcNext()">
             Selanjutnya <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
-      <!-- ═══ STEP 2 — Data Coachee ═══ -->
+      <!-- ═══════════ STEP 2 ═══════════ -->
       <div id="pcStep2" class="form-step">
+        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 2 dari 3 — Identitas Coachee</div>
 
-        <div class="pc-section-title"><i class="fa-solid fa-user"></i> Identitas Coachee</div>
-
-        <div class="form-group pc-search-wrap">
-          <label>Cari dari Data Karyawan
-            <small style="font-weight:400;color:#5eead4;text-transform:none"> (opsional)</small>
-          </label>
+        <div class="sbo-section-title"><i class="fa-solid fa-user"></i> Cari dari Data Karyawan</div>
+        <div class="form-group pic-search-wrap" style="margin-bottom:16px">
+          <label>Cari Nama atau NIK <small style="font-weight:400;color:#94a3b8">(opsional, untuk auto-isi)</small></label>
           <input type="text" id="coacheeSearch"
             placeholder="Ketik nama atau NIK coachee..."
             oninput="filterCoacheeDropdown()"
             autocomplete="off" />
-          <div id="coacheeDropdown" class="pc-dropdown"></div>
+          <div id="coacheeDropdown" class="pic-dropdown"></div>
         </div>
 
+        <div class="sbo-section-title"><i class="fa-solid fa-id-card"></i> Data Coachee</div>
         <div class="form-group">
           <label>Nama Coachee <span class="required">*</span></label>
           <input type="text" id="nama_coachee" placeholder="Nama lengkap" required />
         </div>
-        <div class="pc-grid">
+        <div class="sbo-form-grid">
           <div class="form-group">
             <label>Perusahaan <span class="required">*</span></label>
             <input type="text" id="perusahaan_coachee" required />
@@ -301,38 +283,34 @@
         <input type="hidden" id="nik_coachee" />
 
         <div id="pcErr2" class="pc-err"></div>
-        <div class="pc-btn-group">
-          <button type="button" class="btn-pc-secondary" onclick="pcPrev()">
+        <div class="sbo-button-group">
+          <button type="button" class="btn-secondary-sbo" onclick="pcPrev()">
             <i class="fa-solid fa-arrow-left"></i> Kembali
           </button>
-          <button type="button" class="btn-pc-primary" onclick="pcNext()">
+          <button type="button" class="btn-primary-sbo" onclick="pcNext()">
             Selanjutnya <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
-      <!-- ═══ STEP 3 — Isi Coaching ═══ -->
+      <!-- ═══════════ STEP 3 ═══════════ -->
       <div id="pcStep3" class="form-step">
+        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 3 dari 3 — Materi Coaching</div>
 
-        <div class="pc-section-title"><i class="fa-solid fa-comment-dots"></i> Materi Coaching</div>
-
-        <div class="form-group">
-          <label>Topik Coaching <span class="required">*</span></label>
-          <div class="topik-pills">
-            <label class="topik-pill" id="pill_pekerjaan" onclick="selectTopik('Pekerjaan')">
-              <input type="radio" name="topik" value="Pekerjaan" />
-              <span class="pill-icon">🏗️</span>
-              <span class="pill-label">Pekerjaan</span>
-            </label>
-            <label class="topik-pill" id="pill_pribadi" onclick="selectTopik('Pribadi')">
-              <input type="radio" name="topik" value="Pribadi" />
-              <span class="pill-icon">👤</span>
-              <span class="pill-label">Pribadi</span>
-            </label>
-          </div>
-          <input type="hidden" id="topik_coaching" />
+        <div class="sbo-section-title"><i class="fa-solid fa-comment-dots"></i> Topik Coaching</div>
+        <div class="topik-pills" style="margin-bottom:6px">
+          <label class="topik-pill" id="pill_pekerjaan" onclick="selectTopik('Pekerjaan')">
+            <span class="pill-icon">🏗️</span>
+            <span class="pill-label">Pekerjaan</span>
+          </label>
+          <label class="topik-pill" id="pill_pribadi" onclick="selectTopik('Pribadi')">
+            <span class="pill-icon">👤</span>
+            <span class="pill-label">Pribadi</span>
+          </label>
         </div>
+        <input type="hidden" id="topik_coaching" />
 
+        <div class="sbo-section-title" style="margin-top:22px"><i class="fa-solid fa-pen-to-square"></i> Detail Coaching</div>
         <div class="form-group">
           <label>Judul Coaching <span class="required">*</span></label>
           <input type="text" id="judul_coaching"
@@ -348,12 +326,14 @@
           <textarea id="komitmen_perbaikan" rows="3"
             placeholder="Apa yang dikomitmenkan coachee untuk diperbaiki..." required></textarea>
         </div>
-        <div class="form-group">
-          <label>Batas Waktu Komitmen <span class="required">*</span></label>
-          <input type="date" id="batas_waktu_pc" required />
+        <div class="sbo-form-grid">
+          <div class="form-group">
+            <label>Batas Waktu Komitmen <span class="required">*</span></label>
+            <input type="date" id="batas_waktu_pc" required />
+          </div>
         </div>
 
-        <div class="pc-section-title" style="margin-top:18px"><i class="fa-solid fa-camera"></i> Dokumentasi</div>
+        <div class="sbo-section-title"><i class="fa-solid fa-camera"></i> Dokumentasi</div>
         <div class="form-group">
           <label>Foto Sesi Coaching
             <small style="font-weight:400;color:#94a3b8"> (opsional, bisa lebih dari 1)</small>
@@ -363,33 +343,32 @@
         </div>
 
         <div id="pcErr3" class="pc-err"></div>
-        <div class="pc-btn-group">
-          <button type="button" class="btn-pc-secondary" onclick="pcPrev()">
+        <div class="sbo-button-group">
+          <button type="button" class="btn-secondary-sbo" onclick="pcPrev()">
             <i class="fa-solid fa-arrow-left"></i> Kembali
           </button>
-          <button type="button" class="btn-pc-primary" id="pcSubmitBtn" onclick="submitPcReport()">
+          <button type="button" class="btn-primary-sbo" id="pcSubmitBtn" onclick="submitPcReport()">
             <i class="fa-solid fa-paper-plane"></i> Kirim Personal Contact
           </button>
         </div>
       </div>
 
-    </div><!-- end pc-wrap -->
-
-    <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
-  </div>
-</div>
+    </form>
+  </div><!-- end card -->
+</div><!-- end container -->
 
 <!-- Modal Sukses -->
-<div class="pc-modal-overlay" id="pcSuccessModal">
-  <div class="pc-modal">
-    <div class="pc-modal-icon">🤝</div>
-    <div class="pc-modal-title">PC Berhasil Disimpan!</div>
-    <div class="pc-modal-msg" id="pcSuccessMsg">Notifikasi WA telah dikirim ke coachee.</div>
-    <button class="btn-pc-primary" style="width:100%;justify-content:center"
-      onclick="location.href='pc.html'">
+<div class="modal-overlay" id="pcSuccessModal" style="display:none">
+  <div class="modal" style="padding:36px 28px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:14px">🤝</div>
+    <div style="font-size:1.15rem;font-weight:800;color:#0f766e;margin-bottom:8px">PC Berhasil Disimpan!</div>
+    <div style="font-size:.88rem;color:#64748b;margin-bottom:22px;line-height:1.5" id="pcSuccessMsg">
+      Notifikasi WA telah dikirim ke coachee.
+    </div>
+    <a href="pc.html" class="btn-primary-sbo" style="width:100%;justify-content:center;text-decoration:none;display:flex">
       Lihat Semua PC <i class="fa-solid fa-arrow-right"></i>
-    </button>
-    <button class="btn-pc-secondary" style="width:100%;justify-content:center;margin-top:10px"
+    </a>
+    <button class="btn-secondary-sbo" style="width:100%;justify-content:center;margin-top:10px"
       onclick="location.reload()">
       <i class="fa-solid fa-plus"></i> Buat PC Baru
     </button>
@@ -399,10 +378,8 @@
 <div id="toast" class="toast"></div>
 
 <script src="auth.js"></script>
-<script src="layout.js"></script>
 <script src="push-notif.js"></script>
 <script src="reports-utils.js"></script>
-<script src="notifications.js"></script>
 <script src="offline-sync.js"></script>
 <script src="pc-form.js"></script>
 </body>

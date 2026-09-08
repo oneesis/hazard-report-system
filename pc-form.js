@@ -5,25 +5,24 @@ let pcStep = 1;
 let pcPhotos = [];
 let _pcMaster = [];
 
-// ── Step UI ─────────────────────────────────────────────────
-const PROGRESS_PCT = [16, 50, 100];
-
+// ── Step UI — same pattern as SBO ──────────────────────────────
 function updatePcStepUI() {
   for (let i = 1; i <= PC_STEPS; i++) {
     const el = document.getElementById(`pcStep${i}`);
     if (!el) continue;
-    el.classList.toggle('active', i === pcStep);
-    el.style.display = i === pcStep ? 'block' : 'none';
-    const dot  = document.getElementById(`dot${i}`);
-    const circ = document.getElementById(`circ${i}`);
-    if (!dot || !circ) continue;
-    dot.classList.remove('active','done');
-    if (i === pcStep)   { dot.classList.add('active'); circ.innerHTML = i; }
-    else if (i < pcStep){ dot.classList.add('done');   circ.innerHTML = '<i class="fa-solid fa-check" style="font-size:.7rem"></i>'; }
-    else                { circ.innerHTML = i; }
+    if (i === pcStep) {
+      el.classList.add('active');
+      el.style.display = 'block';
+    } else {
+      el.classList.remove('active');
+      el.style.display = 'none';
+    }
   }
-  const bar = document.getElementById('pcProgressBar');
-  if (bar) bar.style.width = PROGRESS_PCT[pcStep - 1] + '%';
+  document.querySelectorAll('#pcStepIndicator .step').forEach(el => {
+    const n = parseInt(el.dataset.step);
+    el.classList.toggle('active', n === pcStep);
+    el.classList.toggle('completed', n < pcStep);
+  });
 }
 
 // ── Topik pill ───────────────────────────────────────────────
@@ -93,7 +92,7 @@ function onPcFotoChange(input) {
   }))).then(results => {
     pcPhotos = results;
     if (preview) preview.innerHTML = results.map(d =>
-      `<img src="${d}" style="height:72px;border-radius:10px;border:1.5px solid #e2e8f0;object-fit:cover">`
+      `<img src="${d}">`
     ).join('');
   });
 }
@@ -118,12 +117,12 @@ function filterCoacheeDropdown() {
   if (!matches.length) { dd.style.display = 'none'; return; }
   dd.style.display = '';
   dd.innerHTML = matches.map(k => `
-    <div class="pc-dropdown-item" onclick='selectCoachee(${JSON.stringify(k)})'>
+    <div class="pic-dropdown-item" onclick='selectCoachee(${JSON.stringify(k)})'>
       <div>
         <div style="font-weight:600">${k['NAMA']||'-'}</div>
-        <div class="pc-dropdown-meta">${k['JABATAN']||''}</div>
+        <div class="pic-dropdown-meta">${k['JABATAN']||''}</div>
       </div>
-      <div class="pc-dropdown-meta" style="text-align:right">
+      <div class="pic-dropdown-meta" style="text-align:right">
         ${k['PERUSAHAAN']||''}<br>${k['DEPARTEMEN']||''}
       </div>
     </div>`).join('');
@@ -184,7 +183,7 @@ async function submitPcReport() {
 
     const msgEl = document.getElementById('pcSuccessMsg');
     if (msgEl) msgEl.textContent = json.message || `PC ${json.id} berhasil disimpan.`;
-    document.getElementById('pcSuccessModal').classList.add('show');
+    document.getElementById('pcSuccessModal').style.display = 'flex';
   } catch (e) {
     showStepErr(3, 'Gagal: ' + e.message);
     btn.disabled = false;
@@ -196,7 +195,7 @@ async function submitPcReport() {
 window.addEventListener('DOMContentLoaded', () => {
   requireLogin();
   renderUserProfile();
-  const user = getCurrentUser();
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   if (user) {
     const el = id => document.getElementById(id);
     if (el('coachInitial')) el('coachInitial').textContent = (user.nama || '?').charAt(0).toUpperCase();
