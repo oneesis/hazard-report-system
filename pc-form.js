@@ -194,7 +194,6 @@ async function submitPcReport() {
 // ── Init ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   requireLogin();
-  renderUserProfile();
   const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   if (user) {
     const el = id => document.getElementById(id);
