@@ -1112,7 +1112,7 @@ const PC_HEADERS = [
   'NAMA_COACH','NIK_COACH','JABATAN_COACH','DEPARTEMEN_COACH','PERUSAHAAN_COACH',
   'NAMA_COACHEE','NIK_COACHEE','JABATAN_COACHEE','DEPARTEMEN_COACHEE','PERUSAHAAN_COACHEE','SUBCONT_COACHEE','NO_WA_COACHEE',
   'TOPIK_COACHING','JUDUL_COACHING','DESKRIPSI_COACHING','KOMITMEN_PERBAIKAN','BATAS_WAKTU_PC',
-  'FOTO_PC','STATUS','FOTO_KOMITMEN','PESAN_KOMITMEN','TIMESTAMP_CLOSE','WA_COACHEE_STATUS',
+  'FOTO_PC','STATUS','FOTO_KOMITMEN','PESAN_KOMITMEN','TIMESTAMP_CLOSE','WA_PIC_STATUS',
 ];
 
 async function ensurePCSheet(sheets) {
@@ -1208,41 +1208,21 @@ async function getPCReports(sheets, auth) {
 }
 
 async function updatePCReport(sheets, data, auth) {
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'PC_Report' });
-  const rows = res.data.values || [];
-  if (rows.length < 2) throw new Error('Data PC tidak ditemukan.');
-  const headers = rows[0].map(normalizeHeader);
-  const idIdx = headers.indexOf('id');
-  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[idIdx] || '').trim() === String(data.id || '').trim());
-  if (rowIdx < 0) throw new Error(`PC ${data.id} tidak ditemukan.`);
-
   let fotoUrl = '';
   if (data.foto_komitmen)
     fotoUrl = await saveMultipleImagesToDrive(data.foto_komitmen, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, data.id + '-Komitmen');
 
-  const updates = {
-    status:           'CLOSED',
-    foto_komitmen:    fotoUrl,
-    pesan_komitmen:   data.pesan_komitmen || '',
-    timestamp_close:  new Date().toISOString(),
-  };
-
-  for (const [key, val] of Object.entries(updates)) {
-    const colIdx = headers.indexOf(key);
-    if (colIdx < 0) continue;
-    const col = String.fromCharCode(65 + colIdx);
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `PC_Report!${col}${rowIdx + 1}`,
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [[val]] }
-    });
-  }
+  // Gunakan updateWorkflowFields — handles kolom > Z dengan benar
+  const coachRow = await updateWorkflowFields(sheets, 'PC_Report', data.id, {
+    'STATUS':          'CLOSED',
+    'FOTO_KOMITMEN':   fotoUrl,
+    'PESAN_KOMITMEN':  data.pesan_komitmen || '',
+    'TIMESTAMP_CLOSE': new Date().toISOString(),
+  });
   invalidateCache('PC_Report');
 
-  // Notif ke coach bahwa coachee sudah konfirmasi
-  const coachRow = rows[rowIdx];
-  const nikCoach = String(coachRow[headers.indexOf('nik_coach')] || '').trim();
+  // Push notif ke coach
+  const nikCoach = String(coachRow?.nik_coach || '').trim();
   if (nikCoach) await sendPushToNik(sheets, nikCoach, {
     title: 'Coachee Telah Konfirmasi Komitmen ✅',
     body:  `Coachee untuk PC ${data.id} telah mengkonfirmasi komitmennya.`,

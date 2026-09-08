@@ -1,103 +1,110 @@
-// Personal Contact (PC) Form — ONE-SAP
-
+// Personal Contact Form — ONE-SAP
 const BASE_URL = '/api';
-const PC_TOTAL_STEPS = 3;
+const PC_STEPS = 3;
 let pcStep = 1;
-let pcSelectedPhotos = [];
-let _pcMasterKaryawan = [];
+let pcPhotos = [];
+let _pcMaster = [];
 
-// ── Step navigation ─────────────────────────────────────────
+// ── Step UI ─────────────────────────────────────────────────
+const PROGRESS_PCT = [16, 50, 100];
+
 function updatePcStepUI() {
-  for (let i = 1; i <= PC_TOTAL_STEPS; i++) {
+  for (let i = 1; i <= PC_STEPS; i++) {
     const el = document.getElementById(`pcStep${i}`);
     if (!el) continue;
-    if (i === pcStep) {
-      el.classList.add('active');
-      el.style.display = 'block';
-    } else {
-      el.classList.remove('active');
-      el.style.display = 'none';
-    }
+    el.classList.toggle('active', i === pcStep);
+    el.style.display = i === pcStep ? 'block' : 'none';
+    const dot  = document.getElementById(`dot${i}`);
+    const circ = document.getElementById(`circ${i}`);
+    if (!dot || !circ) continue;
+    dot.classList.remove('active','done');
+    if (i === pcStep)   { dot.classList.add('active'); circ.innerHTML = i; }
+    else if (i < pcStep){ dot.classList.add('done');   circ.innerHTML = '<i class="fa-solid fa-check" style="font-size:.7rem"></i>'; }
+    else                { circ.innerHTML = i; }
   }
-  document.querySelectorAll('#pcStepIndicator .step').forEach(el => {
-    const n = parseInt(el.dataset.step);
-    el.classList.toggle('active', n === pcStep);
-    el.classList.toggle('completed', n < pcStep);
+  const bar = document.getElementById('pcProgressBar');
+  if (bar) bar.style.width = PROGRESS_PCT[pcStep - 1] + '%';
+}
+
+// ── Topik pill ───────────────────────────────────────────────
+function selectTopik(val) {
+  document.getElementById('topik_coaching').value = val;
+  ['Pekerjaan','Pribadi'].forEach(t => {
+    document.getElementById(`pill_${t.toLowerCase()}`)?.classList.toggle('selected', t === val);
   });
 }
 
-function validatePcStep(step) {
-  const req = id => {
-    const el = document.getElementById(id);
-    return el && String(el.value || '').trim() !== '';
-  };
+// ── Validation ───────────────────────────────────────────────
+function showStepErr(step, msg) {
+  const el = document.getElementById(`pcErr${step}`);
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+  if (typeof showToast === 'function') showToast(msg, 'error');
+}
+function clearErr(step) {
+  const el = document.getElementById(`pcErr${step}`);
+  if (el) el.style.display = 'none';
+}
+function val(id) { return String(document.getElementById(id)?.value || '').trim(); }
+
+function validateStep(step) {
+  clearErr(step);
   if (step === 1) {
-    if (!req('tgl_pc'))    return showErr('Tanggal PC wajib diisi.'), false;
-    if (!req('lokasi_pc')) return showErr('Lokasi wajib diisi.'), false;
+    if (!val('tgl_pc'))    return showStepErr(1,'Tanggal PC wajib diisi.'), false;
+    if (!val('lokasi_pc')) return showStepErr(1,'Lokasi wajib diisi.'), false;
   }
   if (step === 2) {
-    if (!req('nama_coachee'))      return showErr('Nama Coachee wajib diisi.'), false;
-    if (!req('perusahaan_coachee')) return showErr('Perusahaan Coachee wajib diisi.'), false;
-    if (!req('jabatan_coachee'))    return showErr('Jabatan Coachee wajib diisi.'), false;
-    if (!req('departemen_coachee')) return showErr('Departemen Coachee wajib diisi.'), false;
-    if (!req('no_wa_coachee'))      return showErr('No WhatsApp Coachee wajib diisi.'), false;
+    if (!val('nama_coachee'))       return showStepErr(2,'Nama Coachee wajib diisi.'), false;
+    if (!val('perusahaan_coachee')) return showStepErr(2,'Perusahaan Coachee wajib diisi.'), false;
+    if (!val('jabatan_coachee'))    return showStepErr(2,'Jabatan Coachee wajib diisi.'), false;
+    if (!val('departemen_coachee')) return showStepErr(2,'Departemen Coachee wajib diisi.'), false;
+    if (!val('no_wa_coachee'))      return showStepErr(2,'No WhatsApp Coachee wajib diisi.'), false;
   }
   if (step === 3) {
-    if (!req('topik_coaching'))    return showErr('Topik Coaching wajib dipilih.'), false;
-    if (!req('judul_coaching'))    return showErr('Judul Coaching wajib diisi.'), false;
-    if (!req('deskripsi_coaching')) return showErr('Deskripsi Coaching wajib diisi.'), false;
-    if (!req('komitmen_perbaikan')) return showErr('Komitmen Perbaikan wajib diisi.'), false;
-    if (!req('batas_waktu_pc'))    return showErr('Batas Waktu Komitmen wajib diisi.'), false;
+    if (!val('topik_coaching'))    return showStepErr(3,'Topik Coaching wajib dipilih.'), false;
+    if (!val('judul_coaching'))    return showStepErr(3,'Judul Coaching wajib diisi.'), false;
+    if (!val('deskripsi_coaching')) return showStepErr(3,'Deskripsi Coaching wajib diisi.'), false;
+    if (!val('komitmen_perbaikan')) return showStepErr(3,'Komitmen Perbaikan wajib diisi.'), false;
+    if (!val('batas_waktu_pc'))    return showStepErr(3,'Batas Waktu Komitmen wajib diisi.'), false;
   }
   return true;
 }
 
-function showErr(msg) {
-  const el = document.getElementById('pcErrMsg');
-  if (el) { el.textContent = msg; el.style.display = 'block'; }
-  if (typeof showToast === 'function') showToast(msg, 'error');
-}
-
 function pcNext() {
-  const el = document.getElementById('pcErrMsg');
-  if (el) el.style.display = 'none';
-  if (!validatePcStep(pcStep)) return;
-  pcStep++;
+  if (!validateStep(pcStep)) return;
+  pcStep = Math.min(pcStep + 1, PC_STEPS);
   updatePcStepUI();
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
 function pcPrev() {
-  pcStep--;
+  pcStep = Math.max(pcStep - 1, 1);
   updatePcStepUI();
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Foto ────────────────────────────────────────────────────
+// ── Foto ─────────────────────────────────────────────────────
 function onPcFotoChange(input) {
   const preview = document.getElementById('pcFotoPreview');
-  pcSelectedPhotos = [];
+  pcPhotos = [];
   if (!input.files?.length) { if (preview) preview.innerHTML = ''; return; }
-  const reads = [...input.files].map(f => new Promise(res => {
+  Promise.all([...input.files].map(f => new Promise(res => {
     const fr = new FileReader();
     fr.onload = e => res(e.target.result);
     fr.readAsDataURL(f);
-  }));
-  Promise.all(reads).then(results => {
-    pcSelectedPhotos = results;
+  }))).then(results => {
+    pcPhotos = results;
     if (preview) preview.innerHTML = results.map(d =>
-      `<img src="${d}" style="height:64px;border-radius:8px;border:1.5px solid #e2e8f0;object-fit:cover">`
+      `<img src="${d}" style="height:72px;border-radius:10px;border:1.5px solid #e2e8f0;object-fit:cover">`
     ).join('');
   });
 }
 
 // ── Coachee autocomplete ─────────────────────────────────────
-async function loadPcMasterKaryawan() {
+async function loadPcMaster() {
   try {
     const res  = await fetch(`${BASE_URL}?action=masterKaryawan`);
     const json = await res.json();
-    _pcMasterKaryawan = Array.isArray(json) ? json : (json.data || []);
-  } catch { _pcMasterKaryawan = []; }
+    _pcMaster = Array.isArray(json) ? json : (json.data || []);
+  } catch { _pcMaster = []; }
 }
 
 function filterCoacheeDropdown() {
@@ -105,15 +112,20 @@ function filterCoacheeDropdown() {
   const dd = document.getElementById('coacheeDropdown');
   if (!dd) return;
   if (!q) { dd.style.display = 'none'; return; }
-  const matches = _pcMasterKaryawan.filter(k =>
-    String(k['NAMA'] || '').toLowerCase().includes(q) || String(k['NIK'] || '').includes(q)
+  const matches = _pcMaster.filter(k =>
+    String(k['NAMA']||'').toLowerCase().includes(q) || String(k['NIK']||'').includes(q)
   ).slice(0, 10);
   if (!matches.length) { dd.style.display = 'none'; return; }
   dd.style.display = '';
   dd.innerHTML = matches.map(k => `
-    <div onclick='selectCoachee(${JSON.stringify(k)})' style="padding:10px 14px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between">
-      <span>${k['NAMA'] || '-'}</span>
-      <span style="color:#94a3b8;font-size:.78rem">${k['PERUSAHAAN']||''} · ${k['DEPARTEMEN']||''}</span>
+    <div class="pc-dropdown-item" onclick='selectCoachee(${JSON.stringify(k)})'>
+      <div>
+        <div style="font-weight:600">${k['NAMA']||'-'}</div>
+        <div class="pc-dropdown-meta">${k['JABATAN']||''}</div>
+      </div>
+      <div class="pc-dropdown-meta" style="text-align:right">
+        ${k['PERUSAHAAN']||''}<br>${k['DEPARTEMEN']||''}
+      </div>
     </div>`).join('');
 }
 
@@ -127,83 +139,75 @@ function selectCoachee(k) {
   set('no_wa_coachee',      k['NO WHATSAPP'] || '');
   set('nik_coachee',        k['NIK'] || '');
   set('coacheeSearch',      k['NAMA']);
-  const dd = document.getElementById('coacheeDropdown');
-  if (dd) dd.style.display = 'none';
+  document.getElementById('coacheeDropdown').style.display = 'none';
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('#coacheeSearch') && !e.target.closest('#coacheeDropdown')) {
-    const dd = document.getElementById('coacheeDropdown');
-    if (dd) dd.style.display = 'none';
-  }
+  if (!e.target.closest('#coacheeSearch') && !e.target.closest('#coacheeDropdown'))
+    document.getElementById('coacheeDropdown')?.style && (document.getElementById('coacheeDropdown').style.display = 'none');
 });
 
-// ── Submit ───────────────────────────────────────────────────
+// ── Submit ────────────────────────────────────────────────────
 async function submitPcReport() {
-  const el = document.getElementById('pcErrMsg');
-  if (el) el.style.display = 'none';
-  if (!validatePcStep(3)) return;
-
+  if (!validateStep(3)) return;
   const btn = document.getElementById('pcSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
-  const val = id => String(document.getElementById(id)?.value || '').trim();
-
   try {
-    const body = {
-      action: 'submitPCReport',
-      tgl_pc:             val('tgl_pc'),
-      lokasi_pc:          val('lokasi_pc'),
-      nama_coachee:       val('nama_coachee'),
-      nik_coachee:        val('nik_coachee'),
-      perusahaan_coachee: val('perusahaan_coachee'),
-      subcont_coachee:    val('subcont_coachee'),
-      jabatan_coachee:    val('jabatan_coachee'),
-      departemen_coachee: val('departemen_coachee'),
-      no_wa_coachee:      val('no_wa_coachee'),
-      topik_coaching:     val('topik_coaching'),
-      judul_coaching:     val('judul_coaching'),
-      deskripsi_coaching: val('deskripsi_coaching'),
-      komitmen_perbaikan: val('komitmen_perbaikan'),
-      batas_waktu_pc:     val('batas_waktu_pc'),
-      foto_pc:            pcSelectedPhotos.length ? pcSelectedPhotos : null,
-    };
-
-    const res  = await fetch(BASE_URL, {
+    const res = await fetch(BASE_URL, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body:    JSON.stringify(body)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submitPCReport',
+        data: {
+          tgl_pc:             val('tgl_pc'),
+          lokasi_pc:          val('lokasi_pc'),
+          nama_coachee:       val('nama_coachee'),
+          nik_coachee:        val('nik_coachee'),
+          perusahaan_coachee: val('perusahaan_coachee'),
+          subcont_coachee:    val('subcont_coachee'),
+          jabatan_coachee:    val('jabatan_coachee'),
+          departemen_coachee: val('departemen_coachee'),
+          no_wa_coachee:      val('no_wa_coachee'),
+          topik_coaching:     val('topik_coaching'),
+          judul_coaching:     val('judul_coaching'),
+          deskripsi_coaching: val('deskripsi_coaching'),
+          komitmen_perbaikan: val('komitmen_perbaikan'),
+          batas_waktu_pc:     val('batas_waktu_pc'),
+          foto_pc:            pcPhotos.length ? pcPhotos : null,
+        }
+      }),
     });
     const json = await res.json();
     if (!res.ok || json.status === 'error') throw new Error(json.message || 'Gagal menyimpan.');
 
     const msgEl = document.getElementById('pcSuccessMsg');
     if (msgEl) msgEl.textContent = json.message || `PC ${json.id} berhasil disimpan.`;
-    document.getElementById('pcSuccessModal').style.display = 'flex';
+    document.getElementById('pcSuccessModal').classList.add('show');
   } catch (e) {
-    showErr('Gagal: ' + e.message);
+    showStepErr(3, 'Gagal: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim PC';
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Personal Contact';
   }
 }
 
-// ── Init ─────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   requireLogin();
+  renderUserProfile();
   const user = getCurrentUser();
   if (user) {
-    const init = document.getElementById('coachInitial');
-    if (init) init.textContent = (user.nama || '?').charAt(0).toUpperCase();
-    const name = document.getElementById('coachName');
-    if (name) name.textContent = user.nama || '-';
-    const sub  = document.getElementById('coachSub');
-    if (sub)  sub.textContent  = `${user.jabatan || ''} • ${user.departemen || ''} • ${user.perusahaan || ''}`;
+    const el = id => document.getElementById(id);
+    if (el('coachInitial')) el('coachInitial').textContent = (user.nama || '?').charAt(0).toUpperCase();
+    if (el('coachName'))    el('coachName').textContent    = user.nama || '-';
+    if (el('coachSub'))     el('coachSub').textContent     =
+      [user.jabatan, user.departemen, user.perusahaan].filter(Boolean).join(' • ');
   }
   const today = new Date().toISOString().slice(0, 10);
-  const tglEl = document.getElementById('tgl_pc');
-  if (tglEl) tglEl.value = today;
+  const tgl = document.getElementById('tgl_pc');
+  if (tgl) tgl.value = today;
 
-  loadPcMasterKaryawan();
   updatePcStepUI();
+  loadPcMaster();
 });
