@@ -433,10 +433,12 @@ if ("serviceWorker" in navigator) {
       .catch((err) => console.warn("Service Worker registration failed:", err));
   });
 
-  // Reload page when new service worker takes control (via skipWaiting)
+  // Reload page when new service worker takes control (via skipWaiting).
+  // JANGAN reload di login.html — SW controllerchange di login page menyebabkan
+  // reload loop: SW aktif → reload → iOS autofill re-fill → reload lagi → dst.
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!refreshing) {
+    if (!refreshing && !window.location.pathname.endsWith('login.html')) {
       refreshing = true;
       window.location.reload();
     }

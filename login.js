@@ -20,10 +20,16 @@ if (passwordToggle && passwordInput) {
 }
 
 if (loginForm) {
+  let _submitting = false; // guard double-submit (iOS autofill + tap tombol)
+
   loginForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+    if (_submitting) return;
+    _submitting = true;
 
-    const nik = document.getElementById("nik").value.trim();
+    // iOS autocorrect bisa mengubah NIK — strip semua selain digit
+    const rawNik = document.getElementById("nik").value.trim();
+    const nik = rawNik.replace(/\D/g, ''); // buang karakter non-angka
     const password = passwordInput ? passwordInput.value.trim() : "";
 
     errorMessage.textContent = "";
@@ -66,6 +72,7 @@ if (loginForm) {
         errorMessage.after(link);
       }
     } finally {
+      _submitting = false;
       btnLogin.disabled = false;
       btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Masuk</span>';
     }
