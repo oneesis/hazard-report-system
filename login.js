@@ -50,7 +50,7 @@ if (loginForm) {
 
       saveUserSession(result.user, result.token);
       if (result.force_change_password) {
-        sessionStorage.setItem('onesap_force_pw', '1');
+        _ssSet('onesap_force_pw', '1'); // _ssSet dari auth.js — aman di iOS private mode
       }
       window.location.href = "index-home.html";
     } catch (err) {

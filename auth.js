@@ -23,16 +23,36 @@ function installPwaApp() {
 }
 
 // ===== SESSION & TOKEN =====
+
+// ── Safe storage helpers — iOS Safari private mode throws SecurityError ──────
+// localStorage/sessionStorage throw on access in private mode; these wrappers
+// prevent the entire auth.js from crashing silently on iPhone private tabs.
+function _lsGet(k)   { try { return localStorage.getItem(k);   } catch { return null; } }
+function _lsSet(k,v) { try { localStorage.setItem(k, v);       } catch {} }
+function _lsRm(k)    { try { localStorage.removeItem(k);       } catch {} }
+function _ssGet(k)   { try { return sessionStorage.getItem(k); } catch { return null; } }
+function _ssSet(k,v) { try { sessionStorage.setItem(k, v);    } catch {} }
+function _ssRm(k)    { try { sessionStorage.removeItem(k);    } catch {} }
+
 function saveUserSession(user, token){
-  localStorage.setItem("hazard_user", JSON.stringify(user));
-  if (token) localStorage.setItem("hazard_token", token);
+  _lsSet("hazard_user", JSON.stringify(user));
+  if (token) _lsSet("hazard_token", token);
 }
-function getCurrentUser(){const d=localStorage.getItem("hazard_user");return d?JSON.parse(d):null;}
-function getAuthToken(){return localStorage.getItem("hazard_token") || "";}
+function getCurrentUser(){
+  const d = _lsGet("hazard_user");
+  try { return d ? JSON.parse(d) : null; } catch { return null; }
+}
+function getAuthToken(){ return _lsGet("hazard_token") || ""; }
 
 function isTokenExpired(token){
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const parts = token.split(".");
+    if (parts.length !== 3) return true;
+    // JWT menggunakan base64url (- dan _ gantikan + dan /).
+    // atob() hanya terima base64 standar → harus di-patch dulu.
+    // Ini penyebab token selalu dianggap expired di iOS Safari.
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(b64));
     return payload.exp && (payload.exp * 1000) < Date.now();
   } catch { return true; }
 }
@@ -40,15 +60,15 @@ function isTokenExpired(token){
 function requireLogin(){
   const token = getAuthToken();
   if (!getCurrentUser() || !token || isTokenExpired(token)) {
-    localStorage.removeItem("hazard_user");
-    localStorage.removeItem("hazard_token");
+    _lsRm("hazard_user");
+    _lsRm("hazard_token");
     window.location.href = "login.html";
   }
 }
 
 function logout(){
-  // #2 — Invalidasi token di server (fire-and-forget)
-  const token = localStorage.getItem('hazard_token');
+  // Invalidasi token di server (fire-and-forget)
+  const token = _lsGet('hazard_token');
   if (token) {
     fetch('/api', {
       method: 'POST',
@@ -56,8 +76,8 @@ function logout(){
       body: JSON.stringify({ action: 'logout' })
     }).catch(() => {});
   }
-  localStorage.removeItem("hazard_user");
-  localStorage.removeItem("hazard_token");
+  _lsRm("hazard_user");
+  _lsRm("hazard_token");
   window.location.href = "login.html";
 }
 
@@ -386,9 +406,9 @@ async function submitChangePassword() {
 
 // Force password change jika login dengan password lemah/default
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('onesap_force_pw')) {
+  if (_ssGet('onesap_force_pw')) {
     window.__onesapForcePw = true;
-    sessionStorage.removeItem('onesap_force_pw');
+    _ssRm('onesap_force_pw');
     const banner = document.createElement('div');
     banner.id = 'forcePwBanner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;' +
