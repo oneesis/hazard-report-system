@@ -430,7 +430,9 @@ body.inspection-form-page .card {
   transition: all .15s;
   user-select: none;
 }
-.topik-pill .pill-icon  { font-size: 1.5rem; display: block; margin-bottom: 6px; }
+.topik-pill .pill-icon  { font-size: 1.5rem; display: block; margin-bottom: 6px; line-height: 1; }
+.topik-pill .pill-icon svg { width: 24px; height: 24px; stroke: #78716c; display: block; }
+.topik-pill.selected .pill-icon svg { stroke: #00205B; }
 .topik-pill .pill-label { font-size: 13px; font-weight: 600; color: #78716c; display: block; }
 .topik-pill:hover { border-color: #d6d0ca; background: #f6f4f1; }
 .topik-pill.selected {
