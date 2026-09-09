@@ -2974,3 +2974,100 @@ td {
     padding: 14px 16px !important;
   }
 }
+
+/* ═══════════════════════════════════════════
+   UI/UX PRO MAX — Typography + Density v2
+   (Data-Dense Dashboard Style)
+   ═══════════════════════════════════════════ */
+
+/* Fira Sans for UI text, Fira Code for data numbers */
+body,
+.filter-bar,
+.chart-title,
+.kpi-title,
+th, td,
+.akpi-label,
+.aging-label,
+.leader-name,
+.dept-name {
+  font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+}
+
+/* Fira Code (monospaced, tabular) for numeric data */
+.kpi-value,
+.akpi-value,
+.aging-count,
+.leader-count,
+.dept-count,
+.drilldown-row-count,
+.drilldown-row-pct,
+.pagination-page,
+#agingCount0_7,
+#agingCount8_14,
+#agingCountOver14 {
+  font-family: 'Fira Code', 'Courier New', monospace;
+}
+
+/* Data table: compact row height per Data-Dense spec */
+#reportTable td {
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+}
+
+#reportTable th {
+  padding: 10px 14px !important;
+}
+
+/* KPI numbers: slightly smaller for 5-column grid */
+.kpi-grid .kpi-value {
+  font-size: 34px !important;
+  letter-spacing: -1px;
+}
+
+/* Akpi values: monospaced */
+.akpi-value {
+  letter-spacing: -.5px;
+}
+
+/* Tighten chart title spacing */
+.chart-title {
+  font-size: 12px !important;
+  letter-spacing: .06em;
+  margin-bottom: 14px !important;
+}
+
+/* Top lokasi bar: colored gradient */
+.top-lokasi-bar {
+  background: linear-gradient(90deg, #00205B, #307FE2) !important;
+}
+
+/* Cursor: pointer on all clickable elements */
+.range-chip,
+.akpi-overdue-card,
+.btn-primary,
+.btn-secondary,
+.btn-view,
+.btn-icon,
+.pagination-btn,
+.drilldown-close,
+th[data-sort] {
+  cursor: pointer;
+}
+
+/* Hover transition: 150ms (Pro Max standard) */
+.kpi-card,
+.chart-card,
+.akpi-card,
+.aging-tile {
+  transition: box-shadow 150ms ease, transform 150ms ease !important;
+}
+
+/* Hover: subtle lift */
+.kpi-card:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 24px rgba(0,32,91,.10) !important;
+}
+
+.chart-card:hover {
+  box-shadow: 0 6px 20px rgba(15,23,42,.08) !important;
+}
