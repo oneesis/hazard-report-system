@@ -182,7 +182,7 @@ function buildStep4() {
   if (!hasFinding) {
     content.innerHTML = `
       <div class="sbo-safe-alert"><i class="fa-solid fa-circle-check"></i>&nbsp; Semua poin dinilai Aman — tidak ada temuan yang perlu dilaporkan.</div>
-      <div class="sbo-section-title"><i class="fa-solid fa-pen"></i> Pernyataan</div>
+      <div class="form-section-label"><i class="fa-solid fa-pen"></i> Pernyataan</div>
       <div class="form-group">
         <label>Pernyataan Observer <span class="required">*</span></label>
         <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
@@ -193,8 +193,8 @@ function buildStep4() {
   content.innerHTML = `
     <div class="sbo-finding-alert"><i class="fa-solid fa-triangle-exclamation"></i>&nbsp; Terdapat poin Tidak Aman. Lengkapi data temuan dan PIC di bawah.</div>
 
-    <div class="sbo-section-title"><i class="fa-solid fa-magnifying-glass"></i> Detail Temuan</div>
-    <div class="sbo-form-grid">
+    <div class="form-section-label"><i class="fa-solid fa-magnifying-glass"></i> Detail Temuan</div>
+    <div class="form-grid-2">
       <div class="form-group">
         <label>Jenis Temuan <span class="required">*</span></label>
         <select id="jenis_temuan" required>
@@ -219,12 +219,12 @@ function buildStep4() {
       <div id="sboFotoPreview" class="foto-preview-wrap"></div>
     </div>
 
-    <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-clipboard-check"></i> Rencana Tindakan</div>
+    <div class="form-section-label" style="margin-top:20px"><i class="fa-solid fa-clipboard-check"></i> Rencana Tindakan</div>
     <div class="form-group">
       <label>Rencana Tindakan Perbaikan <span class="required">*</span></label>
       <textarea id="rencana_tindakan" rows="3" placeholder="Tindakan apa yang harus dilakukan PIC..." required></textarea>
     </div>
-    <div class="sbo-form-grid">
+    <div class="form-grid-2">
       <div class="form-group">
         <label>Referensi SOP Terkait <em style="font-weight:400">(opsional)</em></label>
         <input type="text" id="referensi_sop" placeholder="Nomor/nama SOP terkait" />
@@ -235,8 +235,8 @@ function buildStep4() {
       </div>
     </div>
 
-    <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-user-tie"></i> Data PIC</div>
-    <div class="sbo-form-grid">
+    <div class="form-section-label" style="margin-top:20px"><i class="fa-solid fa-user-tie"></i> Data PIC</div>
+    <div class="form-grid-2">
       <div class="form-group">
         <label>Perusahaan PIC <span class="required">*</span></label>
         <select id="perusahaan_pic" onchange="loadSboSubcontPic()" required>
@@ -256,7 +256,7 @@ function buildStep4() {
         <option value="">Pilih Nama PIC</option>
       </select>
     </div>
-    <div class="sbo-form-grid">
+    <div class="form-grid-2">
       <div class="form-group">
         <label>Jabatan PIC</label>
         <input type="text" id="jabatan_pic" readonly />
@@ -272,7 +272,7 @@ function buildStep4() {
     </div>
     <input type="hidden" id="nik_pic" />
 
-    <div class="sbo-section-title" style="margin-top:20px"><i class="fa-solid fa-pen"></i> Pernyataan</div>
+    <div class="form-section-label" style="margin-top:20px"><i class="fa-solid fa-pen"></i> Pernyataan</div>
     <div class="form-group">
       <label>Pernyataan Observer <span class="required">*</span></label>
       <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
@@ -566,7 +566,7 @@ async function submitSboForm() {
         ? `Laporan SBO ${json.id} berhasil disimpan. WA notifikasi dikirim ke PIC.`
         : `Laporan SBO ${json.id} berhasil disimpan. Observasi dinyatakan aman.`;
     }
-    document.getElementById('successModal').style.display = 'flex';
+    document.getElementById('successModal').classList.add('open');
   } catch (e) {
     showErr('Gagal: ' + e.message);
     btn.disabled = false;

@@ -7,165 +7,69 @@
 <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
 <link rel="stylesheet" href="tokens.css" />
 <link rel="stylesheet" href="style.css" />
-<link rel="stylesheet" href="layout.css" />
-<link rel="stylesheet" href="home.css" />
+<link rel="stylesheet" href="form.css" />
 <link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
-  /* ── Checklist Item ── */
-  .sbo-cat-title {
-    font-size: .75rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .07em; color: #6366f1; margin: 20px 0 8px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .sbo-cat-title::after { content:''; flex:1; height:1.5px; background:#e0e7ff; }
+/* ── SBO-specific: checklist & tindakan segera ── */
+.sbo-cat-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: #00205B; margin: 20px 0 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sbo-cat-title i { color: #F2A900; font-size: 12px; }
+.sbo-cat-title::after { content:''; flex:1; height:1px; background:#e8e4df; }
 
-  .sbo-checklist-item {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    padding: 10px 14px; border-radius: 10px; border: 1.5px solid #f1f5f9;
-    margin-bottom: 6px; background: #fafafa; gap: 10px;
-  }
-  .sbo-checklist-item.has-tidak { border-color: #fecaca; background: #fff5f5; }
-  .sbo-checklist-label { font-size: .85rem; color: #1e293b; flex: 1; padding-top: 2px; }
+.sbo-checklist-item {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 10px 14px; border-radius: 8px; border: 1px solid #e8e4df;
+  margin-bottom: 6px; background: #fafaf9; gap: 10px; transition: border-color .15s;
+}
+.sbo-checklist-item.has-tidak { border-color: #fca5a5; background: #fff5f5; }
+.sbo-checklist-label { font-size: 13.5px; color: #1c1917; flex: 1; padding-top: 2px; line-height: 1.4; }
 
-  .sbo-radio-group { display: flex; flex-direction: column; gap: 5px; min-width: 120px; }
-  @media (min-width: 520px) { .sbo-radio-group { flex-direction: row; gap: 6px; min-width: auto; } }
+.sbo-radio-group { display: flex; flex-direction: column; gap: 5px; min-width: 120px; }
+@media (min-width: 520px) { .sbo-radio-group { flex-direction: row; gap: 6px; min-width: auto; } }
 
-  .sbo-radio-label {
-    display: flex; align-items: center; gap: 5px; cursor: pointer;
-    font-size: .78rem; font-weight: 600; padding: 5px 10px;
-    border-radius: 8px; border: 1.5px solid #e2e8f0;
-    user-select: none; transition: all .15s; white-space: nowrap;
-  }
-  .sbo-radio-label input { display: none; }
-  .sbo-radio-label.checked-aman    { background: #dcfce7; color: #15803d; border-color: #86efac; }
-  .sbo-radio-label.checked-tidak   { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
-  .sbo-radio-label.checked-na      { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+.sbo-radio-label {
+  display: flex; align-items: center; gap: 5px; cursor: pointer;
+  font-size: 12px; font-weight: 600; padding: 5px 10px;
+  border-radius: 6px; border: 1px solid #e8e4df;
+  user-select: none; transition: all .15s; white-space: nowrap; color: #78716c;
+}
+.sbo-radio-label input { display: none; }
+.sbo-radio-label.checked-aman  { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.sbo-radio-label.checked-tidak { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+.sbo-radio-label.checked-na    { background: #f6f4f1; color: #78716c; border-color: #d6d0ca; }
 
-  /* ── Tindakan segera ── */
-  .sbo-segera-item {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-    border-radius: 10px; border: 1.5px solid #f1f5f9; margin-bottom: 6px;
-    background: #fafafa; cursor: pointer;
-  }
-  .sbo-segera-item input[type=checkbox] { width:18px; height:18px; accent-color:#6366f1; flex-shrink:0; cursor:pointer; }
-  .sbo-segera-item label { font-size:.85rem; color:#1e293b; cursor:pointer; }
+.sbo-segera-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border-radius: 8px; border: 1px solid #e8e4df; margin-bottom: 6px;
+  background: #fafaf9; cursor: pointer; transition: border-color .15s;
+}
+.sbo-segera-item:hover { border-color: #d6d0ca; }
+.sbo-segera-item input[type=checkbox] { width:17px; height:17px; accent-color:#00205B; flex-shrink:0; cursor:pointer; }
+.sbo-segera-item label { font-size:13.5px; color:#1c1917; cursor:pointer; line-height:1.4; }
 
-  /* ── Alerts ── */
-  .sbo-finding-alert {
-    background: #fee2e2; border: 1.5px solid #fca5a5; border-radius: 10px;
-    padding: 12px 16px; margin: 0 0 16px; color: #dc2626;
-    font-size: .85rem; font-weight: 600; display: flex; align-items: flex-start; gap: 8px;
-  }
-  .sbo-safe-alert {
-    background: #dcfce7; border: 1.5px solid #86efac; border-radius: 10px;
-    padding: 12px 16px; margin: 0 0 16px; color: #15803d;
-    font-size: .85rem; font-weight: 600; display: flex; align-items: flex-start; gap: 8px;
-  }
+.sbo-finding-alert {
+  background: #fff5f5; border: 1px solid #fca5a5; border-radius: 8px;
+  padding: 12px 16px; margin: 0 0 16px; color: #b91c1c;
+  font-size: 13px; font-weight: 600; display: flex; align-items: flex-start; gap: 8px;
+}
+.sbo-safe-alert {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;
+  padding: 12px 16px; margin: 0 0 16px; color: #15803d;
+  font-size: 13px; font-weight: 600; display: flex; align-items: flex-start; gap: 8px;
+}
 
-  /* ── Observer card (readonly) ── */
-  .observer-card {
-    background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px;
-    padding: 14px 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
-  }
-  .observer-avatar {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: linear-gradient(135deg,#6366f1,#4f46e5);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 1rem; flex-shrink: 0;
-  }
-  .observer-info-name { font-size: .9rem; font-weight: 700; color: #0f172a; }
-  .observer-info-sub { font-size: .78rem; color: #64748b; margin-top: 2px; }
-
-  /* ── Autocomplete dropdown ── */
-  .pic-search-wrap { position: relative; }
-  .pic-dropdown {
-    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-    border: 1.5px solid #e2e8f0; border-radius: 10px; max-height: 220px;
-    overflow-y: auto; background: #fff; z-index: 200;
-    box-shadow: 0 8px 24px rgba(0,0,0,.1);
-  }
-  .pic-dropdown-item {
-    padding: 10px 14px; cursor: pointer; font-size: .85rem;
-    border-bottom: 1px solid #f1f5f9; display: flex;
-    justify-content: space-between; align-items: center; gap: 8px;
-  }
-  .pic-dropdown-item:last-child { border-bottom: none; }
-  .pic-dropdown-item:hover { background: #f0f9ff; }
-  .pic-dropdown-meta { font-size: .75rem; color: #94a3b8; text-align: right; }
-
-  /* ── Foto preview ── */
-  .foto-preview-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .foto-preview-wrap img { height: 72px; width: 72px; object-fit: cover; border-radius: 8px; border: 1.5px solid #e2e8f0; }
-
-  /* ── Progress bar step info ── */
-  .sbo-step-progress {
-    background: #f0f9ff; border-radius: 8px; padding: 8px 14px;
-    font-size: .78rem; color: #0369a1; font-weight: 600; margin-bottom: 14px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .checklist-counter {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: .78rem; font-weight: 700; padding: 5px 10px;
-    border-radius: 8px; margin-bottom: 12px;
-  }
-  .checklist-counter.all-done { background: #dcfce7; color: #15803d; }
-  .checklist-counter.partial  { background: #fef9c3; color: #a16207; }
-
-  .btn-primary-sbo {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 22px; background: linear-gradient(135deg,#6366f1,#4f46e5);
-    color: #fff; border: none; border-radius: 10px;
-    font-size: .9rem; font-weight: 700; cursor: pointer;
-    transition: opacity .15s;
-  }
-  .btn-primary-sbo:hover { opacity: .9; }
-  .btn-primary-sbo:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-secondary-sbo {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 22px; background: #f1f5f9; color: #475569;
-    border: 1.5px solid #e2e8f0; border-radius: 10px;
-    font-size: .9rem; font-weight: 700; cursor: pointer;
-    transition: background .15s;
-  }
-  .btn-secondary-sbo:hover { background: #e2e8f0; }
-
-  .sbo-button-group {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; margin-top: 28px; padding-top: 20px;
-    border-top: 1.5px solid #f1f5f9;
-  }
-
-  .sbo-section-title {
-    font-size: .82rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .06em; color: #374151; margin: 22px 0 12px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .sbo-section-title i { color: #6366f1; }
-  .sbo-section-title:first-child { margin-top: 0; }
-
-  .sbo-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 520px) { .sbo-form-grid { grid-template-columns: 1fr; } }
-
-  .form-input-readonly {
-    background: #f8fafc; color: #64748b;
-    border: 1.5px solid #e2e8f0; border-radius: 8px;
-    padding: 10px 12px; font-size: .88rem; width: 100%;
-    box-sizing: border-box;
-  }
-
-  /* ── Success Modal Overlay ── */
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,.5);
-    z-index: 9000; display: flex; align-items: center; justify-content: center;
-    padding: 16px;
-  }
-  .modal {
-    background: #fff; border-radius: 18px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.2);
-    width: 100%;
-  }
+.checklist-counter {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; padding: 5px 12px;
+  border-radius: 20px; margin-bottom: 12px; border: 1px solid;
+}
+.checklist-counter.all-done { background: #f0fdf4; color: #15803d; border-color: #86efac; }
+.checklist-counter.partial  { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
 </style>
 </head>
 <body class="inspection-form-page">
@@ -174,55 +78,41 @@
 
     <div class="header-top">
       <a href="sbo.html" class="nav-home-btn">
-        <span class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 7l-5 5 5 5V7z"/></svg>
-        </span>
-        Kembali ke Daftar SBO
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M14 7l-5 5 5 5V7z"/></svg>
+        Daftar SBO
       </a>
     </div>
 
     <div class="header-logos">
       <img src="assets/Logo Hasnur.png" alt="Logo Hasnur" class="logo" />
-      <img src="assets/Nilai Inti - Indonesia.png" alt="Nilai Inti Indonesia" class="logo nilai-inti" />
+      <img src="assets/Nilai Inti - Indonesia.png" alt="Nilai Inti Indonesia" class="logo" />
     </div>
 
-    <h1 class="main-title">Form SBO</h1>
-    <p class="main-subtitle">Safe Behavior Observation — Observasi perilaku keselamatan kerja</p>
+    <h1 class="form-page-title">Form SBO</h1>
+    <p class="form-page-subtitle">Safe Behavior Observation — Observasi perilaku keselamatan kerja</p>
 
     <div id="alertError" class="alert-error" style="display:none">
-      <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>
+      <i class="fa-solid fa-triangle-exclamation"></i>
       <span id="alertErrorMsg">Masih ada field yang belum diisi.</span>
     </div>
 
-    <!-- Step Indicator -->
-    <div class="step-indicator" id="sboStepIndicator">
+    <!-- Step Indicator (4 steps) -->
+    <div class="step-indicator" id="sboStepIndicator" style="--steps:4">
       <div class="step active" data-step="1">
         <div class="step-circle">1</div>
-        <div>
-          <div class="step-label">Observasi</div>
-          <div class="step-subtitle">Tanggal & lokasi</div>
-        </div>
+        <div class="step-label">Observasi</div>
       </div>
       <div class="step" data-step="2">
         <div class="step-circle">2</div>
-        <div>
-          <div class="step-label">Observee</div>
-          <div class="step-subtitle">Yang diobservasi</div>
-        </div>
+        <div class="step-label">Observee</div>
       </div>
       <div class="step" data-step="3">
         <div class="step-circle">3</div>
-        <div>
-          <div class="step-label">Checklist</div>
-          <div class="step-subtitle">Penilaian perilaku</div>
-        </div>
+        <div class="step-label">Checklist</div>
       </div>
       <div class="step" data-step="4">
         <div class="step-circle">4</div>
-        <div>
-          <div class="step-label">Temuan</div>
-          <div class="step-subtitle">Jika ada Tidak Aman</div>
-        </div>
+        <div class="step-label">Temuan</div>
       </div>
     </div>
 
@@ -230,10 +120,10 @@
 
       <!-- ═══════════ STEP 1 ═══════════ -->
       <div id="sboStep1" class="form-step active">
-        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 1 dari 4 — Informasi Observasi</div>
+        <div class="step-progress-badge"><i class="fa-solid fa-circle-info"></i> Langkah 1 dari 4 — Informasi Observasi</div>
 
-        <div class="sbo-section-title"><i class="fa-solid fa-clipboard-list"></i> Detail Pekerjaan</div>
-        <div class="sbo-form-grid">
+        <div class="form-section-label"><i class="fa-solid fa-clipboard-list"></i> Detail Pekerjaan</div>
+        <div class="form-grid-2">
           <div class="form-group">
             <label>Tanggal Observasi <span class="required">*</span></label>
             <input type="date" id="tgl_observasi" required />
@@ -244,45 +134,45 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Nama / Jenis Pekerjaan yang Diobservasi <span class="required">*</span></label>
-          <input type="text" id="nama_pekerjaan" placeholder="Mis: Pengoperasian alat berat, Pengelasan, Loading" required />
+          <label>Nama / Jenis Pekerjaan <span class="required">*</span></label>
+          <input type="text" id="nama_pekerjaan" placeholder="Mis: Pengoperasian alat berat, Pengelasan" required />
         </div>
 
-        <div class="sbo-section-title" style="margin-top:24px"><i class="fa-solid fa-user-shield"></i> Identitas Observer (kamu)</div>
-        <div id="observerCard" class="observer-card">
-          <div class="observer-avatar" id="observerInitial">?</div>
+        <div class="form-section-label" style="margin-top:24px"><i class="fa-solid fa-user-shield"></i> Identitas Observer</div>
+        <div id="observerCard" class="identity-card">
+          <div class="identity-avatar" id="observerInitial">?</div>
           <div>
-            <div class="observer-info-name" id="observerName">Memuat...</div>
-            <div class="observer-info-sub" id="observerSub"></div>
+            <div class="identity-name" id="observerName">Memuat...</div>
+            <div class="identity-sub" id="observerSub"></div>
           </div>
         </div>
-        <p style="font-size:.75rem;color:#94a3b8;margin-top:4px">
-          <i class="fa-solid fa-lock" style="margin-right:4px"></i>Data observer diambil otomatis dari akunmu dan tidak dapat diubah.
+        <p class="identity-lock-note">
+          <i class="fa-solid fa-lock" style="font-size:10px"></i>
+          Data observer diambil otomatis dari akunmu dan tidak dapat diubah.
         </p>
 
-        <div class="sbo-button-group">
-          <div></div>
-          <button type="button" class="btn-primary-sbo" onclick="sboNext()">
+        <div class="form-nav">
+          <span class="spacer"></span>
+          <button type="button" class="btn-primary" onclick="sboNext()">
             Selanjutnya <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
       <!-- ═══════════ STEP 2 ═══════════ -->
-      <div id="sboStep2" class="form-step" style="display:none">
-        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 2 dari 4 — Data Observee (Orang yang Diobservasi)</div>
+      <div id="sboStep2" class="form-step">
+        <div class="step-progress-badge"><i class="fa-solid fa-circle-info"></i> Langkah 2 dari 4 — Data Observee</div>
 
-        <div class="sbo-section-title"><i class="fa-solid fa-user"></i> Identitas Observee</div>
-
-        <div class="sbo-form-grid">
+        <div class="form-section-label"><i class="fa-solid fa-user"></i> Identitas Observee</div>
+        <div class="form-grid-2">
           <div class="form-group">
-            <label>Perusahaan Observee <span class="required">*</span></label>
+            <label>Perusahaan <span class="required">*</span></label>
             <select id="perusahaan_observee" onchange="loadObserveeSubcont()" required>
               <option value="">Pilih Perusahaan</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Subcont <small style="font-weight:400;color:#94a3b8">(jika ada)</small></label>
+            <label>Subcont <small>(jika ada)</small></label>
             <select id="subcont_observee" onchange="loadObserveeNama()">
               <option value="">Semua / Tidak ada</option>
             </select>
@@ -294,65 +184,71 @@
             <option value="">— Pilih perusahaan dulu —</option>
           </select>
         </div>
-        <div class="sbo-form-grid">
+        <div class="form-grid-2">
           <div class="form-group">
             <label>Jabatan</label>
-            <input type="text" id="jabatan_observee" readonly placeholder="(otomatis terisi)" />
+            <input type="text" id="jabatan_observee" readonly placeholder="otomatis terisi" />
           </div>
           <div class="form-group">
             <label>Departemen</label>
-            <input type="text" id="departemen_observee" readonly placeholder="(otomatis terisi)" />
+            <input type="text" id="departemen_observee" readonly placeholder="otomatis terisi" />
           </div>
         </div>
         <input type="hidden" id="nik_observee" />
 
-        <div class="sbo-button-group">
-          <button type="button" class="btn-secondary-sbo" onclick="sboPrev()">
+        <div class="form-nav">
+          <button type="button" class="btn-secondary" onclick="sboPrev()">
             <i class="fa-solid fa-arrow-left"></i> Kembali
           </button>
-          <button type="button" class="btn-primary-sbo" onclick="sboNext()">
+          <button type="button" class="btn-primary" onclick="sboNext()">
             Selanjutnya <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
       <!-- ═══════════ STEP 3 ═══════════ -->
-      <div id="sboStep3" class="form-step" style="display:none">
-        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 3 dari 4 — Checklist Observasi</div>
+      <div id="sboStep3" class="form-step">
+        <div class="step-progress-badge"><i class="fa-solid fa-circle-info"></i> Langkah 3 dari 4 — Checklist Observasi</div>
 
-        <p style="font-size:.85rem;color:#475569;margin-bottom:14px;line-height:1.5">
-          Nilai setiap poin dengan <strong style="color:#15803d">✅ Aman</strong>, <strong style="color:#dc2626">❌ Tidak Aman</strong>, atau <strong style="color:#64748b">— N.A.</strong> (tidak berlaku untuk pekerjaan ini).
+        <p style="font-size:13.5px;color:#78716c;margin-bottom:14px;line-height:1.55">
+          Nilai setiap poin dengan <strong style="color:#15803d">✅ Aman</strong>,
+          <strong style="color:#dc2626">❌ Tidak Aman</strong>, atau
+          <strong style="color:#78716c">— N.A.</strong> (tidak berlaku).
         </p>
 
         <div id="sboChecklistCounter" class="checklist-counter partial">
-          <i class="fa-solid fa-list-check"></i> <span id="counterText">0 dari 0 poin dinilai</span>
+          <i class="fa-solid fa-list-check"></i>
+          <span id="counterText">0 dari 0 poin dinilai</span>
         </div>
 
-        <div class="sbo-cat-title" style="margin-top:16px"><i class="fa-solid fa-hand"></i> Tindakan Segera Observee</div>
-        <p style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">Centang tindakan yang dilakukan observee saat menyadari diobservasi (boleh kosong)</p>
+        <div class="sbo-cat-title" style="margin-top:16px">
+          <i class="fa-solid fa-hand"></i> Tindakan Segera Observee
+        </div>
+        <p style="font-size:12px;color:#a8a29e;margin-bottom:8px">
+          Centang tindakan yang dilakukan observee saat menyadari diobservasi (boleh kosong)
+        </p>
         <div id="sboTindakanSegera"></div>
-
         <div id="sboChecklistCategories"></div>
 
-        <div class="sbo-button-group">
-          <button type="button" class="btn-secondary-sbo" onclick="sboPrev()">
+        <div class="form-nav">
+          <button type="button" class="btn-secondary" onclick="sboPrev()">
             <i class="fa-solid fa-arrow-left"></i> Kembali
           </button>
-          <button type="button" class="btn-primary-sbo" onclick="sboNext()">
+          <button type="button" class="btn-primary" onclick="sboNext()">
             Selanjutnya <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
       <!-- ═══════════ STEP 4 ═══════════ -->
-      <div id="sboStep4" class="form-step" style="display:none">
-        <div class="sbo-step-progress"><i class="fa-solid fa-circle-info"></i> Langkah 4 dari 4 — Temuan & Pernyataan</div>
+      <div id="sboStep4" class="form-step">
+        <div class="step-progress-badge"><i class="fa-solid fa-circle-info"></i> Langkah 4 dari 4 — Temuan & Pernyataan</div>
         <div id="sboStep4Content"></div>
-        <div class="sbo-button-group">
-          <button type="button" class="btn-secondary-sbo" onclick="sboPrev()">
+        <div class="form-nav">
+          <button type="button" class="btn-secondary" onclick="sboPrev()">
             <i class="fa-solid fa-arrow-left"></i> Kembali
           </button>
-          <button type="button" id="sboSubmitBtn" class="btn-primary-sbo" onclick="submitSboForm()">
+          <button type="button" id="sboSubmitBtn" class="btn-primary" onclick="submitSboForm()">
             <i class="fa-solid fa-paper-plane"></i> Kirim Laporan SBO
           </button>
         </div>
@@ -363,21 +259,23 @@
 </div>
 
 <!-- Success Modal -->
-<div id="successModal" class="modal-overlay" style="display:none">
-  <div class="modal" style="text-align:center;padding:32px 24px;max-width:440px">
-    <div style="font-size:3.5rem;margin-bottom:16px">✅</div>
-    <h2 style="margin-bottom:8px;color:#0f172a">Laporan Berhasil Dikirim!</h2>
-    <p style="color:#64748b;margin-bottom:24px" id="successModalMsg">Laporan SBO berhasil disimpan.</p>
+<div id="successModal" class="form-success-modal">
+  <div class="form-success-box">
+    <div class="form-success-icon"><i class="fa-solid fa-check"></i></div>
+    <div class="form-success-title">Laporan Berhasil Dikirim!</div>
+    <p class="form-success-msg" id="successModalMsg">Laporan SBO berhasil disimpan.</p>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <a href="sbo-form.html" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;background:#f1f5f9;color:#475569;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.9rem;font-weight:700;text-decoration:none">
+      <a href="sbo-form.html" class="btn-secondary" style="justify-content:center;text-decoration:none">
         <i class="fa-solid fa-plus"></i> Buat Observasi Lagi
       </a>
-      <a href="sbo.html" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;text-decoration:none">
+      <a href="sbo.html" class="btn-primary" style="justify-content:center;text-decoration:none">
         <i class="fa-solid fa-list"></i> Lihat Daftar Laporan
       </a>
     </div>
   </div>
 </div>
+
+<div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script src="auth.js"></script>

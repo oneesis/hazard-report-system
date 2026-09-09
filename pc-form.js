@@ -36,7 +36,7 @@ function selectTopik(val) {
 // ── Validation ───────────────────────────────────────────────
 function showStepErr(step, msg) {
   const el = document.getElementById(`pcErr${step}`);
-  if (el) { el.textContent = msg; el.style.display = 'block'; }
+  if (el) { el.textContent = msg; el.style.display = 'flex'; }
   if (typeof showToast === 'function') showToast(msg, 'error');
 }
 function clearErr(step) {
@@ -205,7 +205,7 @@ async function submitPcReport() {
 
     const msgEl = document.getElementById('pcSuccessMsg');
     if (msgEl) msgEl.textContent = json.message || `PC ${json.id} berhasil disimpan.`;
-    document.getElementById('pcSuccessModal').style.display = 'flex';
+    document.getElementById('pcSuccessModal').classList.add('open');
   } catch (e) {
     showStepErr(3, 'Gagal: ' + e.message);
     btn.disabled = false;
