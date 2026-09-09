@@ -2494,18 +2494,18 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 
 .drilldown-row {
   display: grid;
-  grid-template-columns: 160px 1fr 36px 44px;
+  grid-template-columns: minmax(180px, 38%) 1fr 36px 44px;
   align-items: center;
   gap: 10px;
+  row-gap: 6px;
 }
 
 .drilldown-row-label {
   font-size: .78rem;
   font-weight: 600;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  /* allow wrapping — no more truncation */
 }
 
 .drilldown-row-bar-wrap {
