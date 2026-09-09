@@ -2494,7 +2494,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 
 .drilldown-row {
   display: grid;
-  grid-template-columns: minmax(180px, 38%) 1fr 36px 44px;
+  grid-template-columns: minmax(220px, 58%) 1fr 36px 44px;
   align-items: center;
   gap: 10px;
   row-gap: 6px;
@@ -2504,8 +2504,9 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
   font-size: .78rem;
   font-weight: 600;
   color: var(--color-text);
-  line-height: 1.35;
-  /* allow wrapping — no more truncation */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .drilldown-row-bar-wrap {
