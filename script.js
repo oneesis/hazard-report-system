@@ -949,7 +949,7 @@ function showStep(stepNumber) {
     requestAnimationFrame(resizeSignaturePad);
   }
 
-  document.querySelectorAll(".step-progress .step").forEach(step => {
+  document.querySelectorAll(".step-indicator .step").forEach(step => {
     const value = Number(step.dataset.step);
     step.classList.remove("active", "completed");
     if (value < stepNumber) step.classList.add("completed");

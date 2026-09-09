@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="tokens.css" />
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="home.css" />
+<link rel="stylesheet" href="form.css" />
 <link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
@@ -38,41 +39,26 @@
     <div id="alertError" class="alert-error" style="display:none;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Masih ada field yang belum diisi. Lihat highlight merah di bawah.</div>
     <div id="autoSaveIndicator" class="auto-save-indicator">Draft tersimpan</div>
 
-    <div class="step-indicator" id="inspectionStepIndicator">
+    <div class="step-indicator" id="inspectionStepIndicator" style="--steps:5">
       <div class="step active" data-step="1">
         <div class="step-circle">1</div>
-        <div>
-          <div class="step-label">Data Pelapor</div>
-          <div class="step-subtitle">Isi data pelapor sebelum lanjut</div>
-        </div>
+        <div class="step-label">Pelapor</div>
       </div>
       <div class="step" data-step="2">
         <div class="step-circle">2</div>
-        <div>
-          <div class="step-label">Detail Inspeksi</div>
-          <div class="step-subtitle">Atur tanggal, shift, dan lokasi</div>
-        </div>
+        <div class="step-label">Inspeksi</div>
       </div>
       <div class="step" data-step="3">
         <div class="step-circle">3</div>
-        <div>
-          <div class="step-label">Temuan</div>
-          <div class="step-subtitle">Jelaskan temuan dan dokumentasi</div>
-        </div>
+        <div class="step-label">Temuan</div>
       </div>
       <div class="step" data-step="4">
         <div class="step-circle">4</div>
-        <div>
-          <div class="step-label">Data PIC</div>
-          <div class="step-subtitle">Lengkapi PIC dan batas waktu</div>
-        </div>
+        <div class="step-label">Data PIC</div>
       </div>
       <div class="step" data-step="5">
         <div class="step-circle">5</div>
-        <div>
-          <div class="step-label">Pernyataan</div>
-          <div class="step-subtitle">Konfirmasi dan tanda tangan</div>
-        </div>
+        <div class="step-label">Pernyataan</div>
       </div>
     </div>
     <div id="inspectionStepSummary" class="step-summary"></div>
