@@ -106,19 +106,27 @@ body.inspection-form-page .card {
 }
 
 /* ── Step indicator ──────────────────────────────────────── */
+/*
+ * style.css has conflicting .step-indicator rules that add pill backgrounds
+ * to active steps. These rules cancel them — form.css loads after style.css
+ * so equal-specificity rules here win.
+ */
 .step-indicator {
-  display: grid;
+  display: grid !important; /* cancel style.css flex for inspection-form-page */
   grid-template-columns: repeat(var(--steps, 4), 1fr);
   gap: 0;
   margin-bottom: 28px;
   position: relative;
+  overflow: visible !important;
+  scroll-snap-type: none !important;
+  padding: 0 !important;
 }
 
 /* progress line behind dots */
 .step-indicator::before {
   content: '';
   position: absolute;
-  top: 14px;
+  top: 16px; /* half of 32px circle */
   left: calc(100% / var(--steps, 4) / 2);
   right: calc(100% / var(--steps, 4) / 2);
   height: 2px;
@@ -126,62 +134,84 @@ body.inspection-form-page .card {
   z-index: 0;
 }
 
+/* Cancel style.css pill/tab behaviour on all steps */
+.step-indicator .step,
+.step-indicator .step.active,
+.step-indicator .step.completed {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
 .step-indicator .step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   gap: 8px;
   position: relative;
   z-index: 1;
   padding: 0 4px;
   cursor: default;
+  /* Cancel inspection-form-page mobile min-width */
+  flex: auto !important;
+  min-width: 0 !important;
 }
 
 .step-indicator .step .step-circle {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 2px solid #e8e4df;
-  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  background: #f8fafc !important; /* cancel dark backgrounds */
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #a8a29e;
+  color: #94a3b8;
   transition: all .2s;
   position: relative;
+  box-shadow: none !important;
 }
 
 .step-indicator .step.active .step-circle {
-  border-color: #00205B;
-  background: #00205B;
-  color: #ffffff;
-  box-shadow: 0 0 0 4px rgba(0,32,91,.1);
+  border-color: #00205B !important;
+  background: #00205B !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(0,32,91,.12) !important;
 }
 
 .step-indicator .step.completed .step-circle {
-  border-color: #F2A900;
-  background: #F2A900;
-  color: #00205B;
+  border-color: #F2A900 !important;
+  background: #F2A900 !important;
+  color: #00205B !important;
 }
 
 .step-indicator .step .step-label {
   font-size: 11px;
   font-weight: 600;
-  color: #a8a29e;
+  color: #94a3b8 !important; /* cancel style.css overrides */
   text-align: center;
   letter-spacing: .02em;
   line-height: 1.3;
   transition: color .2s;
 }
 
-.step-indicator .step.active .step-label { color: #00205B; }
-.step-indicator .step.completed .step-label { color: #78716c; }
+.step-indicator .step.active .step-label   { color: #00205B !important; font-weight: 700 !important; }
+.step-indicator .step.completed .step-label { color: #78716c !important; }
 
-/* subtitle bawah label — hide di mobile untuk hemat ruang */
-.step-indicator .step .step-subtitle {
-  display: none;
+/* hide subtitle on all viewports */
+.step-indicator .step .step-subtitle { display: none !important; }
+
+/* ── Mobile: smaller label text, keep all steps visible ─── */
+@media (max-width: 480px) {
+  .step-indicator { margin-bottom: 20px; }
+  .step-indicator .step .step-circle { width: 28px; height: 28px; font-size: 11px; }
+  .step-indicator .step .step-label  { font-size: 9.5px; letter-spacing: 0; }
+  .step-indicator::before,
+  .step-indicator::after { top: 14px; }
 }
 
 /* ── Step progress badge ─────────────────────────────────── */
