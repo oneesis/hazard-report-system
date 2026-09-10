@@ -1266,6 +1266,67 @@ async function ensureSBOSheet(sheets) {
   } catch (err) { console.error('ensureSBOSheet error:', err?.message || err); }
 }
 
+// ── SBO Draft helpers (per-NIK, sheet: SBO_Drafts) ─────────────
+const SBO_DRAFT_SHEET  = 'SBO_Drafts';
+const SBO_DRAFT_HDRS   = ['NIK', 'DRAFT', 'UPDATED_AT'];
+
+async function _readSBODraftRows(sheets) {
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: SBO_DRAFT_SHEET });
+    return res.data.values || [];
+  } catch { return []; }
+}
+
+async function saveSBODraftForUser(sheets, nik, draftJson) {
+  const rows = await _readSBODraftRows(sheets);
+  const now  = new Date().toISOString();
+  if (!rows.length) {
+    // Sheet baru / kosong — tulis header + baris pertama
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID, range: SBO_DRAFT_SHEET, valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [SBO_DRAFT_HDRS, [nik, draftJson, now]] },
+    }).catch(() => {}); // sheet belum ada = silent fail, localStorage tetap jadi backup
+    return;
+  }
+  const nikCol   = rows[0].indexOf('NIK');
+  const rowIdx   = rows.findIndex((r, i) => i > 0 && (r[nikCol] || '') === nik);
+  if (rowIdx === -1) {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID, range: SBO_DRAFT_SHEET, valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [[nik, draftJson, now]] },
+    }).catch(() => {});
+  } else {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID, range: `${SBO_DRAFT_SHEET}!A${rowIdx + 1}:C${rowIdx + 1}`,
+      valueInputOption: 'USER_ENTERED', requestBody: { values: [[nik, draftJson, now]] },
+    }).catch(() => {});
+  }
+}
+
+async function getSBODraftForUser(sheets, nik) {
+  const rows = await _readSBODraftRows(sheets);
+  if (rows.length < 2) return null;
+  const nikCol   = rows[0].indexOf('NIK');
+  const draftCol = rows[0].indexOf('DRAFT');
+  const tsCol    = rows[0].indexOf('UPDATED_AT');
+  const row = rows.find((r, i) => i > 0 && (r[nikCol] || '') === nik);
+  if (!row || !row[draftCol]) return null;
+  try { return { draft: JSON.parse(row[draftCol]), ts: row[tsCol] || '' }; } catch { return null; }
+}
+
+async function clearSBODraftForUser(sheets, nik) {
+  const rows = await _readSBODraftRows(sheets);
+  if (rows.length < 2) return;
+  const nikCol = rows[0].indexOf('NIK');
+  const rowIdx = rows.findIndex((r, i) => i > 0 && (r[nikCol] || '') === nik);
+  if (rowIdx !== -1) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID, range: `${SBO_DRAFT_SHEET}!A${rowIdx + 1}:C${rowIdx + 1}`,
+      valueInputOption: 'USER_ENTERED', requestBody: { values: [['', '', '']] },
+    }).catch(() => {});
+  }
+}
+
 async function submitSBOReport(sheets, data) {
   await ensureSBOSheet(sheets);
   const id = 'SBO-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
@@ -1693,6 +1754,20 @@ module.exports = async (req, res) => {
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         case 'getSBOReports':       result = await getSBOReports(sheets, auth); break;
+        case 'saveSBODraft': {
+          const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
+          await saveSBODraftForUser(sheets, auth2.nik, JSON.stringify(data.draft || {}));
+          result = { status: 'success' }; break;
+        }
+        case 'getSBODraft': {
+          const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
+          result = await getSBODraftForUser(sheets, auth2.nik) || { draft: null }; break;
+        }
+        case 'clearSBODraft': {
+          const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
+          await clearSBODraftForUser(sheets, auth2.nik);
+          result = { status: 'success' }; break;
+        }
         case 'getPCReports':        result = await getPCReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;

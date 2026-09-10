@@ -626,8 +626,8 @@ async function submitSboForm() {
   }
 }
 
-// ── Draft auto-save (localStorage) ────────────────────────────────
-const SBO_DRAFT_KEY = 'sbo_form_draft';
+// ── Draft auto-save (localStorage + server sync) ──────────────────
+let SBO_DRAFT_KEY = 'sbo_form_draft'; // akan diset dengan NIK setelah login
 
 function _collectDraft() {
   const fields = {};
@@ -644,46 +644,85 @@ function _collectDraft() {
   return { step: sboStep, ts: Date.now(), fields, checklist, tindakan };
 }
 
-let _draftTimer;
+let _draftTimer, _serverSaveTimer;
+
 function scheduleSaveDraft() {
   clearTimeout(_draftTimer);
   _draftTimer = setTimeout(() => {
-    try { localStorage.setItem(SBO_DRAFT_KEY, JSON.stringify(_collectDraft())); } catch (e) {}
+    const d = _collectDraft();
+    try { localStorage.setItem(SBO_DRAFT_KEY, JSON.stringify(d)); } catch (e) {}
+    // Sync ke server juga (throttle lebih lambat — 4 detik)
+    clearTimeout(_serverSaveTimer);
+    _serverSaveTimer = setTimeout(() => _saveToServer(d), 4000);
   }, 800);
 }
 
-function clearDraft() { try { localStorage.removeItem(SBO_DRAFT_KEY); } catch (e) {} }
+async function _saveToServer(draft) {
+  try {
+    await fetch(BASE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveSBODraft', data: { draft } }),
+    });
+  } catch (e) {} // silent — localStorage tetap jadi backup
+}
 
-function loadAndRestoreDraft() {
+function clearDraft() {
+  try { localStorage.removeItem(SBO_DRAFT_KEY); } catch (e) {}
+  // Hapus dari server juga (best-effort)
+  fetch(BASE_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'clearSBODraft', data: {} }),
+  }).catch(() => {});
+}
+
+function _showDraftBanner(draft) {
+  if (!draft?.ts) return;
+  const ageMin = Math.round((Date.now() - (typeof draft.ts === 'number' ? draft.ts : new Date(draft.ts).getTime())) / 60000);
+  const ageStr = ageMin < 1 ? 'baru saja'
+    : ageMin < 60 ? `${ageMin} menit lalu`
+    : `${Math.round(ageMin / 60)} jam lalu`;
+
+  const banner = document.createElement('div');
+  banner.id = 'sboDraftBanner';
+  banner.style.cssText = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
+  banner.innerHTML = `
+    <i class="fa-solid fa-clock-rotate-left" style="color:#d97706;font-size:1.1rem;flex-shrink:0"></i>
+    <span style="font-size:.88rem;color:#78350f;font-weight:500;flex:1">Ada draft tersimpan dari <strong>${ageStr}</strong>. Lanjutkan mengisi?</span>
+    <button onclick="applyDraft()" style="padding:7px 14px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer">
+      <i class="fa-solid fa-rotate-left"></i> Lanjutkan Draft
+    </button>
+    <button onclick="discardDraft()" style="padding:7px 14px;background:transparent;color:#92400e;border:1.5px solid #fbbf24;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer">
+      Mulai Baru
+    </button>`;
+  const anchor = document.querySelector('.step-progress, .form-card, .step-card, form') || document.body;
+  anchor.parentNode?.insertBefore(banner, anchor) || document.body.prepend(banner);
+  window._sboDraft = draft;
+}
+
+async function loadAndRestoreDraft() {
+  // 1. Cek localStorage dulu (instan, offline-first)
+  let localDraft = null;
   try {
     const raw = localStorage.getItem(SBO_DRAFT_KEY);
-    if (!raw) return;
-    const draft = JSON.parse(raw);
-    if (!draft?.ts) return;
-
-    const ageMin = Math.round((Date.now() - draft.ts) / 60000);
-    const ageStr = ageMin < 1 ? 'baru saja'
-      : ageMin < 60 ? `${ageMin} menit lalu`
-      : `${Math.round(ageMin / 60)} jam lalu`;
-
-    const banner = document.createElement('div');
-    banner.id = 'sboDraftBanner';
-    banner.style.cssText = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
-    banner.innerHTML = `
-      <i class="fa-solid fa-clock-rotate-left" style="color:#d97706;font-size:1.1rem;flex-shrink:0"></i>
-      <span style="font-size:.88rem;color:#78350f;font-weight:500;flex:1">Ada draft tersimpan dari <strong>${ageStr}</strong>. Lanjutkan mengisi?</span>
-      <button onclick="applyDraft()" style="padding:7px 14px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer">
-        <i class="fa-solid fa-rotate-left"></i> Lanjutkan Draft
-      </button>
-      <button onclick="discardDraft()" style="padding:7px 14px;background:transparent;color:#92400e;border:1.5px solid #fbbf24;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer">
-        Mulai Baru
-      </button>`;
-
-    // Sisipkan sebelum kartu pertama
-    const anchor = document.querySelector('.step-progress, .form-card, .step-card, form') || document.body;
-    anchor.parentNode?.insertBefore(banner, anchor) || document.body.prepend(banner);
-    window._sboDraft = draft;
+    if (raw) localDraft = JSON.parse(raw);
   } catch (e) {}
+
+  // 2. Fetch dari server (cross-device sync)
+  let serverDraft = null;
+  try {
+    const res  = await fetch(`${BASE_URL}?action=getSBODraft`);
+    const json = await res.json();
+    if (json.draft?.ts) serverDraft = json.draft;
+    // juga normalisasi ts server (ISO string) ke number
+    if (serverDraft && typeof serverDraft.ts === 'string')
+      serverDraft.ts = new Date(serverDraft.ts).getTime();
+  } catch (e) {}
+
+  // 3. Pakai yang lebih baru
+  const localTs  = localDraft?.ts  || 0;
+  const serverTs = serverDraft?.ts || 0;
+  const best = serverTs >= localTs ? serverDraft : localDraft;
+  if (best) _showDraftBanner(best);
 }
 
 function applyDraft() {
@@ -736,6 +775,8 @@ function discardDraft() {
 window.addEventListener('DOMContentLoaded', () => {
   requireLogin();
   const user = getCurrentUser();
+  // Draft key per-akun agar tidak bercampur antar user di device sama
+  SBO_DRAFT_KEY = `sbo_form_draft_${user?.nik || user?.nama || 'guest'}`;
   if (user) {
     // Populate observer card
     const initEl = document.getElementById('observerInitial');
@@ -756,8 +797,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // Muat master karyawan — tersedia untuk Step 2 (observee) dan Step 4 (PIC)
   loadMasterForPic().then(loadObserveePerusahaan);
 
-  // Draft: cek dan tawarkan restore
-  loadAndRestoreDraft();
+  // Draft: cek localStorage + server, tawarkan restore
+  loadAndRestoreDraft(); // async, banner muncul setelah fetch selesai
   // Auto-save tiap ada perubahan input
   document.addEventListener('input',  scheduleSaveDraft);
   document.addEventListener('change', scheduleSaveDraft);
