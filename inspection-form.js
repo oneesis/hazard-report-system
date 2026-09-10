@@ -1102,7 +1102,13 @@ function resetNamaPicDropdown() {
 function getInspectionDraftKey() {
   const params = getQueryParams();
   const type = (params.type || "").toUpperCase();
-  return `inspection_draft_${type}`;
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  return `inspection_draft_${type}_${user?.nik || user?.nama || 'guest'}`;
+}
+
+function _inspectionFormType() {
+  const params = getQueryParams();
+  return 'Inspection_' + (params.type || 'UNKNOWN').toUpperCase();
 }
 
 function saveInspectionDraft() {
@@ -1148,9 +1154,12 @@ function saveInspectionDraft() {
   // Meta info
   data._currentStep = currentStep;
   data._savedAt = new Date().toISOString();
-  
+  data._ts = Date.now();
+
   localStorage.setItem(key, JSON.stringify(data));
   showInspectionAutoSaveIndicator();
+  // Sync ke server (cross-device)
+  if (typeof _draftSaveToServer === 'function') _draftSaveToServer(_inspectionFormType(), data);
 }
 
 function loadInspectionDraft() {
@@ -1230,6 +1239,7 @@ function loadInspectionDraft() {
 function clearInspectionDraft() {
   const key = getInspectionDraftKey();
   localStorage.removeItem(key);
+  if (typeof _draftClearServer === 'function') _draftClearServer(_inspectionFormType());
   selectedInspeksiPhotos = [];
   const preview = document.getElementById("previewFotoInspeksi");
   if (preview) {
@@ -1311,6 +1321,19 @@ function initializeInspectionForm(type) {
   setTimeout(() => {
     loadInspectionDraft();
     setupInspectionAutosave();
+    // Cek server — jika ada draft lebih baru dari device lain, tawarkan swap
+    if (typeof _draftCheckServer === 'function') {
+      const localRaw = localStorage.getItem(getInspectionDraftKey());
+      const localTs  = localRaw ? (JSON.parse(localRaw)._ts || 0) : 0;
+      _draftCheckServer(_inspectionFormType(), localTs, serverDraft => {
+        if (typeof _draftBanner === 'function') {
+          _draftBanner(serverDraft,
+            d => { localStorage.setItem(getInspectionDraftKey(), JSON.stringify(d)); loadInspectionDraft(); },
+            () => {}
+          );
+        }
+      });
+    }
   }, 500);
 }
 

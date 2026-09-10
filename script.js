@@ -445,15 +445,18 @@ function resizeSignaturePad() {
 // ========================================
 // AUTO-SAVE DRAFT
 // ========================================
-const AUTOSAVE_KEY = "hazard_draft";
+let AUTOSAVE_KEY = "hazard_draft"; // di-set per-NIK saat init
 const AUTOSAVE_DELAY = 2000;
 
 function saveDraft() {
   const data = getFormData();
   data._currentStep = currentStep;
   data._savedAt = new Date().toISOString();
+  data._ts = Date.now();
   localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
   showAutoSaveIndicator();
+  // Sync ke server (cross-device)
+  if (typeof _draftSaveToServer === 'function') _draftSaveToServer('Hazard', data);
 }
 
 function loadDraft() {
@@ -601,6 +604,7 @@ function loadDraft() {
 
 function clearDraft() {
   localStorage.removeItem(AUTOSAVE_KEY);
+  if (typeof _draftClearServer === 'function') _draftClearServer('Hazard');
   selectedBahayaPhotos = [];
   const preview = document.getElementById("previewFotoBahaya");
   if (preview) {
@@ -1326,6 +1330,9 @@ function fillReporterCard() {
 // ========================================
 document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('step1')?.classList.add('section-1-skeleton');
+  // Key per-akun agar draft tidak bercampur antar user di device sama
+  { const u = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    AUTOSAVE_KEY = `hazard_draft_${u?.nik || u?.nama || 'guest'}`; }
   try {
     await Promise.all([loadMasterKaryawan(), loadMasterLokasi(), loadMasterTemuan()]);
     fillReporterCard();
@@ -1389,6 +1396,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Initialize enhancements
     loadDraft();
+    // Cek server — jika draft server lebih baru (dari device lain), tawarkan swap
+    if (typeof _draftCheckServer === 'function') {
+      const localRaw = localStorage.getItem(AUTOSAVE_KEY);
+      const localTs  = localRaw ? (JSON.parse(localRaw)._ts || 0) : 0;
+      _draftCheckServer('Hazard', localTs, serverDraft => {
+        if (typeof _draftBanner === 'function') {
+          _draftBanner(serverDraft,
+            d => { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(d)); loadDraft(); },
+            () => {}
+          );
+        }
+      });
+    }
     setupCharCounter("deskripsi_bahaya");
     setupCharCounter("detail_lokasi_bahaya");
     setupCharCounter("tindakan_langsung");

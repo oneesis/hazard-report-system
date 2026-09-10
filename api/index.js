@@ -1266,66 +1266,69 @@ async function ensureSBOSheet(sheets) {
   } catch (err) { console.error('ensureSBOSheet error:', err?.message || err); }
 }
 
-// ── SBO Draft helpers (per-NIK, sheet: SBO_Drafts) ─────────────
-const SBO_DRAFT_SHEET  = 'SBO_Drafts';
-const SBO_DRAFT_HDRS   = ['NIK', 'DRAFT', 'UPDATED_AT'];
-
-async function _readSBODraftRows(sheets) {
+// ── Generic draft helpers (per-NIK, sheet: {FormType}_Drafts) ────
+async function _upsertDraftRow(sheets, sheetName, nik, draftJson) {
+  let rows = [];
   try {
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: SBO_DRAFT_SHEET });
-    return res.data.values || [];
-  } catch { return []; }
-}
-
-async function saveSBODraftForUser(sheets, nik, draftJson) {
-  const rows = await _readSBODraftRows(sheets);
-  const now  = new Date().toISOString();
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
+    rows = res.data.values || [];
+  } catch {}
+  const now = new Date().toISOString();
   if (!rows.length) {
-    // Sheet baru / kosong — tulis header + baris pertama
     await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID, range: SBO_DRAFT_SHEET, valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [SBO_DRAFT_HDRS, [nik, draftJson, now]] },
-    }).catch(() => {}); // sheet belum ada = silent fail, localStorage tetap jadi backup
+      spreadsheetId: SPREADSHEET_ID, range: sheetName, valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [['NIK','DRAFT','UPDATED_AT'], [nik, draftJson, now]] },
+    }).catch(() => {});
     return;
   }
-  const nikCol   = rows[0].indexOf('NIK');
-  const rowIdx   = rows.findIndex((r, i) => i > 0 && (r[nikCol] || '') === nik);
+  const nikCol = rows[0].indexOf('NIK');
+  const rowIdx = rows.findIndex((r, i) => i > 0 && (r[nikCol] || '') === nik);
   if (rowIdx === -1) {
     await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID, range: SBO_DRAFT_SHEET, valueInputOption: 'USER_ENTERED',
+      spreadsheetId: SPREADSHEET_ID, range: sheetName, valueInputOption: 'USER_ENTERED',
       requestBody: { values: [[nik, draftJson, now]] },
     }).catch(() => {});
   } else {
     await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID, range: `${SBO_DRAFT_SHEET}!A${rowIdx + 1}:C${rowIdx + 1}`,
+      spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!A${rowIdx + 1}:C${rowIdx + 1}`,
       valueInputOption: 'USER_ENTERED', requestBody: { values: [[nik, draftJson, now]] },
     }).catch(() => {});
   }
 }
 
-async function getSBODraftForUser(sheets, nik) {
-  const rows = await _readSBODraftRows(sheets);
-  if (rows.length < 2) return null;
-  const nikCol   = rows[0].indexOf('NIK');
-  const draftCol = rows[0].indexOf('DRAFT');
-  const tsCol    = rows[0].indexOf('UPDATED_AT');
-  const row = rows.find((r, i) => i > 0 && (r[nikCol] || '') === nik);
-  if (!row || !row[draftCol]) return null;
-  try { return { draft: JSON.parse(row[draftCol]), ts: row[tsCol] || '' }; } catch { return null; }
+async function _fetchDraftRow(sheets, sheetName, nik) {
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
+    const rows = res.data.values || [];
+    if (rows.length < 2) return null;
+    const nikCol   = rows[0].indexOf('NIK');
+    const draftCol = rows[0].indexOf('DRAFT');
+    const row = rows.find((r, i) => i > 0 && (r[nikCol] || '') === nik);
+    if (!row || !row[draftCol]) return null;
+    return { draft: JSON.parse(row[draftCol]) };
+  } catch { return null; }
 }
 
-async function clearSBODraftForUser(sheets, nik) {
-  const rows = await _readSBODraftRows(sheets);
-  if (rows.length < 2) return;
-  const nikCol = rows[0].indexOf('NIK');
-  const rowIdx = rows.findIndex((r, i) => i > 0 && (r[nikCol] || '') === nik);
-  if (rowIdx !== -1) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID, range: `${SBO_DRAFT_SHEET}!A${rowIdx + 1}:C${rowIdx + 1}`,
-      valueInputOption: 'USER_ENTERED', requestBody: { values: [['', '', '']] },
-    }).catch(() => {});
-  }
+async function _deleteDraftRow(sheets, sheetName, nik) {
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
+    const rows = res.data.values || [];
+    if (rows.length < 2) return;
+    const nikCol = rows[0].indexOf('NIK');
+    const rowIdx = rows.findIndex((r, i) => i > 0 && (r[nikCol] || '') === nik);
+    if (rowIdx !== -1) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!A${rowIdx + 1}:C${rowIdx + 1}`,
+        valueInputOption: 'USER_ENTERED', requestBody: { values: [['','','']] },
+      }).catch(() => {});
+    }
+  } catch {}
 }
+
+// Shorthand untuk SBO (tetap kompatibel)
+const saveSBODraftForUser   = (s, n, d) => _upsertDraftRow(s, 'SBO_Drafts', n, d);
+const getSBODraftForUser    = (s, n)    => _fetchDraftRow(s, 'SBO_Drafts', n);
+const clearSBODraftForUser  = (s, n)    => _deleteDraftRow(s, 'SBO_Drafts', n);
 
 async function submitSBOReport(sheets, data) {
   await ensureSBOSheet(sheets);
@@ -1766,6 +1769,26 @@ module.exports = async (req, res) => {
         case 'clearSBODraft': {
           const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
           await clearSBODraftForUser(sheets, auth2.nik);
+          result = { status: 'success' }; break;
+        }
+        // Generic draft — digunakan oleh Hazard, Inspeksi, PC, SBO
+        case 'saveDraft': {
+          const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
+          const ftype = String(data.form_type || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 30);
+          if (!ftype) throw new Error('form_type wajib diisi.');
+          await _upsertDraftRow(sheets, ftype + '_Drafts', auth2.nik, JSON.stringify(data.draft || {}));
+          result = { status: 'success' }; break;
+        }
+        case 'getDraft': {
+          const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
+          const ftype = String(req.query?.form_type || data.form_type || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 30);
+          result = ftype ? (await _fetchDraftRow(sheets, ftype + '_Drafts', auth2.nik) || { draft: null }) : { draft: null };
+          break;
+        }
+        case 'clearDraft': {
+          const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
+          const ftype = String(data.form_type || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 30);
+          if (ftype) await _deleteDraftRow(sheets, ftype + '_Drafts', auth2.nik);
           result = { status: 'success' }; break;
         }
         case 'getPCReports':        result = await getPCReports(sheets, auth); break;

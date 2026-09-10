@@ -1,5 +1,63 @@
 const BASE_URL = "/api";
 
+// ── Draft sync helpers (shared: Hazard, Inspeksi, PC, SBO) ────────
+// Key per-akun agar draft tidak bercampur antar user di device sama
+function _draftKey(formType) {
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  return `draft_${formType}_${user?.nik || user?.nama || 'guest'}`;
+}
+
+let __draftSrvTimer = null;
+function _draftSaveToServer(formType, draft) {
+  clearTimeout(__draftSrvTimer);
+  __draftSrvTimer = setTimeout(() => {
+    fetch(BASE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveDraft', data: { form_type: formType, draft } }),
+    }).catch(() => {});
+  }, 4000);
+}
+
+function _draftClearServer(formType) {
+  fetch(BASE_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'clearDraft', data: { form_type: formType } }),
+  }).catch(() => {});
+}
+
+// Cek server — jika draft server lebih baru dari localTs, panggil onNewer(serverDraft)
+async function _draftCheckServer(formType, localTs, onNewer) {
+  try {
+    const res  = await fetch(`${BASE_URL}?action=getDraft&form_type=${encodeURIComponent(formType)}`);
+    const json = await res.json();
+    const d = json.draft;
+    if (!d) return;
+    const ts = typeof d._ts === 'string' ? new Date(d._ts).getTime() : (d._ts || 0);
+    if (ts > (localTs || 0)) onNewer({ ...d, _ts: ts });
+  } catch {}
+}
+
+function _draftBanner(draft, onApply, onDiscard) {
+  const ts = typeof draft._ts === 'string' ? new Date(draft._ts).getTime() : (draft._ts || 0);
+  if (!ts) return;
+  const ageMin = Math.round((Date.now() - ts) / 60000);
+  const ageStr = ageMin < 1 ? 'baru saja'
+    : ageMin < 60 ? `${ageMin} menit lalu`
+    : `${Math.round(ageMin / 60)} jam lalu`;
+  document.getElementById('_fdbanner')?.remove();
+  const b = document.createElement('div');
+  b.id = '_fdbanner';
+  b.style.cssText = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
+  b.innerHTML = `<i class="fa-solid fa-clock-rotate-left" style="color:#d97706;font-size:1.1rem;flex-shrink:0"></i>
+    <span style="font-size:.88rem;color:#78350f;font-weight:500;flex:1">Draft lebih baru dari perangkat lain (<strong>${ageStr}</strong>). Gunakan?</span>
+    <button id="_fdApply" style="padding:7px 14px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer"><i class="fa-solid fa-rotate-left"></i> Ya, Gunakan</button>
+    <button id="_fdKeep" style="padding:7px 14px;background:transparent;color:#92400e;border:1.5px solid #fbbf24;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer">Tetap Pakai Ini</button>`;
+  b.querySelector('#_fdApply').onclick = () => { b.remove(); onApply(draft); };
+  b.querySelector('#_fdKeep').onclick  = () => { b.remove(); if (onDiscard) onDiscard(); };
+  const anchor = document.querySelector('.card, .form-card, .step-progress, form') || document.body;
+  if (anchor.parentNode) anchor.parentNode.insertBefore(b, anchor); else document.body.prepend(b);
+}
+
 function normalizeString(value) {
   return String(value || "").trim().toLowerCase();
 }
