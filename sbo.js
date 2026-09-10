@@ -266,7 +266,7 @@ async function submitSboUpdate(id) {
     });
     const json = await res.json();
     if (json.status !== 'success') throw new Error(json.message || 'Gagal');
-    showToast('Perbaikan berhasil disubmit! Status menunggu review admin.');
+    showToast('Perbaikan berhasil disubmit! Laporan SBO dinyatakan CLOSED.');
     closeSboModal();
     await loadSboReports();
   } catch (e) {

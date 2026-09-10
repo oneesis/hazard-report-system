@@ -620,8 +620,9 @@ async function resolveNikFromWa(sheets, wa) {
   const norm = p => p.replace(/^0/, '62').replace(/^(?!62)/, '62');
   const target = norm(phone);
   const karyawan = await getSheetData(sheets, 'Master_Karyawan');
-  const match = karyawan.find(r => norm(String(r['no_whatsapp'] || '').replace(/\D/g, '')) === target);
-  const nik = String(match?.['nik'] || '').trim();
+  // Header sheet adalah 'NO WHATSAPP' dan 'NIK' (uppercase sesuai KARYAWAN_HEADERS)
+  const match = karyawan.find(r => norm(String(r['NO WHATSAPP'] || '').replace(/\D/g, '')) === target);
+  const nik = String(match?.['NIK'] || '').trim();
   console.log(`[push] resolveNikFromWa wa="${wa}" target="${target}" found=${!!match} nik="${nik}"`);
   return nik;
 }
@@ -1489,8 +1490,11 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
   }
 
   let fotoPerbaikanUrl = '';
-  if (data.upload_foto_perbaikan_pic)
-    fotoPerbaikanUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, process.env.FOLDER_CLOSING_ID, data.id + folderSuffix);
+  if (data.upload_foto_perbaikan_pic) {
+    // Fallback: FOLDER_CLOSING_ID → FOLDER_SBO_ID → FOLDER_HAZARD_ID
+    const closingFolder = process.env.FOLDER_CLOSING_ID || process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID;
+    fotoPerbaikanUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, closingFolder, data.id + folderSuffix);
+  }
 
   const updates = [];
   const setCell = (headerName, value) => {
@@ -1797,11 +1801,8 @@ module.exports = async (req, res) => {
           result = await submitSBOReport(sheets, data);
           break;
         case 'updateSBOReport': {
-          if (data.status_perbaikan === 'CLOSED') {
-            await ensureClosingColumns(sheets, 'SBO_Report');
-            data.status_perbaikan = 'FOLLOWUP';
-            data.closing_status   = 'pending_review';
-          }
+          // SBO tidak memiliki alur reviewClosing dari observer (observer sudah menyaksikan langsung).
+          // Langsung CLOSED tanpa FOLLOWUP — berbeda dari Hazard/Inspeksi yang butuh konfirmasi pelapor.
           result = await updateReport(sheets, data, 'SBO_Report', '-SBO-Closing', authUser);
           break;
         }

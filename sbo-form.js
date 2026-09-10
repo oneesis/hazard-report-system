@@ -500,7 +500,7 @@ function validateStep(step) {
 function sboNext() {
   if (!validateStep(sboStep)) return;
   if (sboStep === 3) { buildStep4(); if (hasTidakAman()) loadSboPerusahaanPic(); }
-  sboStep++;
+  sboStep = Math.min(sboStep + 1, SBO_TOTAL_STEPS);
   updateStepUI();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
