@@ -191,18 +191,16 @@ function autoFillTemuanFromChecklist() {
     });
   });
 
-  const jenisSel = document.getElementById('jenis_temuan');
-  if (jenisSel) {
-    jenisSel.value = (hasAct && hasCond) ? 'Unsafe Act & Condition'
-                   : hasAct              ? 'Unsafe Act'
-                   : 'Unsafe Condition';
+  // Render list visual
+  const listEl = document.getElementById('kategoriTemuanList');
+  if (listEl) {
+    listEl.innerHTML = badItems.length
+      ? badItems.map(item => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.85rem;color:#991b1b"><i class="fa-solid fa-xmark" style="color:#dc2626;width:14px;flex-shrink:0"></i>${item}</div>`).join('')
+      : '<em style="color:#6b7280;font-size:.85rem">-</em>';
   }
-
+  // Hidden input untuk submit
   const katInput = document.getElementById('kategori_temuan');
-  if (katInput && badItems.length) {
-    katInput.value = badItems.join(', ');
-    katInput.placeholder = 'Auto-terisi dari checklist (bisa diubah)';
-  }
+  if (katInput) katInput.value = badItems.join(', ');
 }
 
 // Build step 4 content
@@ -216,7 +214,11 @@ function buildStep4() {
       <div class="form-section-label"><i class="fa-solid fa-pen"></i> Pernyataan</div>
       <div class="form-group">
         <label>Pernyataan Observer <span class="required">*</span></label>
-        <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;margin-top:4px">
+        <input type="checkbox" id="pernyataan_check" onchange="document.getElementById('pernyataan').value=this.checked?'Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif.':''" style="margin-top:2px;width:18px;height:18px;flex-shrink:0;accent-color:#16a34a">
+        <span style="font-size:.88rem;color:#166534;font-weight:500;line-height:1.4">Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif.</span>
+      </label>
+      <input type="hidden" id="pernyataan" />
       </div>`;
     return;
   }
@@ -225,20 +227,10 @@ function buildStep4() {
     <div class="sbo-finding-alert"><i class="fa-solid fa-triangle-exclamation"></i>&nbsp; Terdapat poin Tidak Aman. Lengkapi data temuan dan PIC di bawah.</div>
 
     <div class="form-section-label"><i class="fa-solid fa-magnifying-glass"></i> Detail Temuan</div>
-    <div class="form-grid-2">
-      <div class="form-group">
-        <label>Jenis Temuan <span class="required">*</span></label>
-        <select id="jenis_temuan" required>
-          <option value="">-- Pilih --</option>
-          <option value="Unsafe Act">Unsafe Act (Tindakan Tidak Aman)</option>
-          <option value="Unsafe Condition">Unsafe Condition (Kondisi Tidak Aman)</option>
-          <option value="Unsafe Act & Condition">Unsafe Act & Condition</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Kategori Temuan <span class="required">*</span></label>
-        <input type="text" id="kategori_temuan" placeholder="Mis: APD tidak lengkap, Prosedur tidak dipatuhi" required />
-      </div>
+    <div class="form-group">
+      <label>Item Tidak Aman Teridentifikasi</label>
+      <div id="kategoriTemuanList" style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 14px;margin-top:4px"></div>
+      <input type="hidden" id="kategori_temuan" />
     </div>
     <div class="form-group">
       <label>Deskripsi Temuan <span class="required">*</span></label>
@@ -297,16 +289,17 @@ function buildStep4() {
         <input type="text" id="departemen_pic" readonly />
       </div>
     </div>
-    <div class="form-group">
-      <label>No WhatsApp PIC <span class="required">*</span></label>
-      <input type="tel" id="no_wa_pic" placeholder="08xx atau 62xx" required />
-    </div>
+    <input type="hidden" id="no_wa_pic" />
     <input type="hidden" id="nik_pic" />
 
     <div class="form-section-label" style="margin-top:20px"><i class="fa-solid fa-pen"></i> Pernyataan</div>
     <div class="form-group">
       <label>Pernyataan Observer <span class="required">*</span></label>
-      <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;margin-top:4px">
+        <input type="checkbox" id="pernyataan_check" onchange="document.getElementById('pernyataan').value=this.checked?'Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif.':''" style="margin-top:2px;width:18px;height:18px;flex-shrink:0;accent-color:#16a34a">
+        <span style="font-size:.88rem;color:#166534;font-weight:500;line-height:1.4">Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif.</span>
+      </label>
+      <input type="hidden" id="pernyataan" />
     </div>`;
 
   // Auto-fill Jenis & Kategori Temuan dari checklist Step 3
@@ -515,16 +508,11 @@ function validateStep(step) {
   if (step === 4) {
     if (!val('pernyataan')) return showErr('Pernyataan observer wajib diisi.'), false;
     if (hasTidakAman()) {
-      if (!val('jenis_temuan')) return showErr('Jenis temuan wajib dipilih.'), false;
-      if (!val('kategori_temuan')) return showErr('Kategori temuan wajib diisi.'), false;
       if (!val('deskripsi_temuan')) return showErr('Deskripsi temuan wajib diisi.'), false;
       if (!val('rencana_tindakan')) return showErr('Rencana tindakan wajib diisi.'), false;
       if (!val('batas_waktu')) return showErr('Batas waktu wajib diisi.'), false;
-      if (!val('nama_pic')) return showErr('Nama PIC wajib diisi.'), false;
+      if (!val('nama_pic')) return showErr('Nama PIC wajib dipilih.'), false;
       if (!val('perusahaan_pic')) return showErr('Perusahaan PIC wajib diisi.'), false;
-      if (!val('departemen_pic')) return showErr('Departemen PIC wajib diisi.'), false;
-      if (!val('jabatan_pic')) return showErr('Jabatan PIC wajib diisi.'), false;
-      if (!val('no_wa_pic')) return showErr('No WhatsApp PIC wajib diisi.'), false;
     }
   }
   return true;
@@ -577,11 +565,39 @@ function collectFormData() {
   };
 }
 
+function showSboLoading(hasFoto) {
+  let ov = document.getElementById('sboLoadingOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'sboLoadingOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;padding:36px 44px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.35);max-width:320px;width:90%">
+      <div style="position:relative;width:64px;height:64px;margin:0 auto 20px">
+        <svg viewBox="0 0 64 64" style="width:64px;height:64px;animation:sboSpin 1s linear infinite">
+          <circle cx="32" cy="32" r="28" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+          <path d="M32 4a28 28 0 0 1 28 28" fill="none" stroke="#00205B" stroke-width="6" stroke-linecap="round"/>
+        </svg>
+        <i class="fa-solid fa-file-circle-check" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#00205B"></i>
+      </div>
+      <div style="font-weight:700;font-size:1.05rem;color:#0f172a;margin-bottom:6px">Menyimpan Laporan SBO...</div>
+      <div style="font-size:.82rem;color:#64748b;line-height:1.5">${hasFoto ? 'Sedang upload foto ke server.<br>Mohon jangan tutup halaman ini.' : 'Mohon tunggu sebentar...'}</div>
+    </div>`;
+  ov.style.display = 'flex';
+}
+function hideSboLoading() {
+  const ov = document.getElementById('sboLoadingOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
 async function submitSboForm() {
   if (!validateStep(4)) return;
   const btn = document.getElementById('sboSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  showSboLoading(sboSelectedPhotos.length > 0);
 
   try {
     const formData = collectFormData();
@@ -591,6 +607,7 @@ async function submitSboForm() {
       body: JSON.stringify({ action: 'submitSBOReport', data: formData }),
     });
     const json = await res.json();
+    hideSboLoading();
     if (json.status !== 'success') throw new Error(json.message || 'Gagal menyimpan laporan.');
     const hasFinding = formData.status_observasi === 'ADA_TEMUAN';
     const msgEl = document.getElementById('successModalMsg');
@@ -601,6 +618,7 @@ async function submitSboForm() {
     }
     document.getElementById('successModal').classList.add('open');
   } catch (e) {
+    hideSboLoading();
     showErr('Gagal: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Laporan';
