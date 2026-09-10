@@ -609,6 +609,7 @@ async function submitSboForm() {
     const json = await res.json();
     hideSboLoading();
     if (json.status !== 'success') throw new Error(json.message || 'Gagal menyimpan laporan.');
+    clearDraft(); // Draft selesai — hapus dari localStorage
     const hasFinding = formData.status_observasi === 'ADA_TEMUAN';
     const msgEl = document.getElementById('successModalMsg');
     if (msgEl) {
@@ -623,6 +624,112 @@ async function submitSboForm() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Laporan';
   }
+}
+
+// ── Draft auto-save (localStorage) ────────────────────────────────
+const SBO_DRAFT_KEY = 'sbo_form_draft';
+
+function _collectDraft() {
+  const fields = {};
+  ['tgl_observasi','nama_pekerjaan','lokasi',
+   'nama_observee','perusahaan_observee','subcont_observee','jabatan_observee','departemen_observee',
+   'deskripsi_temuan','rencana_tindakan','referensi_sop','batas_waktu',
+   'perusahaan_pic','subcont_pic','nama_pic','jabatan_pic','departemen_pic','no_wa_pic','nik_pic',
+  ].forEach(id => { const el = document.getElementById(id); if (el) fields[id] = el.value; });
+
+  const checklist = {};
+  document.querySelectorAll('[name^="cl_"]:checked').forEach(r => { checklist[r.name] = r.value; });
+  const tindakan = [...document.querySelectorAll('#sboTindakanSegera input:checked')].map(c => c.value);
+
+  return { step: sboStep, ts: Date.now(), fields, checklist, tindakan };
+}
+
+let _draftTimer;
+function scheduleSaveDraft() {
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(() => {
+    try { localStorage.setItem(SBO_DRAFT_KEY, JSON.stringify(_collectDraft())); } catch (e) {}
+  }, 800);
+}
+
+function clearDraft() { try { localStorage.removeItem(SBO_DRAFT_KEY); } catch (e) {} }
+
+function loadAndRestoreDraft() {
+  try {
+    const raw = localStorage.getItem(SBO_DRAFT_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (!draft?.ts) return;
+
+    const ageMin = Math.round((Date.now() - draft.ts) / 60000);
+    const ageStr = ageMin < 1 ? 'baru saja'
+      : ageMin < 60 ? `${ageMin} menit lalu`
+      : `${Math.round(ageMin / 60)} jam lalu`;
+
+    const banner = document.createElement('div');
+    banner.id = 'sboDraftBanner';
+    banner.style.cssText = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
+    banner.innerHTML = `
+      <i class="fa-solid fa-clock-rotate-left" style="color:#d97706;font-size:1.1rem;flex-shrink:0"></i>
+      <span style="font-size:.88rem;color:#78350f;font-weight:500;flex:1">Ada draft tersimpan dari <strong>${ageStr}</strong>. Lanjutkan mengisi?</span>
+      <button onclick="applyDraft()" style="padding:7px 14px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer">
+        <i class="fa-solid fa-rotate-left"></i> Lanjutkan Draft
+      </button>
+      <button onclick="discardDraft()" style="padding:7px 14px;background:transparent;color:#92400e;border:1.5px solid #fbbf24;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer">
+        Mulai Baru
+      </button>`;
+
+    // Sisipkan sebelum kartu pertama
+    const anchor = document.querySelector('.step-progress, .form-card, .step-card, form') || document.body;
+    anchor.parentNode?.insertBefore(banner, anchor) || document.body.prepend(banner);
+    window._sboDraft = draft;
+  } catch (e) {}
+}
+
+function applyDraft() {
+  const draft = window._sboDraft;
+  if (!draft) return;
+
+  // Restore field biasa
+  const applyFields = () => {
+    Object.entries(draft.fields || {}).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+  };
+  applyFields();
+
+  // Restore checklist radios
+  Object.entries(draft.checklist || {}).forEach(([name, val]) => {
+    const r = document.querySelector(`input[name="${name}"][value="${val}"]`);
+    if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
+  });
+  updateChecklistCounter();
+
+  // Restore tindakan segera
+  (draft.tindakan || []).forEach(val => {
+    document.querySelectorAll('#sboTindakanSegera input[type=checkbox]').forEach(cb => {
+      if (cb.value === val) cb.checked = true;
+    });
+  });
+
+  // Navigasi ke step tersimpan
+  sboStep = Math.min(draft.step || 1, SBO_TOTAL_STEPS);
+  if (sboStep >= 4) {
+    buildStep4();
+    if (hasTidakAman()) loadSboPerusahaanPic();
+    // Step 4 di-render secara dinamis — re-apply fields setelah render
+    setTimeout(applyFields, 100);
+  }
+  updateStepUI();
+  document.getElementById('sboDraftBanner')?.remove();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function discardDraft() {
+  clearDraft();
+  window._sboDraft = null;
+  document.getElementById('sboDraftBanner')?.remove();
 }
 
 // Init
@@ -648,4 +755,14 @@ window.addEventListener('DOMContentLoaded', () => {
   updateStepUI();
   // Muat master karyawan — tersedia untuk Step 2 (observee) dan Step 4 (PIC)
   loadMasterForPic().then(loadObserveePerusahaan);
+
+  // Draft: cek dan tawarkan restore
+  loadAndRestoreDraft();
+  // Auto-save tiap ada perubahan input
+  document.addEventListener('input',  scheduleSaveDraft);
+  document.addEventListener('change', scheduleSaveDraft);
+  // Simpan langsung saat keluar halaman
+  window.addEventListener('beforeunload', () => {
+    try { localStorage.setItem(SBO_DRAFT_KEY, JSON.stringify(_collectDraft())); } catch (e) {}
+  });
 });
