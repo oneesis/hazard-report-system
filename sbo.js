@@ -80,6 +80,7 @@ function sboRender() {
     const st = (r.status_perbaikan || r.status_observasi || 'AMAN').toUpperCase();
     const badge = st === 'AMAN'      ? '<span class="badge badge-aman">Aman</span>'
                 : st === 'OPEN'      ? '<span class="badge badge-open">Open</span>'
+                : st === 'KOMITMEN'  ? '<span class="badge badge-followup">Komitmen</span>'
                 : st === 'FOLLOWUP'  ? '<span class="badge badge-followup">Follow Up</span>'
                 : st === 'CLOSED'    ? '<span class="badge badge-closed">Closed</span>'
                 : `<span class="badge">${st}</span>`;
@@ -141,6 +142,8 @@ function openSboModal(id) {
   const isAdmin = ['ADMIN','SUPER_ADMIN'].includes(String(user?.role||'').toUpperCase().replace(/\s+/g,'_'));
   const isMyReport = (r.nik_observer || r.nama_observer) === (user?.nik || user?.nama);
   const isPic = r.nik_pic === user?.nik || (r.nama_pic && r.nama_pic === user?.nama);
+  const isObservee = r.nik_observee === user?.nik ||
+    (r.nama_observee && r.nama_observee.toLowerCase() === (user?.nama || '').toLowerCase());
   const st = (r.status_perbaikan || r.status_observasi || 'AMAN').toUpperCase();
   const hasFinding = r.status_observasi === 'ADA_TEMUAN' || (st !== 'AMAN');
 
@@ -209,23 +212,38 @@ function openSboModal(id) {
       ${dl('Departemen PIC', r.departemen_pic)}
       ${dl('Perusahaan PIC', r.perusahaan_pic)}
       ${dl('Batas Waktu', r.batas_waktu)}
-      <div class="sbo-section-sep">📸 Update PIC</div>
-      <div class="sbo-dl-item" style="grid-column:1/-1"><div class="sbo-dl-label">Foto Perbaikan</div><div class="sbo-dl-val">${fotoPerbaikanHtml}</div></div>
+      ${r.pernyataan ? `
+      <div class="sbo-section-sep">🤝 Komitmen Observee</div>
+      <div class="sbo-dl-item" style="grid-column:1/-1">${dl('Pernyataan', r.pernyataan)}</div>` : ''}
+      ${fotoPerbaikanHtml !== '-' ? `
+      <div class="sbo-section-sep">📸 Tindak Lanjut PIC</div>
+      <div class="sbo-dl-item" style="grid-column:1/-1"><div class="sbo-dl-label">Foto Perbaikan</div><div class="sbo-dl-val">${fotoPerbaikanHtml}</div></div>` : ''}
       ` : `<div class="sbo-section-sep">✅ Semua Aman</div><div style="grid-column:1/-1;color:#16a34a;font-weight:700;font-size:.9rem">Tidak ada temuan. Observasi dinyatakan aman.</div>`}
     </div>
-    ${(isPic || isAdmin) && st === 'OPEN' ? `
+    ${(isObservee || isAdmin) && st === 'OPEN' ? `
     <div class="sbo-update-section">
-      <h4><i class="fa-solid fa-upload"></i> Update Perbaikan (PIC)</h4>
+      <h4><i class="fa-solid fa-handshake"></i> Komitmen Observee</h4>
       <div style="margin-bottom:10px">
-        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px">Catatan</label>
-        <textarea id="sboUpdateCatatan" placeholder="Catatan perbaikan..."></textarea>
+        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px">Pernyataan Komitmen <span style="color:#dc2626">*</span></label>
+        <textarea id="sboKomitmenText" placeholder="Tulis pernyataan komitmen perbaikan yang akan dilakukan..."></textarea>
+      </div>
+      <button id="sboKomitmenBtn" onclick="submitSboKomitmen('${id}')" style="padding:9px 18px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:9px;font-size:.85rem;font-weight:700;cursor:pointer">
+        <i class="fa-solid fa-handshake"></i> Kirim Komitmen
+      </button>
+    </div>` : ''}
+    ${(isPic || isAdmin) && st === 'KOMITMEN' ? `
+    <div class="sbo-update-section">
+      <h4><i class="fa-solid fa-screwdriver-wrench"></i> Tindak Lanjut PIC</h4>
+      <div style="margin-bottom:10px">
+        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px">Catatan Tindak Lanjut</label>
+        <textarea id="sboUpdateCatatan" placeholder="Catatan perbaikan yang telah dilakukan..."></textarea>
       </div>
       <div style="margin-bottom:12px">
-        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px">Foto Perbaikan</label>
+        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px">Foto Bukti Perbaikan</label>
         <input type="file" id="sboUpdateFoto" accept="image/*" multiple>
       </div>
       <button id="sboUpdateBtn" onclick="submitSboUpdate('${id}')" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:9px;font-size:.85rem;font-weight:700;cursor:pointer">
-        <i class="fa-solid fa-paper-plane"></i> Kirim Perbaikan ke Review
+        <i class="fa-solid fa-paper-plane"></i> Kirim Tindak Lanjut
       </button>
     </div>` : ''}
   `;
@@ -272,6 +290,28 @@ async function submitSboUpdate(id) {
   } catch (e) {
     showToast('Gagal: ' + e.message, 'error');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Perbaikan'; }
+  }
+}
+
+async function submitSboKomitmen(id) {
+  const pernyataan = document.getElementById('sboKomitmenText')?.value?.trim() || '';
+  if (!pernyataan) { showToast('Pernyataan komitmen wajib diisi.', 'error'); return; }
+  const btn = document.getElementById('sboKomitmenBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
+  try {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updateSBOReport', data: { id, pernyataan, action_type: 'komitmen' } }),
+    });
+    const json = await res.json();
+    if (json.status !== 'success') throw new Error(json.message || 'Gagal');
+    showToast('Komitmen berhasil disimpan! PIC akan segera ditindaklanjuti. 🤝');
+    closeSboModal();
+    await loadSboReports();
+  } catch (e) {
+    showToast('Gagal: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-handshake"></i> Kirim Komitmen'; }
   }
 }
 

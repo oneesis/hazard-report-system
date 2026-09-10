@@ -1801,9 +1801,36 @@ module.exports = async (req, res) => {
           result = await submitSBOReport(sheets, data);
           break;
         case 'updateSBOReport': {
-          // SBO tidak memiliki alur reviewClosing dari observer (observer sudah menyaksikan langsung).
-          // Langsung CLOSED tanpa FOLLOWUP — berbeda dari Hazard/Inspeksi yang butuh konfirmasi pelapor.
-          result = await updateReport(sheets, data, 'SBO_Report', '-SBO-Closing', authUser);
+          if (data.action_type === 'komitmen') {
+            // Observee menyatakan komitmen → status KOMITMEN, notif WA ke PIC
+            if (!data.pernyataan?.trim()) throw new Error('Pernyataan komitmen wajib diisi.');
+            const sboRows = await getSheetData(sheets, 'SBO_Report');
+            const sboRow  = sboRows.find(x => String(x['ID']||x['id']||'').trim() === String(data.id||'').trim());
+            if (!sboRow) throw new Error('Laporan tidak ditemukan.');
+            // Cek akses: observee sendiri atau admin
+            if (!isAdminOrAbove(authUser.role)) {
+              const obsNik = String(sboRow['NIK_OBSERVEE']||sboRow['nik_observee']||'').trim();
+              const myNik  = String(authUser.nik||'').trim();
+              if (obsNik && myNik && obsNik !== myNik)
+                throw Object.assign(new Error('Akses ditolak: kamu bukan observee laporan ini.'), { httpStatus: 403 });
+            }
+            await updateWorkflowFields(sheets, 'SBO_Report', data.id, {
+              'PERNYATAAN':      data.pernyataan,
+              'STATUS_PERBAIKAN': 'KOMITMEN',
+            });
+            // Notif WA ke PIC agar segera tindak lanjut
+            const noWaPic = String(sboRow['NO_WA_PIC']||sboRow['no_wa_pic']||'').trim();
+            const namaPic = String(sboRow['NAMA_PIC']||sboRow['nama_pic']||'').trim();
+            if (noWaPic) {
+              await sendWaNotification(noWaPic,
+                `Halo ${namaPic||'PIC'}, Observee telah menyatakan komitmen untuk laporan SBO *${data.id}*.\n\nSilakan lakukan tindak lanjut perbaikan:\n🔗 https://sap-ebl.vercel.app/sbo.html`
+              ).catch(() => {});
+            }
+            result = { status: 'success', message: 'Komitmen observee berhasil disimpan.' };
+          } else {
+            // PIC melakukan tindak lanjut → langsung CLOSED
+            result = await updateReport(sheets, data, 'SBO_Report', '-SBO-Closing', authUser);
+          }
           break;
         }
         case 'updateHazardReport': {

@@ -208,11 +208,8 @@ function onBuktiFotoChange(input) {
 async function submitKomitmen() {
   const id  = document.getElementById('komitmenPcId').value;
   const err = document.getElementById('komitmenErr');
-  if (!_buktiFotos.length) {
-    err.textContent = 'Foto bukti wajib diupload.';
-    err.style.display = 'block';
-    return;
-  }
+  // ponytail: foto bukti opsional — komitmen teks sudah cukup
+
   const btn = document.getElementById('komitmenSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
