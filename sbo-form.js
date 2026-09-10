@@ -174,6 +174,37 @@ function allChecklistAnswered() {
   );
 }
 
+// Auto-fill Jenis & Kategori Temuan dari hasil checklist Step 3
+function autoFillTemuanFromChecklist() {
+  const actKeys  = new Set(['apd', 'prosedur']);
+  const condKeys = new Set(['potensi_bahaya', 'alat_peralatan', 'kebersihan']);
+  let hasAct = false, hasCond = false;
+  const badItems = [];
+
+  SBO_CATEGORIES.forEach(cat => {
+    cat.items.forEach((itemLabel, i) => {
+      if (document.querySelector(`input[name="cl_${cat.key}_${i}"][value="TIDAK_AMAN"]:checked`)) {
+        badItems.push(itemLabel);
+        if (actKeys.has(cat.key))  hasAct  = true;
+        if (condKeys.has(cat.key)) hasCond = true;
+      }
+    });
+  });
+
+  const jenisSel = document.getElementById('jenis_temuan');
+  if (jenisSel) {
+    jenisSel.value = (hasAct && hasCond) ? 'Unsafe Act & Condition'
+                   : hasAct              ? 'Unsafe Act'
+                   : 'Unsafe Condition';
+  }
+
+  const katInput = document.getElementById('kategori_temuan');
+  if (katInput && badItems.length) {
+    katInput.value = badItems.join(', ');
+    katInput.placeholder = 'Auto-terisi dari checklist (bisa diubah)';
+  }
+}
+
 // Build step 4 content
 function buildStep4() {
   const hasFinding = hasTidakAman();
@@ -278,6 +309,8 @@ function buildStep4() {
       <textarea id="pernyataan" rows="3" placeholder="Saya menyatakan bahwa observasi ini dilakukan dengan jujur dan objektif..." required></textarea>
     </div>`;
 
+  // Auto-fill Jenis & Kategori Temuan dari checklist Step 3
+  autoFillTemuanFromChecklist();
 }
 
 let _sboMasterKaryawan = [];
