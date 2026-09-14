@@ -1726,6 +1726,7 @@ module.exports = async (req, res) => {
 
       // getSafetyTalkPublic — tidak butuh auth (data non-sensitif untuk integrasi quiz-she)
       if (action === 'getSafetyTalkPublic') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
         let rows = [];
         try { rows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 60_000); } catch {}
         return res.status(200).json({
