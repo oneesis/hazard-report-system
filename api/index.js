@@ -1911,6 +1911,43 @@ module.exports = async (req, res) => {
           result = { status: 'success', wa_pic_status: newStatus, message: sent ? 'WA berhasil dikirim ulang.' : 'Gagal mengirim WA.' };
           break;
         }
+        case 'deleteSafetyTalkSchedule': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          if (!data.id) throw new Error('ID jadwal wajib diisi.');
+          const delId = String(data.id).trim();
+          // Hapus baris jadwal (clear + rewrite tanpa baris ini)
+          const schedRaw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule' });
+          const schedRows = schedRaw.data.values || [];
+          if (schedRows.length > 1) {
+            const head = schedRows[0];
+            const idIdx = head.indexOf('ID');
+            const remaining = schedRows.filter((r, i) => i === 0 || String(r[idIdx] || '') !== delId);
+            await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule' });
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule',
+              valueInputOption: 'USER_ENTERED', requestBody: { values: remaining },
+            });
+          }
+          // Hapus absensi terkait
+          try {
+            const abRaw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
+            const abRows = abRaw.data.values || [];
+            if (abRows.length > 1) {
+              const abHead = abRows[0];
+              const abScIdx = abHead.indexOf('SCHEDULE_ID');
+              const abRemaining = abRows.filter((r, i) => i === 0 || String(r[abScIdx] || '') !== delId);
+              await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
+              await sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi',
+                valueInputOption: 'USER_ENTERED', requestBody: { values: abRemaining },
+              });
+            }
+          } catch {}
+          invalidateCache('SafetyTalk_Schedule');
+          invalidateCache('SafetyTalk_Absensi');
+          result = { status: 'success', message: 'Jadwal berhasil dihapus.' };
+          break;
+        }
         case 'createSafetyTalkSchedule': {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           if (!data.tanggal?.trim()) throw new Error('Tanggal wajib diisi.');

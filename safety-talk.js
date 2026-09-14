@@ -95,6 +95,9 @@ function renderSchedules() {
         ${status === 'AKTIF' ? `<button class="btn-danger-soft" onclick="selesaikan('${id}')">
           <i class="fa-solid fa-circle-check"></i> Selesaikan
         </button>` : ''}
+        <button class="btn-danger-soft" onclick="hapusJadwal('${id}', '${escapeHTML(s['JUDUL_MATERI'] || '')}')" title="Hapus jadwal ini">
+          <i class="fa-solid fa-trash"></i>
+        </button>
       </div>
     </div>`;
   }).join('');
@@ -155,6 +158,22 @@ async function submitCreate() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
+  }
+}
+
+async function hapusJadwal(id, judul) {
+  if (!confirm(`Hapus jadwal "${judul}"?\n\nData absensi juga akan ikut dihapus. Tindakan ini tidak dapat dibatalkan.`)) return;
+  try {
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteSafetyTalkSchedule', data: { id } }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.status === 'error') throw new Error(json.message || 'Gagal.');
+    if (typeof showToast === 'function') showToast('Jadwal berhasil dihapus.');
+    await loadAll();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast(e.message, 'error');
   }
 }
 
