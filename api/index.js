@@ -2036,7 +2036,7 @@ module.exports = async (req, res) => {
           await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
           await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi',
-            valueInputOption: 'USER_ENTERED', requestBody: { values: allData },
+            valueInputOption: 'RAW', requestBody: { values: allData },
           });
           invalidateCache('SafetyTalk_Absensi');
           result = { status: 'success', count: newRows.length, message: `${newRows.length} karyawan tercatat hadir.` };
