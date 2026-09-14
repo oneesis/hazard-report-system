@@ -1780,7 +1780,8 @@ module.exports = async (req, res) => {
         case 'getSBOReports':       result = await getSBOReports(sheets, auth); break;
         case 'getSafetyTalkSchedules': {
           if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
-          let stRows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 30_000);
+          let stRows = [];
+          try { stRows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 30_000); } catch {}
           if (!isSuperAdmin(auth.role)) {
             const co = String(auth.perusahaan || '').trim();
             stRows = stRows.filter(r => !r['PERUSAHAAN_TARGET'] || r['PERUSAHAAN_TARGET'] === co);

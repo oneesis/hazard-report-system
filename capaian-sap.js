@@ -185,7 +185,7 @@ function renderTable() {
 
   const monthStr = document.getElementById('capMonth')?.value || '';
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
-  const colSpan  = isSA ? 14 : 13;
+  const colSpan  = isSA ? 15 : 14; // +1 kolom Safety Talk
 
   // Thead sortable — re-render setiap kali agar ikon sort update
   const thead = document.getElementById('capTableHead');
