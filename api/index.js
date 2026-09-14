@@ -1724,6 +1724,22 @@ module.exports = async (req, res) => {
       // Health check — satu-satunya GET tanpa auth
       if (!action) return res.status(200).json({ status: 'success', message: 'HAZARD REPORT ONE-SAP API is running' });
 
+      // getSafetyTalkPublic — tidak butuh auth (data non-sensitif untuk integrasi quiz-she)
+      if (action === 'getSafetyTalkPublic') {
+        let rows = [];
+        try { rows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 60_000); } catch {}
+        return res.status(200).json({
+          status: 'success',
+          data: rows
+            .filter(r => String(r['STATUS'] || '') === 'AKTIF')
+            .map(r => ({
+              id: r['ID'], tanggal: r['TANGGAL'], bulan: r['BULAN'],
+              judul: r['JUDUL_MATERI'], deskripsi: r['DESKRIPSI_MATERI'],
+              pemateri: r['NAMA_PEMATERI'], perusahaan_target: r['PERUSAHAAN_TARGET'] || '',
+            })),
+        });
+      }
+
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
       await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
