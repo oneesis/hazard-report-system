@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety Talk - ONE-SAP</title>
+  <link rel="icon" href="./assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+  <style>
+    .st-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+    .st-card { background: #fff; border-radius: 14px; border: 1.5px solid #e2e8f0; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .st-card:hover { border-color: #6366f1; box-shadow: 0 4px 16px rgba(99,102,241,.1); }
+    .st-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: .72rem; font-weight: 700; }
+    .st-badge.aktif { background: #eff6ff; color: #2563eb; }
+    .st-badge.selesai { background: #f0fdf4; color: #16a34a; }
+    .st-card-title { font-size: 1rem; font-weight: 700; color: #0f172a; line-height: 1.3; }
+    .st-card-meta { font-size: .8rem; color: #64748b; display: flex; align-items: center; gap: 6px; }
+    .st-card-desc { font-size: .82rem; color: #475569; }
+    .st-card-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .st-absensi-count { font-size: .8rem; color: #64748b; display: flex; align-items: center; gap: 5px; }
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 18px; padding: 28px 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 20px; }
+    .form-label { font-size: .82rem; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+    .form-input { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 9px; font-size: .88rem; outline: none; box-sizing: border-box; }
+    .form-input:focus { border-color: #6366f1; }
+    .form-group { margin-bottom: 14px; }
+    .btn-primary { background: linear-gradient(135deg,#6366f1,#4f46e5); color: #fff; border: none; border-radius: 9px; padding: 10px 20px; font-size: .88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .btn-primary:hover { opacity: .9; }
+    .btn-secondary { background: #f1f5f9; color: #374151; border: none; border-radius: 9px; padding: 10px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-danger-soft { background: #fff1f2; color: #dc2626; border: none; border-radius: 9px; padding: 9px 14px; font-size: .82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-danger-soft:hover { background: #ffe4e6; }
+    .btn-indigo-soft { background: #eff6ff; color: #2563eb; border: none; border-radius: 9px; padding: 9px 14px; font-size: .82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-indigo-soft:hover { background: #dbeafe; }
+    .err-msg { color: #dc2626; font-size: .8rem; margin-top: 8px; display: none; }
+    .st-empty { text-align: center; padding: 48px 24px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Safety Talk</span>
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <section class="admin-section">
+      <div class="um-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="month" id="stFilterMonth" class="um-search" style="width:160px" onchange="renderSchedules()">
+          <select id="stFilterStatus" class="um-search" style="width:150px" onchange="renderSchedules()">
+            <option value="">Semua Status</option>
+            <option value="AKTIF">Aktif</option>
+            <option value="SELESAI">Selesai</option>
+          </select>
+        </div>
+        <div class="um-header-actions">
+          <button class="btn-primary" onclick="openCreateModal()">
+            <i class="fa-solid fa-plus"></i> Buat Jadwal
+          </button>
+          <button class="btn-secondary btn-icon" onclick="loadAll()" title="Refresh">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="stGrid" class="st-card-grid">
+        <div class="st-empty"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>
+      </div>
+    </section>
+
+    <nav id="mobileBottomNav" class="mobile-bottom-nav"></nav>
+  </div>
+</div>
+
+<!-- Modal Buat Jadwal -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="fa-solid fa-chalkboard-user" style="color:#6366f1"></i> Buat Jadwal Safety Talk</div>
+    <div class="form-group">
+      <label class="form-label">Tanggal Safety Talk *</label>
+      <input type="date" id="stTanggal" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Judul Materi *</label>
+      <input type="text" id="stJudul" class="form-input" placeholder="cth. K3 Bekerja di Ketinggian">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Deskripsi Materi</label>
+      <textarea id="stDeskripsi" class="form-input" rows="3" placeholder="Ringkasan topik yang akan disampaikan..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pemateri *</label>
+      <select id="stPemateri" class="form-input">
+        <option value="">Pilih Pemateri</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Target Perusahaan</label>
+      <select id="stTargetCo" class="form-input">
+        <option value="">Semua Perusahaan</option>
+      </select>
+    </div>
+    <div id="createErr" class="err-msg"></div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeModal('createModal')">Batal</button>
+      <button class="btn-primary" id="createBtn" onclick="submitCreate()">
+        <i class="fa-solid fa-floppy-disk"></i> Simpan
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="push-notif.js"></script>
+<script src="reports-utils.js"></script>
+<script src="notifications.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="safety-talk.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    const role = String(user.role || '').toUpperCase().replace(/\s+/g, '_');
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      window.location.href = 'index-home.html'; return;
+    }
+    const now = new Date();
+    document.getElementById('stFilterMonth').value =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    loadAll();
+  });
+</script>
+</body>
+</html>

@@ -1266,6 +1266,27 @@ async function ensureSBOSheet(sheets) {
   } catch (err) { console.error('ensureSBOSheet error:', err?.message || err); }
 }
 
+// ── Safety Talk sheet bootstrap ───────────────────────────────────
+const ST_SCHED_HDR = ['ID','TIMESTAMP','TANGGAL','BULAN','JUDUL_MATERI','DESKRIPSI_MATERI','NAMA_PEMATERI','NIK_PEMATERI','JABATAN_PEMATERI','PERUSAHAAN_TARGET','STATUS','CREATED_BY'];
+const ST_AB_HDR    = ['SCHEDULE_ID','BULAN','NIK','NAMA','PERUSAHAAN','DEPARTEMEN','JABATAN','CHECKED_BY','CHECKED_AT'];
+
+async function _ensureSafetyTalkSheets(sheets) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties.title' });
+    const titles = new Set(meta.data.sheets.map(s => s.properties.title));
+    const reqs = [];
+    if (!titles.has('SafetyTalk_Schedule')) reqs.push({ addSheet: { properties: { title: 'SafetyTalk_Schedule' } } });
+    if (!titles.has('SafetyTalk_Absensi'))  reqs.push({ addSheet: { properties: { title: 'SafetyTalk_Absensi' } } });
+    if (reqs.length) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { requests: reqs } });
+      const updates = [];
+      if (!titles.has('SafetyTalk_Schedule')) updates.push({ range: 'SafetyTalk_Schedule!A1', values: [ST_SCHED_HDR] });
+      if (!titles.has('SafetyTalk_Absensi'))  updates.push({ range: 'SafetyTalk_Absensi!A1',  values: [ST_AB_HDR] });
+      await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: 'RAW', data: updates } });
+    }
+  } catch (err) { console.error('_ensureSafetyTalkSheets error:', err?.message); }
+}
+
 // ── Generic draft helpers (per-NIK, sheet: {FormType}_Drafts) ────
 async function _upsertDraftRow(sheets, sheetName, nik, draftJson) {
   let rows = [];
@@ -1757,6 +1778,27 @@ module.exports = async (req, res) => {
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         case 'getSBOReports':       result = await getSBOReports(sheets, auth); break;
+        case 'getSafetyTalkSchedules': {
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          let stRows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 30_000);
+          if (!isSuperAdmin(auth.role)) {
+            const co = String(auth.perusahaan || '').trim();
+            stRows = stRows.filter(r => !r['PERUSAHAAN_TARGET'] || r['PERUSAHAAN_TARGET'] === co);
+          }
+          result = { status: 'success', data: stRows };
+          break;
+        }
+        case 'getSafetyTalkAbsensi': {
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const schedId = String(req.query.schedule_id || '').trim();
+          let abRows = [];
+          try { abRows = await getCachedSheet(sheets, 'SafetyTalk_Absensi', 30_000); } catch {}
+          result = {
+            status: 'success',
+            data: schedId ? abRows.filter(r => String(r['SCHEDULE_ID'] || '') === schedId) : abRows,
+          };
+          break;
+        }
         case 'saveSBODraft': {
           const auth2 = requireAuth(req); await checkTokenValid(sheets, auth2);
           await saveSBODraftForUser(sheets, auth2.nik, JSON.stringify(data.draft || {}));
@@ -1866,6 +1908,75 @@ module.exports = async (req, res) => {
           const newStatus = sent ? 'TERKIRIM' : 'GAGAL';
           await writeWaStatusToSheet(sheets, sheetTarget, data.report_id, newStatus);
           result = { status: 'success', wa_pic_status: newStatus, message: sent ? 'WA berhasil dikirim ulang.' : 'Gagal mengirim WA.' };
+          break;
+        }
+        case 'createSafetyTalkSchedule': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          if (!data.tanggal?.trim()) throw new Error('Tanggal wajib diisi.');
+          if (!data.judul_materi?.trim()) throw new Error('Judul materi wajib diisi.');
+          await _ensureSafetyTalkSheets(sheets);
+          const stId = 'ST-' + Date.now();
+          const stRow = [
+            stId, new Date().toISOString(),
+            data.tanggal, data.tanggal.slice(0, 7),
+            data.judul_materi?.trim() || '',
+            data.deskripsi_materi?.trim() || '',
+            data.nama_pemateri?.trim() || '',
+            data.nik_pemateri?.trim() || '',
+            data.jabatan_pemateri?.trim() || '',
+            data.perusahaan_target?.trim() || '',
+            'AKTIF',
+            authUser.nik || '',
+          ];
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule',
+            valueInputOption: 'USER_ENTERED', requestBody: { values: [stRow] },
+          });
+          invalidateCache('SafetyTalk_Schedule');
+          result = { status: 'success', id: stId, message: 'Jadwal Safety Talk berhasil dibuat.' };
+          break;
+        }
+        case 'updateSafetyTalkSchedule': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          if (!data.id) throw new Error('ID jadwal wajib diisi.');
+          const updFields = {};
+          if (data.status) updFields['STATUS'] = data.status;
+          if (data.judul_materi)    updFields['JUDUL_MATERI']    = data.judul_materi;
+          if (data.deskripsi_materi) updFields['DESKRIPSI_MATERI'] = data.deskripsi_materi;
+          await updateWorkflowFields(sheets, 'SafetyTalk_Schedule', data.id, updFields);
+          invalidateCache('SafetyTalk_Schedule');
+          result = { status: 'success', message: 'Jadwal berhasil diperbarui.' };
+          break;
+        }
+        case 'saveSafetyTalkAbsensi': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const { schedule_id, niks_hadir } = data || {};
+          if (!schedule_id) throw new Error('schedule_id wajib diisi.');
+          await _ensureSafetyTalkSheets(sheets);
+          // Ambil BULAN dari jadwal
+          const schedRows = await getSheetData(sheets, 'SafetyTalk_Schedule');
+          const sched = schedRows.find(r => String(r['ID'] || '') === String(schedule_id));
+          if (!sched) throw new Error('Jadwal tidak ditemukan.');
+          const bulan = String(sched['BULAN'] || sched['TANGGAL']?.slice(0, 7) || '');
+          const ST_AB_HDR = ['SCHEDULE_ID','BULAN','NIK','NAMA','PERUSAHAAN','DEPARTEMEN','JABATAN','CHECKED_BY','CHECKED_AT'];
+          // Baca semua absensi yang ada
+          let existing = [];
+          try { existing = await getSheetData(sheets, 'SafetyTalk_Absensi'); } catch {}
+          // Pertahankan absensi jadwal lain; ganti jadwal ini
+          const others = existing.filter(r => String(r['SCHEDULE_ID'] || '') !== String(schedule_id));
+          const now = new Date().toISOString();
+          const newRows = (Array.isArray(niks_hadir) ? niks_hadir : []).map(k => [
+            schedule_id, bulan, k.nik || '', k.nama || '', k.perusahaan || '',
+            k.departemen || '', k.jabatan || '', authUser.nik || '', now,
+          ]);
+          const allData = [ST_AB_HDR, ...others.map(r => ST_AB_HDR.map(h => r[h] || '')), ...newRows];
+          await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi',
+            valueInputOption: 'USER_ENTERED', requestBody: { values: allData },
+          });
+          invalidateCache('SafetyTalk_Absensi');
+          result = { status: 'success', count: newRows.length, message: `${newRows.length} karyawan tercatat hadir.` };
           break;
         }
         case 'submitHazardReport':

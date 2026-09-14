@@ -1,6 +1,7 @@
 let _capKaryawan = [];
 let _capHazardReports = [];
 let _capInsReports = [];
+let _capStAbsensi = []; // Safety Talk absensi rows
 let _capLoaded = false;
 let _capFiltered = [];
 let _capComputed = [];
@@ -24,10 +25,11 @@ async function loadCapaian() {
   if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px">Memuat data...</td></tr>';
 
   try {
-    const [karRes, hrRes, insRes] = await Promise.all([
+    const [karRes, hrRes, insRes, stAbRes] = await Promise.all([
       fetch('/api?action=getKaryawan').then(r => r.json()),
       fetch('/api?action=getHazardReports').then(r => r.json()),
       fetch('/api?action=getInspectionReports').then(r => r.json()),
+      fetch('/api?action=getSafetyTalkAbsensi').then(r => r.json()).catch(() => ({ data: [] })),
     ]);
 
     if (karRes.status !== 'success') throw new Error(karRes.message || 'Gagal memuat data karyawan');
@@ -37,6 +39,7 @@ async function loadCapaian() {
     );
     _capHazardReports = hrRes.data || [];
     _capInsReports    = insRes.data || [];
+    _capStAbsensi     = stAbRes.data || [];
     _capLoaded = true;
 
     const isSA = isSuperAdminRole(getCurrentUser()?.role);
@@ -148,7 +151,12 @@ function computeAndRender() {
     // %Total = rata-rata %HR dan %INS (hanya yang memiliki target)
     const pctVals  = [pctHR, pctINS].filter(v => v !== null);
     const pctTotal = pctVals.length > 0 ? Math.round(pctVals.reduce((a, b) => a + b, 0) / pctVals.length) : null;
-    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal, picOpen, pctClosing };
+    // Safety Talk — hadir jika ada absensi di bulan yang sama
+    const stHadir = monthStr ? _capStAbsensi.some(ab =>
+      String(ab['NIK'] || '').trim() === nik &&
+      String(ab['BULAN'] || '') === monthStr
+    ) : null;
+    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal, picOpen, pctClosing, stHadir };
   });
 
   _capFiltered = _capComputed.filter(row => {
@@ -191,6 +199,7 @@ function renderTable() {
       ${th('objINS', 'OBJ INS', true)}${th('achINS', 'Capaian INS', true)}${th('pctINS', '% INS', true)}
       ${th('pctTotal', '% Total', true)}
       ${th('picOpen', 'PIC Open', true)}${th('pctClosing', '% Closing', true)}
+      ${th('stHadir', 'Safety Talk', true)}
     </tr>`;
   }
 
@@ -232,6 +241,7 @@ function renderTable() {
       ${_capPctCell(row.pctTotal)}
       <td class="um-center"><b style="color:${picOpenColor}">${row.picOpen}</b></td>
       ${_capPctCell(row.pctClosing)}
+      <td class="um-center">${row.stHadir === null ? '<span style="color:#cbd5e1">-</span>' : row.stHadir ? '<span style="color:#22c55e;font-size:1.1rem" title="Hadir">✓</span>' : '<span style="color:#ef4444;font-size:1rem" title="Tidak hadir">✗</span>'}</td>
     </tr>`;
   }).join('');
 
@@ -271,6 +281,11 @@ function renderKpi() {
     </div>`;
   };
 
+  // Safety Talk stats bulan ini
+  const stHadirCount = _capFiltered.filter(r => r.stHadir === true).length;
+  const stTotalCount = _capFiltered.filter(r => r.stHadir !== null).length;
+  const stPct = stTotalCount > 0 ? Math.round(stHadirCount / stTotalCount * 100) : null;
+
   el.style.display = 'flex';
   el.innerHTML = `
     <div class="ach-kpi-cell">
@@ -280,7 +295,12 @@ function renderKpi() {
     </div>
     ${kpiItem('Rata-rata HR',    avg('pctHR'),    'fa-triangle-exclamation')}
     ${kpiItem('Rata-rata INS',   avg('pctINS'),   'fa-clipboard-check')}
-    ${kpiItem('Rata-rata Total', avg('pctTotal'), 'fa-trophy')}`;
+    ${kpiItem('Rata-rata Total', avg('pctTotal'), 'fa-trophy')}
+    ${stTotalCount > 0 ? `<div class="ach-kpi-cell">
+      <i class="fa-solid fa-chalkboard-user" style="color:${stPct >= 80 ? '#22c55e' : stPct >= 50 ? '#f59e0b' : '#ef4444'};font-size:1.1rem"></i>
+      <div class="ach-kpi-num" style="color:${stPct >= 80 ? '#22c55e' : stPct >= 50 ? '#f59e0b' : '#ef4444'}">${stHadirCount}/${stTotalCount}</div>
+      <div class="ach-kpi-label">Safety Talk Hadir</div>
+    </div>` : ''}`;
 }
 
 function _capSortIcon(col) {
@@ -312,6 +332,7 @@ function _capSortVal(row, col) {
     case 'pctTotal':   return row.pctTotal   ?? -1;
     case 'picOpen':    return row.picOpen;
     case 'pctClosing': return row.pctClosing ?? -1;
+    case 'stHadir':    return row.stHadir === null ? -1 : row.stHadir ? 1 : 0;
     default:           return 0;
   }
 }

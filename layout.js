@@ -14,8 +14,10 @@
     'capaian-sap.html':  'capaian-sap',
     'sbo.html':          'sbo',
     'sbo-form.html':     'sbo',
-    'pc.html':           'pc',
-    'pc-form.html':      'pc',
+    'pc.html':                  'pc',
+    'pc-form.html':             'pc',
+    'safety-talk.html':         'safety_talk',
+    'safety-talk-absensi.html': 'safety_talk',
   };
 
   const PAGE_TITLES = {
@@ -29,6 +31,7 @@
     'laporan-detail': 'Detail Laporan',
     'capaian-sap':    'Capaian SAP',
     'sbo':            'Safe Behavior Observation',
+    'safety_talk':    'Safety Talk',
   };
 
   function getActivePage() {
@@ -81,9 +84,10 @@
       ${isAdmin ? `
       <div class="sidebar-section-label">Admin Management</div>
       <nav class="sidebar-nav">
-        ${navItem('admin.html',         'fa-users-gear',      'Manajemen User',    'admin-user', active)}
-        ${navItem('laporan-admin.html', 'fa-file-lines',      'Manajemen Laporan', 'laporan',    active)}
-        ${navItem('eskalasi.html',      'fa-circle-exclamation','Eskalasi',        'eskalasi',   active)}
+        ${navItem('admin.html',         'fa-users-gear',        'Manajemen User',    'admin-user',  active)}
+        ${navItem('laporan-admin.html', 'fa-file-lines',        'Manajemen Laporan', 'laporan',     active)}
+        ${navItem('eskalasi.html',      'fa-circle-exclamation','Eskalasi',          'eskalasi',    active)}
+        ${navItem('safety-talk.html',   'fa-chalkboard-user',   'Safety Talk',        'safety_talk', active)}
       </nav>` : ''}
 
       <div class="sidebar-spacer"></div>
