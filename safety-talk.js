@@ -4,6 +4,7 @@ let _stSchedules = [];
 let _stAbsensiMap = {}; // schedule_id → jumlah hadir
 let _stKaryawan  = [];
 let _stPemateriChoices;
+let _editingStId = null; // null = buat baru, string = edit jadwal
 
 // ── Load ──────────────────────────────────────────────────────────
 async function loadAll() {
@@ -92,6 +93,9 @@ function renderSchedules() {
         <a href="safety-talk-absensi.html?id=${encodeURIComponent(id)}" class="btn-indigo-soft">
           <i class="fa-solid fa-clipboard-list"></i> Kelola Absensi
         </a>
+        <button class="btn-indigo-soft" onclick="editJadwal('${id}')" title="Edit jadwal ini">
+          <i class="fa-solid fa-pen"></i>
+        </button>
         ${status === 'AKTIF' ? `<button class="btn-danger-soft" onclick="selesaikan('${id}')">
           <i class="fa-solid fa-circle-check"></i> Selesaikan
         </button>` : ''}
@@ -103,13 +107,31 @@ function renderSchedules() {
   }).join('');
 }
 
-// ── Create ────────────────────────────────────────────────────────
+// ── Create / Edit ─────────────────────────────────────────────────
 function openCreateModal() {
+  _editingStId = null;
+  document.getElementById('createModalTitle').textContent = 'Buat Jadwal Safety Talk';
+  document.getElementById('createBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
   document.getElementById('stTanggal').value = new Date().toISOString().slice(0, 10);
   document.getElementById('stJudul').value = '';
   document.getElementById('stDeskripsi').value = '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue('');
   document.getElementById('stTargetCo').value = '';
+  document.getElementById('createErr').style.display = 'none';
+  document.getElementById('createModal').classList.add('open');
+}
+
+function editJadwal(id) {
+  const s = _stSchedules.find(r => r['ID'] === id);
+  if (!s) return;
+  _editingStId = id;
+  document.getElementById('createModalTitle').textContent = 'Edit Jadwal Safety Talk';
+  document.getElementById('createBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Perbarui';
+  document.getElementById('stTanggal').value = s['TANGGAL'] || '';
+  document.getElementById('stJudul').value = s['JUDUL_MATERI'] || '';
+  document.getElementById('stDeskripsi').value = s['DESKRIPSI_MATERI'] || '';
+  if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue(s['NAMA_PEMATERI'] || '');
+  document.getElementById('stTargetCo').value = s['PERUSAHAAN_TARGET'] || '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
 }
@@ -134,30 +156,37 @@ async function submitCreate() {
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  const payload = {
+    tanggal,
+    judul_materi:     judul,
+    deskripsi_materi: document.getElementById('stDeskripsi').value.trim(),
+    nama_pemateri:    pemateri || '',
+    nik_pemateri:     karFound?.['NIK']     || '',
+    jabatan_pemateri: karFound?.['JABATAN'] || '',
+    perusahaan_target: document.getElementById('stTargetCo').value,
+  };
   try {
+    const isEdit = !!_editingStId;
     const res = await fetch('/api', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'createSafetyTalkSchedule', data: {
-        tanggal,
-        judul_materi:    judul,
-        deskripsi_materi: document.getElementById('stDeskripsi').value.trim(),
-        nama_pemateri:   pemateri || '',
-        nik_pemateri:    karFound?.['NIK']     || '',
-        jabatan_pemateri:karFound?.['JABATAN'] || '',
-        perusahaan_target: document.getElementById('stTargetCo').value,
-      }}),
+      body: JSON.stringify({
+        action: isEdit ? 'updateSafetyTalkSchedule' : 'createSafetyTalkSchedule',
+        data: isEdit ? { id: _editingStId, ...payload } : payload,
+      }),
     });
     const json = await res.json();
     if (!res.ok || json.status === 'error') throw new Error(json.message || 'Gagal menyimpan.');
     closeModal('createModal');
-    if (typeof showToast === 'function') showToast('Jadwal berhasil dibuat!');
+    if (typeof showToast === 'function') showToast(isEdit ? 'Jadwal berhasil diperbarui!' : 'Jadwal berhasil dibuat!');
     await loadAll();
   } catch (e) {
     errEl.textContent = e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
+    btn.innerHTML = _editingStId
+      ? '<i class="fa-solid fa-floppy-disk"></i> Perbarui'
+      : '<i class="fa-solid fa-floppy-disk"></i> Simpan';
   }
 }
 

@@ -1995,9 +1995,17 @@ module.exports = async (req, res) => {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           if (!data.id) throw new Error('ID jadwal wajib diisi.');
           const updFields = {};
-          if (data.status) updFields['STATUS'] = data.status;
-          if (data.judul_materi)    updFields['JUDUL_MATERI']    = data.judul_materi;
-          if (data.deskripsi_materi) updFields['DESKRIPSI_MATERI'] = data.deskripsi_materi;
+          if (data.status)            updFields['STATUS']            = data.status;
+          if (data.judul_materi)      updFields['JUDUL_MATERI']      = data.judul_materi;
+          if (data.deskripsi_materi !== undefined) updFields['DESKRIPSI_MATERI'] = data.deskripsi_materi;
+          if (data.tanggal) {
+            updFields['TANGGAL'] = data.tanggal;
+            updFields['BULAN']   = data.tanggal.slice(0, 7); // YYYY-MM
+          }
+          if (data.nama_pemateri    !== undefined) updFields['NAMA_PEMATERI']    = data.nama_pemateri;
+          if (data.nik_pemateri     !== undefined) updFields['NIK_PEMATERI']     = data.nik_pemateri;
+          if (data.jabatan_pemateri !== undefined) updFields['JABATAN_PEMATERI'] = data.jabatan_pemateri;
+          if (data.perusahaan_target !== undefined) updFields['PERUSAHAAN_TARGET'] = data.perusahaan_target;
           await updateWorkflowFields(sheets, 'SafetyTalk_Schedule', data.id, updFields);
           invalidateCache('SafetyTalk_Schedule');
           result = { status: 'success', message: 'Jadwal berhasil diperbarui.' };
