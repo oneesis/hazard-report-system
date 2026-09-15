@@ -19,6 +19,7 @@ let sboStatusChartInstance = null;
 let sboCategoryChartInstance = null;
 let sboTrendChartInstance = null;
 let insJenisChartInstance = null;
+let _insTemuanChartInstance = null;
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let _insJenisFilter = '';   // kode aktif saat drill-down INS, '' = tampilkan semua
 let _insSortedCodes = [];   // urutan kode sesuai chart (untuk highlight bar)
@@ -1187,7 +1188,9 @@ function _renderInsFilterChip() {
 // ── Panel temuan abnormal per jenis inspeksi ────────────────────────────────
 
 function renderInsTemuanPanel(code) {
-  // Cari atau buat panel di dalam #insSection
+  // Destroy chart lama
+  if (_insTemuanChartInstance) { _insTemuanChartInstance.destroy(); _insTemuanChartInstance = null; }
+
   let panel = document.getElementById('insTemuanPanel');
   if (!panel) {
     panel = document.createElement('div');
@@ -1201,8 +1204,6 @@ function renderInsTemuanPanel(code) {
     isInspectionReport(r) &&
     (r.inspection_sheet || '').trim().toUpperCase() === code
   );
-
-  // Hanya laporan yg punya temuan abnormal
   const withTemuan = insList.filter(r => r.temuan_inspeksi && r.temuan_inspeksi.trim());
   const jenisLabel = _INS_LABELS[code] || code;
   panel.style.display = '';
@@ -1215,62 +1216,100 @@ function renderInsTemuanPanel(code) {
     return;
   }
 
-  const cards = withTemuan.map(r => {
-    const tgl     = r.tanggal_inspeksi ? formatDate(r.tanggal_inspeksi) : formatDate(r.timestamp);
-    const lokasi  = r.lokasi_inspeksi || r.lokasi || '-';
-    const pelapor = r.nama || r.pelapor || '-';
-    const status  = r.status_perbaikan || 'OPEN';
-    const badgeCls = status === 'CLOSED' ? 'status-closed' : status === 'PROGRESS' ? 'status-progress' : 'status-open';
-
-    // Parse inspection_checklist untuk item abnormal
-    let abnormals = [];
+  // Hitung frekuensi tiap item abnormal di semua laporan jenis ini
+  const freq = {};
+  withTemuan.forEach(r => {
+    let items = [];
     try {
       const cl = JSON.parse(r.inspection_checklist || '[]');
-      abnormals = cl.filter(x => x.status === 'Abnormal' || x.status === 'abnormal');
-    } catch { /* fallback ke temuan_inspeksi string */ }
-
-    let temuanHtml = '';
-    if (abnormals.length) {
-      temuanHtml = `<ul class="ins-temuan-list">
-        ${abnormals.map(x => `<li>
-          <span class="ins-temuan-item-name">${esc(x.item || '')}</span>
-          ${x.notes ? `<span class="ins-temuan-notes">: ${esc(x.notes)}</span>` : ''}
-        </li>`).join('')}
-      </ul>`;
-    } else if (r.temuan_inspeksi) {
-      // Fallback: parse string "Item : Catatan\nItem2 : Catatan2"
-      const lines = r.temuan_inspeksi.trim().split(/\n+/).filter(Boolean);
-      temuanHtml = `<ul class="ins-temuan-list">
-        ${lines.map(line => {
-          const sep   = line.indexOf(' : ');
-          const name  = sep > -1 ? line.slice(0, sep) : line;
-          const notes = sep > -1 ? line.slice(sep + 3) : '';
-          return `<li>
-            <span class="ins-temuan-item-name">${esc(name)}</span>
-            ${notes ? `<span class="ins-temuan-notes">: ${esc(notes)}</span>` : ''}
-          </li>`;
-        }).join('')}
-      </ul>`;
+      items = cl.filter(x => x.status === 'Abnormal' || x.status === 'abnormal').map(x => x.item || '');
+    } catch {}
+    if (!items.length && r.temuan_inspeksi) {
+      items = r.temuan_inspeksi.trim().split(/\n+/).filter(Boolean).map(line => {
+        const sep = line.indexOf(' : ');
+        return sep > -1 ? line.slice(0, sep) : line;
+      });
     }
+    items.forEach(name => {
+      const key = name.trim();
+      if (key) freq[key] = (freq[key] || 0) + 1;
+    });
+  });
 
-    return `<div class="ins-temuan-card">
-      <div class="ins-temuan-card-header">
-        <span class="ins-temuan-meta"><i class="fa-regular fa-calendar"></i> ${tgl}</span>
-        <span class="ins-temuan-meta"><i class="fa-solid fa-location-dot"></i> ${esc(lokasi)}</span>
-        <span class="ins-temuan-meta"><i class="fa-solid fa-user"></i> ${esc(pelapor)}</span>
-        <span class="status-badge ${badgeCls}" style="margin-left:auto">${status}</span>
-      </div>
-      ${temuanHtml}
-    </div>`;
-  }).join('');
+  // Sort desc, ambil maks 20 item teratas
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  const labels = sorted.map(([k]) => k);
+  const values = sorted.map(([, v]) => v);
+
+  // Warna gradasi: merah penuh untuk tertinggi, merah muda untuk terendah
+  const max = values[0] || 1;
+  const barColors = values.map(v => {
+    const alpha = 0.35 + 0.65 * (v / max);
+    return `rgba(220,38,38,${alpha.toFixed(2)})`;
+  });
+
+  // Chart height proporsional ke jumlah bar (min 260px)
+  const chartH = Math.max(260, labels.length * 34);
 
   panel.innerHTML = `
     <div class="section-heading" style="color:#dc2626;border-top-color:#fecaca;margin-top:16px">
       <i class="fa-solid fa-triangle-exclamation"></i>
-      Temuan Abnormal — ${jenisLabel}
-      <span style="font-size:.75rem;font-weight:500;color:#94a3b8;text-transform:none">(${withTemuan.length} laporan)</span>
+      Frekuensi Temuan Abnormal — ${esc(jenisLabel)}
+      <span style="font-size:.75rem;font-weight:500;color:#94a3b8;text-transform:none">(dari ${withTemuan.length} laporan)</span>
     </div>
-    <div class="ins-temuan-cards">${cards}</div>`;
+    <div class="chart-card" style="margin-top:10px">
+      <div class="chart-container" style="height:${chartH}px;position:relative">
+        <canvas id="insTemuanChart"></canvas>
+      </div>
+    </div>`;
+
+  const ctx = document.getElementById('insTemuanChart').getContext('2d');
+  _insTemuanChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Frekuensi Abnormal',
+        data: values,
+        backgroundColor: barColors,
+        borderRadius: 6,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.x}× ditemukan abnormal`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, precision: 0 },
+          grid: { color: 'rgba(0,0,0,.06)' },
+          title: { display: true, text: 'Frekuensi', font: { size: 11 } },
+        },
+        y: {
+          ticks: {
+            font: { size: 11 },
+            autoSkip: false,
+            callback(val) {
+              const lbl = this.getLabelForValue(val);
+              // Potong label panjang > 35 karakter
+              return lbl.length > 35 ? lbl.slice(0, 33) + '…' : lbl;
+            },
+          },
+          grid: { display: false },
+        },
+      },
+    },
+  });
 }
 
 // ========================================
