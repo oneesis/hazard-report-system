@@ -11,6 +11,13 @@
   <link rel="stylesheet" href="admin.css">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Full-width layout: sidebar disembunyikan di desktop agar tabel tidak terpotong */
+    @media (min-width: 769px) {
+      .app-sidebar { display: none !important; }
+      .app-main    { margin-left: 0 !important; }
+    }
+  </style>
 </head>
 <body>
 
