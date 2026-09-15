@@ -95,6 +95,7 @@ function renderSchedules() {
       ${s['NAMA_PEMATERI'] ? `<div class="st-card-meta"><i class="fa-solid fa-person-chalkboard"></i> ${escapeHTML(s['NAMA_PEMATERI'])}${s['JABATAN_PEMATERI'] ? ' · ' + escapeHTML(s['JABATAN_PEMATERI']) : ''}</div>` : ''}
       ${s['PERUSAHAAN_TARGET'] ? `<div class="st-card-meta"><i class="fa-solid fa-building"></i> ${escapeHTML(s['PERUSAHAAN_TARGET'])}</div>` : '<div class="st-card-meta"><i class="fa-solid fa-building"></i> Semua Perusahaan</div>'}
       ${s['DESKRIPSI_MATERI'] ? `<div class="st-card-desc">${escapeHTML(s['DESKRIPSI_MATERI'])}</div>` : ''}
+      ${s['QUIZ_SESSION_ID'] ? `<div class="st-card-meta" style="color:#7c3aed"><i class="fa-solid fa-clipboard-question"></i> Quiz: ${escapeHTML(s['QUIZ_SESSION_ID'])}</div>` : ''}
       <div class="st-absensi-count">
         <i class="fa-solid fa-users-line" style="color:#6366f1"></i>
         <span style="color:#16a34a;font-weight:700">${ab.hadir} Hadir</span>
@@ -132,6 +133,7 @@ function openCreateModal() {
   document.getElementById('stDeskripsi').value = '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue('');
   document.getElementById('stTargetCo').value = '';
+  document.getElementById('stQuizSessionId').value = '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
 }
@@ -147,6 +149,7 @@ function editJadwal(id) {
   document.getElementById('stDeskripsi').value = s['DESKRIPSI_MATERI'] || '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue(s['NAMA_PEMATERI'] || '');
   document.getElementById('stTargetCo').value = s['PERUSAHAAN_TARGET'] || '';
+  document.getElementById('stQuizSessionId').value = s['QUIZ_SESSION_ID'] || '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
 }
@@ -179,6 +182,7 @@ async function submitCreate() {
     nik_pemateri:     karFound?.['NIK']     || '',
     jabatan_pemateri: karFound?.['JABATAN'] || '',
     perusahaan_target: document.getElementById('stTargetCo').value,
+    quiz_session_id:   document.getElementById('stQuizSessionId').value.trim(),
   };
   try {
     const isEdit = !!_editingStId;
