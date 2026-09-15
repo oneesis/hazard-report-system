@@ -512,7 +512,7 @@ function renderTimeline(r, status, isInspection, planStatus, closingStatus, renc
   }
 
   if (status === 'PROGRESS' || status === 'CLOSED' || status === 'FOLLOWUP') {
-    items.push({ dot: status === 'CLOSED' ? 'done' : 'progress', label: 'Sedang Perbaikan (IN PROGRESS)', date: '-' });
+    items.push({ dot: status === 'CLOSED' ? 'done' : 'progress', label: 'Sedang Perbaikan (IN PROGRESS)', date: fmt(tanggalR) || '-' });
   }
 
   if (status === 'FOLLOWUP') {

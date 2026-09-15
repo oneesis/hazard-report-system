@@ -309,10 +309,14 @@ async function saveBase64ImageToDrive(base64Data, folderId, fileName) {
 async function saveMultipleImagesToDrive(base64DataField, folderId, idPrefix) {
   if (!base64DataField) return '';
   let list;
-  try {
-    const trimmed = String(base64DataField).trim();
-    list = trimmed.startsWith('[') ? JSON.parse(trimmed) : [base64DataField];
-  } catch { list = [base64DataField]; }
+  if (Array.isArray(base64DataField)) {
+    list = base64DataField;
+  } else {
+    try {
+      const trimmed = String(base64DataField).trim();
+      list = trimmed.startsWith('[') ? JSON.parse(trimmed) : [base64DataField];
+    } catch { list = [base64DataField]; }
+  }
   const urls = [];
   for (let i = 0; i < list.length; i++) {
     if (list[i]) {
