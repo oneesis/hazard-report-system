@@ -245,7 +245,10 @@ async function _doFetchReports() {
     try {
       result = JSON.parse(text);
     } catch (err) {
-      throw new Error('Response API bukan JSON valid: ' + text);
+      // SW mungkin return cached HTML bukan JSON → fallback localStorage
+      const ls = _reportsLsRead();
+      if (ls) { _fetchAllReportsCache = ls; return ls.data; }
+      throw new Error('Response API bukan JSON valid');
     }
 
     if (result.status !== "success") {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "onesap-cache-v15";
+const CACHE_NAME = "onesap-cache-v16";
 const ASSETS_TO_CACHE = [
   "./",
   "./index-home.html",
@@ -66,8 +66,10 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // If successful and normal GET, cache the clone
-        if (response && response.status === 200 && event.request.url.startsWith(self.location.origin)) {
+        // Cache static assets saja — jangan cache /api (dynamic, user-specific)
+        const reqUrl = event.request.url;
+        if (response && response.status === 200 && reqUrl.startsWith(self.location.origin)
+            && !reqUrl.includes('/api')) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
