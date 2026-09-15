@@ -208,20 +208,30 @@ async function _doFetchReports() {
   if (_fetchAllReportsInFlight) return _fetchAllReportsInFlight;
   _fetchAllReportsInFlight = (async () => {
     let response;
-    try {
-      const user = getCurrentUser();
-      const params = new URLSearchParams({ action: "getAllReports" });
-      if (user) {
-        if (user.nik) params.append("nik", user.nik);
-        if (user.nama) params.append("nama", user.nama);
-        if (user.role) params.append("role", user.role);
+    const user = getCurrentUser();
+    const params = new URLSearchParams({ action: "getAllReports" });
+    if (user) {
+      if (user.nik)  params.append("nik",  user.nik);
+      if (user.nama) params.append("nama", user.nama);
+      if (user.role) params.append("role", user.role);
+    }
+    const url = `${BASE_URL}?${params.toString()}`;
+
+    // Coba fetch, retry 1x setelah 3 detik jika gagal (iOS SW restart butuh waktu)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await fetch(url);
+        break; // berhasil, keluar loop
+      } catch (err) {
+        if (attempt === 0) {
+          await new Promise(r => setTimeout(r, 3000)); // tunggu SW ready
+          continue;
+        }
+        // Retry juga gagal → fallback localStorage
+        const ls = _reportsLsRead();
+        if (ls) { _fetchAllReportsCache = ls; return ls.data; }
+        throw new Error('Network error: ' + (err && err.message ? err.message : err));
       }
-      response = await fetch(`${BASE_URL}?${params.toString()}`);
-    } catch (err) {
-      // Fallback ke localStorage jika ada (misal iOS SW restart, fetch gagal sementara)
-      const ls = _reportsLsRead();
-      if (ls) { _fetchAllReportsCache = ls; return ls.data; }
-      throw new Error('Network error saat memanggil API: ' + (err && err.message ? err.message : err));
     }
 
     if (!response.ok) {

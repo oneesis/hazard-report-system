@@ -50,7 +50,10 @@ async function initHomePage() {
   } catch (e) {
     console.error('Home load error', e);
     const el = document.getElementById('myReportsList');
-    if (el) el.innerHTML = '<p class="reports-loading">Gagal memuat laporan.</p>';
+    if (el) el.innerHTML = `<div style="text-align:center;padding:24px 16px">
+      <p style="color:#ef4444;font-size:.9rem;margin-bottom:12px"><i class="fa-solid fa-circle-exclamation"></i> Gagal memuat laporan.</p>
+      <button onclick="location.reload()" style="padding:8px 20px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer"><i class="fa-solid fa-arrows-rotate"></i> Coba Lagi</button>
+    </div>`;
   }
 }
 
