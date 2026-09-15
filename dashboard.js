@@ -173,9 +173,8 @@ document.getElementById('reportTableBody').innerHTML = `
     }
     window.__reportsCache = reports;
 
-    updateKPI();
-    renderTable();
-    updateAnalyticsKpi(reports);
+    // Terapkan initial tab state (General) — show/hide sections yang benar
+    switchTab('general');
     renderModuleSummary(visible);
     handleOpenReportQuery();
 
@@ -205,32 +204,40 @@ function switchTab(name) {
     t.classList.toggle('active', t.dataset.tab === name)
   );
 
-  // Show/hide general-only sections
+  const show = (id, visible) => { const el = typeof id === 'string' ? document.getElementById(id) : id; if (el) el.style.display = visible ? '' : 'none'; };
+
+  // analyticsSection = Pareto / Tren Risiko / Aging / Top Lokasi / Hotspot → HR tab only (admin-gated)
   const analyticsSec = document.getElementById('analyticsSection');
-  // analyticsSection hanya tampil di General dan hanya jika admin (dataset.adminVisible)
-  if (analyticsSec) analyticsSec.style.display = (name === 'general' && analyticsSec.dataset.adminVisible) ? '' : 'none';
+  if (analyticsSec) show(analyticsSec, name === 'hr' && !!analyticsSec.dataset.adminVisible);
 
-  const moduleSumSec = document.getElementById('moduleSummarySection');
-  if (moduleSumSec) moduleSumSec.style.display = name === 'general' ? '' : 'none';
-  const modTrend = document.getElementById('moduleTrendSection');
-  if (modTrend) modTrend.style.display = name === 'general' ? '' : 'none';
+  // Module Summary 3-blok + Trend Komparasi → Umum tab only
+  show('moduleSummarySection', name === 'general');
+  show('moduleTrendSection',   name === 'general');
 
-  // INS section
-  const insEl = document.getElementById('insSection');
-  if (insEl) insEl.style.display = name === 'ins' ? '' : 'none';
+  // KPI grid + Charts section + Leaderboard/Dept → semua tab kecuali Umum (Umum pakai module-summary)
+  const kpiGrid    = document.querySelector('.kpi-grid');
+  const chartsSec  = document.getElementById('dashboardChartsSection');
+  const analyticRow = document.querySelector('.analytics-row');
+  show(kpiGrid,     name !== 'general');
+  show(chartsSec,   name !== 'general');
+  show(analyticRow, name !== 'general');
 
-  // SBO section
-  const sboEl = document.getElementById('sboSection');
-  if (sboEl) sboEl.style.display = name === 'sbo' ? '' : 'none';
+  // INS detail section
+  show('insSection', name === 'ins');
 
-  // Sync hidden typeFilter so renderTable() branches correctly
+  // SBO section (pie + kategori)
+  show('sboSection', name === 'sbo');
+
+  // Sync hidden typeFilter
   const tf = document.getElementById('typeFilter');
   if (tf) tf.value = { general: '', hr: 'HAZARD', ins: 'INSPECTION', sbo: 'SBO' }[name] || '';
 
-  // Re-render KPI + table (table calls renderDashboardCharts internally)
+  // Re-render
   updateKPI();
   renderTable();
   if (name === 'ins') renderInsSection();
+  // HR tab: refresh analytics KPI dengan data HR
+  if (name === 'hr') updateAnalyticsKpi(reports);
 }
 
 function isOverdue(report) {
@@ -1963,7 +1970,8 @@ function initAnalyticsSection() {
   if (!section) return;
   // Tandai sebagai "admin-visible" — switchTab() yang mengatur display berdasarkan tab aktif
   section.dataset.adminVisible = '1';
-  if (_activeTab === 'general') section.style.display = '';
+  // Hanya tampil saat di tab HR (bukan General)
+  if (_activeTab === 'hr') section.style.display = '';
 
   section.querySelectorAll('.range-chip').forEach(btn => {
     btn.addEventListener('click', () => {
