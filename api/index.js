@@ -790,7 +790,7 @@ function stripSensitiveKaryawan(rows) {
 }
 
 async function getHazardReports(sheets, auth) {
-  const data = await getSheetData(sheets, 'Hazard_Report');
+  const data = await getCachedSheet(sheets, 'Hazard_Report', 300_000);
   let result = data
     .map(obj => {
       const normalized = {};
@@ -810,7 +810,7 @@ async function getHazardReports(sheets, auth) {
 async function getInspectionReports(sheets, auth) {
   // ponytail: parallel fetches — 8 sheets sequential was ~8x slower
   const results = await Promise.allSettled(
-    INSPECTION_SHEETS.map(sheetName => getSheetData(sheets, sheetName).then(rows => ({ sheetName, rows })))
+    INSPECTION_SHEETS.map(sheetName => getCachedSheet(sheets, sheetName, 300_000).then(rows => ({ sheetName, rows })))
   );
   let data = [];
   for (const result of results) {

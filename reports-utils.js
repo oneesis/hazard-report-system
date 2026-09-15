@@ -165,7 +165,23 @@ async function fetchHazardReports() {
 
 let _fetchAllReportsInFlight = null;
 let _fetchAllReportsCache = null; // { data, ts }
-const _REPORTS_TTL = 60_000;
+const _REPORTS_TTL = 120_000; // 2 menit in-memory
+const _REPORTS_LS_TTL = 600_000; // 10 menit localStorage stale
+
+function _reportsLsKey() {
+  try { const u = getCurrentUser(); return u ? `_rpts_v1_${u.nik || u.nama}` : null; } catch { return null; }
+}
+function _reportsLsRead() {
+  try {
+    const key = _reportsLsKey(); if (!key) return null;
+    const raw = localStorage.getItem(key); if (!raw) return null;
+    const p = JSON.parse(raw);
+    return (p && Array.isArray(p.data) && Date.now() - p.ts < _REPORTS_LS_TTL) ? p : null;
+  } catch { return null; }
+}
+function _reportsLsWrite(data) {
+  try { const key = _reportsLsKey(); if (key) localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+}
 
 function invalidateReportsCache() { _fetchAllReportsCache = null; }
 
@@ -173,6 +189,22 @@ async function fetchAllReports() {
   if (_fetchAllReportsCache && Date.now() - _fetchAllReportsCache.ts < _REPORTS_TTL) {
     return _fetchAllReportsCache.data;
   }
+
+  // stale-while-revalidate: kembalikan localStorage cache sekarang, fetch di background
+  const ls = _reportsLsRead();
+  if (ls && !_fetchAllReportsInFlight) {
+    _fetchAllReportsCache = ls; // set in-memory dari ls agar call berikutnya dalam TTL juga instan
+    _doFetchReports().then(data => {
+      document.dispatchEvent(new CustomEvent('reportsRefreshed', { detail: data }));
+    }).catch(() => {});
+    return ls.data;
+  }
+
+  if (_fetchAllReportsInFlight) return _fetchAllReportsInFlight;
+  return _doFetchReports();
+}
+
+async function _doFetchReports() {
   if (_fetchAllReportsInFlight) return _fetchAllReportsInFlight;
   _fetchAllReportsInFlight = (async () => {
     let response;
@@ -207,6 +239,7 @@ async function fetchAllReports() {
 
     const data = result.data || [];
     _fetchAllReportsCache = { data, ts: Date.now() };
+    _reportsLsWrite(data);
     return data;
   })().finally(() => { _fetchAllReportsInFlight = null; });
   return _fetchAllReportsInFlight;
