@@ -250,7 +250,7 @@ Kami mengundang Bapak/Ibu untuk hadir dalam kegiatan Safety Talk yang akan dilak
 Hari/Tanggal : ${tgl}
 Waktu        : 07.00 WITA - Selesai
 Pemateri     : ${pemateri}
-${deptPemateri ? `               ${deptPemateri}\n` : ''}Topik        : ${topik}${deskripsi}
+${deptPemateri ? `Departemen   : ${deptPemateri}\n` : ''}Topik        : ${topik}${deskripsi}
 
 *Atribut Peserta:*
 ∙ Menggunakan seragam perusahaan dalam kondisi rapi.
