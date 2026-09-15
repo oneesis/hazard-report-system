@@ -233,7 +233,8 @@ function salinWA(id) {
     : '-';
   const perusahaan = s['PERUSAHAAN_TARGET'] || 'PT Energi Batubara Lestari';
   const pemateri   = s['NAMA_PEMATERI']    || '-';
-  const jabPemateri= s['JABATAN_PEMATERI'] ? ` (${s['JABATAN_PEMATERI']})` : '';
+  const karPemateri = _stKaryawan.find(k => k['NIK'] === s['NIK_PEMATERI'] || k['NAMA'] === s['NAMA_PEMATERI']);
+  const jabPemateri = karPemateri?.['DEPARTEMEN'] ? ` (${karPemateri['DEPARTEMEN']})` : '';
   const topik      = s['JUDUL_MATERI']     || '-';
   const deskripsi  = s['DESKRIPSI_MATERI'] ? `\nDeskripsi  : ${s['DESKRIPSI_MATERI']}\n` : '';
 
