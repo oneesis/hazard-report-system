@@ -19,6 +19,8 @@ let sboStatusChartInstance = null;
 let sboCategoryChartInstance = null;
 let sboTrendChartInstance = null;
 let insJenisChartInstance = null;
+let _insJenisFilter = '';   // kode aktif saat drill-down INS, '' = tampilkan semua
+let _insSortedCodes = [];   // urutan kode sesuai chart (untuk highlight bar)
 let _sboReports = [];
 let _activeTab = 'general';
 let currentPage = 1;
@@ -222,6 +224,12 @@ function switchTab(name) {
   show(chartsSec,   name !== 'general');
   show(analyticRow, name !== 'general');
 
+  // Reset drill-down INS saat pindah dari tab INS
+  if (name !== 'ins' && _insJenisFilter) {
+    _insJenisFilter = '';
+    document.getElementById('insFilterChip')?.remove();
+  }
+
   // INS detail section
   show('insSection', name === 'ins');
 
@@ -390,7 +398,10 @@ function renderTable() {
       (!endDate   || (reportDate && reportDate <= endDate));
 
     const matchesOverdue = !overdueOnlyFilter || isOverdue(report);
-    return matchesSearch && matchesStatus && matchesType && matchesDate && matchesOverdue;
+    // Drill-down INS: filter per jenis inspeksi
+    const matchesInsJenis = !_insJenisFilter || _activeTab !== 'ins' ||
+      (report.inspection_sheet || '').trim().toUpperCase() === _insJenisFilter;
+    return matchesSearch && matchesStatus && matchesType && matchesDate && matchesOverdue && matchesInsJenis;
   });
 
   filteredReports = filtered;
@@ -1078,30 +1089,34 @@ function renderInsSection() {
   if (!canvas || typeof Chart === 'undefined') return;
 
   const insList = getVisibleReportsFromCache().filter(isInspectionReport);
-  const counts  = {};
+
+  // Hitung per kode (bukan nama) supaya bisa filter tabel pakai kode
+  const rawCounts = {};
   insList.forEach(r => {
-    const raw   = (r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || 'Lainnya').trim().toUpperCase();
-    const jenis = _INS_LABELS[raw] || raw; // nama penuh atau fallback ke kode
-    counts[jenis] = (counts[jenis] || 0) + 1;
+    const code = (r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || 'LAINNYA').trim().toUpperCase();
+    rawCounts[code] = (rawCounts[code] || 0) + 1;
   });
 
-  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const sorted = Object.entries(rawCounts).sort((a, b) => b[1] - a[1]);
   if (!sorted.length) return;
 
-  const labels   = sorted.map(([k]) => wrapLabel(k, 22));
-  const data     = sorted.map(([,v]) => v);
+  _insSortedCodes = sorted.map(([code]) => code);
+  const labels = sorted.map(([code]) => _INS_LABELS[code] || code);
+  const data   = sorted.map(([, v]) => v);
+
+  // Warna bar: highlighted jika sedang di-filter
+  const barColors = () => _insSortedCodes.map(code =>
+    _insJenisFilter
+      ? (code === _insJenisFilter ? 'rgba(16,185,129,1)' : 'rgba(16,185,129,.25)')
+      : 'rgba(16,185,129,.8)'
+  );
 
   if (insJenisChartInstance) insJenisChartInstance.destroy();
   insJenisChartInstance = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Jumlah Inspeksi',
-        data,
-        backgroundColor: 'rgba(16,185,129,.75)',
-        borderRadius: 4,
-      }],
+      datasets: [{ label: 'Jumlah Inspeksi', data, backgroundColor: barColors(), borderRadius: 4 }],
     },
     options: {
       responsive: true,
@@ -1111,36 +1126,58 @@ function renderInsSection() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            // Tampilkan nama penuh di tooltip
-            title: (items) => {
-              const idx = items[0]?.dataIndex;
-              return sorted[idx]?.[0] || '';
-            },
+            title: (items) => labels[items[0]?.dataIndex] || '',
+            label:  (item) => ` ${item.raw} inspeksi — klik untuk lihat temuan`,
           },
         },
       },
       scales: {
-        x: {
-          beginAtZero: true,
-          ticks: { precision: 0, color: '#64748b', font: { size: 10 } },
-          grid: { color: '#f1f5f9' },
-        },
-        y: {
-          ticks: {
-            color: '#475569',
-            font: { size: 11 },
-            autoSkip: false,
-          },
-          grid: { display: false },
-        },
+        x: { beginAtZero: true, ticks: { precision: 0, color: '#64748b', font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+        y: { ticks: { color: '#475569', font: { size: 11 }, autoSkip: false }, grid: { display: false } },
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const clickedCode = _insSortedCodes[elements[0].index];
+        // Toggle: klik sama → clear filter
+        _insJenisFilter = (_insJenisFilter === clickedCode) ? '' : clickedCode;
+        // Update warna bar tanpa re-render seluruh chart
+        insJenisChartInstance.data.datasets[0].backgroundColor = barColors();
+        insJenisChartInstance.update('none');
+        // Update chip + tabel
+        _renderInsFilterChip();
+        renderTable();
+        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       },
     },
   });
 
-  // Sesuaikan tinggi canvas agar semua bar terlihat (min 40px per bar)
-  const minH = Math.max(280, sorted.length * 40);
+  const minH = Math.max(280, sorted.length * 44);
   canvas.parentElement.style.minHeight = minH + 'px';
   insJenisChartInstance.resize();
+  _renderInsFilterChip();
+}
+
+function _renderInsFilterChip() {
+  const chipId = 'insFilterChip';
+  let chip = document.getElementById(chipId);
+  if (!_insJenisFilter) {
+    if (chip) chip.remove();
+    return;
+  }
+  const label = _INS_LABELS[_insJenisFilter] || _insJenisFilter;
+  if (!chip) {
+    chip = document.createElement('div');
+    chip.id = chipId;
+    chip.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:8px;font-size:.82rem;font-weight:600;color:#065f46;margin:0 20px 8px;flex-wrap:wrap';
+    // Sisipkan sebelum filter-bar
+    const filterBar = document.querySelector('.filter-bar');
+    if (filterBar) filterBar.parentNode.insertBefore(chip, filterBar);
+  }
+  chip.innerHTML = `<i class="fa-solid fa-filter"></i> Filter: <strong>${label}</strong>
+    <button onclick="_insJenisFilter='';_renderInsFilterChip();if(insJenisChartInstance){insJenisChartInstance.data.datasets[0].backgroundColor=_insSortedCodes.map(()=>'rgba(16,185,129,.8)');insJenisChartInstance.update('none');}renderTable();"
+      style="margin-left:4px;background:#d1fae5;border:1px solid #6ee7b7;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.78rem;color:#065f46">
+      × Hapus Filter
+    </button>`;
 }
 
 // ========================================
