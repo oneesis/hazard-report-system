@@ -117,11 +117,15 @@
     <div class="form-group">
       <label class="form-label">
         <i class="fa-solid fa-clipboard-question" style="color:#7c3aed"></i>
-        Quiz Session ID
-        <span style="font-size:.73rem;font-weight:400;color:#94a3b8;margin-left:4px">— dari quizsheebl.org (opsional)</span>
+        Link Quiz
+        <span style="font-size:.73rem;font-weight:400;color:#94a3b8;margin-left:4px">— dari quiz-she.vercel.app (opsional)</span>
       </label>
-      <input type="text" id="stQuizSessionId" class="form-input" placeholder="cth. session-abc123">
-      <div style="font-size:.74rem;color:#94a3b8;margin-top:4px">ID sesi quiz di <a href="https://quizsheebl.org/admin.html" target="_blank" style="color:#7c3aed">quizsheebl.org</a> yang sesuai dengan materi ini. Karyawan tidak hadir wajib lulus quiz tersebut.</div>
+      <select id="stQuizSessionId" class="form-input">
+        <option value="">— Tidak ada quiz —</option>
+      </select>
+      <div id="stQuizLoadStatus" style="font-size:.74rem;color:#94a3b8;margin-top:4px">
+        <i class="fa-solid fa-spinner fa-spin"></i> Memuat sesi quiz...
+      </div>
     </div>
     <div id="createErr" class="err-msg"></div>
     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">

@@ -1,12 +1,41 @@
 // Safety Talk — halaman list jadwal (admin only)
 
+const QUIZ_URL = 'https://quiz-she.vercel.app';
+
 let _stSchedules = [];
 let _stAbsensiMap = {}; // schedule_id → jumlah hadir
 let _stKaryawan  = [];
 let _stPemateriChoices;
 let _editingStId = null; // null = buat baru, string = edit jadwal
+let _quizSessions = []; // cache sesi dari quiz-she
 
 // ── Load ──────────────────────────────────────────────────────────
+async function _loadQuizSessions() {
+  const sel = document.getElementById('stQuizSessionId');
+  const statusEl = document.getElementById('stQuizLoadStatus');
+  try {
+    const res  = await fetch(`${QUIZ_URL}/api/data?action=sessions`);
+    const data = await res.json();
+    _quizSessions = Array.isArray(data) ? data : (data.value || data.sessions || []);
+    // Filter published saja, sort terbaru dulu
+    _quizSessions = _quizSessions
+      .filter(s => s.status === 'published')
+      .sort((a, b) => String(b.validFrom || '').localeCompare(String(a.validFrom || '')));
+    const currentVal = sel?.value || '';
+    if (sel) {
+      sel.innerHTML = '<option value="">— Tidak ada quiz —</option>' +
+        _quizSessions.map(s => {
+          const from = s.validFrom ? s.validFrom.slice(0, 10) : '';
+          const label = `${s.topicCode || s.id}${s.title ? ' — ' + s.title : ''}${from ? ' ('+from+')' : ''}`;
+          return `<option value="${escapeHTML(s.id)}" ${currentVal === s.id ? 'selected' : ''}>${escapeHTML(label)}</option>`;
+        }).join('');
+    }
+    if (statusEl) statusEl.innerHTML = `<a href="${QUIZ_URL}/admin.html" target="_blank" style="color:#7c3aed;font-size:.74rem"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka admin quiz-she</a>`;
+  } catch {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-size:.74rem"><i class="fa-solid fa-circle-exclamation"></i> Gagal memuat sesi quiz</span>';
+  }
+}
+
 async function loadAll() {
   document.getElementById('stGrid').innerHTML =
     '<div class="st-empty"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>';
@@ -136,6 +165,7 @@ function openCreateModal() {
   document.getElementById('stQuizSessionId').value = '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
+  _loadQuizSessions();
 }
 
 function editJadwal(id) {
@@ -149,9 +179,13 @@ function editJadwal(id) {
   document.getElementById('stDeskripsi').value = s['DESKRIPSI_MATERI'] || '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue(s['NAMA_PEMATERI'] || '');
   document.getElementById('stTargetCo').value = s['PERUSAHAAN_TARGET'] || '';
-  document.getElementById('stQuizSessionId').value = s['QUIZ_SESSION_ID'] || '';
+  const savedQuizId = s['QUIZ_SESSION_ID'] || '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
+  _loadQuizSessions().then(() => {
+    // Set nilai setelah dropdown terisi
+    if (savedQuizId) document.getElementById('stQuizSessionId').value = savedQuizId;
+  });
 }
 
 function closeModal(id) {

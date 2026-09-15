@@ -1,6 +1,6 @@
 // Safety Talk — halaman kelola absensi per jadwal
 
-const QUIZ_URL = 'https://quizsheebl.org';
+const QUIZ_URL = 'https://quiz-she.vercel.app';
 
 let _abSchedule  = null;
 let _abKaryawan  = [];   // list karyawan
