@@ -234,7 +234,7 @@ function salinWA(id) {
   const perusahaan = s['PERUSAHAAN_TARGET'] || 'PT Energi Batubara Lestari';
   const pemateri   = s['NAMA_PEMATERI']    || '-';
   const karPemateri = _stKaryawan.find(k => k['NIK'] === s['NIK_PEMATERI'] || k['NAMA'] === s['NAMA_PEMATERI']);
-  const jabPemateri = karPemateri?.['DEPARTEMEN'] ? ` (${karPemateri['DEPARTEMEN']})` : '';
+  const deptPemateri = karPemateri?.['DEPARTEMEN'] || '';
   const topik      = s['JUDUL_MATERI']     || '-';
   const deskripsi  = s['DESKRIPSI_MATERI'] ? `\nDeskripsi  : ${s['DESKRIPSI_MATERI']}\n` : '';
 
@@ -248,8 +248,9 @@ Dengan hormat,
 Kami mengundang Bapak/Ibu untuk hadir dalam kegiatan Safety Talk yang akan dilaksanakan pada:
 
 Hari/Tanggal : ${tgl}
-Pemateri     : ${pemateri}${jabPemateri}
-Topik        : ${topik}${deskripsi}
+Waktu        : 07.00 WITA - Selesai
+Pemateri     : ${pemateri}
+${deptPemateri ? `               ${deptPemateri}\n` : ''}Topik        : ${topik}${deskripsi}
 
 *Atribut Peserta:*
 ∙ Menggunakan seragam perusahaan dalam kondisi rapi.
