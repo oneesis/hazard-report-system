@@ -99,6 +99,9 @@ function renderSchedules() {
         ${status === 'AKTIF' ? `<button class="btn-danger-soft" onclick="selesaikan('${id}')">
           <i class="fa-solid fa-circle-check"></i> Selesaikan
         </button>` : ''}
+        <button class="btn-indigo-soft" onclick="salinWA('${id}')" title="Salin teks undangan WA">
+          <i class="fa-brands fa-whatsapp"></i> Salin WA
+        </button>
         <button class="btn-danger-soft" onclick="hapusJadwal('${id}', '${escapeHTML(s['JUDUL_MATERI'] || '')}')" title="Hapus jadwal ini">
           <i class="fa-solid fa-trash"></i>
         </button>
@@ -220,6 +223,58 @@ async function selesaikan(id) {
   } catch (e) {
     if (typeof showToast === 'function') showToast(e.message, 'error');
   }
+}
+
+function salinWA(id) {
+  const s = _stSchedules.find(r => r['ID'] === id);
+  if (!s) return;
+  const tgl = s['TANGGAL']
+    ? new Date(s['TANGGAL']).toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+    : '-';
+  const perusahaan = s['PERUSAHAAN_TARGET'] || 'PT Energi Batubara Lestari';
+  const pemateri   = s['NAMA_PEMATERI']    || '-';
+  const jabPemateri= s['JABATAN_PEMATERI'] ? ` (${s['JABATAN_PEMATERI']})` : '';
+  const topik      = s['JUDUL_MATERI']     || '-';
+  const deskripsi  = s['DESKRIPSI_MATERI'] ? `\nDeskripsi  : ${s['DESKRIPSI_MATERI']}\n` : '';
+
+  const teks =
+`🚨 *Safety Talk – ${perusahaan}*
+
+Kepada Yth.
+Bapak/Ibu Karyawan ${perusahaan}
+
+Dengan hormat,
+Kami mengundang Bapak/Ibu untuk hadir dalam kegiatan Safety Talk yang akan dilaksanakan pada:
+
+Hari/Tanggal : ${tgl}
+Pemateri     : ${pemateri}${jabPemateri}
+Topik        : ${topik}${deskripsi}
+
+*Atribut Peserta:*
+∙ Menggunakan seragam perusahaan dalam kondisi rapi.
+∙ Membawa serta mengenakan Alat Pelindung Diri (APD) lengkap sesuai standar.
+
+*YEL-YEL HASNUR GROUP*
+Hasnur Group! Semangat
+Hasnur Group! Bangkit
+Hasnur Group! Jaya
+Hasnur Group! Mulia
+
+Berkat! 🤲
+لَا إِلَٰهَ إِلَّا اللَّٰهُ مُحَمَّدٌ رَّسُولُ اللَّٰهِ
+
+Demikian undangan ini kami sampaikan. Atas perhatian dan kehadiran Bapak/Ibu tepat waktu, kami ucapkan terima kasih.`;
+
+  navigator.clipboard.writeText(teks).then(() => {
+    if (typeof showToast === 'function') showToast('Teks undangan berhasil disalin!');
+  }).catch(() => {
+    // Fallback: textarea trick
+    const ta = document.createElement('textarea');
+    ta.value = teks; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (typeof showToast === 'function') showToast('Teks undangan berhasil disalin!');
+  });
 }
 
 function escapeHTML(s) {
