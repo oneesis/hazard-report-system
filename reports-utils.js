@@ -218,10 +218,15 @@ async function _doFetchReports() {
       }
       response = await fetch(`${BASE_URL}?${params.toString()}`);
     } catch (err) {
+      // Fallback ke localStorage jika ada (misal iOS SW restart, fetch gagal sementara)
+      const ls = _reportsLsRead();
+      if (ls) { _fetchAllReportsCache = ls; return ls.data; }
       throw new Error('Network error saat memanggil API: ' + (err && err.message ? err.message : err));
     }
 
     if (!response.ok) {
+      const ls = _reportsLsRead();
+      if (ls) { _fetchAllReportsCache = ls; return ls.data; }
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
