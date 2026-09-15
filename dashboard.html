@@ -161,6 +161,47 @@
       </div>
     </section>
 
+    <!-- MODULE SUMMARY (HR / INS / SBO) -->
+    <section id="moduleSummarySection" class="module-summary-row">
+      <!-- HR -->
+      <div class="module-card module-hr">
+        <div class="module-card-header"><i class="fa-solid fa-triangle-exclamation"></i> Hazard Report</div>
+        <div class="module-stats-grid">
+          <div class="module-stat"><span class="ms-val" id="msHrOpen">-</span><span class="ms-lbl">OPEN</span></div>
+          <div class="module-stat"><span class="ms-val" id="msHrProgress">-</span><span class="ms-lbl">PROGRESS</span></div>
+          <div class="module-stat"><span class="ms-val" id="msHrClosed">-</span><span class="ms-lbl">CLOSED</span></div>
+          <div class="module-stat ms-danger"><span class="ms-val" id="msHrOverdue">-</span><span class="ms-lbl">OVERDUE</span></div>
+          <div class="module-stat"><span class="ms-val" id="msHrAvg">-</span><span class="ms-lbl">Avg Hari Closing</span></div>
+        </div>
+      </div>
+      <!-- INS -->
+      <div class="module-card module-ins">
+        <div class="module-card-header"><i class="fa-solid fa-list-check"></i> Inspeksi</div>
+        <div class="module-stats-grid">
+          <div class="module-stat"><span class="ms-val" id="msInsTotal">-</span><span class="ms-lbl">Total</span></div>
+          <div class="module-stat"><span class="ms-val" id="msInsOpen">-</span><span class="ms-lbl">OPEN</span></div>
+          <div class="module-stat"><span class="ms-val" id="msInsClosed">-</span><span class="ms-lbl">CLOSED</span></div>
+          <div class="module-stat ms-danger"><span class="ms-val" id="msInsOverdue">-</span><span class="ms-lbl">OVERDUE</span></div>
+          <div class="module-stat"><span class="ms-val" id="msInsAvg">-</span><span class="ms-lbl">Avg Hari Closing</span></div>
+          <div class="module-stat ms-wide"><span class="ms-val ms-sm" id="msInsJenis">-</span><span class="ms-lbl">Jenis Terbanyak</span></div>
+        </div>
+      </div>
+      <!-- SBO -->
+      <div class="module-card module-sbo">
+        <div class="module-card-header"><i class="fa-solid fa-eye"></i> Safe Behavior Observation</div>
+        <div class="module-stats-grid">
+          <div class="module-stat"><span class="ms-val" id="msSboTotal">-</span><span class="ms-lbl">Total Observasi</span></div>
+          <div class="module-stat ms-green"><span class="ms-val" id="msSboAman">-</span><span class="ms-lbl">AMAN</span></div>
+          <div class="module-stat ms-warn"><span class="ms-val" id="msSboTemuan">-</span><span class="ms-lbl">ADA TEMUAN</span></div>
+          <div class="module-stat ms-green"><span class="ms-val" id="msSboPctAman">-</span><span class="ms-lbl">% Aman</span></div>
+          <div class="module-stat ms-danger"><span class="ms-val" id="msSboOpen">-</span><span class="ms-lbl">Temuan OPEN</span></div>
+          <div class="module-stat"><span class="ms-val" id="msSboClosed">-</span><span class="ms-lbl">Temuan CLOSED</span></div>
+          <div class="module-stat ms-danger"><span class="ms-val" id="msSboOverdue">-</span><span class="ms-lbl">Temuan OVERDUE</span></div>
+          <div class="module-stat ms-green"><span class="ms-val" id="msSboPctClose">-</span><span class="ms-lbl">% Closing Temuan</span></div>
+        </div>
+      </div>
+    </section>
+
     <!-- KPI CARDS -->
     <section class="kpi-grid">
       <div class="kpi-card open">
@@ -228,6 +269,35 @@
       </div>
     </section>
 
+    <!-- TREND KOMPARASI MODUL -->
+    <section class="module-trend-section">
+      <div class="chart-card chart-card-full">
+        <h3 class="chart-title"><i class="fa-solid fa-chart-bar" style="color:#307FE2"></i> Trend Komparasi per Modul (6 Bulan)</h3>
+        <div class="chart-container">
+          <canvas id="chartModuleTrend"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- SBO SECTION -->
+    <section id="sboSection" class="sbo-detail-section">
+      <div class="section-heading"><i class="fa-solid fa-eye"></i> Detail SBO — Safe Behavior Observation</div>
+      <div class="charts-section" style="margin-top:12px">
+        <div class="chart-card">
+          <h3 class="chart-title">Status Observasi</h3>
+          <div class="chart-container"><canvas id="sboChartStatus"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Top 5 Kategori Temuan</h3>
+          <div class="chart-container"><canvas id="sboChartCategory"></canvas></div>
+        </div>
+        <div class="chart-card chart-card-full">
+          <h3 class="chart-title">Trend Observasi SBO per Bulan (6 Bulan)</h3>
+          <div class="chart-container"><canvas id="sboChartTrend"></canvas></div>
+        </div>
+      </div>
+    </section>
+
     <!-- FILTER -->
     <section class="filter-bar">
       <div class="date-range">
@@ -269,6 +339,7 @@
         <option value="">Semua Jenis</option>
         <option value="HAZARD">Hazard</option>
         <option value="INSPECTION">Inspeksi</option>
+        <option value="SBO">SBO</option>
       </select>
 
       <a href="admin.html" id="btnAdminPanel" class="btn-secondary" style="display:none">

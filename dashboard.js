@@ -14,6 +14,11 @@ let selectedStatus = "OPEN";
 let statusChartInstance = null;
 let lokasiChartInstance = null;
 let trendChartInstance = null;
+let moduleTrendChartInstance = null;
+let sboStatusChartInstance = null;
+let sboCategoryChartInstance = null;
+let sboTrendChartInstance = null;
+let _sboReports = [];
 let currentPage = 1;
 const PAGE_SIZE = 20;
 
@@ -134,7 +139,13 @@ async function loadReports() {
       </tr>
     `;
 
-    reports = await fetchAllReports();
+    // Fetch HR/INS dan SBO secara paralel
+    const [allReports, sboRes] = await Promise.all([
+      fetchAllReports(),
+      fetch('/api?action=getSBOReports').then(r => r.json()).catch(() => ({ data: [] })),
+    ]);
+    reports = allReports;
+    _sboReports = (sboRes && sboRes.data) ? sboRes.data : [];
 
     // Jika ada data di server tetapi pengguna tidak melihatnya karena visibilitas,
     // tampilkan pesan informatif di tabel agar mudah didiagnosis.
@@ -150,6 +161,7 @@ document.getElementById('reportTableBody').innerHTML = `
       `;
       // Tetap update KPI dengan nol agar tidak keliru
       updateKPI();
+      renderModuleSummary(visible);
       return;
     }
     window.__reportsCache = reports;
@@ -157,6 +169,7 @@ document.getElementById('reportTableBody').innerHTML = `
     updateKPI();
     renderTable();
     updateAnalyticsKpi(reports);
+    renderModuleSummary(visible);
     handleOpenReportQuery();
 
   } catch (error) {
@@ -265,37 +278,26 @@ function renderTable() {
     if (endDate) endDate.setHours(23, 59, 59, 999);
   }
 
-  const visibleReports = getVisibleReportsFromCache();
-  const filtered = visibleReports.filter(report => {
-    const status =
-      report.status_perbaikan || "OPEN";
+  // SBO pakai _sboReports, HR/INS pakai visibleReports dari cache
+  const baseList = typeFilter === 'SBO' ? _sboReports : getVisibleReportsFromCache();
+  const filtered = baseList.filter(report => {
+    const status = report.status_perbaikan || report.status_observasi || "OPEN";
 
     const matchesSearch =
       !search ||
-      (report.id || "")
-        .toLowerCase()
-        .includes(search) ||
-      (report.nama || "")
-        .toLowerCase()
-        .includes(search) ||
-      (report.nama_pic || "")
-        .toLowerCase()
-        .includes(search) ||
-      getDashboardLocation(report)
-        .toLowerCase()
-        .includes(search);
+      (report.id || report.id_sbo || "").toLowerCase().includes(search) ||
+      (report.nama || report.nama_observer || "").toLowerCase().includes(search) ||
+      (report.nama_pic || "").toLowerCase().includes(search) ||
+      (getDashboardLocation(report) || "").toLowerCase().includes(search);
 
-    const matchesStatus =
-      !statusFilter ||
-      status === statusFilter;
-    const matchesType =
-      !typeFilter ||
-      getReportType(report) === typeFilter;
+    const matchesStatus = !statusFilter || status === statusFilter;
+    // SBO sudah difilter dari baseList; HAZARD/INSPECTION tetap difilter
+    const matchesType = typeFilter === 'SBO' || !typeFilter || getReportType(report) === typeFilter;
 
     const reportDate = parseReportDate(report);
     const matchesDate =
       (!startDate || (reportDate && reportDate >= startDate)) &&
-      (!endDate || (reportDate && reportDate <= endDate));
+      (!endDate   || (reportDate && reportDate <= endDate));
 
     const matchesOverdue = !overdueOnlyFilter || isOverdue(report);
     return matchesSearch && matchesStatus && matchesType && matchesDate && matchesOverdue;
@@ -305,7 +307,9 @@ function renderTable() {
   currentPage = 1;
 
   renderTablePage();
-  renderDashboardCharts(filtered);
+  // Hanya kirim HR+INS ke renderDashboardCharts (SBO punya renderSboSection sendiri)
+  const visForCharts = typeFilter === 'SBO' ? getVisibleReportsFromCache() : filtered;
+  renderDashboardCharts(visForCharts);
 }
 
 function renderTablePage() {
@@ -324,9 +328,35 @@ function renderTablePage() {
   tbody.innerHTML = filteredReports.slice(startIdx, endIdx)
     .map((report, localIndex) => {
       const globalIndex = startIdx + localIndex;
-      const status = report.status_perbaikan || "OPEN";
-      const badgeClass = status === "OPEN" ? "status-open" : status === "PROGRESS" ? "status-progress" : "status-closed";
+      // Deteksi apakah ini baris SBO (punya status_observasi atau id_sbo)
+      const isSboRow = !!(report.status_observasi || report.id_sbo);
+      const status = isSboRow
+        ? (report.status_perbaikan || report.status_observasi || 'OPEN')
+        : (report.status_perbaikan || 'OPEN');
+      const badgeClass = status === "OPEN" ? "status-open" : status === "PROGRESS" ? "status-progress" : (status === 'AMAN' ? 'status-closed' : "status-closed");
       const overdue = isOverdue(report);
+
+      if (isSboRow) {
+        const tgl = report.tgl_observasi ? formatDate(report.tgl_observasi) : '-';
+        const observer = report.nama_observer || report.nama || '-';
+        const lokasi   = report.lokasi || '-';
+        const jobDesc  = report.nama_pekerjaan || '-';
+        const statusObs = report.status_observasi || '-';
+        const obsClass = statusObs === 'AMAN' ? 'status-closed' : (statusObs === 'ADA_TEMUAN' ? 'status-progress' : 'status-open');
+        return `
+          <tr${overdue ? ' class="row-overdue"' : ''}>
+            <td><strong>${report.id || report.id_sbo || ''}</strong></td>
+            <td><span class="report-type-badge" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a">SBO</span></td>
+            <td>${tgl}</td>
+            <td>${observer}</td>
+            <td>${lokasi}</td>
+            <td>${jobDesc}</td>
+            <td>-</td>
+            <td><span class="status-badge ${obsClass}">${statusObs}</span>${overdue ? '<span class="badge-overdue">Overdue</span>' : ''}</td>
+            <td><a href="sbo.html" class="btn-view" style="text-decoration:none">Detail</a></td>
+          </tr>
+        `;
+      }
 
       return `
         <tr${overdue ? ' class="row-overdue"' : ''}>
@@ -576,6 +606,240 @@ function renderDashboardCharts(reportsList) {
       }
     });
   }
+
+  // Widget tambahan: trend komparasi + SBO detail
+  renderModuleTrend(reportsList);
+  renderSboSection();
+}
+
+// ── Helpers shared ───────────────────────────────────────────────────────────
+
+function _last6Months() {
+  const months = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: d.toLocaleDateString('id-ID', { month:'short', year:'2-digit' }) });
+  }
+  return months;
+}
+
+function _countByMonth(list) {
+  const m = {};
+  list.forEach(r => {
+    const d = parseReportDate(r);
+    if (!d) return;
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    m[k] = (m[k] || 0) + 1;
+  });
+  return m;
+}
+
+// ── renderModuleSummary ──────────────────────────────────────────────────────
+
+function renderModuleSummary(visibleReports) {
+  const all = visibleReports || [];
+  const hrList  = all.filter(r => !isInspectionReport(r));
+  const insList = all.filter(r =>  isInspectionReport(r));
+
+  // ── HR stats ──
+  const hrOpen     = hrList.filter(r => (r.status_perbaikan || 'OPEN') === 'OPEN').length;
+  const hrProgress = hrList.filter(r => (r.status_perbaikan || '') === 'PROGRESS').length;
+  const hrClosed   = hrList.filter(r => (r.status_perbaikan || '') === 'CLOSED').length;
+  const hrOverdue  = hrList.filter(isOverdue).length;
+  const hrAvg      = _avgClosingDays(hrList);
+
+  _ms('msHrOpen',     hrOpen);
+  _ms('msHrProgress', hrProgress);
+  _ms('msHrClosed',   hrClosed);
+  _ms('msHrOverdue',  hrOverdue);
+  _ms('msHrAvg',      hrAvg > 0 ? hrAvg + ' hr' : '-');
+
+  // ── INS stats ──
+  const insOpen   = insList.filter(r => (r.status_perbaikan || 'OPEN') === 'OPEN').length;
+  const insClosed = insList.filter(r => (r.status_perbaikan || '') === 'CLOSED').length;
+  const insOverdue = insList.filter(isOverdue).length;
+  const insAvg    = _avgClosingDays(insList);
+  const insJenis  = _mostCommon(insList, r => r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || '-');
+
+  _ms('msInsTotal',  insList.length);
+  _ms('msInsOpen',   insOpen);
+  _ms('msInsClosed', insClosed);
+  _ms('msInsOverdue',insOverdue);
+  _ms('msInsAvg',    insAvg > 0 ? insAvg + ' hr' : '-');
+  _ms('msInsJenis',  insJenis || '-');
+
+  // ── SBO stats ──
+  const sbo        = _sboReports;
+  const sboTotal   = sbo.length;
+  const sboAman    = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'AMAN').length;
+  const sboTemuan  = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN').length;
+  const sboPctAman = sboTotal > 0 ? Math.round(sboAman / sboTotal * 100) + '%' : '-';
+
+  // Temuan = observasi dengan ADA_TEMUAN; status_perbaikan on those
+  const sboWithTemuan = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN');
+  const sboTOpen   = sboWithTemuan.filter(r => (r.status_perbaikan || 'OPEN') === 'OPEN').length;
+  const sboTClosed = sboWithTemuan.filter(r => (r.status_perbaikan || '') === 'CLOSED').length;
+  const sboTOverdue = sboWithTemuan.filter(r => {
+    if ((r.status_perbaikan || 'OPEN') === 'CLOSED') return false;
+    const due = new Date(r.batas_waktu || r.tanggal_rencana || '');
+    return !isNaN(due) && due < new Date();
+  }).length;
+  const sboPctClose = sboWithTemuan.length > 0 ? Math.round(sboTClosed / sboWithTemuan.length * 100) + '%' : '-';
+
+  _ms('msSboTotal',   sboTotal);
+  _ms('msSboAman',    sboAman);
+  _ms('msSboTemuan',  sboTemuan);
+  _ms('msSboPctAman', sboPctAman);
+  _ms('msSboOpen',    sboTOpen);
+  _ms('msSboClosed',  sboTClosed);
+  _ms('msSboOverdue', sboTOverdue);
+  _ms('msSboPctClose',sboPctClose);
+}
+
+function _ms(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+function _avgClosingDays(list) {
+  const closed = list.filter(r => r.status_perbaikan === 'CLOSED' && r.tanggal_closed);
+  if (!closed.length) return 0;
+  const sum = closed.reduce((acc, r) => {
+    const open = parseReportDate(r);
+    const cls  = new Date(r.tanggal_closed);
+    if (!open || isNaN(cls)) return acc;
+    return acc + (cls - open) / 86400000;
+  }, 0);
+  return Math.round(sum / closed.length);
+}
+
+function _mostCommon(list, keyFn) {
+  const m = {};
+  list.forEach(r => { const k = keyFn(r); if (k && k !== '-') m[k] = (m[k]||0)+1; });
+  return Object.entries(m).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
+}
+
+// ── renderModuleTrend ────────────────────────────────────────────────────────
+
+function renderModuleTrend(visibleReports) {
+  const canvas = document.getElementById('chartModuleTrend');
+  if (!canvas) return;
+
+  const months = _last6Months();
+  const labels  = months.map(m => m.label);
+
+  const hrList  = (visibleReports||[]).filter(r => !isInspectionReport(r));
+  const insList = (visibleReports||[]).filter(r =>  isInspectionReport(r));
+
+  const hrM   = _countByMonth(hrList);
+  const insM  = _countByMonth(insList);
+  const sboM  = _countByMonth(_sboReports);
+
+  const hrData  = months.map(m => hrM[m.key]  || 0);
+  const insData = months.map(m => insM[m.key] || 0);
+  const sboData = months.map(m => sboM[m.key] || 0);
+
+  if (moduleTrendChartInstance) moduleTrendChartInstance.destroy();
+  moduleTrendChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Hazard Report', data: hrData,  backgroundColor: 'rgba(48,127,226,.75)',  borderRadius: 4 },
+        { label: 'Inspeksi',      data: insData, backgroundColor: 'rgba(16,185,129,.75)', borderRadius: 4 },
+        { label: 'SBO',           data: sboData, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+        y: { beginAtZero: true, ticks: { precision: 0, color: '#64748b', font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+      },
+    },
+  });
+}
+
+// ── renderSboSection ─────────────────────────────────────────────────────────
+
+function renderSboSection() {
+  const sbo = _sboReports;
+  if (!sbo.length) return;
+
+  // Pie: AMAN vs ADA_TEMUAN
+  const pieCvs = document.getElementById('sboChartStatus');
+  if (pieCvs) {
+    const aman   = sbo.filter(r => (r.status_observasi||'').toUpperCase() === 'AMAN').length;
+    const temuan = sbo.filter(r => (r.status_observasi||'').toUpperCase() === 'ADA_TEMUAN').length;
+    if (sboStatusChartInstance) sboStatusChartInstance.destroy();
+    sboStatusChartInstance = new Chart(pieCvs, {
+      type: 'doughnut',
+      data: {
+        labels: ['AMAN', 'ADA TEMUAN'],
+        datasets: [{ data: [aman, temuan], backgroundColor: ['#10b981','#f59e0b'], borderWidth: 0 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '60%',
+      },
+    });
+  }
+
+  // Bar: Top 5 kategori temuan
+  const barCvs = document.getElementById('sboChartCategory');
+  if (barCvs) {
+    const cm = {};
+    sbo.forEach(r => {
+      const cats = String(r.kategori_temuan || r.kategori || '').split(/[,;]+/).map(s=>s.trim()).filter(Boolean);
+      cats.forEach(c => { cm[c] = (cm[c]||0)+1; });
+    });
+    const sorted = Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if (sboCategoryChartInstance) sboCategoryChartInstance.destroy();
+    sboCategoryChartInstance = new Chart(barCvs, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(([k])=>k),
+        datasets: [{ label: 'Jumlah', data: sorted.map(([,v])=>v), backgroundColor: 'rgba(245,158,11,.8)', borderRadius: 4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0, color: '#64748b', font:{size:10} }, grid:{color:'#f1f5f9'} },
+          y: { ticks: { color:'#475569', font:{size:10} }, grid:{display:false} },
+        },
+      },
+    });
+  }
+
+  // Line: trend SBO per bulan
+  const trendCvs = document.getElementById('sboChartTrend');
+  if (trendCvs) {
+    const months = _last6Months();
+    const sboM   = _countByMonth(sbo);
+    if (sboTrendChartInstance) sboTrendChartInstance.destroy();
+    sboTrendChartInstance = new Chart(trendCvs, {
+      type: 'line',
+      data: {
+        labels: months.map(m=>m.label),
+        datasets: [{
+          label: 'Observasi SBO',
+          data: months.map(m=>sboM[m.key]||0),
+          borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.12)',
+          tension: 0.35, fill: true, pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'#64748b', font:{size:10} }, grid:{color:'#f1f5f9'} },
+          y: { beginAtZero: true, ticks: { precision:0, color:'#64748b', font:{size:10} }, grid:{color:'#f1f5f9'} },
+        },
+      },
+    });
+  }
 }
 
 // ========================================
@@ -711,6 +975,7 @@ function parseReportDate(report) {
     "tanggal_laporan_hazard",
     "tanggal_inspeksi",
     "tanggal_kejadian",
+    "tgl_observasi",
     "tanggal",
     "date"
   ], "");

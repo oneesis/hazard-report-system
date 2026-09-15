@@ -3070,3 +3070,104 @@ th[data-sort] {
 .chart-card:hover {
   box-shadow: 0 6px 20px rgba(15,23,42,.08) !important;
 }
+
+/* ===== MODULE SUMMARY (HR / INS / SBO) ===== */
+.module-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 0 20px 6px;
+}
+@media (max-width: 900px) { .module-summary-row { grid-template-columns: 1fr; } }
+@media (min-width: 601px) and (max-width: 900px) { .module-summary-row { grid-template-columns: 1fr 1fr; } }
+
+.module-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,32,91,.07);
+  padding: 16px 18px;
+  border-top: 4px solid #cbd5e1;
+}
+.module-card.module-hr  { border-top-color: #307FE2; }
+.module-card.module-ins { border-top-color: #10b981; }
+.module-card.module-sbo { border-top-color: #f59e0b; }
+
+.module-card-header {
+  font-size: .8rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.module-hr .module-card-header  { color: #307FE2; }
+.module-ins .module-card-header { color: #10b981; }
+.module-sbo .module-card-header { color: #f59e0b; }
+
+.module-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.module-ins .module-stats-grid,
+.module-sbo .module-stats-grid  { grid-template-columns: repeat(4, 1fr); }
+
+.module-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.module-stat.ms-wide { grid-column: span 2; }
+.module-stat.ms-danger { background: #fef2f2; }
+.module-stat.ms-green  { background: #f0fdf4; }
+.module-stat.ms-warn   { background: #fffbeb; }
+
+.ms-val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+.ms-val.ms-sm { font-size: .82rem; font-weight: 700; color: #475569; }
+.ms-danger .ms-val { color: #dc2626; }
+.ms-green  .ms-val { color: #16a34a; }
+.ms-warn   .ms-val { color: #d97706; }
+.ms-lbl {
+  font-size: .65rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ===== TREND + SBO SECTIONS ===== */
+.module-trend-section {
+  padding: 0 20px;
+  margin-bottom: 4px;
+}
+.sbo-detail-section {
+  padding: 0 20px;
+  margin-bottom: 4px;
+}
+.section-heading {
+  font-size: .88rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 2px solid #f1f5f9;
+}
