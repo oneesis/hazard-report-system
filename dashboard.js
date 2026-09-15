@@ -1062,6 +1062,17 @@ function wrapLabel(str, maxLen) {
   return lines.length > 1 ? lines : str; // array = multiline, string = single line
 }
 
+const _INS_LABELS = {
+  INS_CB: 'Inspeksi Conveyor Belt',
+  INS_JA: 'Inspeksi Jalan Angkut',
+  INS_MD: 'Inspeksi Mess dan Dapur',
+  INS_KG: 'Inspeksi Kantor dan Gudang',
+  INS_SP: 'Inspeksi Settling Pond',
+  INS_T:  'Inspeksi Tambang',
+  INS_TB: 'Inspeksi Tangki BBM',
+  INS_WS: 'Inspeksi Workshop',
+};
+
 function renderInsSection() {
   const canvas = document.getElementById('insChartJenis');
   if (!canvas || typeof Chart === 'undefined') return;
@@ -1069,7 +1080,8 @@ function renderInsSection() {
   const insList = getVisibleReportsFromCache().filter(isInspectionReport);
   const counts  = {};
   insList.forEach(r => {
-    const jenis = (r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || 'Lainnya').trim();
+    const raw   = (r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || 'Lainnya').trim().toUpperCase();
+    const jenis = _INS_LABELS[raw] || raw; // nama penuh atau fallback ke kode
     counts[jenis] = (counts[jenis] || 0) + 1;
   });
 
