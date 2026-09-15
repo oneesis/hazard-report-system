@@ -1,6 +1,8 @@
 let _capKaryawan = [];
 let _capHazardReports = [];
 let _capInsReports = [];
+let _capSboReports = [];
+let _capPcReports  = [];
 let _capStAbsensi = []; // Safety Talk absensi rows
 let _capLoaded = false;
 let _capFiltered = [];
@@ -25,10 +27,12 @@ async function loadCapaian() {
   if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px">Memuat data...</td></tr>';
 
   try {
-    const [karRes, hrRes, insRes, stAbRes] = await Promise.all([
+    const [karRes, hrRes, insRes, sboRes, pcRes, stAbRes] = await Promise.all([
       fetch('/api?action=getKaryawan').then(r => r.json()),
       fetch('/api?action=getHazardReports').then(r => r.json()),
       fetch('/api?action=getInspectionReports').then(r => r.json()),
+      fetch('/api?action=getSBOReports').then(r => r.json()).catch(() => ({ data: [] })),
+      fetch('/api?action=getPCReports').then(r => r.json()).catch(() => ({ data: [] })),
       fetch('/api?action=getSafetyTalkAbsensi').then(r => r.json()).catch(() => ({ data: [] })),
     ]);
 
@@ -39,6 +43,8 @@ async function loadCapaian() {
     );
     _capHazardReports = hrRes.data || [];
     _capInsReports    = insRes.data || [];
+    _capSboReports    = sboRes.data || [];
+    _capPcReports     = pcRes.data  || [];
     _capStAbsensi     = stAbRes.data || [];
     _capLoaded = true;
 
@@ -126,6 +132,22 @@ function computeAndRender() {
              _capSameMonth(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi, monthStr);
     }) : [];
 
+    // SBO sebagai Observer
+    const mineSBO = monthStr ? _capSboReports.filter(r => {
+      const rNik  = String(r.nik_observer || '').trim();
+      const rNama = String(r.nama_observer || '').trim().toLowerCase();
+      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+             _capSameMonth(r.timestamp, monthStr);
+    }) : [];
+
+    // PC sebagai Coach
+    const minePC = monthStr ? _capPcReports.filter(r => {
+      const rNik  = String(r.nik_coach || '').trim();
+      const rNama = String(r.nama_coach || '').trim().toLowerCase();
+      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+             _capSameMonth(r.timestamp, monthStr);
+    }) : [];
+
     // Laporan sebagai PIC — all-time untuk "PIC Open", month-filter untuk "%Closing"
     const isPic = r => {
       const rNikPic  = String(r.nik_pic || '').trim();
@@ -143,12 +165,18 @@ function computeAndRender() {
 
     const achHR    = mine.filter(r => r.report_type === 'HAZARD').length;
     const achINS   = mine.filter(r => r.report_type === 'INSPECTION').length;
+    const achSBO   = mineSBO.length;
+    const achPC    = minePC.length;
     const objHR    = parseInt(k['OBJ HR']  || 0) || 0;
     const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
+    const objSBO   = parseInt(k['OBJ SBO'] || 0) || 0;
+    const objPC    = parseInt(k['OBJ PC']  || 0) || 0;
     const objST    = parseInt(k['OBJ_ST']  || k['OBJ ST'] || 0) || 0;
     // Cap di 100% — kelebihan capaian tidak menambah persentase
     const pctHR    = objHR  > 0 ? Math.min(100, Math.round(achHR  / objHR  * 100)) : null;
     const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;
+    const pctSBO   = objSBO > 0 ? Math.min(100, Math.round(achSBO / objSBO * 100)) : null;
+    const pctPC    = objPC  > 0 ? Math.min(100, Math.round(achPC  / objPC  * 100)) : null;
     // Safety Talk — hadir jika ada absensi di bulan yang sama
     const stHadir = monthStr ? _capStAbsensi.some(ab =>
       String(ab['NIK'] || '').trim() === nik &&
@@ -157,9 +185,9 @@ function computeAndRender() {
     const achST = stHadir === null ? null : (stHadir ? 1 : 0);
     const pctST = (objST > 0 && achST !== null) ? (stHadir ? 100 : 0) : null;
     // %Total = rata-rata semua komponen yang memiliki target
-    const pctVals  = [pctHR, pctINS, pctST].filter(v => v !== null);
+    const pctVals  = [pctHR, pctINS, pctSBO, pctPC, pctST].filter(v => v !== null);
     const pctTotal = pctVals.length > 0 ? Math.round(pctVals.reduce((a, b) => a + b, 0) / pctVals.length) : null;
-    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, objST, achST, pctST, pctTotal, picOpen, pctClosing, stHadir };
+    return { k, achHR, achINS, achSBO, achPC, objHR, objINS, objSBO, objPC, pctHR, pctINS, pctSBO, pctPC, objST, achST, pctST, pctTotal, picOpen, pctClosing, stHadir };
   });
 
   _capFiltered = _capComputed.filter(row => {
@@ -188,7 +216,7 @@ function renderTable() {
 
   const monthStr = document.getElementById('capMonth')?.value || '';
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
-  const colSpan  = isSA ? 17 : 16; // OBJ ST + Capaian ST + % ST
+  const colSpan  = isSA ? 23 : 22; // +SBO(3) +PC(3)
 
   // Thead sortable — re-render setiap kali agar ikon sort update
   const thead = document.getElementById('capTableHead');
@@ -200,6 +228,8 @@ function renderTable() {
       ${th('nama', 'Nama')}${th('nik', 'NIK')}${th('jabatan', 'Jabatan')}${th('dept', 'Departemen')}
       ${th('objHR', 'OBJ HR', true)}${th('achHR', 'Capaian HR', true)}${th('pctHR', '% HR', true)}
       ${th('objINS', 'OBJ INS', true)}${th('achINS', 'Capaian INS', true)}${th('pctINS', '% INS', true)}
+      ${th('objSBO', 'OBJ SBO', true)}${th('achSBO', 'Capaian SBO', true)}${th('pctSBO', '% SBO', true)}
+      ${th('objPC', 'OBJ PC', true)}${th('achPC', 'Capaian PC', true)}${th('pctPC', '% PC', true)}
       ${th('objST', 'OBJ ST', true)}${th('achST', 'Capaian ST', true)}${th('pctST', '% ST', true)}
       ${th('pctTotal', '% Total', true)}
       ${th('picOpen', 'PIC Open', true)}${th('pctClosing', '% Closing', true)}
@@ -241,6 +271,12 @@ function renderTable() {
       <td class="um-center">${row.objINS || '-'}</td>
       <td class="um-center"><b>${row.achINS}</b></td>
       ${_capPctCell(row.pctINS)}
+      <td class="um-center">${row.objSBO || '-'}</td>
+      <td class="um-center"><b>${row.achSBO}</b></td>
+      ${_capPctCell(row.pctSBO)}
+      <td class="um-center">${row.objPC || '-'}</td>
+      <td class="um-center"><b>${row.achPC}</b></td>
+      ${_capPctCell(row.pctPC)}
       <td class="um-center">${row.objST || '-'}</td>
       <td class="um-center"><b>${row.achST !== null ? row.achST : '-'}</b></td>
       ${_capPctCell(row.pctST)}
@@ -334,6 +370,12 @@ function _capSortVal(row, col) {
     case 'objINS':     return row.objINS;
     case 'achINS':     return row.achINS;
     case 'pctINS':     return row.pctINS     ?? -1;
+    case 'objSBO':     return row.objSBO;
+    case 'achSBO':     return row.achSBO;
+    case 'pctSBO':     return row.pctSBO     ?? -1;
+    case 'objPC':      return row.objPC;
+    case 'achPC':      return row.achPC;
+    case 'pctPC':      return row.pctPC      ?? -1;
     case 'objST':      return row.objST;
     case 'achST':      return row.achST      ?? -1;
     case 'pctST':      return row.pctST      ?? -1;
@@ -649,6 +691,8 @@ function exportCsv() {
     'Nama', 'NIK', 'Jabatan', 'Departemen',
     'OBJ HR', 'Capaian HR', '% HR',
     'OBJ INS', 'Capaian INS', '% INS',
+    'OBJ SBO', 'Capaian SBO', '% SBO',
+    'OBJ PC', 'Capaian PC', '% PC',
     'OBJ ST', 'Capaian ST', '% ST',
     '% Total', 'PIC Open', '% Closing',
   ];
@@ -658,6 +702,8 @@ function exportCsv() {
     r.k['NAMA'] || '', String(r.k['NIK'] || ''), r.k['JABATAN'] || '', r.k['DEPARTEMEN'] || '',
     r.objHR, r.achHR, r.pctHR    !== null ? r.pctHR    + '%' : '-',
     r.objINS, r.achINS, r.pctINS !== null ? r.pctINS   + '%' : '-',
+    r.objSBO, r.achSBO, r.pctSBO !== null ? r.pctSBO   + '%' : '-',
+    r.objPC,  r.achPC,  r.pctPC  !== null ? r.pctPC    + '%' : '-',
     r.objST, r.achST  !== null ? r.achST : '-', r.pctST !== null ? r.pctST + '%' : '-',
     r.pctTotal   !== null ? r.pctTotal   + '%' : '-',
     r.picOpen,
