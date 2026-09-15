@@ -436,9 +436,12 @@ if ("serviceWorker" in navigator) {
   // Reload page when new service worker takes control (via skipWaiting).
   // JANGAN reload di login.html — SW controllerchange di login page menyebabkan
   // reload loop: SW aktif → reload → iOS autofill re-fill → reload lagi → dst.
+  // Guard 15 detik: iOS Safari me-restart SW saat memory rendah / balik dari background,
+  // yang memicu controllerchange bukan karena update versi — jangan reload dalam kasus itu.
+  const _swPageLoadTs = Date.now();
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!refreshing && !window.location.pathname.endsWith('login.html')) {
+    if (!refreshing && !window.location.pathname.endsWith('login.html') && Date.now() - _swPageLoadTs > 15_000) {
       refreshing = true;
       window.location.reload();
     }
