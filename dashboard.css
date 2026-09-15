@@ -3171,3 +3171,18 @@ th[data-sort] {
   padding-top: 8px;
   border-top: 2px solid #f1f5f9;
 }
+
+/* ===== INS SECTION ===== */
+.ins-detail-section {
+  padding: 0 20px;
+  margin-bottom: 4px;
+}
+.ins-detail-section .section-heading {
+  font-size: .88rem; font-weight: 700; color: #10b981;
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  padding-top: 8px; border-top: 2px solid #f1f5f9;
+}
+
+/* ===== TAB: icon spacing ===== */
+.dash-tab i { margin-right: 5px; }

@@ -18,7 +18,9 @@ let moduleTrendChartInstance = null;
 let sboStatusChartInstance = null;
 let sboCategoryChartInstance = null;
 let sboTrendChartInstance = null;
+let insJenisChartInstance = null;
 let _sboReports = [];
+let _activeTab = 'general';
 let currentPage = 1;
 const PAGE_SIZE = 20;
 
@@ -33,6 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
   refreshNotifications().catch(console.error);
   initAnalyticsSection();
   loadReports();
+
+  // Wire tabs
+  document.querySelectorAll('.dash-tab').forEach(btn =>
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+  );
 
   document
     .getElementById("btnRefresh")
@@ -187,6 +194,45 @@ document.getElementById('reportTableBody').innerHTML = `
   }
 }
 
+// ========================================
+// TAB SWITCHING
+// ========================================
+function switchTab(name) {
+  _activeTab = name;
+
+  // Active tab style
+  document.querySelectorAll('.dash-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === name)
+  );
+
+  // Show/hide general-only sections
+  const analyticsSec = document.getElementById('analyticsSection');
+  // analyticsSection hanya tampil di General dan hanya jika admin (dataset.adminVisible)
+  if (analyticsSec) analyticsSec.style.display = (name === 'general' && analyticsSec.dataset.adminVisible) ? '' : 'none';
+
+  const moduleSumSec = document.getElementById('moduleSummarySection');
+  if (moduleSumSec) moduleSumSec.style.display = name === 'general' ? '' : 'none';
+  const modTrend = document.getElementById('moduleTrendSection');
+  if (modTrend) modTrend.style.display = name === 'general' ? '' : 'none';
+
+  // INS section
+  const insEl = document.getElementById('insSection');
+  if (insEl) insEl.style.display = name === 'ins' ? '' : 'none';
+
+  // SBO section
+  const sboEl = document.getElementById('sboSection');
+  if (sboEl) sboEl.style.display = name === 'sbo' ? '' : 'none';
+
+  // Sync hidden typeFilter so renderTable() branches correctly
+  const tf = document.getElementById('typeFilter');
+  if (tf) tf.value = { general: '', hr: 'HAZARD', ins: 'INSPECTION', sbo: 'SBO' }[name] || '';
+
+  // Re-render KPI + table (table calls renderDashboardCharts internally)
+  updateKPI();
+  renderTable();
+  if (name === 'ins') renderInsSection();
+}
+
 function isOverdue(report) {
   if ((report.status_perbaikan || 'OPEN') === 'CLOSED') return false;
   const due = new Date(getReportValue(report, ['batas_waktu', 'due_date'], ''));
@@ -217,13 +263,50 @@ function handleOpenReportQuery() {
 // UPDATE KPI
 // ========================================
 function updateKPI() {
-  const visibleReports = getVisibleReportsFromCache();
+  const set    = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  const setTxt = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+
+  // ── SBO tab: different KPI semantics ─────────────────────────────────────
+  if (_activeTab === 'sbo') {
+    const sbo     = _sboReports;
+    const total   = sbo.length;
+    const aman    = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'AMAN').length;
+    const temuan  = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN').length;
+    const tOpen   = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN' && (r.status_perbaikan || 'OPEN') !== 'CLOSED').length;
+    const tClosed = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN' && (r.status_perbaikan || '') === 'CLOSED').length;
+
+    setTxt('kpiTitleOpen',     'Total Observasi');
+    setTxt('kpiTitleProgress', 'AMAN');
+    setTxt('kpiTitleClosed',   'ADA TEMUAN');
+    setTxt('kpiTitleOverdue',  'Temuan OPEN');
+    setTxt('kpiTitleAvg',      'Temuan CLOSED');
+    setTxt('kpiAvgUnit',       '');
+
+    set('kpiOpen',     total);
+    set('kpiProgress', aman);
+    set('kpiClosed',   temuan);
+    set('kpiOverdue',  tOpen);
+    set('kpiAvgClose', tClosed);
+    return;
+  }
+
+  // ── HR / INS / General: restore labels ───────────────────────────────────
+  setTxt('kpiTitleOpen',     'OPEN');
+  setTxt('kpiTitleProgress', 'PROGRESS');
+  setTxt('kpiTitleClosed',   'CLOSED');
+  setTxt('kpiTitleOverdue',  'OVERDUE');
+  setTxt('kpiTitleAvg',      'AVG. CLOSING');
+  setTxt('kpiAvgUnit',       'hari');
+
+  const base = getVisibleReportsFromCache();
+  const visibleReports = _activeTab === 'hr'  ? base.filter(r => !isInspectionReport(r))
+                       : _activeTab === 'ins' ? base.filter(isInspectionReport)
+                       : base;
 
   const openCount     = visibleReports.filter(r => (r.status_perbaikan || "OPEN") === "OPEN").length;
   const progressCount = visibleReports.filter(r => r.status_perbaikan === "PROGRESS").length;
   const closedCount   = visibleReports.filter(r => r.status_perbaikan === "CLOSED").length;
 
-  const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   set("kpiOpen",     openCount);
   set("kpiProgress", progressCount);
   set("kpiClosed",   closedCount);
@@ -423,6 +506,31 @@ function renderDashboardCharts(reportsList) {
     return;
   }
 
+  // ── SBO tab: gunakan _sboReports, render chart berbeda ───────────────────
+  if (_activeTab === 'sbo') {
+    _renderSboTabCharts();
+    renderLeaderboard([], 'sbo');
+    renderDeptBreakdown([], 'sbo');
+    return;
+  }
+
+  // ── Update chart titles sesuai tab ───────────────────────────────────────
+  const titles = {
+    hr:  ['Distribusi Status Hazard Report', 'Lokasi Bahaya (Top 5)', 'Tren Hazard Report per Bulan'],
+    ins: ['Distribusi Status Inspeksi',      'Lokasi Inspeksi (Top 5)', 'Tren Inspeksi per Bulan'],
+  };
+  const [tStatus, tLokasi, tTrend] = titles[_activeTab] || ['Distribusi Status Laporan', 'Temuan Berdasarkan Lokasi (Top 5)', 'Tren Laporan per Bulan (6 Bulan Terakhir)'];
+  const setTitle = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+  setTitle('chartTitleStatus', tStatus);
+  setTitle('chartTitleLokasi', tLokasi);
+  setTitle('chartTitleTrend',  tTrend);
+
+  // ── Leaderboard/dept titles ───────────────────────────────────────────────
+  const lbTitle = document.getElementById('leaderboardTitle');
+  if (lbTitle) lbTitle.innerHTML = `<i class="fa-solid fa-trophy" style="color:#F2A900"></i> ${_activeTab === 'ins' ? 'Top Pemeriksa (Inspeksi)' : 'Top Pelapor'}`;
+  const dtTitle = document.getElementById('deptTitle');
+  if (dtTitle) dtTitle.innerHTML = `<i class="fa-solid fa-sitemap" style="color:#307FE2"></i> Distribusi per Departemen`;
+
   // 1. Process Status Data
   let statusCounts = { OPEN: 0, PROGRESS: 0, CLOSED: 0 };
   reportsList.forEach(r => {
@@ -607,9 +715,10 @@ function renderDashboardCharts(reportsList) {
     });
   }
 
-  // Widget tambahan: trend komparasi + SBO detail
-  renderModuleTrend(reportsList);
-  renderSboSection();
+  // Widget tambahan: hanya di tab General
+  if (_activeTab === 'general') {
+    renderModuleTrend(reportsList);
+  }
 }
 
 // ── Helpers shared ───────────────────────────────────────────────────────────
@@ -840,6 +949,179 @@ function renderSboSection() {
       },
     });
   }
+}
+
+// ── SBO Tab: render chartStatus/Lokasi/Trend dengan data SBO ─────────────────
+
+function _renderSboTabCharts() {
+  const sbo = _sboReports;
+  if (typeof Chart === 'undefined') return;
+
+  // Update judul chart
+  const setTitle = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+  setTitle('chartTitleStatus', 'Status Observasi (AMAN / ADA TEMUAN)');
+  setTitle('chartTitleLokasi', 'Lokasi Observasi (Top 5)');
+  setTitle('chartTitleTrend',  'Tren Observasi SBO per Bulan (6 Bulan)');
+
+  // Pie: AMAN vs ADA_TEMUAN
+  const statusCvs = document.getElementById('chartStatus');
+  if (statusCvs) {
+    const aman   = sbo.filter(r => (r.status_observasi||'').toUpperCase() === 'AMAN').length;
+    const temuan = sbo.filter(r => (r.status_observasi||'').toUpperCase() === 'ADA_TEMUAN').length;
+    if (statusChartInstance) statusChartInstance.destroy();
+    statusChartInstance = new Chart(statusCvs, {
+      type: 'doughnut',
+      data: {
+        labels: ['AMAN', 'ADA TEMUAN'],
+        datasets: [{ data: [aman, temuan], backgroundColor: ['#10b981', '#f59e0b'], borderWidth: 0 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '55%',
+      },
+    });
+  }
+
+  // Bar: top 5 lokasi SBO
+  const lokasiCvs = document.getElementById('chartLokasi');
+  if (lokasiCvs) {
+    const locMap = {};
+    sbo.forEach(r => { const l = r.lokasi || 'Tidak Diketahui'; locMap[l] = (locMap[l]||0)+1; });
+    const sorted = Object.entries(locMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if (lokasiChartInstance) lokasiChartInstance.destroy();
+    lokasiChartInstance = new Chart(lokasiCvs, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(([k])=>k),
+        datasets: [{ label: 'Observasi', data: sorted.map(([,v])=>v), backgroundColor: 'rgba(245,158,11,.8)', borderRadius:4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision:0, color:'#64748b', font:{size:10} }, grid:{color:'#f1f5f9'} },
+          y: { ticks: { color:'#475569', font:{size:10} }, grid:{display:false} },
+        },
+      },
+    });
+  }
+
+  // Line: trend SBO per bulan (reuse chartTrend canvas)
+  const trendCvs = document.getElementById('chartTrend');
+  if (trendCvs) {
+    const months = _last6Months();
+    const sboM   = _countByMonth(sbo);
+    if (trendChartInstance) trendChartInstance.destroy();
+    trendChartInstance = new Chart(trendCvs, {
+      type: 'line',
+      data: {
+        labels: months.map(m=>m.label),
+        datasets: [{
+          label: 'Observasi SBO',
+          data: months.map(m=>sboM[m.key]||0),
+          borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.12)',
+          tension: 0.35, fill: true, pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'#64748b', font:{size:10} }, grid:{color:'#f1f5f9'} },
+          y: { beginAtZero: true, ticks: { precision:0, color:'#64748b', font:{size:10} }, grid:{color:'#f1f5f9'} },
+        },
+      },
+    });
+  }
+
+  // Also render sboSection (pie + kategori) in SBO tab
+  renderSboSection();
+}
+
+// ── renderInsSection ──────────────────────────────────────────────────────────
+
+function wrapLabel(str, maxLen) {
+  const max = maxLen || 22;
+  const words = String(str).split(/\s+/);
+  const lines = [];
+  let cur = '';
+  words.forEach(w => {
+    if (!cur) { cur = w; return; }
+    if ((cur + ' ' + w).length <= max) { cur += ' ' + w; }
+    else { lines.push(cur); cur = w; }
+  });
+  if (cur) lines.push(cur);
+  return lines.length > 1 ? lines : str; // array = multiline, string = single line
+}
+
+function renderInsSection() {
+  const canvas = document.getElementById('insChartJenis');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const insList = getVisibleReportsFromCache().filter(isInspectionReport);
+  const counts  = {};
+  insList.forEach(r => {
+    const jenis = (r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || 'Lainnya').trim();
+    counts[jenis] = (counts[jenis] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  if (!sorted.length) return;
+
+  const labels   = sorted.map(([k]) => wrapLabel(k, 22));
+  const data     = sorted.map(([,v]) => v);
+
+  if (insJenisChartInstance) insJenisChartInstance.destroy();
+  insJenisChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Jumlah Inspeksi',
+        data,
+        backgroundColor: 'rgba(16,185,129,.75)',
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            // Tampilkan nama penuh di tooltip
+            title: (items) => {
+              const idx = items[0]?.dataIndex;
+              return sorted[idx]?.[0] || '';
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { precision: 0, color: '#64748b', font: { size: 10 } },
+          grid: { color: '#f1f5f9' },
+        },
+        y: {
+          ticks: {
+            color: '#475569',
+            font: { size: 11 },
+            autoSkip: false,
+          },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+
+  // Sesuaikan tinggi canvas agar semua bar terlihat (min 40px per bar)
+  const minH = Math.max(280, sorted.length * 40);
+  canvas.parentElement.style.minHeight = minH + 'px';
+  insJenisChartInstance.resize();
 }
 
 // ========================================
@@ -1563,17 +1845,35 @@ function showToast(message, type = "success") {
 // ========================================
 // LEADERBOARD
 // ========================================
-function renderLeaderboard(reportsList) {
+function renderLeaderboard(reportsList, mode) {
   const el = document.getElementById("leaderboardList");
   if (!el) return;
 
+  // SBO mode: gunakan _sboReports, field nama_observer
+  const isSbo = (mode === 'sbo') || (_activeTab === 'sbo');
+  const list = isSbo ? _sboReports : reportsList;
+
+  // Update judul leaderboard
+  const lbTitle = document.getElementById('leaderboardTitle');
+  if (lbTitle) {
+    if (isSbo) lbTitle.innerHTML = '<i class="fa-solid fa-trophy" style="color:#F2A900"></i> Top Observer (SBO)';
+    else if (_activeTab === 'ins') lbTitle.innerHTML = '<i class="fa-solid fa-trophy" style="color:#F2A900"></i> Top Pemeriksa (Inspeksi)';
+    else lbTitle.innerHTML = '<i class="fa-solid fa-trophy" style="color:#F2A900"></i> Top Pelapor';
+  }
+
   const counts = {};
   const depts  = {};
-  reportsList.forEach(r => {
-    const name = (r.nama || r.pelapor || "").trim();
+  list.forEach(r => {
+    const name = isSbo
+      ? (r.nama_observer || r.nama || "").trim()
+      : (r.nama || r.pelapor || "").trim();
     if (!name) return;
     counts[name] = (counts[name] || 0) + 1;
-    if (!depts[name]) depts[name] = r.departemen || r.department || "";
+    if (!depts[name]) {
+      depts[name] = isSbo
+        ? (r.departemen_observer || r.departemen || "")
+        : (r.departemen || r.department || "");
+    }
   });
 
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -1601,13 +1901,18 @@ function renderLeaderboard(reportsList) {
 // ========================================
 // DEPT BREAKDOWN
 // ========================================
-function renderDeptBreakdown(reportsList) {
+function renderDeptBreakdown(reportsList, mode) {
   const el = document.getElementById("deptBreakdown");
   if (!el) return;
 
+  const isSbo = (mode === 'sbo') || (_activeTab === 'sbo');
+  const list = isSbo ? _sboReports : reportsList;
+
   const counts = {};
-  reportsList.forEach(r => {
-    const dept = (r.departemen || r.department || "Lainnya").trim() || "Lainnya";
+  list.forEach(r => {
+    const dept = isSbo
+      ? ((r.departemen_observee || r.departemen || "Lainnya").trim() || "Lainnya")
+      : ((r.departemen || r.department || "Lainnya").trim() || "Lainnya");
     counts[dept] = (counts[dept] || 0) + 1;
   });
 
@@ -1656,7 +1961,9 @@ function initAnalyticsSection() {
 
   const section = document.getElementById('analyticsSection');
   if (!section) return;
-  section.style.display = '';
+  // Tandai sebagai "admin-visible" — switchTab() yang mengatur display berdasarkan tab aktif
+  section.dataset.adminVisible = '1';
+  if (_activeTab === 'general') section.style.display = '';
 
   section.querySelectorAll('.range-chip').forEach(btn => {
     btn.addEventListener('click', () => {

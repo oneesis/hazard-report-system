@@ -53,6 +53,15 @@
   </div>
 
 </header>
+
+    <!-- TAB NAV -->
+    <nav class="dashboard-tabs" id="dashboardTabs">
+      <button class="dash-tab active" data-tab="general"><i class="fa-solid fa-gauge"></i> Umum</button>
+      <button class="dash-tab" data-tab="hr"><i class="fa-solid fa-triangle-exclamation"></i> Hazard Report</button>
+      <button class="dash-tab" data-tab="ins"><i class="fa-solid fa-list-check"></i> Inspeksi</button>
+      <button class="dash-tab" data-tab="sbo"><i class="fa-solid fa-eye"></i> SBO</button>
+    </nav>
+
     <!-- ANALYTICS SECTION (admin-only, shown by JS) -->
     <section id="analyticsSection" style="display:none">
       <div class="range-chips">
@@ -205,48 +214,48 @@
     <!-- KPI CARDS -->
     <section class="kpi-grid">
       <div class="kpi-card open">
-        <div class="kpi-title">OPEN</div>
+        <div class="kpi-title" id="kpiTitleOpen">OPEN</div>
         <div id="kpiOpen" class="kpi-value">0</div>
       </div>
 
       <div class="kpi-card progress">
-        <div class="kpi-title">PROGRESS</div>
+        <div class="kpi-title" id="kpiTitleProgress">PROGRESS</div>
         <div id="kpiProgress" class="kpi-value">0</div>
       </div>
 
       <div class="kpi-card closed">
-        <div class="kpi-title">CLOSED</div>
+        <div class="kpi-title" id="kpiTitleClosed">CLOSED</div>
         <div id="kpiClosed" class="kpi-value">0</div>
       </div>
 
       <div class="kpi-card overdue">
-        <div class="kpi-title">OVERDUE</div>
+        <div class="kpi-title" id="kpiTitleOverdue">OVERDUE</div>
         <div id="kpiOverdue" class="kpi-value">0</div>
       </div>
 
       <div class="kpi-card avgclose">
-        <div class="kpi-title">AVG. CLOSING</div>
+        <div class="kpi-title" id="kpiTitleAvg">AVG. CLOSING</div>
         <div id="kpiAvgClose" class="kpi-value">-</div>
-        <div class="kpi-unit">hari</div>
+        <div class="kpi-unit" id="kpiAvgUnit">hari</div>
       </div>
     </section>
 
     <!-- CHARTS SECTION -->
     <section class="charts-section" id="dashboardChartsSection">
       <div class="chart-card">
-        <h3 class="chart-title">Distribusi Status Laporan</h3>
+        <h3 class="chart-title" id="chartTitleStatus">Distribusi Status Laporan</h3>
         <div class="chart-container">
           <canvas id="chartStatus"></canvas>
         </div>
       </div>
       <div class="chart-card">
-        <h3 class="chart-title">Temuan Bahaya Berdasarkan Lokasi (Top 5)</h3>
+        <h3 class="chart-title" id="chartTitleLokasi">Temuan Berdasarkan Lokasi (Top 5)</h3>
         <div class="chart-container">
           <canvas id="chartLokasi"></canvas>
         </div>
       </div>
       <div class="chart-card chart-card-full">
-        <h3 class="chart-title">Tren Laporan per Bulan (6 Bulan Terakhir)</h3>
+        <h3 class="chart-title" id="chartTitleTrend">Tren Laporan per Bulan (6 Bulan Terakhir)</h3>
         <div class="chart-container">
           <canvas id="chartTrend"></canvas>
         </div>
@@ -256,21 +265,21 @@
     <!-- ANALYTICS ROW: Leaderboard + Dept Breakdown -->
     <section class="analytics-row">
       <div class="chart-card analytics-card">
-        <h3 class="chart-title"><i class="fa-solid fa-trophy" style="color:#F2A900"></i> Top Pelapor</h3>
+        <h3 class="chart-title" id="leaderboardTitle"><i class="fa-solid fa-trophy" style="color:#F2A900"></i> Top Pelapor</h3>
         <div id="leaderboardList" class="leaderboard-list">
           <p class="loading-row" style="font-size:.82rem;padding:12px 0">Memuat...</p>
         </div>
       </div>
       <div class="chart-card analytics-card">
-        <h3 class="chart-title"><i class="fa-solid fa-sitemap" style="color:#307FE2"></i> Distribusi per Departemen</h3>
+        <h3 class="chart-title" id="deptTitle"><i class="fa-solid fa-sitemap" style="color:#307FE2"></i> Distribusi per Departemen</h3>
         <div id="deptBreakdown" class="dept-breakdown">
           <p class="loading-row" style="font-size:.82rem;padding:12px 0">Memuat...</p>
         </div>
       </div>
     </section>
 
-    <!-- TREND KOMPARASI MODUL -->
-    <section class="module-trend-section">
+    <!-- TREND KOMPARASI MODUL (General only) -->
+    <section class="module-trend-section" id="moduleTrendSection">
       <div class="chart-card chart-card-full">
         <h3 class="chart-title"><i class="fa-solid fa-chart-bar" style="color:#307FE2"></i> Trend Komparasi per Modul (6 Bulan)</h3>
         <div class="chart-container">
@@ -279,8 +288,17 @@
       </div>
     </section>
 
-    <!-- SBO SECTION -->
-    <section id="sboSection" class="sbo-detail-section">
+    <!-- INS SECTION (Inspeksi tab only) -->
+    <section id="insSection" style="display:none" class="ins-detail-section">
+      <div class="section-heading"><i class="fa-solid fa-list-check"></i> Distribusi Jenis Inspeksi</div>
+      <div class="chart-card" style="margin-top:12px">
+        <h3 class="chart-title">Jumlah Inspeksi per Jenis</h3>
+        <div class="chart-container" style="min-height:300px"><canvas id="insChartJenis"></canvas></div>
+      </div>
+    </section>
+
+    <!-- SBO SECTION (SBO tab only) -->
+    <section id="sboSection" class="sbo-detail-section" style="display:none">
       <div class="section-heading"><i class="fa-solid fa-eye"></i> Detail SBO — Safe Behavior Observation</div>
       <div class="charts-section" style="margin-top:12px">
         <div class="chart-card">
@@ -335,7 +353,7 @@
         <option value="CLOSED">CLOSED</option>
       </select>
 
-      <select id="typeFilter" aria-label="Filter jenis laporan">
+      <select id="typeFilter" aria-label="Filter jenis laporan" style="display:none">
         <option value="">Semua Jenis</option>
         <option value="HAZARD">Hazard</option>
         <option value="INSPECTION">Inspeksi</option>
