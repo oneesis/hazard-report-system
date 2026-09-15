@@ -145,18 +145,21 @@ function computeAndRender() {
     const achINS   = mine.filter(r => r.report_type === 'INSPECTION').length;
     const objHR    = parseInt(k['OBJ HR']  || 0) || 0;
     const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
+    const objST    = parseInt(k['OBJ_ST']  || k['OBJ ST'] || 0) || 0;
     // Cap di 100% — kelebihan capaian tidak menambah persentase
     const pctHR    = objHR  > 0 ? Math.min(100, Math.round(achHR  / objHR  * 100)) : null;
     const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;
-    // %Total = rata-rata %HR dan %INS (hanya yang memiliki target)
-    const pctVals  = [pctHR, pctINS].filter(v => v !== null);
-    const pctTotal = pctVals.length > 0 ? Math.round(pctVals.reduce((a, b) => a + b, 0) / pctVals.length) : null;
     // Safety Talk — hadir jika ada absensi di bulan yang sama
     const stHadir = monthStr ? _capStAbsensi.some(ab =>
       String(ab['NIK'] || '').trim() === nik &&
-      String(ab['BULAN'] || '') === monthStr
+      String(ab['BULAN'] || '').slice(0, 7) === monthStr
     ) : null;
-    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, pctTotal, picOpen, pctClosing, stHadir };
+    const achST = stHadir === null ? null : (stHadir ? 1 : 0);
+    const pctST = (objST > 0 && achST !== null) ? (stHadir ? 100 : 0) : null;
+    // %Total = rata-rata semua komponen yang memiliki target
+    const pctVals  = [pctHR, pctINS, pctST].filter(v => v !== null);
+    const pctTotal = pctVals.length > 0 ? Math.round(pctVals.reduce((a, b) => a + b, 0) / pctVals.length) : null;
+    return { k, achHR, achINS, objHR, objINS, pctHR, pctINS, objST, achST, pctST, pctTotal, picOpen, pctClosing, stHadir };
   });
 
   _capFiltered = _capComputed.filter(row => {
@@ -185,7 +188,7 @@ function renderTable() {
 
   const monthStr = document.getElementById('capMonth')?.value || '';
   const isSA     = isSuperAdminRole(getCurrentUser()?.role);
-  const colSpan  = isSA ? 15 : 14; // +1 kolom Safety Talk
+  const colSpan  = isSA ? 17 : 16; // OBJ ST + Capaian ST + % ST
 
   // Thead sortable — re-render setiap kali agar ikon sort update
   const thead = document.getElementById('capTableHead');
@@ -197,9 +200,9 @@ function renderTable() {
       ${th('nama', 'Nama')}${th('nik', 'NIK')}${th('jabatan', 'Jabatan')}${th('dept', 'Departemen')}
       ${th('objHR', 'OBJ HR', true)}${th('achHR', 'Capaian HR', true)}${th('pctHR', '% HR', true)}
       ${th('objINS', 'OBJ INS', true)}${th('achINS', 'Capaian INS', true)}${th('pctINS', '% INS', true)}
+      ${th('objST', 'OBJ ST', true)}${th('achST', 'Capaian ST', true)}${th('pctST', '% ST', true)}
       ${th('pctTotal', '% Total', true)}
       ${th('picOpen', 'PIC Open', true)}${th('pctClosing', '% Closing', true)}
-      ${th('stHadir', 'Safety Talk', true)}
     </tr>`;
   }
 
@@ -238,10 +241,12 @@ function renderTable() {
       <td class="um-center">${row.objINS || '-'}</td>
       <td class="um-center"><b>${row.achINS}</b></td>
       ${_capPctCell(row.pctINS)}
+      <td class="um-center">${row.objST || '-'}</td>
+      <td class="um-center"><b>${row.achST !== null ? row.achST : '-'}</b></td>
+      ${_capPctCell(row.pctST)}
       ${_capPctCell(row.pctTotal)}
       <td class="um-center"><b style="color:${picOpenColor}">${row.picOpen}</b></td>
       ${_capPctCell(row.pctClosing)}
-      <td class="um-center">${row.stHadir === null ? '<span style="color:#cbd5e1">-</span>' : row.stHadir ? '<span style="color:#22c55e;font-size:1.1rem" title="Hadir">✓</span>' : '<span style="color:#ef4444;font-size:1rem" title="Tidak hadir">✗</span>'}</td>
     </tr>`;
   }).join('');
 
@@ -329,10 +334,12 @@ function _capSortVal(row, col) {
     case 'objINS':     return row.objINS;
     case 'achINS':     return row.achINS;
     case 'pctINS':     return row.pctINS     ?? -1;
+    case 'objST':      return row.objST;
+    case 'achST':      return row.achST      ?? -1;
+    case 'pctST':      return row.pctST      ?? -1;
     case 'pctTotal':   return row.pctTotal   ?? -1;
     case 'picOpen':    return row.picOpen;
     case 'pctClosing': return row.pctClosing ?? -1;
-    case 'stHadir':    return row.stHadir === null ? -1 : row.stHadir ? 1 : 0;
     default:           return 0;
   }
 }
@@ -641,8 +648,9 @@ function exportCsv() {
     ...(isSA ? ['Perusahaan'] : []),
     'Nama', 'NIK', 'Jabatan', 'Departemen',
     'OBJ HR', 'Capaian HR', '% HR',
-    'OBJ INS', 'Capaian INS', '% INS', '% Total',
-    'PIC Open', '% Closing',
+    'OBJ INS', 'Capaian INS', '% INS',
+    'OBJ ST', 'Capaian ST', '% ST',
+    '% Total', 'PIC Open', '% Closing',
   ];
 
   const rows = _capFiltered.map(r => [
@@ -650,6 +658,7 @@ function exportCsv() {
     r.k['NAMA'] || '', String(r.k['NIK'] || ''), r.k['JABATAN'] || '', r.k['DEPARTEMEN'] || '',
     r.objHR, r.achHR, r.pctHR    !== null ? r.pctHR    + '%' : '-',
     r.objINS, r.achINS, r.pctINS !== null ? r.pctINS   + '%' : '-',
+    r.objST, r.achST  !== null ? r.achST : '-', r.pctST !== null ? r.pctST + '%' : '-',
     r.pctTotal   !== null ? r.pctTotal   + '%' : '-',
     r.picOpen,
     r.pctClosing !== null ? r.pctClosing + '%' : '-',

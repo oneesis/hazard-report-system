@@ -1965,6 +1965,26 @@ module.exports = async (req, res) => {
           result = { status: 'success', message: 'Jadwal berhasil dihapus.' };
           break;
         }
+        case 'addObjStColumn': {
+          // Satu kali: tambah header OBJ_ST ke Master_Karyawan jika belum ada
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const hdrRes = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan!1:1' });
+          const hdrRow = (hdrRes.data.values || [[]])[0] || [];
+          if (hdrRow.includes('OBJ_ST')) {
+            result = { status: 'success', message: 'Kolom OBJ_ST sudah ada.' };
+          } else {
+            const nextCol = colIndexToLetter(hdrRow.length);
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: SPREADSHEET_ID,
+              range: `Master_Karyawan!${nextCol}1`,
+              valueInputOption: 'RAW',
+              requestBody: { values: [['OBJ_ST']] },
+            });
+            invalidateCache('Master_Karyawan');
+            result = { status: 'success', message: `Kolom OBJ_ST berhasil ditambahkan di kolom ${nextCol}.` };
+          }
+          break;
+        }
         case 'createSafetyTalkSchedule': {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           if (!data.tanggal?.trim()) throw new Error('Tanggal wajib diisi.');
