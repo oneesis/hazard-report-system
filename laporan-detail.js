@@ -394,16 +394,11 @@ function wireClosingForm(r, status) {
 
   if (isFollowup) return;
 
-  // Status buttons
+  // Status buttons — read-only, hanya indicator visual (status berubah otomatis via workflow)
   document.querySelectorAll('#detailStatusButtons .status-button').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.status === status);
-    btn.addEventListener('click', () => {
-      detailStatus = btn.dataset.status;
-      document.querySelectorAll('#detailStatusButtons .status-button')
-        .forEach(b => b.classList.toggle('selected', b === btn));
-      document.getElementById('closingRequired').style.display =
-        detailStatus === 'CLOSED' ? '' : 'none';
-    });
+    btn.disabled = true;
+    btn.style.cursor = 'default';
   });
 
   // After photo upload
