@@ -15,19 +15,64 @@
     .st-info-card { background: linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border-radius:14px; padding:20px 24px; margin-bottom:18px; }
     .st-info-card h2 { font-size:1.05rem; font-weight:700; margin:0 0 8px; }
     .st-info-meta { font-size:.82rem; opacity:.85; display:flex; gap:16px; flex-wrap:wrap; }
+
+    /* Toolbar */
     .st-ab-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-    .st-ab-count { font-size:.85rem; color:#64748b; }
-    .st-ab-count b { color:#6366f1; }
-    .ab-cb { width:18px; height:18px; cursor:pointer; accent-color:#6366f1; }
-    tr.checked td { background:#f0fdf4; }
+    .st-ab-count { font-size:.82rem; color:#64748b; }
+
+    /* Summary chips */
+    .ab-summary { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .ab-chip { display:inline-flex; align-items:center; gap:5px; font-size:.78rem; font-weight:700; border-radius:20px; padding:4px 12px; }
+    .ab-chip-hadir       { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+    .ab-chip-quiz        { background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd; }
+    .ab-chip-mangkir     { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+    .ab-chip-belum       { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
+
+    /* Quick-fill buttons */
+    .quick-fill { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .qf-btn { border:none; border-radius:8px; padding:5px 12px; font-size:.75rem; font-weight:700; cursor:pointer; }
+    .qf-hadir       { background:#dcfce7; color:#15803d; }
+    .qf-cuti        { background:#fef3c7; color:#92400e; }
+    .qf-dinas-luar  { background:#e0f2fe; color:#0369a1; }
+    .qf-shift-malam { background:#ede9fe; color:#6d28d9; }
+    .qf-libur       { background:#f1f5f9; color:#475569; }
+    .qf-mangkir     { background:#fee2e2; color:#b91c1c; }
+
+    /* Table */
+    .ab-status-sel {
+      max-width:130px; border-radius:7px; border:1.5px solid #e2e8f0;
+      padding:4px 6px; font-size:.78rem; background:#fff; cursor:pointer;
+    }
+    .ab-status-badge {
+      display:inline-block; border-radius:12px; padding:2px 9px;
+      font-size:.72rem; font-weight:700; margin-left:6px;
+    }
+    .ab-quiz-label { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; cursor:pointer; }
+    .ab-quiz-label input { width:16px; height:16px; accent-color:#7c3aed; cursor:pointer; }
+    .ab-quiz-na { color:#cbd5e1; font-size:.8rem; }
+    .ab-quiz-locked { color:#dc2626; font-size:.78rem; font-weight:600; display:inline-flex; align-items:center; gap:4px; }
+    .ab-quiz-cell { white-space:nowrap; }
+
+    /* Row tints */
+    tr.ab-row-hadir       td { background:#f0fdf4; }
+    tr.ab-row-cuti        td { background:#fefce8; }
+    tr.ab-row-dinas_luar  td { background:#f0f9ff; }
+    tr.ab-row-shift_malam td { background:#f5f3ff; }
+    tr.ab-row-libur       td { background:#f8fafc; }
+    tr.ab-row-mangkir     td { background:#fff1f2; }
+
+    /* Sticky bar */
     .btn-save { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border:none; border-radius:10px; padding:11px 24px; font-size:.9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
     .btn-save:hover { opacity:.9; }
     .btn-save:disabled { opacity:.6; cursor:default; }
     .sticky-bar { position:sticky; bottom:0; background:#fff; border-top:1.5px solid #e2e8f0; padding:14px 0; z-index:10; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
     .back-link { display:inline-flex; align-items:center; gap:6px; color:#6366f1; font-size:.85rem; font-weight:600; text-decoration:none; margin-bottom:4px; }
     .back-link:hover { text-decoration:underline; }
-    .toggle-all-btn { background:#f1f5f9; color:#374151; border:none; border-radius:8px; padding:7px 14px; font-size:.8rem; font-weight:600; cursor:pointer; }
-    .toggle-all-btn:hover { background:#e2e8f0; }
+
+    /* Legend */
+    .ab-legend { display:flex; gap:10px; flex-wrap:wrap; font-size:.75rem; color:#64748b; margin-bottom:10px; }
+    .ab-legend-item { display:flex; align-items:center; gap:4px; }
+    .ab-legend-dot { width:10px; height:10px; border-radius:50%; }
   </style>
 </head>
 <body>
@@ -50,24 +95,61 @@
       <div id="stInfoCard" class="st-info-card" style="display:none"></div>
 
       <div class="admin-card" style="overflow-x:auto">
-        <div class="st-ab-toolbar">
-          <input type="text" id="abSearch" class="um-search" placeholder="Cari nama karyawan..." style="width:220px" oninput="filterTable()">
-          <button class="toggle-all-btn" onclick="toggleAll()">Centang Semua / Batal</button>
-          <span class="st-ab-count">Hadir: <b id="hadirCount">0</b> / <span id="totalCount">0</span></span>
+
+        <!-- Summary chips -->
+        <div class="ab-summary">
+          <span class="ab-chip ab-chip-hadir"><i class="fa-solid fa-circle-check"></i> Hadir: <b id="hadirCount">0</b></span>
+          <span class="ab-chip ab-chip-quiz"><i class="fa-solid fa-clipboard-question"></i> Quiz: <b id="quizCount">0</b></span>
+          <span class="ab-chip ab-chip-mangkir"><i class="fa-solid fa-ban"></i> Mangkir: <b id="mangkirCount">0</b></span>
+          <span class="ab-chip ab-chip-belum"><i class="fa-solid fa-clock"></i> Belum Quiz: <b id="belumCount">0</b></span>
+          <span style="font-size:.78rem;color:#94a3b8;margin-left:4px;align-self:center">dari <b id="totalCount">0</b> karyawan</span>
         </div>
+
+        <!-- Toolbar -->
+        <div class="st-ab-toolbar">
+          <input type="text" id="abSearch" class="um-search" placeholder="Cari nama karyawan..." style="width:210px" oninput="filterTable()">
+          <select id="abFilterStatus" class="um-search" style="width:140px" onchange="filterTable()">
+            <option value="">Semua Status</option>
+            <option value="HADIR">Hadir</option>
+            <option value="CUTI">Cuti</option>
+            <option value="DINAS_LUAR">Dinas Luar</option>
+            <option value="SHIFT_MALAM">Shift Malam</option>
+            <option value="LIBUR">Libur</option>
+            <option value="MANGKIR">Mangkir</option>
+          </select>
+        </div>
+
+        <!-- Quick fill -->
+        <div class="quick-fill">
+          <span style="font-size:.75rem;color:#94a3b8;align-self:center">Isi semua yang tampil:</span>
+          <button class="qf-btn qf-hadir"       onclick="isiSemua('HADIR')">✓ Hadir</button>
+          <button class="qf-btn qf-cuti"         onclick="isiSemua('CUTI')">Cuti</button>
+          <button class="qf-btn qf-dinas-luar"   onclick="isiSemua('DINAS_LUAR')">Dinas Luar</button>
+          <button class="qf-btn qf-shift-malam"  onclick="isiSemua('SHIFT_MALAM')">Shift Malam</button>
+          <button class="qf-btn qf-libur"         onclick="isiSemua('LIBUR')">Libur</button>
+          <button class="qf-btn qf-mangkir"       onclick="isiSemua('MANGKIR')">Mangkir</button>
+        </div>
+
+        <!-- Legend -->
+        <div class="ab-legend">
+          <span class="ab-legend-item"><span class="ab-legend-dot" style="background:#16a34a"></span> Hadir = capaian penuh</span>
+          <span class="ab-legend-item"><span class="ab-legend-dot" style="background:#7c3aed"></span> Cuti/Dinas/Shift/Libur + Quiz = capaian penuh</span>
+          <span class="ab-legend-item"><span class="ab-legend-dot" style="background:#dc2626"></span> Mangkir = 0 capaian, quiz terkunci</span>
+        </div>
+
         <table class="admin-table" id="abTable">
           <thead>
             <tr>
-              <th class="um-center" style="width:44px">Hadir</th>
               <th>Nama</th>
               <th>NIK</th>
-              <th>Perusahaan</th>
               <th>Departemen</th>
               <th>Jabatan</th>
+              <th>Status Kehadiran</th>
+              <th style="text-align:center">Quiz</th>
             </tr>
           </thead>
           <tbody id="abTbody">
-            <tr><td colspan="6" class="um-loading">Memuat data...</td></tr>
+            <tr><td colspan="7" class="um-loading">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>

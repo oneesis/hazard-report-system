@@ -2037,33 +2037,50 @@ module.exports = async (req, res) => {
         }
         case 'saveSafetyTalkAbsensi': {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
-          const { schedule_id, niks_hadir } = data || {};
+          // Support both legacy {niks_hadir} and new {absensi} format
+          const { schedule_id, niks_hadir, absensi } = data || {};
           if (!schedule_id) throw new Error('schedule_id wajib diisi.');
           await _ensureSafetyTalkSheets(sheets);
-          // Ambil BULAN dari jadwal
           const schedRows = await getSheetData(sheets, 'SafetyTalk_Schedule');
           const sched = schedRows.find(r => String(r['ID'] || '') === String(schedule_id));
           if (!sched) throw new Error('Jadwal tidak ditemukan.');
           const bulan = String(sched['BULAN'] || sched['TANGGAL']?.slice(0, 7) || '');
-          const ST_AB_HDR = ['SCHEDULE_ID','BULAN','NIK','NAMA','PERUSAHAAN','DEPARTEMEN','JABATAN','CHECKED_BY','CHECKED_AT'];
-          // Baca semua absensi yang ada
+          const ST_AB_HDR = ['SCHEDULE_ID','BULAN','NIK','NAMA','PERUSAHAAN','DEPARTEMEN','JABATAN','STATUS_KEHADIRAN','QUIZ_DONE','CHECKED_BY','CHECKED_AT'];
           let existing = [];
           try { existing = await getSheetData(sheets, 'SafetyTalk_Absensi'); } catch {}
-          // Pertahankan absensi jadwal lain; ganti jadwal ini
           const others = existing.filter(r => String(r['SCHEDULE_ID'] || '') !== String(schedule_id));
           const now = new Date().toISOString();
-          const newRows = (Array.isArray(niks_hadir) ? niks_hadir : []).map(k => [
-            schedule_id, bulan, k.nik || '', k.nama || '', k.perusahaan || '',
-            k.departemen || '', k.jabatan || '', authUser.nik || '', now,
-          ]);
-          const allData = [ST_AB_HDR, ...others.map(r => ST_AB_HDR.map(h => r[h] || '')), ...newRows];
+          // Normalize input: baru pakai absensi[], lama pakai niks_hadir[] (semua HADIR)
+          const VALID_STATUS = new Set(['HADIR','CUTI','DINAS_LUAR','SHIFT_MALAM','LIBUR','MANGKIR']);
+          const inputList = Array.isArray(absensi)
+            ? absensi
+            : (Array.isArray(niks_hadir) ? niks_hadir.map(k => ({ ...k, status_kehadiran: 'HADIR', quiz_done: '' })) : []);
+          const newRows = inputList.map(k => {
+            const status = VALID_STATUS.has(String(k.status_kehadiran || '').toUpperCase())
+              ? String(k.status_kehadiran).toUpperCase() : 'HADIR';
+            // MANGKIR tidak boleh punya quiz; HADIR juga tidak perlu
+            const quizDone = (status !== 'HADIR' && status !== 'MANGKIR') ? (k.quiz_done ? 'YA' : '') : '';
+            return [schedule_id, bulan, k.nik || '', k.nama || '', k.perusahaan || '',
+              k.departemen || '', k.jabatan || '', status, quizDone, authUser.nik || '', now];
+          });
+          // Pertahankan row lama (kolom lama) — petakan ke header baru
+          const othersRows = others.map(r => ST_AB_HDR.map(h => {
+            if (h === 'STATUS_KEHADIRAN') return r[h] || 'HADIR'; // backward compat
+            if (h === 'QUIZ_DONE') return r[h] || '';
+            return r[h] || '';
+          }));
+          const allData = [ST_AB_HDR, ...othersRows, ...newRows];
           await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
           await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi',
             valueInputOption: 'RAW', requestBody: { values: allData },
           });
           invalidateCache('SafetyTalk_Absensi');
-          result = { status: 'success', count: newRows.length, message: `${newRows.length} karyawan tercatat hadir.` };
+          const hadirCount  = newRows.filter(r => r[7] === 'HADIR').length;
+          const quizCount   = newRows.filter(r => r[8] === 'YA').length;
+          const mangkirCount = newRows.filter(r => r[7] === 'MANGKIR').length;
+          result = { status: 'success', count: newRows.length,
+            message: `Hadir: ${hadirCount}, Quiz: ${quizCount}, Mangkir: ${mangkirCount}.` };
           break;
         }
         case 'submitHazardReport':

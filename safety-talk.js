@@ -20,8 +20,14 @@ async function loadAll() {
     // Build absensi count map
     _stAbsensiMap = {};
     (abRes.data || []).forEach(row => {
-      const id = row['SCHEDULE_ID'];
-      _stAbsensiMap[id] = (_stAbsensiMap[id] || 0) + 1;
+      const id     = row['SCHEDULE_ID'];
+      const status = String(row['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase();
+      const quiz   = String(row['QUIZ_DONE'] || '').toUpperCase() === 'YA';
+      if (!_stAbsensiMap[id]) _stAbsensiMap[id] = { hadir:0, quiz:0, mangkir:0, total:0 };
+      _stAbsensiMap[id].total++;
+      if (status === 'HADIR')   _stAbsensiMap[id].hadir++;
+      else if (status === 'MANGKIR') _stAbsensiMap[id].mangkir++;
+      else if (quiz) _stAbsensiMap[id].quiz++;
     });
     _stKaryawan = Array.isArray(karRes) ? karRes : (karRes.data || []);
     _populatePemateriDropdown();
@@ -75,7 +81,8 @@ function renderSchedules() {
   grid.innerHTML = filtered.map(s => {
     const id     = s['ID'] || '';
     const status = String(s['STATUS'] || 'AKTIF').toUpperCase();
-    const hadir  = _stAbsensiMap[id] || 0;
+    const ab     = _stAbsensiMap[id] || { hadir:0, quiz:0, mangkir:0, total:0 };
+    const hadir  = ab.hadir;
     const tgl    = s['TANGGAL'] ? new Date(s['TANGGAL']).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : '-';
     const badgeCls = status === 'SELESAI' ? 'selesai' : 'aktif';
     const badgeIcon = status === 'SELESAI' ? 'fa-circle-check' : 'fa-circle-play';
@@ -88,7 +95,12 @@ function renderSchedules() {
       ${s['NAMA_PEMATERI'] ? `<div class="st-card-meta"><i class="fa-solid fa-person-chalkboard"></i> ${escapeHTML(s['NAMA_PEMATERI'])}${s['JABATAN_PEMATERI'] ? ' · ' + escapeHTML(s['JABATAN_PEMATERI']) : ''}</div>` : ''}
       ${s['PERUSAHAAN_TARGET'] ? `<div class="st-card-meta"><i class="fa-solid fa-building"></i> ${escapeHTML(s['PERUSAHAAN_TARGET'])}</div>` : '<div class="st-card-meta"><i class="fa-solid fa-building"></i> Semua Perusahaan</div>'}
       ${s['DESKRIPSI_MATERI'] ? `<div class="st-card-desc">${escapeHTML(s['DESKRIPSI_MATERI'])}</div>` : ''}
-      <div class="st-absensi-count"><i class="fa-solid fa-users-line" style="color:#6366f1"></i> <b>${hadir}</b> karyawan hadir</div>
+      <div class="st-absensi-count">
+        <i class="fa-solid fa-users-line" style="color:#6366f1"></i>
+        <span style="color:#16a34a;font-weight:700">${ab.hadir} Hadir</span>
+        ${ab.quiz    ? `<span style="color:#7c3aed;font-weight:700;margin-left:6px">${ab.quiz} Quiz</span>` : ''}
+        ${ab.mangkir ? `<span style="color:#dc2626;font-weight:700;margin-left:6px">${ab.mangkir} Mangkir</span>` : ''}
+      </div>
       <div class="st-card-footer">
         <a href="safety-talk-absensi.html?id=${encodeURIComponent(id)}" class="btn-indigo-soft">
           <i class="fa-solid fa-clipboard-list"></i> Kelola Absensi
