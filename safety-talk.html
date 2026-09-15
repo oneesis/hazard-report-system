@@ -114,18 +114,11 @@
         <option value="">Semua Perusahaan</option>
       </select>
     </div>
-    <div class="form-group">
-      <label class="form-label">
-        <i class="fa-solid fa-clipboard-question" style="color:#7c3aed"></i>
-        Link Quiz
-        <span style="font-size:.73rem;font-weight:400;color:#94a3b8;margin-left:4px">— dari quiz-she.vercel.app (opsional)</span>
-      </label>
-      <select id="stQuizSessionId" class="form-input">
-        <option value="">— Tidak ada quiz —</option>
-      </select>
-      <div id="stQuizLoadStatus" style="font-size:.74rem;color:#94a3b8;margin-top:4px">
-        <i class="fa-solid fa-spinner fa-spin"></i> Memuat sesi quiz...
-      </div>
+    <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:11px 14px;font-size:.76rem;color:#5b21b6;line-height:1.5">
+      <i class="fa-solid fa-circle-info"></i>
+      <b>Quiz otomatis tertaut.</b> Setelah jadwal disimpan, buat quiz-nya di
+      <a href="https://quiz-she.vercel.app/admin.html" target="_blank" style="color:#7c3aed;font-weight:700">quiz-she</a>
+      → Topik Baru → <b>Import dari Safety Talk</b> → pilih jadwal ini.
     </div>
     <div id="createErr" class="err-msg"></div>
     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">

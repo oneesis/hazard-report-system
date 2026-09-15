@@ -1271,7 +1271,7 @@ async function ensureSBOSheet(sheets) {
 }
 
 // ── Safety Talk sheet bootstrap ───────────────────────────────────
-const ST_SCHED_HDR = ['ID','TIMESTAMP','TANGGAL','BULAN','JUDUL_MATERI','DESKRIPSI_MATERI','NAMA_PEMATERI','NIK_PEMATERI','JABATAN_PEMATERI','PERUSAHAAN_TARGET','STATUS','CREATED_BY','QUIZ_SESSION_ID'];
+const ST_SCHED_HDR = ['ID','TIMESTAMP','TANGGAL','BULAN','JUDUL_MATERI','DESKRIPSI_MATERI','NAMA_PEMATERI','NIK_PEMATERI','JABATAN_PEMATERI','PERUSAHAAN_TARGET','STATUS','CREATED_BY'];
 const ST_AB_HDR    = ['SCHEDULE_ID','BULAN','NIK','NAMA','PERUSAHAAN','DEPARTEMEN','JABATAN','CHECKED_BY','CHECKED_AT'];
 
 async function _ensureSafetyTalkSheets(sheets) {
@@ -2006,7 +2006,6 @@ module.exports = async (req, res) => {
             data.perusahaan_target?.trim() || '',
             'AKTIF',
             authUser.nik || '',
-            data.quiz_session_id?.trim() || '',
           ];
           await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule',
@@ -2031,7 +2030,6 @@ module.exports = async (req, res) => {
           if (data.nik_pemateri     !== undefined) updFields['NIK_PEMATERI']     = data.nik_pemateri;
           if (data.jabatan_pemateri !== undefined) updFields['JABATAN_PEMATERI'] = data.jabatan_pemateri;
           if (data.perusahaan_target  !== undefined) updFields['PERUSAHAAN_TARGET']  = data.perusahaan_target;
-          if (data.quiz_session_id    !== undefined) updFields['QUIZ_SESSION_ID']    = data.quiz_session_id;
           await updateWorkflowFields(sheets, 'SafetyTalk_Schedule', data.id, updFields);
           invalidateCache('SafetyTalk_Schedule');
           result = { status: 'success', message: 'Jadwal berhasil diperbarui.' };

@@ -17,6 +17,14 @@
     .st-info-card h2 { font-size:1.05rem; font-weight:700; margin:0 0 8px; }
     .st-info-meta { font-size:.82rem; opacity:.85; display:flex; gap:16px; flex-wrap:wrap; }
 
+    /* Peringatan quiz belum ada */
+    .st-quiz-warn {
+      background:#fffbeb; border:1.5px solid #fcd34d; border-radius:12px;
+      padding:13px 16px; margin-bottom:16px; font-size:.82rem; color:#92400e;
+      display:flex; align-items:flex-start; gap:10px; line-height:1.55;
+    }
+    .st-quiz-warn i { color:#d97706; margin-top:2px; flex-shrink:0; }
+
     /* Summary chips */
     .ab-summary { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
     .ab-chip { display:inline-flex; align-items:center; gap:5px; font-size:.78rem; font-weight:700; border-radius:20px; padding:4px 12px; }
@@ -97,6 +105,8 @@
       </a>
 
       <div id="stInfoCard" class="st-info-card" style="display:none"></div>
+
+      <div id="stQuizWarn" class="st-quiz-warn" style="display:none"></div>
 
       <div class="admin-card" style="overflow-x:auto">
 

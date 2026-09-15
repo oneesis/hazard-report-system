@@ -7,33 +7,25 @@ let _stAbsensiMap = {}; // schedule_id → jumlah hadir
 let _stKaryawan  = [];
 let _stPemateriChoices;
 let _editingStId = null; // null = buat baru, string = edit jadwal
-let _quizSessions = []; // cache sesi dari quiz-she
+// ID jadwal Safety Talk yang sudah punya sesi quiz di quiz-she.
+// Linkage: quiz-she menyalin ID jadwal jadi kode topik saat "Import dari Safety Talk",
+// lalu sesi menunjuk topik itu — jadi topicCode sesi === ID jadwal ini.
+let _quizLinked = new Set();
 
 // ── Load ──────────────────────────────────────────────────────────
-async function _loadQuizSessions() {
-  const sel = document.getElementById('stQuizSessionId');
-  const statusEl = document.getElementById('stQuizLoadStatus');
+// Kumpulkan ID jadwal yang sudah punya sesi quiz. Gagal fetch = set kosong
+// (indikator tidak tampil), bukan error — quiz-she opsional bagi halaman ini.
+async function _loadQuizLinks() {
   try {
     const res  = await fetch(`${QUIZ_URL}/api/data?action=sessions`);
     const data = await res.json();
-    _quizSessions = Array.isArray(data) ? data : (data.value || data.sessions || []);
-    // Filter published saja, sort terbaru dulu
-    _quizSessions = _quizSessions
-      .filter(s => s.status === 'published')
-      .sort((a, b) => String(b.validFrom || '').localeCompare(String(a.validFrom || '')));
-    const currentVal = sel?.value || '';
-    if (sel) {
-      sel.innerHTML = '<option value="">— Tidak ada quiz —</option>' +
-        _quizSessions.map(s => {
-          const from = s.validFrom ? s.validFrom.slice(0, 10) : '';
-          const label = `${s.topicCode || s.id}${s.title ? ' — ' + s.title : ''}${from ? ' ('+from+')' : ''}`;
-          return `<option value="${escapeHTML(s.id)}" ${currentVal === s.id ? 'selected' : ''}>${escapeHTML(label)}</option>`;
-        }).join('');
-    }
-    if (statusEl) statusEl.innerHTML = `<a href="${QUIZ_URL}/admin.html" target="_blank" style="color:#7c3aed;font-size:.74rem"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka admin quiz-she</a>`;
-  } catch {
-    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-size:.74rem"><i class="fa-solid fa-circle-exclamation"></i> Gagal memuat sesi quiz</span>';
-  }
+    const list = Array.isArray(data) ? data : (data.value || data.sessions || []);
+    _quizLinked = new Set(
+      list.filter(s => s.status === 'published')
+          .map(s => String(s.topicCode || '').trim())
+          .filter(Boolean)
+    );
+  } catch { _quizLinked = new Set(); }
 }
 
 async function loadAll() {
@@ -44,6 +36,7 @@ async function loadAll() {
       fetch('/api?action=getSafetyTalkSchedules').then(r => r.json()),
       fetch('/api?action=getSafetyTalkAbsensi').then(r => r.json()),
       fetch('/api?action=masterKaryawan').then(r => r.json()),
+      _loadQuizLinks(),
     ]);
     _stSchedules = schRes.data || [];
     // Build absensi count map
@@ -124,7 +117,9 @@ function renderSchedules() {
       ${s['NAMA_PEMATERI'] ? `<div class="st-card-meta"><i class="fa-solid fa-person-chalkboard"></i> ${escapeHTML(s['NAMA_PEMATERI'])}${s['JABATAN_PEMATERI'] ? ' · ' + escapeHTML(s['JABATAN_PEMATERI']) : ''}</div>` : ''}
       ${s['PERUSAHAAN_TARGET'] ? `<div class="st-card-meta"><i class="fa-solid fa-building"></i> ${escapeHTML(s['PERUSAHAAN_TARGET'])}</div>` : '<div class="st-card-meta"><i class="fa-solid fa-building"></i> Semua Perusahaan</div>'}
       ${s['DESKRIPSI_MATERI'] ? `<div class="st-card-desc">${escapeHTML(s['DESKRIPSI_MATERI'])}</div>` : ''}
-      ${s['QUIZ_SESSION_ID'] ? `<div class="st-card-meta" style="color:#7c3aed"><i class="fa-solid fa-clipboard-question"></i> Quiz: ${escapeHTML(s['QUIZ_SESSION_ID'])}</div>` : ''}
+      ${_quizLinked.has(id)
+        ? '<div class="st-card-meta" style="color:#7c3aed"><i class="fa-solid fa-clipboard-check"></i> Quiz tertaut</div>'
+        : '<div class="st-card-meta" style="color:#cbd5e1"><i class="fa-solid fa-clipboard-question"></i> Belum ada quiz</div>'}
       <div class="st-absensi-count">
         <i class="fa-solid fa-users-line" style="color:#6366f1"></i>
         <span style="color:#16a34a;font-weight:700">${ab.hadir} Hadir</span>
@@ -162,10 +157,8 @@ function openCreateModal() {
   document.getElementById('stDeskripsi').value = '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue('');
   document.getElementById('stTargetCo').value = '';
-  document.getElementById('stQuizSessionId').value = '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
-  _loadQuizSessions();
 }
 
 function editJadwal(id) {
@@ -179,13 +172,8 @@ function editJadwal(id) {
   document.getElementById('stDeskripsi').value = s['DESKRIPSI_MATERI'] || '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue(s['NAMA_PEMATERI'] || '');
   document.getElementById('stTargetCo').value = s['PERUSAHAAN_TARGET'] || '';
-  const savedQuizId = s['QUIZ_SESSION_ID'] || '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
-  _loadQuizSessions().then(() => {
-    // Set nilai setelah dropdown terisi
-    if (savedQuizId) document.getElementById('stQuizSessionId').value = savedQuizId;
-  });
 }
 
 function closeModal(id) {
@@ -216,7 +204,6 @@ async function submitCreate() {
     nik_pemateri:     karFound?.['NIK']     || '',
     jabatan_pemateri: karFound?.['JABATAN'] || '',
     perusahaan_target: document.getElementById('stTargetCo').value,
-    quiz_session_id:   document.getElementById('stQuizSessionId').value.trim(),
   };
   try {
     const isEdit = !!_editingStId;

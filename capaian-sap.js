@@ -177,11 +177,23 @@ function computeAndRender() {
     const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;
     const pctSBO   = objSBO > 0 ? Math.min(100, Math.round(achSBO / objSBO * 100)) : null;
     const pctPC    = objPC  > 0 ? Math.min(100, Math.round(achPC  / objPC  * 100)) : null;
-    // Safety Talk — hadir jika ada absensi di bulan yang sama
-    const stHadir = monthStr ? _capStAbsensi.some(ab =>
-      String(ab['NIK'] || '').trim() === nik &&
-      String(ab['BULAN'] || '').slice(0, 7) === monthStr
-    ) : null;
+    // Safety Talk — HADIR = tercatat; MANGKIR = tidak tercatat; status lain
+    // (Cuti/Dinas Luar/Shift Malam/Libur) tercatat HANYA jika lulus quiz.
+    // Baris lama tanpa STATUS_KEHADIRAN dianggap HADIR (kompatibilitas mundur).
+    let stHadir = null;
+    if (monthStr) {
+      stHadir = _capStAbsensi
+        .filter(ab =>
+          String(ab['NIK'] || '').trim() === nik &&
+          String(ab['BULAN'] || '').slice(0, 7) === monthStr
+        )
+        .some(ab => {
+          const st = String(ab['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase();
+          if (st === 'HADIR')   return true;
+          if (st === 'MANGKIR') return false;
+          return String(ab['QUIZ_DONE'] || '').toUpperCase() === 'YA';
+        });
+    }
     const achST = stHadir === null ? null : (stHadir ? 1 : 0);
     const pctST = (objST > 0 && achST !== null) ? (stHadir ? 100 : 0) : null;
     // %Total = rata-rata semua komponen yang memiliki target

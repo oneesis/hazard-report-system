@@ -7,7 +7,12 @@ let _abKaryawan  = [];   // list karyawan
 let _abStatus    = {};   // NIK → status kehadiran string
 let _abQuizResult = {};  // NIK → { passed, score, certificateNo } dari quizsheebl.org
 let _abFiltered  = [];
-let _quizSessionId = ''; // dari jadwal
+// Sesi quiz yang tertaut ke jadwal ini. Linkage otomatis: saat admin quiz-she
+// pakai "Import dari Safety Talk", ID jadwal disalin jadi kode topik — jadi
+// sesi dengan topicCode === ID jadwal adalah quiz untuk safety talk ini.
+// Bisa lebih dari satu (mis. pre-test & post-test); lulus di salah satu = lulus.
+let _quizSessionIds = [];
+let _quizTopicLabel = '';
 
 const STATUS_OPTIONS = [
   { value: 'HADIR',       label: 'Hadir',       color: '#16a34a', bg: '#dcfce7' },
@@ -42,7 +47,7 @@ async function initAbsensi() {
     _abSchedule = allSched.find(s => String(s['ID'] || '') === schedId);
     if (!_abSchedule) { window.location.href = 'safety-talk.html'; return; }
 
-    _quizSessionId = String(_abSchedule['QUIZ_SESSION_ID'] || '').trim();
+    await _resolveQuizSessions(schedId);
 
     // Info card
     const infoCard = document.getElementById('stInfoCard');
@@ -57,8 +62,22 @@ async function initAbsensi() {
           <span><i class="fa-regular fa-calendar"></i> ${tgl}</span>
           ${_abSchedule['NAMA_PEMATERI'] ? `<span><i class="fa-solid fa-person-chalkboard"></i> ${escapeHTML(_abSchedule['NAMA_PEMATERI'])}</span>` : ''}
           ${_abSchedule['PERUSAHAAN_TARGET'] ? `<span><i class="fa-solid fa-building"></i> ${escapeHTML(_abSchedule['PERUSAHAAN_TARGET'])}</span>` : '<span><i class="fa-solid fa-building"></i> Semua Perusahaan</span>'}
-          ${_quizSessionId ? `<span style="color:#fde68a;font-size:.78rem"><i class="fa-solid fa-clipboard-question"></i> Quiz: ${escapeHTML(_quizSessionId)}</span>` : ''}
+          ${_quizSessionIds.length ? `<span style="color:#c7d2fe;font-size:.78rem"><i class="fa-solid fa-clipboard-check"></i> Quiz tertaut${_quizTopicLabel ? ': ' + escapeHTML(_quizTopicLabel) : ''}</span>` : ''}
         </div>`;
+    }
+
+    // Peringatan bila belum ada quiz — admin perlu buat dulu di quiz-she
+    const warnEl = document.getElementById('stQuizWarn');
+    if (warnEl) {
+      if (_quizSessionIds.length) { warnEl.style.display = 'none'; }
+      else {
+        warnEl.style.display = '';
+        warnEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>
+          <span><b>Belum ada quiz untuk jadwal ini.</b> Karyawan berstatus Cuti / Dinas Luar / Shift Malam / Libur
+          tidak bisa memenuhi capaian sampai quiz dibuat. Buat di
+          <a href="${QUIZ_URL}/admin.html" target="_blank" style="color:#b45309;font-weight:700;text-decoration:underline">quiz-she</a>
+          → Topik Baru → <b>Import dari Safety Talk</b> → pilih jadwal ini.</span>`;
+      }
     }
 
     // Karyawan
@@ -79,36 +98,58 @@ async function initAbsensi() {
 
     renderTable();
 
-    // Auto-cek quiz dari quizsheebl.org (background, setelah tabel tampil)
-    if (_quizSessionId) _fetchQuizStatuses();
+    // Auto-cek quiz (background, setelah tabel tampil)
+    if (_quizSessionIds.length) _fetchQuizStatuses();
 
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="9" style="color:#ef4444;text-align:center;padding:20px">Gagal memuat: ${e.message}</td></tr>`;
   }
 }
 
-// ── Fetch quiz statuses dari quizsheebl.org ─────────────────────────────────
+// ── Resolusi sesi quiz untuk jadwal ini ─────────────────────────────────────
+// Sesi quiz-she yang topicCode-nya sama dengan ID jadwal Safety Talk = quiz
+// untuk jadwal ini (ditetapkan quiz-she saat "Import dari Safety Talk").
+async function _resolveQuizSessions(schedId) {
+  try {
+    const res  = await fetch(`${QUIZ_URL}/api/data?action=sessions`);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.value || data.sessions || []);
+    const matched = list.filter(s =>
+      String(s.topicCode || '').trim() === schedId && s.status === 'published'
+    );
+    _quizSessionIds = matched.map(s => s.id);
+    _quizTopicLabel = matched.find(s => s.title)?.title || '';
+  } catch {
+    _quizSessionIds = [];
+    _quizTopicLabel = '';
+  }
+}
+
+// ── Fetch quiz statuses ─────────────────────────────────────────────────────
+// Lulus di SALAH SATU sesi tertaut sudah dihitung lulus.
+async function _checkOneNik(nik) {
+  const results = await Promise.all(_quizSessionIds.map(async sid => {
+    try {
+      const res  = await fetch(`${QUIZ_URL}/api/data?action=existing&nik=${encodeURIComponent(nik)}&sessionId=${encodeURIComponent(sid)}`);
+      const json = await res.json();
+      return json.certificateNo ? { passed: true, score: json.score, certificateNo: json.certificateNo } : null;
+    } catch { return null; }
+  }));
+  return results.find(Boolean) || { passed: false };
+}
+
 async function _fetchQuizStatuses() {
-  const toCheck = _abKaryawan.filter(k => {
-    const nik = String(k['NIK'] || '').trim();
-    return QUIZ_REQUIRED.has(_abStatus[nik] || '');
-  });
+  const toCheck = _abKaryawan.filter(k =>
+    QUIZ_REQUIRED.has(_abStatus[String(k['NIK'] || '').trim()] || '')
+  );
   if (!toCheck.length) return;
 
-  // Parallel fetch, max 10 bersamaan
+  // Maks 10 karyawan bersamaan agar tidak membanjiri backend quiz-she
   const BATCH = 10;
   for (let i = 0; i < toCheck.length; i += BATCH) {
-    const batch = toCheck.slice(i, i + BATCH);
-    await Promise.all(batch.map(async k => {
+    await Promise.all(toCheck.slice(i, i + BATCH).map(async k => {
       const nik = String(k['NIK'] || '').trim();
-      try {
-        const res = await fetch(`${QUIZ_URL}/api/data?action=existing&nik=${encodeURIComponent(nik)}&sessionId=${encodeURIComponent(_quizSessionId)}`);
-        const json = await res.json();
-        _abQuizResult[nik] = json.certificateNo
-          ? { passed: true, score: json.score, certificateNo: json.certificateNo }
-          : { passed: false };
-      } catch { _abQuizResult[nik] = { passed: false }; }
-      // Update cell langsung tanpa full re-render
+      _abQuizResult[nik] = await _checkOneNik(nik);
       _updateQuizCell(nik);
     }));
   }
@@ -123,7 +164,7 @@ function _updateQuizCell(nik) {
 }
 
 function _quizCellHtml(nik, status) {
-  if (!_quizSessionId) return '<span class="ab-quiz-na">—</span>';
+  if (!_quizSessionIds.length) return '<span class="ab-quiz-na" title="Belum ada quiz untuk jadwal ini">—</span>';
   if (status === 'HADIR') return '<span class="ab-quiz-na">—</span>';
   if (status === 'MANGKIR') return '<span class="ab-quiz-locked"><i class="fa-solid fa-lock"></i> Terkunci</span>';
   if (!QUIZ_REQUIRED.has(status)) return '<span class="ab-quiz-na">—</span>';
@@ -205,7 +246,7 @@ function onStatusChange(radio) {
   if (cell) {
     cell.innerHTML = _quizCellHtml(nik, status);
     // Jika status baru wajib quiz dan belum pernah dicek, fetch sekarang
-    if (QUIZ_REQUIRED.has(status) && _quizSessionId && !_abQuizResult[nik]) {
+    if (QUIZ_REQUIRED.has(status) && _quizSessionIds.length && !_abQuizResult[nik]) {
       _fetchOneDirect(nik);
     }
   }
@@ -213,13 +254,7 @@ function onStatusChange(radio) {
 }
 
 async function _fetchOneDirect(nik) {
-  try {
-    const res = await fetch(`${QUIZ_URL}/api/data?action=existing&nik=${encodeURIComponent(nik)}&sessionId=${encodeURIComponent(_quizSessionId)}`);
-    const json = await res.json();
-    _abQuizResult[nik] = json.certificateNo
-      ? { passed: true, score: json.score, certificateNo: json.certificateNo }
-      : { passed: false };
-  } catch { _abQuizResult[nik] = { passed: false }; }
+  _abQuizResult[nik] = await _checkOneNik(nik);
   _updateQuizCell(nik);
   updateSummary();
 }
@@ -244,9 +279,7 @@ function updateSummary() {
 function isiSemua(status) {
   _abFiltered.forEach(k => { _abStatus[String(k['NIK'] || '').trim()] = status; });
   renderTable();
-  if (_quizSessionId && STATUS_OPTIONS.some(o => o.value === status) && QUIZ_REQUIRED.has(status)) {
-    _fetchQuizStatuses();
-  }
+  if (_quizSessionIds.length && QUIZ_REQUIRED.has(status)) _fetchQuizStatuses();
 }
 
 // ── Save ────────────────────────────────────────────────────────────────────
