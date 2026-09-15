@@ -14,12 +14,32 @@
   <style>
     /* Capaian SAP: sidebar mini (icon-only) di desktop agar tabel lebih lebar */
     @media (min-width: 769px) {
-      .app-sidebar { width: 56px !important; overflow: hidden; }
+      .app-sidebar { width: 56px !important; overflow: visible !important; }
       .app-main    { margin-left: 56px !important; }
-      .sidebar-brand, .sidebar-section-label, .sidebar-nav-item span,
+      .sidebar-brand, .sidebar-section-label,
       .sidebar-user, .sidebar-footer-label { display: none !important; }
-      .sidebar-nav-item { justify-content: center; padding: 12px 0; }
+      .sidebar-nav-item { justify-content: center; padding: 12px 0; position: relative; }
       .sidebar-nav-item i { font-size: 1.1rem; margin: 0; }
+      /* Label jadi tooltip muncul ke kanan saat hover */
+      .sidebar-nav-item span {
+        position: absolute;
+        left: 56px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #1e293b;
+        color: #f1f5f9;
+        font-size: .78rem;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 5px 10px;
+        border-radius: 6px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity .15s;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      }
+      .sidebar-nav-item:hover span { opacity: 1; }
     }
   </style>
 </head>
