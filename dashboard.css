@@ -3184,5 +3184,45 @@ th[data-sort] {
   padding-top: 8px; border-top: 2px solid #f1f5f9;
 }
 
+/* ===== INS TEMUAN PANEL ===== */
+#insTemuanPanel { margin-top: 4px; }
+.ins-temuan-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.ins-temuan-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid #fecaca;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.ins-temuan-card-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: .78rem; color: #64748b; margin-bottom: 10px;
+}
+.ins-temuan-meta { display: flex; align-items: center; gap: 4px; }
+.ins-temuan-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ins-temuan-list li {
+  background: #fef2f2; border-radius: 8px; padding: 8px 12px;
+  font-size: .82rem; line-height: 1.45;
+}
+.ins-temuan-item-name { font-weight: 700; color: #dc2626; }
+.ins-temuan-notes { color: #475569; }
+.ins-no-temuan {
+  text-align: center; padding: 24px; color: #64748b;
+  font-size: .85rem; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #f0fdf4; border-radius: 12px; margin-top: 12px;
+  border: 1.5px solid #bbf7d0;
+}
+@media (prefers-color-scheme: dark) {
+  .ins-temuan-card { background: #1e293b; border-color: #7f1d1d; }
+  .ins-temuan-list li { background: #2d1515; }
+  .ins-temuan-notes { color: #94a3b8; }
+  .ins-no-temuan { background: #052e16; border-color: #166534; }
+}
+:root[data-theme="dark"] .ins-temuan-card { background: #1e293b; border-color: #7f1d1d; }
+:root[data-theme="dark"] .ins-temuan-list li { background: #2d1515; }
+:root[data-theme="dark"] .ins-no-temuan { background: #052e16; border-color: #166534; }
+
 /* ===== TAB: icon spacing ===== */
 .dash-tab i { margin-right: 5px; }

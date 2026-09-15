@@ -1143,10 +1143,13 @@ function renderInsSection() {
         // Update warna bar tanpa re-render seluruh chart
         insJenisChartInstance.data.datasets[0].backgroundColor = barColors();
         insJenisChartInstance.update('none');
-        // Update chip + tabel
+        // Update chip + panel temuan + tabel
         _renderInsFilterChip();
+        renderInsTemuanPanel(_insJenisFilter);
         renderTable();
-        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (_insJenisFilter) {
+          document.getElementById('insTemuanPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       },
     },
   });
@@ -1174,10 +1177,100 @@ function _renderInsFilterChip() {
     if (filterBar) filterBar.parentNode.insertBefore(chip, filterBar);
   }
   chip.innerHTML = `<i class="fa-solid fa-filter"></i> Filter: <strong>${label}</strong>
-    <button onclick="_insJenisFilter='';_renderInsFilterChip();if(insJenisChartInstance){insJenisChartInstance.data.datasets[0].backgroundColor=_insSortedCodes.map(()=>'rgba(16,185,129,.8)');insJenisChartInstance.update('none');}renderTable();"
+    <button onclick="_insJenisFilter='';_renderInsFilterChip();renderInsTemuanPanel('');if(insJenisChartInstance){insJenisChartInstance.data.datasets[0].backgroundColor=_insSortedCodes.map(()=>'rgba(16,185,129,.8)');insJenisChartInstance.update('none');}renderTable();"
       style="margin-left:4px;background:#d1fae5;border:1px solid #6ee7b7;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.78rem;color:#065f46">
       × Hapus Filter
     </button>`;
+}
+
+// ── Panel temuan abnormal per jenis inspeksi ────────────────────────────────
+
+function renderInsTemuanPanel(code) {
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Cari atau buat panel di dalam #insSection
+  let panel = document.getElementById('insTemuanPanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'insTemuanPanel';
+    document.getElementById('insSection')?.appendChild(panel);
+  }
+
+  if (!code) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+
+  const insList = getVisibleReportsFromCache().filter(r =>
+    isInspectionReport(r) &&
+    (r.inspection_sheet || '').trim().toUpperCase() === code
+  );
+
+  // Hanya laporan yg punya temuan abnormal
+  const withTemuan = insList.filter(r => r.temuan_inspeksi && r.temuan_inspeksi.trim());
+  const jenisLabel = _INS_LABELS[code] || code;
+  panel.style.display = '';
+
+  if (!withTemuan.length) {
+    panel.innerHTML = `<div class="ins-no-temuan">
+      <i class="fa-solid fa-circle-check" style="color:#10b981"></i>
+      Tidak ada temuan abnormal tercatat untuk <strong>${jenisLabel}</strong>.
+    </div>`;
+    return;
+  }
+
+  const cards = withTemuan.map(r => {
+    const tgl     = r.tanggal_inspeksi ? formatDate(r.tanggal_inspeksi) : formatDate(r.timestamp);
+    const lokasi  = r.lokasi_inspeksi || r.lokasi || '-';
+    const pelapor = r.nama || r.pelapor || '-';
+    const status  = r.status_perbaikan || 'OPEN';
+    const badgeCls = status === 'CLOSED' ? 'status-closed' : status === 'PROGRESS' ? 'status-progress' : 'status-open';
+
+    // Parse inspection_checklist untuk item abnormal
+    let abnormals = [];
+    try {
+      const cl = JSON.parse(r.inspection_checklist || '[]');
+      abnormals = cl.filter(x => x.status === 'Abnormal' || x.status === 'abnormal');
+    } catch { /* fallback ke temuan_inspeksi string */ }
+
+    let temuanHtml = '';
+    if (abnormals.length) {
+      temuanHtml = `<ul class="ins-temuan-list">
+        ${abnormals.map(x => `<li>
+          <span class="ins-temuan-item-name">${esc(x.item || '')}</span>
+          ${x.notes ? `<span class="ins-temuan-notes">: ${esc(x.notes)}</span>` : ''}
+        </li>`).join('')}
+      </ul>`;
+    } else if (r.temuan_inspeksi) {
+      // Fallback: parse string "Item : Catatan\nItem2 : Catatan2"
+      const lines = r.temuan_inspeksi.trim().split(/\n+/).filter(Boolean);
+      temuanHtml = `<ul class="ins-temuan-list">
+        ${lines.map(line => {
+          const sep   = line.indexOf(' : ');
+          const name  = sep > -1 ? line.slice(0, sep) : line;
+          const notes = sep > -1 ? line.slice(sep + 3) : '';
+          return `<li>
+            <span class="ins-temuan-item-name">${esc(name)}</span>
+            ${notes ? `<span class="ins-temuan-notes">: ${esc(notes)}</span>` : ''}
+          </li>`;
+        }).join('')}
+      </ul>`;
+    }
+
+    return `<div class="ins-temuan-card">
+      <div class="ins-temuan-card-header">
+        <span class="ins-temuan-meta"><i class="fa-regular fa-calendar"></i> ${tgl}</span>
+        <span class="ins-temuan-meta"><i class="fa-solid fa-location-dot"></i> ${esc(lokasi)}</span>
+        <span class="ins-temuan-meta"><i class="fa-solid fa-user"></i> ${esc(pelapor)}</span>
+        <span class="status-badge ${badgeCls}" style="margin-left:auto">${status}</span>
+      </div>
+      ${temuanHtml}
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="section-heading" style="color:#dc2626;border-top-color:#fecaca;margin-top:16px">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Temuan Abnormal — ${jenisLabel}
+      <span style="font-size:.75rem;font-weight:500;color:#94a3b8;text-transform:none">(${withTemuan.length} laporan)</span>
+    </div>
+    <div class="ins-temuan-cards">${cards}</div>`;
 }
 
 // ========================================
@@ -1938,14 +2031,14 @@ function renderLeaderboard(reportsList, mode) {
   const max = sorted[0][1];
   el.innerHTML = sorted.map(([name, count], i) => {
     const initials = name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
-    const dept     = escapeHTML(depts[name] || "");
+    const dept     = esc(depts[name] || "");
     const pct      = Math.round((count / max) * 100);
     const rankCls  = i < 3 ? `rank-${i + 1}` : "";
     return `<div class="leader-item">
       <div class="leader-rank ${rankCls}">${i + 1}</div>
-      <div class="leader-avatar">${escapeHTML(initials)}</div>
+      <div class="leader-avatar">${esc(initials)}</div>
       <div class="leader-info">
-        <div class="leader-name">${escapeHTML(name)}</div>
+        <div class="leader-name">${esc(name)}</div>
         ${dept ? `<div class="leader-dept">${dept}</div>` : ""}
       </div>
       <div class="leader-bar-wrap"><div class="leader-bar" style="width:${pct}%"></div></div>
@@ -1979,7 +2072,7 @@ function renderDeptBreakdown(reportsList, mode) {
   el.innerHTML = sorted.map(([dept, count]) => {
     const pct = Math.round((count / max) * 100);
     return `<div class="dept-row">
-      <div class="dept-name" title="${escapeHTML(dept)}">${escapeHTML(dept)}</div>
+      <div class="dept-name" title="${esc(dept)}">${esc(dept)}</div>
       <div class="dept-bar-wrap"><div class="dept-bar" style="width:${pct}%"></div></div>
       <div class="dept-count">${count}</div>
     </div>`;
@@ -2283,7 +2376,7 @@ function openDrilldown(idx) {
       barsEl.innerHTML = subs.map(([sub, count]) => {
         const pct = catTotal > 0 ? Math.round((count / catTotal) * 100) : 0;
         return `<div class="drilldown-row">
-          <div class="drilldown-row-label" title="${escapeHTML(sub)}">${escapeHTML(sub)}</div>
+          <div class="drilldown-row-label" title="${esc(sub)}">${esc(sub)}</div>
           <div class="drilldown-row-bar-wrap"><div class="drilldown-row-bar" style="width:${pct}%"></div></div>
           <div class="drilldown-row-count">${count}</div>
           <span class="drilldown-row-pct">${pct}%</span>
@@ -2416,7 +2509,7 @@ function renderTopLokasi() {
     const pct = Math.round((count / max) * 100);
     const color = i === 0 ? 'var(--color-accent)' : 'var(--color-primary)';
     return `<div class="top-lokasi-row">
-      <div class="top-lokasi-label" title="${escapeHTML(loc)}">${escapeHTML(loc)}</div>
+      <div class="top-lokasi-label" title="${esc(loc)}">${esc(loc)}</div>
       <div class="top-lokasi-bar-wrap"><div class="top-lokasi-bar" style="width:${pct}%;background:${color}"></div></div>
       <div class="top-lokasi-count">${count}</div>
     </div>`;
@@ -2447,8 +2540,8 @@ function renderHotspot() {
     const sub = key.slice(0, sep);
     const loc = key.slice(sep + 1);
     return `<tr>
-      <td class="hotspot-td-sub">${escapeHTML(sub)}</td>
-      <td class="hotspot-td-loc">${escapeHTML(loc)}</td>
+      <td class="hotspot-td-sub">${esc(sub)}</td>
+      <td class="hotspot-td-loc">${esc(loc)}</td>
       <td><span class="hotspot-badge">${count}</span></td>
     </tr>`;
   }).join('');
