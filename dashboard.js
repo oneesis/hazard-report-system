@@ -19,6 +19,7 @@ let sboStatusChartInstance = null;
 let sboCategoryChartInstance = null;
 let sboTrendChartInstance = null;
 let insJenisChartInstance = null;
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let _insJenisFilter = '';   // kode aktif saat drill-down INS, '' = tampilkan semua
 let _insSortedCodes = [];   // urutan kode sesuai chart (untuk highlight bar)
 let _sboReports = [];
@@ -1186,7 +1187,6 @@ function _renderInsFilterChip() {
 // ── Panel temuan abnormal per jenis inspeksi ────────────────────────────────
 
 function renderInsTemuanPanel(code) {
-  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   // Cari atau buat panel di dalam #insSection
   let panel = document.getElementById('insTemuanPanel');
   if (!panel) {
