@@ -76,9 +76,9 @@
         ${navItem('index.html',      'fa-triangle-exclamation','Hazard Report','hazard',    active)}
         ${navItem('inspection.html', 'fa-list-check',          'Inspeksi',      'inspeksi',  active)}
         ${navItem('dashboard.html',   'fa-chart-simple',  'Dashboard',   'dashboard',   active)}
-        ${navItem('capaian-sap.html','fa-trophy',         'Capaian SAP', 'capaian-sap', active)}
         ${navItem('sbo.html',       'fa-eye',            'SBO',         'sbo',         active)}
         ${navItem('pc.html',        'fa-comments',       'Personal Contact', 'pc',     active)}
+        ${navItem('capaian-sap.html','fa-trophy',         'Capaian SAP', 'capaian-sap', active)}
       </nav>
 
       ${isAdmin ? `
