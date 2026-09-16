@@ -27,6 +27,12 @@ async function loadCapaian() {
   if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px">Memuat data...</td></tr>';
 
   try {
+    // Rekonsiliasi kuis Safety Talk dulu: tandai QUIZ_DONE untuk yang sudah
+    // lulus tapi belum tercatat (kelulusan sebelum auto-sync, atau notif gagal),
+    // supaya angka absensi yang dibaca di bawah sudah mutakhir. Best-effort —
+    // gagal tidak menghentikan pemuatan capaian.
+    await fetch('/api?action=syncAllSafetyTalkQuiz').catch(() => {});
+
     const [karRes, hrRes, insRes, sboRes, pcRes, stAbRes] = await Promise.all([
       fetch('/api?action=getKaryawan').then(r => r.json()),
       fetch('/api?action=getHazardReports').then(r => r.json()),

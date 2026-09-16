@@ -1802,6 +1802,75 @@ module.exports = async (req, res) => {
         return res.status(200).json({ status: 'success', updated: true, score: passed.score, certificateNo: passed.certificateNo });
       }
 
+      // syncAllSafetyTalkQuiz (2026-09-16) — rekonsiliasi massal. Dipanggil saat
+      // halaman Capaian SAP dibuka, untuk menutup kelulusan kuis yang terjadi
+      // SEBELUM fitur auto-sync ada (atau bila notifikasi per-submit gagal).
+      // Memindai baris yang statusnya wajib-kuis & QUIZ_DONE belum YA, cek ke
+      // quiz-she, lalu tulis YA untuk yang sudah lulus. Idempoten & aman:
+      // tidak butuh auth khusus karena hanya menandai kelulusan yang benar.
+      if (action === 'syncAllSafetyTalkQuiz') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        const QUIZ_URL = 'https://quiz-she.vercel.app/api/data';
+        const raw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
+        const rows = raw.data.values || [];
+        const head = rows[0] || [];
+        const iSched = head.indexOf('SCHEDULE_ID'), iNik = head.indexOf('NIK'),
+              iStat  = head.indexOf('STATUS_KEHADIRAN'), iQuiz = head.indexOf('QUIZ_DONE');
+        if (iQuiz === -1 || iSched === -1 || iNik === -1)
+          return res.status(200).json({ status: 'success', updated: 0, reason: 'no_col' });
+        const WAJIB = new Set(['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR']);
+        // Baris kandidat: wajib kuis & belum ditandai
+        const cand = [];
+        for (let i = 1; i < rows.length; i++) {
+          const st = String(rows[i][iStat] || 'HADIR').toUpperCase();
+          if (!WAJIB.has(st)) continue;
+          if (String(rows[i][iQuiz] || '').toUpperCase() === 'YA') continue;
+          const sched = String(rows[i][iSched] || '').trim();
+          const nik   = String(rows[i][iNik] || '').trim();
+          if (sched && nik) cand.push({ rowNum: i + 1, sched, nik });
+        }
+        if (!cand.length) return res.status(200).json({ status: 'success', updated: 0 });
+
+        // Peta jadwal -> sesi quiz (satu fetch)
+        let sessBySched = {};
+        try {
+          const sesJ = await (await fetch(QUIZ_URL + '?action=sessions')).json();
+          for (const s of (Array.isArray(sesJ) ? sesJ : (sesJ.value || []))) {
+            const tc = String(s.topicCode || '').trim();
+            if (!tc) continue;
+            (sessBySched[tc] = sessBySched[tc] || []).push(s.id);
+          }
+        } catch (e) {
+          return res.status(502).json({ status: 'error', message: 'quiz-she tak terjangkau: ' + e.message });
+        }
+        // Cek tiap kandidat (batch paralel), kumpulkan yang lulus
+        const updates = [];
+        const BATCH = 8;
+        for (let i = 0; i < cand.length; i += BATCH) {
+          await Promise.all(cand.slice(i, i + BATCH).map(async c => {
+            const sids = sessBySched[c.sched];
+            if (!sids || !sids.length) return;
+            for (const sid of sids) {
+              try {
+                const ex = await (await fetch(QUIZ_URL + '?action=existing&nik=' + encodeURIComponent(c.nik) + '&sessionId=' + encodeURIComponent(sid))).json();
+                if (ex && ex.certificateNo) {
+                  updates.push({ range: 'SafetyTalk_Absensi!' + colIndexToLetter(iQuiz) + c.rowNum, values: [['YA']] });
+                  break;
+                }
+              } catch { /* satu sesi gagal, lanjut sesi lain */ }
+            }
+          }));
+        }
+        if (updates.length) {
+          await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: { valueInputOption: 'RAW', data: updates },
+          });
+          invalidateCache('SafetyTalk_Absensi');
+        }
+        return res.status(200).json({ status: 'success', updated: updates.length, checked: cand.length });
+      }
+
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
       await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
