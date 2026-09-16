@@ -43,6 +43,29 @@
     .btn-indigo-soft:hover { background: #dbeafe; }
     .err-msg { color: #dc2626; font-size: .8rem; margin-top: 8px; display: none; }
     .st-empty { text-align: center; padding: 48px 24px; color: #94a3b8; }
+
+    /* ===== Dashboard kehadiran ===== */
+    .st-dash { margin-bottom: 22px; }
+    .st-dash-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .st-kpi { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; }
+    .st-kpi-val { font-size: 1.45rem; font-weight: 800; line-height: 1.1; }
+    .st-kpi-lbl { font-size: .7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+    .st-kpi-sub { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+    .st-dash-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+    .st-chart-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; }
+    .st-chart-title { font-size: .78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .st-chart-title i { color: #6366f1; }
+    .st-chart-box { position: relative; height: 220px; }
+    .st-attn-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .st-attn-row { display: flex; align-items: center; gap: 10px; font-size: .8rem; padding: 7px 10px; border-radius: 8px; background: #f8fafc; }
+    .st-attn-row b { color: #0f172a; }
+    .st-attn-row .dept { color: #94a3b8; font-size: .72rem; }
+    .st-attn-badge { margin-left: auto; font-size: .68rem; font-weight: 700; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
+    .st-attn-badge.mangkir { background: #fee2e2; color: #b91c1c; }
+    .st-attn-badge.belum   { background: #fef3c7; color: #b45309; }
+    .st-dash-empty { text-align: center; color: #94a3b8; font-size: .82rem; padding: 40px 12px; }
+    .st-dash-note { font-size: .72rem; color: #94a3b8; margin-top: 8px; }
+    @media (max-width: 767px) { .st-chart-box { height: 200px; } }
   </style>
 </head>
 <body>
@@ -76,6 +99,30 @@
           </button>
         </div>
       </div>
+
+      <!-- Dashboard kehadiran — mengikuti filter bulan di atas -->
+      <section class="st-dash" id="stDash">
+        <div class="st-dash-kpis" id="stDashKpis"></div>
+        <div class="st-dash-charts">
+          <div class="st-chart-card">
+            <div class="st-chart-title"><i class="fa-solid fa-chart-pie"></i> Distribusi Status Kehadiran</div>
+            <div class="st-chart-box"><canvas id="stChartStatus"></canvas></div>
+          </div>
+          <div class="st-chart-card">
+            <div class="st-chart-title"><i class="fa-solid fa-building"></i> Kepatuhan per Departemen</div>
+            <div class="st-chart-box"><canvas id="stChartDept"></canvas></div>
+          </div>
+          <div class="st-chart-card">
+            <div class="st-chart-title"><i class="fa-solid fa-chart-line"></i> Tren Kepatuhan 6 Bulan</div>
+            <div class="st-chart-box"><canvas id="stChartTrend"></canvas></div>
+          </div>
+          <div class="st-chart-card">
+            <div class="st-chart-title"><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> Perlu Perhatian</div>
+            <div class="st-attn-list" id="stAttnList"></div>
+          </div>
+        </div>
+        <div class="st-dash-note"><i class="fa-regular fa-circle-question"></i> Kepatuhan = Hadir, atau status lain yang sudah lulus quiz. Angka mengikuti data absensi yang <b>tersimpan</b>.</div>
+      </section>
 
       <div id="stGrid" class="st-card-grid">
         <div class="st-empty"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>
@@ -136,6 +183,7 @@
 <script src="reports-utils.js"></script>
 <script src="notifications.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="safety-talk.js"></script>
 <script>
   requireLogin();

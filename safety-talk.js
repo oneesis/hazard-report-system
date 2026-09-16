@@ -4,6 +4,8 @@ const QUIZ_URL = 'https://quiz-she.vercel.app';
 
 let _stSchedules = [];
 let _stAbsensiMap = {}; // schedule_id → jumlah hadir
+let _stAbsensiRows = []; // baris mentah SafetyTalk_Absensi untuk dashboard
+let _stCharts = {};      // instance Chart.js dashboard, destroy sebelum render ulang
 let _stKaryawan  = [];
 let _stPemateriChoices;
 let _editingStId = null; // null = buat baru, string = edit jadwal
@@ -39,6 +41,7 @@ async function loadAll() {
       _loadQuizLinks(),
     ]);
     _stSchedules = schRes.data || [];
+    _stAbsensiRows = abRes.data || [];
     // Build absensi count map
     _stAbsensiMap = {};
     (abRes.data || []).forEach(row => {
@@ -85,6 +88,7 @@ function _populateTargetCoDropdown() {
 
 // ── Render ────────────────────────────────────────────────────────
 function renderSchedules() {
+  renderStDashboard();
   const grid = document.getElementById('stGrid');
   const monthF  = document.getElementById('stFilterMonth')?.value || '';
   const statusF = document.getElementById('stFilterStatus')?.value || '';
@@ -314,6 +318,147 @@ Demikian undangan ini kami sampaikan. Atas perhatian dan kehadiran Bapak/Ibu tep
     document.body.removeChild(ta);
     if (typeof showToast === 'function') showToast('Teks undangan berhasil disalin!');
   });
+}
+
+// ── Dashboard kehadiran ──────────────────────────────────────────────────────
+// Aturan kepatuhan (sama dengan capaian-sap.js & quiz-she): HADIR = terpenuhi;
+// MANGKIR = tidak; status lain terpenuhi hanya bila QUIZ_DONE = YA.
+const _ST_STATUS_META = {
+  HADIR:       { label: 'Hadir',       color: '#16a34a' },
+  CUTI:        { label: 'Cuti',        color: '#d97706' },
+  DINAS_LUAR:  { label: 'Dinas Luar',  color: '#0284c7' },
+  SHIFT_MALAM: { label: 'Shift Malam', color: '#7c3aed' },
+  LIBUR:       { label: 'Libur',       color: '#64748b' },
+  MANGKIR:     { label: 'Mangkir',     color: '#dc2626' },
+};
+function _stStatusOf(row) { return String(row['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase(); }
+function _stQuizOf(row)   { return String(row['QUIZ_DONE'] || '').toUpperCase() === 'YA'; }
+function _stTerpenuhi(row) {
+  const st = _stStatusOf(row);
+  if (st === 'HADIR')   return true;
+  if (st === 'MANGKIR') return false;
+  return _stQuizOf(row);
+}
+function _stPct(a, b) { return b > 0 ? Math.round(a / b * 100) : 0; }
+function _stChart(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (_stCharts[id]) _stCharts[id].destroy();
+  _stCharts[id] = new Chart(el.getContext('2d'), cfg);
+}
+
+function renderStDashboard() {
+  const monthF = document.getElementById('stFilterMonth')?.value || '';
+  const rows = monthF
+    ? _stAbsensiRows.filter(r => String(r['BULAN'] || '').slice(0, 7) === monthF)
+    : _stAbsensiRows;
+  const jadwalCount = _stSchedules.filter(s => !monthF || String(s['BULAN'] || '') === monthF).length;
+
+  // ── KPI ──
+  const total     = rows.length;
+  const hadir     = rows.filter(r => _stStatusOf(r) === 'HADIR').length;
+  const mangkir   = rows.filter(r => _stStatusOf(r) === 'MANGKIR').length;
+  const wajibQuiz = rows.filter(r => !['HADIR','MANGKIR'].includes(_stStatusOf(r)));
+  const quizLulus = wajibQuiz.filter(_stQuizOf).length;
+  const quizBelum = wajibQuiz.length - quizLulus;
+  const patuh     = rows.filter(_stTerpenuhi).length;
+  const pctPatuh  = _stPct(patuh, total);
+  const patuhColor = pctPatuh >= 80 ? '#16a34a' : pctPatuh >= 50 ? '#d97706' : '#dc2626';
+
+  const kpi = (val, lbl, color, sub) => `<div class="st-kpi">
+    <div class="st-kpi-val" style="color:${color}">${val}</div>
+    <div class="st-kpi-lbl">${lbl}</div>${sub ? `<div class="st-kpi-sub">${sub}</div>` : ''}</div>`;
+  document.getElementById('stDashKpis').innerHTML =
+    kpi(jadwalCount, 'Jadwal', '#6366f1', monthF ? 'bulan terpilih' : 'semua bulan') +
+    kpi(total, 'Diabsen', '#0f172a', 'total baris absensi') +
+    kpi(hadir, 'Hadir', '#16a34a', `${_stPct(hadir, total)}% dari diabsen`) +
+    kpi(quizLulus, 'Quiz Lulus', '#7c3aed', `dari ${wajibQuiz.length} wajib quiz`) +
+    kpi(quizBelum, 'Belum Quiz', '#d97706', 'capaian belum terpenuhi') +
+    kpi(mangkir, 'Mangkir', '#dc2626', 'tidak bisa diganti quiz') +
+    kpi(pctPatuh + '%', 'Kepatuhan', patuhColor, `${patuh} / ${total} terpenuhi`);
+
+  // ── Chart 1: distribusi status (doughnut) ──
+  const statusKeys = Object.keys(_ST_STATUS_META).filter(k => rows.some(r => _stStatusOf(r) === k));
+  _stChart('stChartStatus', {
+    type: 'doughnut',
+    data: {
+      labels: statusKeys.map(k => _ST_STATUS_META[k].label),
+      datasets: [{ data: statusKeys.map(k => rows.filter(r => _stStatusOf(r) === k).length),
+                   backgroundColor: statusKeys.map(k => _ST_STATUS_META[k].color), borderWidth: 2, borderColor: '#fff' }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed} (${_stPct(c.parsed, total)}%)` } } } },
+  });
+
+  // ── Chart 2: kepatuhan per departemen (stacked bar horizontal, urut % terendah) ──
+  const byDept = {};
+  rows.forEach(r => {
+    const d = String(r['DEPARTEMEN'] || '').trim() || '(tanpa dept)';
+    if (!byDept[d]) byDept[d] = { ok: 0, no: 0 };
+    if (_stTerpenuhi(r)) byDept[d].ok++; else byDept[d].no++;
+  });
+  const depts = Object.entries(byDept)
+    .sort((a, b) => _stPct(a[1].ok, a[1].ok + a[1].no) - _stPct(b[1].ok, b[1].ok + b[1].no))
+    .slice(0, 12);
+  _stChart('stChartDept', {
+    type: 'bar',
+    data: {
+      labels: depts.map(([d]) => d.length > 18 ? d.slice(0, 16) + '…' : d),
+      datasets: [
+        { label: 'Terpenuhi', data: depts.map(([, v]) => v.ok), backgroundColor: '#16a34a', borderRadius: 4, stack: 's' },
+        { label: 'Belum',     data: depts.map(([, v]) => v.no), backgroundColor: '#fca5a5', borderRadius: 4, stack: 's' },
+      ],
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { footer: items => {
+          const v = depts[items[0].dataIndex] && depts[items[0].dataIndex][1];
+          return v ? `Kepatuhan ${_stPct(v.ok, v.ok + v.no)}%` : ''; } } } },
+      scales: { x: { stacked: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,.05)' } },
+                y: { stacked: true, ticks: { font: { size: 11 } }, grid: { display: false } } } },
+  });
+
+  // ── Chart 3: tren kepatuhan 6 bulan (dari bulan terpilih mundur, atau bulan ini) ──
+  const anchor = monthF ? new Date(monthF + '-01') : new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  const trend = months.map(m => {
+    const mr = _stAbsensiRows.filter(r => String(r['BULAN'] || '').slice(0, 7) === m);
+    return mr.length ? _stPct(mr.filter(_stTerpenuhi).length, mr.length) : null;
+  });
+  _stChart('stChartTrend', {
+    type: 'line',
+    data: {
+      labels: months.map(m => new Date(m + '-01').toLocaleDateString('id-ID', { month: 'short', year: '2-digit' })),
+      datasets: [{ label: 'Kepatuhan %', data: trend, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)',
+                   fill: true, tension: .35, spanGaps: true, pointRadius: 4, pointBackgroundColor: '#6366f1' }],
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => c.parsed.y == null ? ' tidak ada absensi' : ` ${c.parsed.y}% kepatuhan` } } },
+      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,.05)' } },
+                x: { grid: { display: false } } } },
+  });
+
+  // ── Perlu perhatian: mangkir dulu, lalu belum quiz ──
+  const attn = rows
+    .filter(r => !_stTerpenuhi(r))
+    .sort((a, b) => (_stStatusOf(b) === 'MANGKIR') - (_stStatusOf(a) === 'MANGKIR')
+                 || String(a['NAMA'] || '').localeCompare(String(b['NAMA'] || '')));
+  document.getElementById('stAttnList').innerHTML = attn.length
+    ? attn.map(r => {
+        const st = _stStatusOf(r), isM = st === 'MANGKIR';
+        const lbl = _ST_STATUS_META[st] ? _ST_STATUS_META[st].label : st;
+        return `<div class="st-attn-row">
+          <div><b>${escapeHTML(r['NAMA'] || r['NIK'] || '-')}</b><div class="dept">${escapeHTML(r['DEPARTEMEN'] || '')}</div></div>
+          <span class="st-attn-badge ${isM ? 'mangkir' : 'belum'}">${isM ? 'Mangkir' : 'Belum quiz · ' + lbl}</span>
+        </div>`;
+      }).join('')
+    : '<div class="st-dash-empty"><i class="fa-solid fa-circle-check" style="color:#16a34a;font-size:1.4rem"></i><br>Semua kehadiran terpenuhi</div>';
 }
 
 function escapeHTML(s) {
