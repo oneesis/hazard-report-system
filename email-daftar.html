@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daftar Email - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #4f46e5, #6366f1); font-family: system-ui, -apple-system, sans-serif; padding: 20px; }
+    .ed-card { background: #fff; border-radius: 18px; padding: 32px 26px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    .ed-logo { text-align: center; margin-bottom: 18px; }
+    .ed-logo img { height: 52px; }
+    .ed-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; text-align: center; margin: 0 0 4px; }
+    .ed-sub { font-size: .85rem; color: #64748b; text-align: center; margin: 0 0 20px; line-height: 1.5; }
+    .ed-id { background: #f1f5f9; border-radius: 10px; padding: 10px 14px; font-size: .82rem; color: #475569; margin-bottom: 18px; }
+    .ed-id b { color: #0f172a; }
+    label { display: block; font-size: .8rem; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    input { width: 100%; padding: 12px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .95rem; outline: none; margin-bottom: 14px; }
+    input:focus { border-color: #6366f1; }
+    #edOtp { letter-spacing: 8px; text-align: center; font-size: 1.3rem; font-weight: 700; }
+    .ed-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: .95rem; font-weight: 800; cursor: pointer;
+      background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .ed-btn:disabled { opacity: .6; cursor: default; }
+    .ed-btn.secondary { background: #f1f5f9; color: #4f46e5; margin-top: 10px; }
+    .ed-msg { font-size: .82rem; margin: 10px 0 0; text-align: center; min-height: 18px; }
+    .ed-msg.err { color: #dc2626; }
+    .ed-msg.ok { color: #16a34a; }
+    .ed-step2 { display: none; }
+    .ed-back { display: block; text-align: center; margin-top: 16px; font-size: .8rem; color: #94a3b8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="ed-card">
+    <div class="ed-logo"><img src="assets/Logo EBL.png" alt="ONE-SAP"></div>
+    <h1 class="ed-title">Daftarkan Email Kamu</h1>
+    <p class="ed-sub">Sebelum melanjutkan, kamu wajib mendaftarkan dan memverifikasi alamat email.</p>
+    <div class="ed-id">Nama: <b id="edNama">-</b><br>NIK: <b id="edNik">-</b></div>
+
+    <!-- Step 1: masukkan email -->
+    <div class="ed-step1" id="edStep1">
+      <label for="edEmail">Alamat Email</label>
+      <input type="email" id="edEmail" placeholder="nama@email.com" autocomplete="email">
+      <button class="ed-btn" id="edSendBtn" onclick="kirimKode()"><i class="fa-solid fa-paper-plane"></i> Kirim Kode</button>
+    </div>
+
+    <!-- Step 2: masukkan OTP -->
+    <div class="ed-step2" id="edStep2">
+      <label for="edOtp">Kode 6 Digit (cek email <b id="edEmailShown"></b>)</label>
+      <input type="text" id="edOtp" inputmode="numeric" maxlength="6" placeholder="______">
+      <button class="ed-btn" id="edVerifyBtn" onclick="verifikasi()"><i class="fa-solid fa-check"></i> Verifikasi</button>
+      <button class="ed-btn secondary" id="edResendBtn" onclick="gantiEmail()">Ganti email</button>
+    </div>
+
+    <p class="ed-msg" id="edMsg"></p>
+    <a href="#" class="ed-back" onclick="keluar();return false;">Keluar</a>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="email-daftar.js"></script>
+</body>
+</html>

@@ -44,7 +44,7 @@ async function initUserManagement() {
 
 async function loadUsers() {
   const tbody = document.getElementById('umTableBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px">Memuat...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px">Memuat...</td></tr>';
   try {
     const res = await fetch('/api?action=getKaryawan', { cache: 'no-store' });
     const result = await res.json();
@@ -92,7 +92,7 @@ function renderUMTable() {
       `<th class="${center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${col}')">${label}${_umSortIcon(col)}</th>`;
     thead.innerHTML = `<tr>
       ${th('co','Perusahaan')}${th('nama','Nama')}${th('nik','NIK')}
-      ${th('jbt','Jabatan')}${th('dept','Departemen')}${th('wa','WhatsApp')}
+      ${th('jbt','Jabatan')}${th('dept','Departemen')}${th('wa','WhatsApp')}<th style="white-space:nowrap">Email</th>
       ${th('hr','OBJ HR',true)}${th('ins','OBJ INS',true)}
       ${th('sbo','OBJ SBO',true)}${th('pc','OBJ PC',true)}
       ${canEdit ? '<th>Aksi</th>' : ''}
@@ -125,6 +125,7 @@ function renderUMTable() {
       <td>${escapeHTML(u['JABATAN'] || '')}</td>
       <td>${escapeHTML(u['DEPARTEMEN'] || '')}</td>
       <td>${escapeHTML(u['NO WHATSAPP'] || '')}</td>
+      <td style="white-space:nowrap">${u['EMAIL'] ? escapeHTML(u['EMAIL']) + (u['EMAIL_VERIFIED_AT'] ? ' <i class=\"fa-solid fa-circle-check\" style=\"color:#16a34a\" title=\"Terverifikasi\"></i>' : '') : '<span style=\"color:#cbd5e1\">—</span>'}</td>
       <td class="um-center">${escapeHTML(String(u['OBJ HR'] || '0'))}</td>
       <td class="um-center">${escapeHTML(String(u['OBJ INS'] || '0'))}</td>
       <td class="um-center">${escapeHTML(String(u['OBJ SBO'] || '0'))}</td>
@@ -259,6 +260,7 @@ function openUMModal(user, action) {
         <p class="um-section-label">Akun &amp; Kontak</p>
         <div class="um-modal-grid">
           ${umField('NO WHATSAPP','No WhatsApp',user['NO WHATSAPP']||'')}
+          ${umField('EMAIL','Email',user['EMAIL']||'')}
           ${roleField}
           ${!isEdit ? umField('PASSWORD','Password (min. 6 karakter)','') : ''}
         </div>
@@ -313,7 +315,7 @@ async function submitUMModal(action, originalNik) {
     PERUSAHAAN: get('PERUSAHAAN'), SUBCONT: get('SUBCONT'), NAMA: get('NAMA'),
     NIK: action === 'EDIT' ? originalNik : get('NIK'),
     JABATAN: get('JABATAN'), DEPARTEMEN: get('DEPARTEMEN'),
-    'NO WHATSAPP': get('NO_WHATSAPP'), ROLE: get('ROLE'),
+    'NO WHATSAPP': get('NO_WHATSAPP'), EMAIL: get('EMAIL'), ROLE: get('ROLE'),
     'OBJ HR': get('OBJ_HR'), 'OBJ INS': get('OBJ_INS'),
     'OBJ SBO': get('OBJ_SBO'), 'OBJ PC': get('OBJ_PC')
   };

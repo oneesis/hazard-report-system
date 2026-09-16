@@ -19,6 +19,69 @@ function ensureVapid() {
 }
 // [PUSH-END]
 
+// ── Email OTP (verifikasi email karyawan) ───────────────────────────────────
+// Kirim via Gmail SMTP (nodemailer) dari GMAIL_SENDER pakai App Password.
+// nodemailer di-require lazy agar tak crash bila dep/env belum siap.
+const EMAIL_OTP_SHEET = 'Email_OTP';
+const EMAIL_OTP_HDR = ['NIK','EMAIL','CODE_HASH','EXPIRES_AT','ATTEMPTS','CREATED_AT'];
+const EMAIL_OTP_TTL_MS   = 10 * 60 * 1000; // 10 menit
+const EMAIL_OTP_COOLDOWN = 60 * 1000;      // jeda kirim ulang 60 dtk
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+let _mailer = null;
+function _getMailer() {
+  if (_mailer) return _mailer;
+  const user = process.env.GMAIL_SENDER, pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) return null;
+  const nodemailer = require('nodemailer');
+  _mailer = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
+  return _mailer;
+}
+
+async function sendEmailOtp(to, code) {
+  const t = _getMailer();
+  if (!t) throw Object.assign(new Error('Layanan email belum dikonfigurasi.'), { httpStatus: 503 });
+  await t.sendMail({
+    from: `ONE-SAP <${process.env.GMAIL_SENDER}>`,
+    to,
+    subject: `Kode Verifikasi Email ONE-SAP: ${code}`,
+    text: `Kode verifikasi email kamu: ${code}\n\nBerlaku 10 menit. Jangan bagikan kode ini ke siapa pun.\n\nJika kamu tidak meminta ini, abaikan email ini.`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:420px;margin:auto">
+      <h2 style="color:#4f46e5;margin:0 0 8px">ONE-SAP</h2>
+      <p>Kode verifikasi email kamu:</p>
+      <p style="font-size:30px;font-weight:800;letter-spacing:6px;color:#0f172a;margin:12px 0">${code}</p>
+      <p style="color:#64748b;font-size:13px">Berlaku 10 menit. Jangan bagikan kode ini ke siapa pun. Jika kamu tidak meminta ini, abaikan email ini.</p>
+    </div>`,
+  });
+}
+
+async function _ensureEmailOtpSheet(sheets) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties.title' });
+    const titles = new Set(meta.data.sheets.map(s => s.properties.title));
+    if (titles.has(EMAIL_OTP_SHEET)) return;
+    await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { requests: [{ addSheet: { properties: { title: EMAIL_OTP_SHEET } } }] } });
+    await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${EMAIL_OTP_SHEET}!A1`, valueInputOption: 'RAW', requestBody: { values: [EMAIL_OTP_HDR] } });
+  } catch (err) { console.error('_ensureEmailOtpSheet:', err?.message); }
+}
+
+// Cari NIK di Master_Karyawan; balikkan { nama, email } atau null.
+async function _findKaryawanEmail(sheets, nik) {
+  const rows = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const target = String(nik || '').trim();
+  const r = rows.find(x => String(x['NIK'] || '').trim() === target);
+  if (!r) return null;
+  return { nama: String(r['NAMA'] || '').trim(), email: String(r['EMAIL'] || '').trim() };
+}
+
+// Cek email sudah dipakai NIK lain?
+async function _emailTakenByOther(sheets, email, nik) {
+  const rows = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const e = String(email || '').trim().toLowerCase();
+  return rows.some(x => String(x['EMAIL'] || '').trim().toLowerCase() === e && String(x['NIK'] || '').trim() !== String(nik || '').trim());
+}
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_TTL = '12h';
 
@@ -436,9 +499,16 @@ async function login(sheets, nik, password, ip) {
   const isPlaintext = !/^\$2[aby]\$/.test(storedPw);
   const forceChange = isPlaintext || isWeakPassword(password);
 
+  const email = String(user['EMAIL'] || '').trim();
+  const emailVerified = !!String(user['EMAIL_VERIFIED_AT'] || '').trim();
+  // Gate email HANYA aktif bila layanan email sudah dikonfigurasi (GMAIL_* env),
+  // supaya rollout tidak mengunci siapa pun sebelum admin menyiapkan pengirim.
+  const emailServiceOn = !!(process.env.GMAIL_SENDER && process.env.GMAIL_APP_PASSWORD);
+  const emailRequired = emailServiceOn && (!email || !emailVerified);
   return {
     status: 'success',
     ...(forceChange ? { force_change_password: true } : {}),
+    ...(emailRequired ? { need_email: true } : {}),
     user: {
       nik: String(user['NIK'] || '').trim(),
       nama: String(user['NAMA'] || '').trim(),
@@ -447,6 +517,9 @@ async function login(sheets, nik, password, ip) {
       perusahaan: String(user['PERUSAHAAN'] || '').trim(),
       subcont: String(user['SUBCONT'] || user['PERUSAHAAN SUBCONT(1)'] || '').trim(),
       no_whatsapp: String(user['NO WHATSAPP'] || '').trim(),
+      email,
+      email_verified: emailVerified,
+      email_required: emailRequired,
       role: String(user['ROLE'] || 'USER').trim().toUpperCase().replace(/\s+/g, '_')
     }
   };
@@ -527,7 +600,7 @@ function normalizeRole(role) { return String(role || '').trim().toUpperCase().re
 function isSuperAdmin(role) { return normalizeRole(role) === 'SUPER_ADMIN'; }
 function isAdminOrAbove(role) { const r = normalizeRole(role); return r === 'ADMIN' || r === 'SUPER_ADMIN'; }
 
-const KARYAWAN_HEADERS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','ROLE','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
+const KARYAWAN_HEADERS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','ROLE','OBJ HR','OBJ INS','OBJ SBO','OBJ PC','EMAIL','EMAIL_VERIFIED_AT'];
 const PENDING_HEADERS  = ['ID','TIMESTAMP','ACTION','PROPOSED_BY_NIK','PROPOSED_BY_NAMA','PERUSAHAAN','TARGET_NIK','DATA','STATUS','REVIEWED_BY','REVIEWED_AT','REJECTION_REASON'];
 
 async function ensurePendingHeaders(sheets) {
@@ -728,6 +801,9 @@ async function applyUserChange(sheets, action, data) {
         }}]}
       });
     } else {
+      // Email yang diisi admin dianggap tervalidasi (tanpa OTP) — set timestamp.
+      if (typeof data.EMAIL === 'string' && data.EMAIL.trim() && data.EMAIL_VERIFIED_AT === undefined)
+        data.EMAIL_VERIFIED_AT = new Date().toISOString();
       const updates = Object.entries(data)
         .filter(([k]) => k.toUpperCase() !== 'PASSWORD')
         .map(([k, v]) => ({ col: headers.indexOf(k.toUpperCase()), val: v }))
@@ -2017,6 +2093,71 @@ module.exports = async (req, res) => {
         const result = await login(sheets, data?.nik, data?.password, ip);
         if (result.status === 'success') result.token = issueToken(result.user);
         return res.status(200).json(result);
+      }
+
+      // Email OTP — publik (kiosk quiz-she tidak login) + CORS. Aman: cuma menulis
+      // EMAIL setelah kode benar; NIK harus ada di roster; dibatasi cooldown/attempt.
+      if (action === 'requestEmailOtp' || action === 'verifyEmailOtp') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        const nik   = String(data?.nik || '').trim();
+        const email = String(data?.email || '').trim();
+        if (!nik) return res.status(400).json({ status: 'error', message: 'NIK wajib diisi.' });
+        const kar = await _findKaryawanEmail(sheets, nik);
+        if (!kar) return res.status(404).json({ status: 'error', message: 'NIK tidak terdaftar.' });
+        await _ensureEmailOtpSheet(sheets);
+
+        if (action === 'requestEmailOtp') {
+          if (!EMAIL_RE.test(email)) return res.status(400).json({ status: 'error', message: 'Format email tidak valid.' });
+          if (await _emailTakenByOther(sheets, email, nik))
+            return res.status(409).json({ status: 'error', message: 'Email sudah dipakai karyawan lain.' });
+          const rows = await getSheetData(sheets, EMAIL_OTP_SHEET);
+          const existing = rows.find(r => String(r['NIK'] || '').trim() === nik);
+          if (existing && Date.now() - Number(existing['CREATED_AT'] || 0) < EMAIL_OTP_COOLDOWN) {
+            const sisa = Math.ceil((EMAIL_OTP_COOLDOWN - (Date.now() - Number(existing['CREATED_AT'] || 0))) / 1000);
+            return res.status(429).json({ status: 'error', message: `Tunggu ${sisa} detik sebelum kirim ulang.` });
+          }
+          const code = String(Math.floor(100000 + Math.random() * 900000));
+          const now = Date.now();
+          const rowVals = [nik, email, bcrypt.hashSync(code, 8), String(now + EMAIL_OTP_TTL_MS), '0', String(now)];
+          // Ganti baris OTP lama NIK ini (kalau ada), lalu tulis ulang seluruh sheet
+          const others = rows.filter(r => String(r['NIK'] || '').trim() !== nik);
+          const allData = [EMAIL_OTP_HDR, ...others.map(r => EMAIL_OTP_HDR.map(h => r[h] ?? '')), rowVals];
+          await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: EMAIL_OTP_SHEET });
+          await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: EMAIL_OTP_SHEET, valueInputOption: 'RAW', requestBody: { values: allData } });
+          invalidateCache(EMAIL_OTP_SHEET);
+          try { await sendEmailOtp(email, code); }
+          catch (e) { return res.status(e.httpStatus || 502).json({ status: 'error', message: e.message || 'Gagal mengirim email.' }); }
+          return res.status(200).json({ status: 'success', message: 'Kode dikirim ke email.' });
+        }
+
+        // verifyEmailOtp
+        const code = String(data?.code || '').trim();
+        if (!code) return res.status(400).json({ status: 'error', message: 'Kode wajib diisi.' });
+        const rows = await getSheetData(sheets, EMAIL_OTP_SHEET);
+        const row = rows.find(r => String(r['NIK'] || '').trim() === nik);
+        if (!row) return res.status(400).json({ status: 'error', message: 'Belum ada kode. Minta kode dulu.' });
+        if (Date.now() > Number(row['EXPIRES_AT'] || 0)) return res.status(400).json({ status: 'error', message: 'Kode kedaluwarsa. Minta kode baru.' });
+        if (Number(row['ATTEMPTS'] || 0) >= EMAIL_OTP_MAX_ATTEMPTS) return res.status(429).json({ status: 'error', message: 'Terlalu banyak percobaan. Minta kode baru.' });
+        const emailStored = String(row['EMAIL'] || '').trim();
+        if (!bcrypt.compareSync(code, String(row['CODE_HASH'] || ''))) {
+          // attempts++
+          const others = rows.filter(r => String(r['NIK'] || '').trim() !== nik);
+          const bumped = EMAIL_OTP_HDR.map(h => h === 'ATTEMPTS' ? String(Number(row['ATTEMPTS'] || 0) + 1) : (row[h] ?? ''));
+          await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: EMAIL_OTP_SHEET });
+          await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: EMAIL_OTP_SHEET, valueInputOption: 'RAW', requestBody: { values: [EMAIL_OTP_HDR, ...others.map(r => EMAIL_OTP_HDR.map(h => r[h] ?? '')), bumped] } });
+          invalidateCache(EMAIL_OTP_SHEET);
+          return res.status(400).json({ status: 'error', message: 'Kode salah.' });
+        }
+        // Sukses → tulis email + timestamp, hapus baris OTP
+        await _updateKaryawanCol(sheets, nik, 'EMAIL', emailStored);
+        await _updateKaryawanCol(sheets, nik, 'EMAIL_VERIFIED_AT', new Date().toISOString());
+        const others = rows.filter(r => String(r['NIK'] || '').trim() !== nik);
+        await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: EMAIL_OTP_SHEET });
+        await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: EMAIL_OTP_SHEET, valueInputOption: 'RAW', requestBody: { values: [EMAIL_OTP_HDR, ...others.map(r => EMAIL_OTP_HDR.map(h => r[h] ?? ''))] } });
+        invalidateCache(EMAIL_OTP_SHEET);
+        return res.status(200).json({ status: 'success', message: 'Email terverifikasi.', email: emailStored });
       }
 
       // Semua action POST lainnya wajib token valid

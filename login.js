@@ -58,6 +58,11 @@ if (loginForm) {
       if (result.force_change_password) {
         _ssSet('onesap_force_pw', '1'); // _ssSet dari auth.js — aman di iOS private mode
       }
+      // Wajib daftar+verifikasi email sebelum masuk beranda
+      if (result.need_email) {
+        window.location.href = "email-daftar.html";
+        return;
+      }
       window.location.href = "index-home.html";
     } catch (err) {
       errorMessage.textContent = err.message;

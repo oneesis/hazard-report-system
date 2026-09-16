@@ -63,6 +63,14 @@ function requireLogin(){
     _lsRm("hazard_user");
     _lsRm("hazard_token");
     window.location.href = "login.html";
+    return;
+  }
+  // Gate email: hanya bila server menandai email_required (layanan email aktif
+  // & user belum verifikasi). Jangan redirect kalau SEDANG di halaman itu.
+  const u = getCurrentUser();
+  const onEmailPage = /email-daftar\.html$/.test(location.pathname);
+  if (u && u.email_required === true && !onEmailPage) {
+    window.location.href = "email-daftar.html";
   }
 }
 

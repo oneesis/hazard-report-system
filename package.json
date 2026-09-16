@@ -4,6 +4,7 @@
     "bcryptjs": "^2.4.3",
     "googleapis": "^144.0.0",
     "jsonwebtoken": "^9.0.3",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "nodemailer": "^6.9.16"
   }
 }
