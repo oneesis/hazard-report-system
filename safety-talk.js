@@ -139,7 +139,9 @@ function renderSchedules() {
         </button>
         ${status === 'AKTIF' ? `<button class="btn-danger-soft" onclick="selesaikan('${id}')">
           <i class="fa-solid fa-circle-check"></i> Selesaikan
-        </button>` : ''}
+        </button>` : `<button class="btn-indigo-soft" onclick="aktifkan('${id}')" title="Kembalikan ke status Aktif">
+          <i class="fa-solid fa-rotate-left"></i> Aktifkan
+        </button>`}
         <button class="btn-indigo-soft" onclick="salinWA('${id}')" title="Salin teks undangan WA">
           <i class="fa-brands fa-whatsapp"></i> Salin WA
         </button>
@@ -252,14 +254,23 @@ async function hapusJadwal(id, judul) {
 
 async function selesaikan(id) {
   if (!confirm('Tandai jadwal ini sebagai Selesai?')) return;
+  await _setStatusJadwal(id, 'SELESAI', 'Jadwal ditandai selesai.');
+}
+
+async function aktifkan(id) {
+  if (!confirm('Kembalikan jadwal ini ke status Aktif?')) return;
+  await _setStatusJadwal(id, 'AKTIF', 'Jadwal diaktifkan kembali.');
+}
+
+async function _setStatusJadwal(id, status, okMsg) {
   try {
     const res = await fetch('/api', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'updateSafetyTalkSchedule', data: { id, status: 'SELESAI' } }),
+      body: JSON.stringify({ action: 'updateSafetyTalkSchedule', data: { id, status } }),
     });
     const json = await res.json();
     if (!res.ok || json.status === 'error') throw new Error(json.message || 'Gagal.');
-    if (typeof showToast === 'function') showToast('Jadwal ditandai selesai.');
+    if (typeof showToast === 'function') showToast(okMsg);
     await loadAll();
   } catch (e) {
     if (typeof showToast === 'function') showToast(e.message, 'error');
