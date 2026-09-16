@@ -328,7 +328,7 @@ const _ST_STATUS_META = {
   CUTI:        { label: 'Cuti',        color: '#d97706' },
   DINAS_LUAR:  { label: 'Dinas Luar',  color: '#0284c7' },
   SHIFT_MALAM: { label: 'Shift Malam', color: '#7c3aed' },
-  LIBUR:       { label: 'Libur',       color: '#64748b' },
+  LIBUR:       { label: 'Libur',       color: '#0f766e' },
   MANGKIR:     { label: 'Mangkir',     color: '#dc2626' },
 };
 function _stStatusOf(row) { return String(row['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase(); }
