@@ -1745,6 +1745,63 @@ module.exports = async (req, res) => {
         });
       }
 
+      // syncSafetyTalkQuiz (2026-09-16) — dipanggil quiz-she begitu seseorang LULUS
+      // kuis Safety Talk, supaya QUIZ_DONE terisi saat itu juga (capaian langsung
+      // +1) tanpa menunggu admin menyimpan ulang absensi.
+      // Tanpa auth, tapi AMAN: pemanggil hanya bisa "minta dicek" — server ini
+      // memverifikasi sendiri ke quiz-she sebelum menulis apa pun, jadi request
+      // palsu tidak bisa memalsukan kelulusan.
+      if (action === 'syncSafetyTalkQuiz') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        const schedId = String(req.query.schedule_id || '').trim();
+        const nik     = String(req.query.nik || '').trim();
+        if (!schedId || !nik) return res.status(400).json({ status: 'error', message: 'schedule_id & nik wajib.' });
+
+        // Baca langsung (bukan cache) — kita akan menulis ke sheet ini
+        const raw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
+        const rows = raw.data.values || [];
+        const head = rows[0] || [];
+        const iSched = head.indexOf('SCHEDULE_ID'), iNik = head.indexOf('NIK'),
+              iStat  = head.indexOf('STATUS_KEHADIRAN'), iQuiz = head.indexOf('QUIZ_DONE');
+        if (iQuiz === -1) return res.status(200).json({ status: 'success', updated: false, reason: 'no_quiz_col' });
+        const ri = rows.findIndex((r, i) => i > 0 &&
+          String(r[iSched] || '').trim() === schedId && String(r[iNik] || '').trim() === nik);
+        // Belum diabsen: tidak apa-apa — saat admin membuka absensi nanti, halaman
+        // itu mengecek quiz-she langsung dan menyimpan QUIZ_DONE sendiri.
+        if (ri === -1) return res.status(200).json({ status: 'success', updated: false, reason: 'no_row' });
+        const status = String(rows[ri][iStat] || 'HADIR').toUpperCase();
+        // Hadir tidak perlu kuis; Mangkir tidak boleh diganti kuis (aturan capaian)
+        if (status === 'HADIR' || status === 'MANGKIR')
+          return res.status(200).json({ status: 'success', updated: false, reason: 'not_quiz_required', status_kehadiran: status });
+        if (String(rows[ri][iQuiz] || '').toUpperCase() === 'YA')
+          return res.status(200).json({ status: 'success', updated: false, reason: 'already' });
+
+        // Verifikasi ke quiz-she: sesi dengan topicCode === ID jadwal, lulus di salah satu
+        const QUIZ_URL = 'https://quiz-she.vercel.app/api/data';
+        let passed = null;
+        try {
+          const sesRes = await fetch(QUIZ_URL + '?action=sessions');
+          const sesJ   = await sesRes.json();
+          const sesIds = (Array.isArray(sesJ) ? sesJ : (sesJ.value || []))
+            .filter(s => String(s.topicCode || '').trim() === schedId).map(s => s.id);
+          for (const sid of sesIds) {
+            const ex = await (await fetch(QUIZ_URL + '?action=existing&nik=' + encodeURIComponent(nik) + '&sessionId=' + encodeURIComponent(sid))).json();
+            if (ex && ex.certificateNo) { passed = ex; break; }
+          }
+        } catch (e) {
+          return res.status(502).json({ status: 'error', message: 'Tidak bisa verifikasi ke quiz-she: ' + e.message });
+        }
+        if (!passed) return res.status(200).json({ status: 'success', updated: false, reason: 'not_passed' });
+
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: 'SafetyTalk_Absensi!' + colIndexToLetter(iQuiz) + (ri + 1),
+          valueInputOption: 'RAW', requestBody: { values: [['YA']] },
+        });
+        invalidateCache('SafetyTalk_Absensi');
+        return res.status(200).json({ status: 'success', updated: true, score: passed.score, certificateNo: passed.certificateNo });
+      }
+
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
       await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
