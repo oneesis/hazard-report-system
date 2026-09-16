@@ -20,10 +20,11 @@ const STATUS_OPTIONS = [
   { value: 'DINAS_LUAR',  label: 'Dinas Luar',   color: '#0284c7', bg: '#e0f2fe' },
   { value: 'SHIFT_MALAM', label: 'Shift Malam',  color: '#7c3aed', bg: '#ede9fe' },
   { value: 'LIBUR',       label: 'Libur',        color: '#0f766e', bg: '#ccfbf1' },
+  { value: 'SECURITY_JAGA',label:'Security Jaga', color: '#db2777', bg: '#fce7f3' },
   { value: 'MANGKIR',     label: 'Mangkir',      color: '#dc2626', bg: '#fee2e2' },
 ];
 // Status yang wajib quiz (bukan Hadir, bukan Mangkir)
-const QUIZ_REQUIRED = new Set(['CUTI','DINAS_LUAR','SHIFT_MALAM','LIBUR']);
+const QUIZ_REQUIRED = new Set(['CUTI','DINAS_LUAR','SHIFT_MALAM','LIBUR','SECURITY_JAGA']);
 
 function _getScheduleId() {
   return new URLSearchParams(window.location.search).get('id') || '';

@@ -1818,7 +1818,7 @@ module.exports = async (req, res) => {
               iStat  = head.indexOf('STATUS_KEHADIRAN'), iQuiz = head.indexOf('QUIZ_DONE');
         if (iQuiz === -1 || iSched === -1 || iNik === -1)
           return res.status(200).json({ status: 'success', updated: 0, reason: 'no_col' });
-        const WAJIB = new Set(['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR']);
+        const WAJIB = new Set(['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA']);
         // Baris kandidat: wajib kuis & belum ditandai
         const cand = [];
         for (let i = 1; i < rows.length; i++) {
@@ -2177,7 +2177,7 @@ module.exports = async (req, res) => {
           const others = existing.filter(r => String(r['SCHEDULE_ID'] || '') !== String(schedule_id));
           const now = new Date().toISOString();
           // Normalize input: baru pakai absensi[], lama pakai niks_hadir[] (semua HADIR)
-          const VALID_STATUS = new Set(['HADIR','CUTI','DINAS_LUAR','SHIFT_MALAM','LIBUR','MANGKIR']);
+          const VALID_STATUS = new Set(['HADIR','CUTI','DINAS_LUAR','SHIFT_MALAM','LIBUR','SECURITY_JAGA','MANGKIR']);
           const inputList = Array.isArray(absensi)
             ? absensi
             : (Array.isArray(niks_hadir) ? niks_hadir.map(k => ({ ...k, status_kehadiran: 'HADIR', quiz_done: '' })) : []);
