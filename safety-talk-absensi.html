@@ -84,6 +84,8 @@
     .btn-save { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border:none; border-radius:10px; padding:11px 24px; font-size:.9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
     .btn-save:hover { opacity:.9; }
     .btn-save:disabled { opacity:.6; cursor:default; }
+    .btn-wa { background:#25d366; color:#fff; border:none; border-radius:10px; padding:11px 20px; font-size:.9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .btn-wa:hover { opacity:.9; }
     .sticky-bar { position:sticky; bottom:0; background:#fff; border-top:1.5px solid #e2e8f0; padding:14px 0; z-index:10; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
     .back-link { display:inline-flex; align-items:center; gap:6px; color:#6366f1; font-size:.85rem; font-weight:600; text-decoration:none; margin-bottom:4px; }
     .back-link:hover { text-decoration:underline; }
@@ -174,6 +176,9 @@
       <div class="sticky-bar">
         <button class="btn-save" id="saveBtn" onclick="saveAbsensi()">
           <i class="fa-solid fa-floppy-disk"></i> Simpan Absensi
+        </button>
+        <button class="btn-wa" id="waBtn" onclick="salinRekapWA()">
+          <i class="fa-brands fa-whatsapp"></i> Salin Rekap WA
         </button>
         <span id="saveMsg" style="font-size:.82rem;color:#22c55e;display:none"></span>
       </div>

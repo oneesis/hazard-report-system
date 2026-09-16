@@ -329,6 +329,62 @@ async function saveAbsensi() {
   }
 }
 
+// ── Salin rekap kehadiran ke WhatsApp (jumlah saja, tanpa nama) ──────────────
+function salinRekapWA() {
+  // Hitung per status dari SEMUA karyawan yang sudah diberi status
+  const cnt = {};
+  STATUS_OPTIONS.forEach(o => { cnt[o.value] = 0; });
+  let diabsen = 0, quizLulus = 0, quizBelum = 0;
+  _abKaryawan.forEach(k => {
+    const nik = String(k['NIK'] || '').trim();
+    const st  = _abStatus[nik] || '';
+    if (!st) return;
+    diabsen++;
+    if (cnt[st] !== undefined) cnt[st]++;
+    if (QUIZ_REQUIRED.has(st)) { if (_abQuizResult[nik]?.passed) quizLulus++; else quizBelum++; }
+  });
+  const terpenuhi = cnt.HADIR + quizLulus;
+  const pct = diabsen > 0 ? Math.round(terpenuhi / diabsen * 100) : 0;
+
+  const tgl = _abSchedule?.['TANGGAL']
+    ? new Date(_abSchedule['TANGGAL']).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : '-';
+  const co = _abSchedule?.['PERUSAHAAN_TARGET'] || 'Semua Perusahaan';
+
+  // Baris per status yang jumlahnya > 0 (label ikut yang tampil, mis. Off)
+  const baris = STATUS_OPTIONS
+    .filter(o => cnt[o.value] > 0)
+    .map(o => `- ${o.label}: ${cnt[o.value]}`)
+    .join('\n');
+
+  const teks =
+`📋 *Rekap Kehadiran Safety Talk*
+${_abSchedule?.['JUDUL_MATERI'] || '-'}
+🗓️ ${tgl}
+🏢 ${co}
+
+Total diabsen: ${diabsen} orang
+${baris || '- (belum ada yang diabsen)'}
+
+📝 Wajib quiz: ${quizLulus + quizBelum} (lulus ${quizLulus}, belum ${quizBelum})
+✅ Kepatuhan: ${terpenuhi}/${diabsen} (${pct}%)
+
+_Hadir + yang lulus quiz = capaian terpenuhi._`;
+
+  const done = () => { if (typeof showToast === 'function') showToast('Rekap kehadiran disalin!'); };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(teks).then(done).catch(() => _fallbackCopy(teks, done));
+  } else { _fallbackCopy(teks, done); }
+}
+
+function _fallbackCopy(teks, done) {
+  const ta = document.createElement('textarea');
+  ta.value = teks; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch {}
+  document.body.removeChild(ta);
+}
+
 function escapeHTML(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
