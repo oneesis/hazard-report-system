@@ -203,7 +203,7 @@ function renderTable() {
     const radioButtons = STATUS_OPTIONS.map(o => `
       <label class="ab-radio-label ${status === o.value ? 'ab-radio-selected' : ''}" style="${status === o.value ? `background:${o.bg};color:${o.color};border-color:${o.color}` : ''}">
         <input type="radio" name="status-${escapeHTML(nik)}" value="${o.value}"
-          ${status === o.value ? 'checked' : ''} onchange="onStatusChange(this)">
+          ${status === o.value ? 'checked' : ''} onclick="onStatusChange(this)">
         ${o.label}
       </label>`).join('');
 
@@ -220,7 +220,10 @@ function renderTable() {
 
 function onStatusChange(radio) {
   const nik    = radio.name.replace(/^status-/, '');
-  const status = radio.value;
+  // Klik ulang pill yang sudah aktif = batalkan (radio bawaan tidak bisa
+  // di-uncheck, jadi pakai onclick + bandingkan dengan status tersimpan).
+  const status = _abStatus[nik] === radio.value ? "" : radio.value;
+  if (!status) radio.checked = false;
   _abStatus[nik] = status;
 
   // Update row class
