@@ -19,7 +19,7 @@ const STATUS_OPTIONS = [
   { value: 'CUTI',        label: 'Cuti',         color: '#d97706', bg: '#fef3c7' },
   { value: 'DINAS_LUAR',  label: 'Dinas Luar',   color: '#0284c7', bg: '#e0f2fe' },
   { value: 'SHIFT_MALAM', label: 'Shift Malam',  color: '#7c3aed', bg: '#ede9fe' },
-  { value: 'LIBUR',       label: 'Libur',        color: '#0f766e', bg: '#ccfbf1' },
+  { value: 'LIBUR',       label: 'Off',          color: '#0f766e', bg: '#ccfbf1' },
   { value: 'SECURITY_JAGA',label:'Security Jaga', color: '#db2777', bg: '#fce7f3' },
   { value: 'MANGKIR',     label: 'Mangkir',      color: '#dc2626', bg: '#fee2e2' },
 ];
@@ -74,7 +74,7 @@ async function initAbsensi() {
       else {
         warnEl.style.display = '';
         warnEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>
-          <span><b>Belum ada quiz untuk jadwal ini.</b> Karyawan berstatus Cuti / Dinas Luar / Shift Malam / Libur
+          <span><b>Belum ada quiz untuk jadwal ini.</b> Karyawan berstatus Cuti / Dinas Luar / Shift Malam / Off / Security Jaga
           tidak bisa memenuhi capaian sampai quiz dibuat. Buat di
           <a href="${QUIZ_URL}/admin.html" target="_blank" style="color:#b45309;font-weight:700;text-decoration:underline">quiz-she</a>
           → Topik Baru → <b>Import dari Safety Talk</b> → pilih jadwal ini.</span>`;

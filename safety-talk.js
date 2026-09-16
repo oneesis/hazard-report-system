@@ -328,7 +328,7 @@ const _ST_STATUS_META = {
   CUTI:        { label: 'Cuti',        color: '#d97706' },
   DINAS_LUAR:  { label: 'Dinas Luar',  color: '#0284c7' },
   SHIFT_MALAM: { label: 'Shift Malam', color: '#7c3aed' },
-  LIBUR:       { label: 'Libur',       color: '#0f766e' },
+  LIBUR:       { label: 'Off',         color: '#0f766e' },
   SECURITY_JAGA:{ label: 'Security Jaga', color: '#db2777' },
   MANGKIR:     { label: 'Mangkir',     color: '#dc2626' },
 };
