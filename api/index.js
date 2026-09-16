@@ -1796,6 +1796,16 @@ async function reviewClosing(sheets, data, sheetName, auth) {
 
 module.exports = async (req, res) => {
   try {
+    // CORS preflight — kiosk quiz-she (origin lain) memanggil endpoint email OTP
+    // via POST+JSON, yang memicu OPTIONS lebih dulu. Jawab di sini sebelum apa pun.
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      return res.status(204).end();
+    }
+
     const { sheets } = getClients();
 
     if (req.method === 'GET') {
