@@ -167,7 +167,7 @@ function _updateQuizCell(nik) {
 function _quizCellHtml(nik, status) {
   if (!_quizSessionIds.length) return '<span class="ab-quiz-na" title="Belum ada quiz untuk jadwal ini">—</span>';
   if (status === 'HADIR') return '<span class="ab-quiz-na">—</span>';
-  if (status === 'MANGKIR') return '<span class="ab-quiz-locked"><i class="fa-solid fa-lock"></i> Terkunci</span>';
+  if (status === 'MANGKIR') return '<span class="ab-quiz-locked" title="Mangkir boleh mengerjakan kuis, tapi tidak menambah capaian"><i class="fa-solid fa-ban"></i> Tidak dihitung</span>';
   if (!QUIZ_REQUIRED.has(status)) return '<span class="ab-quiz-na">—</span>';
 
   const r = _abQuizResult[nik];
