@@ -1863,6 +1863,14 @@ module.exports = async (req, res) => {
         return res.status(200).json({ status: 'success', updated: toMark.length, checked: cand.length });
       }
 
+      // Semua endpoint migrasi (sekali-pakai, sudah selesai) kini DIKUNCI token —
+      // dulu publik untuk kebutuhan migrasi. Pakai BACKUP_TOKEN (header/query).
+      if (typeof action === 'string' && action.startsWith('migrate_')) {
+        const token = process.env.BACKUP_TOKEN;
+        const provided = req.headers['x-backup-token'] || req.query.token;
+        if (!token || provided !== token) return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      }
+
       // Migrasi sekali-pakai PC_Report (Sheets → Neon). Empty-guard: hanya jalan
       // bila tabel pc_report kosong. Baca sheet via service account runtime.
       if (action === 'migrate_pc') {
