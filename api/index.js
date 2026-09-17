@@ -1351,6 +1351,19 @@ async function _ensureSafetyTalkSheets(sheets) {
   } catch (err) { console.error('_ensureSafetyTalkSheets error:', err?.message); }
 }
 
+// Baris Postgres → bentuk UPPERCASE yang dibaca client (safety-talk*.js, capaian).
+const _stSchedOut = r => ({
+  ID: r.id, TIMESTAMP: r.timestamp, TANGGAL: r.tanggal, BULAN: r.bulan,
+  JUDUL_MATERI: r.judul_materi, DESKRIPSI_MATERI: r.deskripsi_materi,
+  NAMA_PEMATERI: r.nama_pemateri, NIK_PEMATERI: r.nik_pemateri, JABATAN_PEMATERI: r.jabatan_pemateri,
+  PERUSAHAAN_TARGET: r.perusahaan_target, STATUS: r.status, CREATED_BY: r.created_by,
+});
+const _stAbsOut = r => ({
+  SCHEDULE_ID: r.schedule_id, BULAN: r.bulan, NIK: r.nik, NAMA: r.nama, PERUSAHAAN: r.perusahaan,
+  DEPARTEMEN: r.departemen, JABATAN: r.jabatan, STATUS_KEHADIRAN: r.status_kehadiran,
+  QUIZ_DONE: r.quiz_done, CHECKED_BY: r.checked_by, CHECKED_AT: r.checked_at,
+});
+
 // ── Generic draft helpers (per-NIK, sheet: {FormType}_Drafts) ────
 async function _upsertDraftRow(sheets, sheetName, nik, draftJson) {
   let rows = [];
@@ -1781,16 +1794,14 @@ module.exports = async (req, res) => {
       if (action === 'getSafetyTalkPublic') {
         res.setHeader('Access-Control-Allow-Origin', '*');
         let rows = [];
-        try { rows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 60_000); } catch {}
+        try { rows = await getSql()`SELECT * FROM safety_talk_schedule WHERE status = 'AKTIF'`; } catch {}
         return res.status(200).json({
           status: 'success',
-          data: rows
-            .filter(r => String(r['STATUS'] || '') === 'AKTIF')
-            .map(r => ({
-              id: r['ID'], tanggal: r['TANGGAL'], bulan: r['BULAN'],
-              judul: r['JUDUL_MATERI'], deskripsi: r['DESKRIPSI_MATERI'],
-              pemateri: r['NAMA_PEMATERI'], perusahaan_target: r['PERUSAHAAN_TARGET'] || '',
-            })),
+          data: rows.map(r => ({
+            id: r.id, tanggal: r.tanggal, bulan: r.bulan,
+            judul: r.judul_materi, deskripsi: r.deskripsi_materi,
+            pemateri: r.nama_pemateri, perusahaan_target: r.perusahaan_target || '',
+          })),
         });
       }
 
@@ -1806,31 +1817,20 @@ module.exports = async (req, res) => {
         const nik     = String(req.query.nik || '').trim();
         if (!schedId || !nik) return res.status(400).json({ status: 'error', message: 'schedule_id & nik wajib.' });
 
-        // Baca langsung (bukan cache) — kita akan menulis ke sheet ini
-        const raw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
-        const rows = raw.data.values || [];
-        const head = rows[0] || [];
-        const iSched = head.indexOf('SCHEDULE_ID'), iNik = head.indexOf('NIK'),
-              iStat  = head.indexOf('STATUS_KEHADIRAN'), iQuiz = head.indexOf('QUIZ_DONE');
-        if (iQuiz === -1) return res.status(200).json({ status: 'success', updated: false, reason: 'no_quiz_col' });
-        const ri = rows.findIndex((r, i) => i > 0 &&
-          String(r[iSched] || '').trim() === schedId && String(r[iNik] || '').trim() === nik);
-        // Belum diabsen: tidak apa-apa — saat admin membuka absensi nanti, halaman
-        // itu mengecek quiz-she langsung dan menyimpan QUIZ_DONE sendiri.
-        if (ri === -1) return res.status(200).json({ status: 'success', updated: false, reason: 'no_row' });
-        const status = String(rows[ri][iStat] || 'HADIR').toUpperCase();
-        // Hadir tidak perlu kuis; Mangkir tidak boleh diganti kuis (aturan capaian)
+        const sql = getSql();
+        const row = (await sql`SELECT status_kehadiran, quiz_done FROM safety_talk_absensi WHERE schedule_id = ${schedId} AND nik = ${nik}`)[0];
+        if (!row) return res.status(200).json({ status: 'success', updated: false, reason: 'no_row' });
+        const status = String(row.status_kehadiran || 'HADIR').toUpperCase();
         if (status === 'HADIR' || status === 'MANGKIR')
           return res.status(200).json({ status: 'success', updated: false, reason: 'not_quiz_required', status_kehadiran: status });
-        if (String(rows[ri][iQuiz] || '').toUpperCase() === 'YA')
+        if (String(row.quiz_done || '').toUpperCase() === 'YA')
           return res.status(200).json({ status: 'success', updated: false, reason: 'already' });
 
         // Verifikasi ke quiz-she: sesi dengan topicCode === ID jadwal, lulus di salah satu
         const QUIZ_URL = 'https://quiz-she.vercel.app/api/data';
         let passed = null;
         try {
-          const sesRes = await fetch(QUIZ_URL + '?action=sessions');
-          const sesJ   = await sesRes.json();
+          const sesJ = await (await fetch(QUIZ_URL + '?action=sessions')).json();
           const sesIds = (Array.isArray(sesJ) ? sesJ : (sesJ.value || []))
             .filter(s => String(s.topicCode || '').trim() === schedId).map(s => s.id);
           for (const sid of sesIds) {
@@ -1842,12 +1842,7 @@ module.exports = async (req, res) => {
         }
         if (!passed) return res.status(200).json({ status: 'success', updated: false, reason: 'not_passed' });
 
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: 'SafetyTalk_Absensi!' + colIndexToLetter(iQuiz) + (ri + 1),
-          valueInputOption: 'RAW', requestBody: { values: [['YA']] },
-        });
-        invalidateCache('SafetyTalk_Absensi');
+        await sql`UPDATE safety_talk_absensi SET quiz_done = 'YA' WHERE schedule_id = ${schedId} AND nik = ${nik}`;
         return res.status(200).json({ status: 'success', updated: true, score: passed.score, certificateNo: passed.certificateNo });
       }
 
@@ -1860,27 +1855,14 @@ module.exports = async (req, res) => {
       if (action === 'syncAllSafetyTalkQuiz') {
         res.setHeader('Access-Control-Allow-Origin', '*');
         const QUIZ_URL = 'https://quiz-she.vercel.app/api/data';
-        const raw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
-        const rows = raw.data.values || [];
-        const head = rows[0] || [];
-        const iSched = head.indexOf('SCHEDULE_ID'), iNik = head.indexOf('NIK'),
-              iStat  = head.indexOf('STATUS_KEHADIRAN'), iQuiz = head.indexOf('QUIZ_DONE');
-        if (iQuiz === -1 || iSched === -1 || iNik === -1)
-          return res.status(200).json({ status: 'success', updated: 0, reason: 'no_col' });
-        const WAJIB = new Set(['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA']);
-        // Baris kandidat: wajib kuis & belum ditandai
-        const cand = [];
-        for (let i = 1; i < rows.length; i++) {
-          const st = String(rows[i][iStat] || 'HADIR').toUpperCase();
-          if (!WAJIB.has(st)) continue;
-          if (String(rows[i][iQuiz] || '').toUpperCase() === 'YA') continue;
-          const sched = String(rows[i][iSched] || '').trim();
-          const nik   = String(rows[i][iNik] || '').trim();
-          if (sched && nik) cand.push({ rowNum: i + 1, sched, nik });
-        }
+        const sql = getSql();
+        const WAJIB = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA'];
+        // Kandidat: wajib kuis & QUIZ_DONE belum YA
+        const cand = await sql`
+          SELECT schedule_id, nik FROM safety_talk_absensi
+          WHERE status_kehadiran = ANY(${WAJIB}) AND COALESCE(upper(quiz_done), '') <> 'YA'`;
         if (!cand.length) return res.status(200).json({ status: 'success', updated: 0 });
 
-        // Peta jadwal -> sesi quiz (satu fetch)
         let sessBySched = {};
         try {
           const sesJ = await (await fetch(QUIZ_URL + '?action=sessions')).json();
@@ -1892,32 +1874,23 @@ module.exports = async (req, res) => {
         } catch (e) {
           return res.status(502).json({ status: 'error', message: 'quiz-she tak terjangkau: ' + e.message });
         }
-        // Cek tiap kandidat (batch paralel), kumpulkan yang lulus
-        const updates = [];
+        const toMark = [];
         const BATCH = 8;
         for (let i = 0; i < cand.length; i += BATCH) {
           await Promise.all(cand.slice(i, i + BATCH).map(async c => {
-            const sids = sessBySched[c.sched];
+            const sids = sessBySched[String(c.schedule_id).trim()];
             if (!sids || !sids.length) return;
             for (const sid of sids) {
               try {
                 const ex = await (await fetch(QUIZ_URL + '?action=existing&nik=' + encodeURIComponent(c.nik) + '&sessionId=' + encodeURIComponent(sid))).json();
-                if (ex && ex.certificateNo) {
-                  updates.push({ range: 'SafetyTalk_Absensi!' + colIndexToLetter(iQuiz) + c.rowNum, values: [['YA']] });
-                  break;
-                }
-              } catch { /* satu sesi gagal, lanjut sesi lain */ }
+                if (ex && ex.certificateNo) { toMark.push(c); break; }
+              } catch { /* satu sesi gagal, lanjut */ }
             }
           }));
         }
-        if (updates.length) {
-          await sheets.spreadsheets.values.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            requestBody: { valueInputOption: 'RAW', data: updates },
-          });
-          invalidateCache('SafetyTalk_Absensi');
-        }
-        return res.status(200).json({ status: 'success', updated: updates.length, checked: cand.length });
+        for (const c of toMark)
+          await sql`UPDATE safety_talk_absensi SET quiz_done = 'YA' WHERE schedule_id = ${c.schedule_id} AND nik = ${c.nik}`;
+        return res.status(200).json({ status: 'success', updated: toMark.length, checked: cand.length });
       }
 
       // Migrasi sekali-pakai PC_Report (Sheets → Neon). Empty-guard: hanya jalan
@@ -1987,6 +1960,44 @@ module.exports = async (req, res) => {
         return res.status(200).json({ status: 'success', migrated: ok, total: after[0].n });
       }
 
+      // Migrasi sekali-pakai Safety Talk (schedule + absensi). Empty-guard per tabel.
+      if (action === 'migrate_safety_talk') {
+        const sql = getSql();
+        const g = (r, k) => { const v = r[k]; return (v === undefined || v === null) ? '' : String(v); };
+        let sMig = 0, aMig = 0;
+        if ((await sql`SELECT count(*)::int n FROM safety_talk_schedule`)[0].n === 0) {
+          let rows = []; try { rows = await getSheetData(sheets, 'SafetyTalk_Schedule'); } catch {}
+          for (const r of rows) {
+            const id = g(r, 'ID').trim(); if (!id) continue;
+            await sql`
+              INSERT INTO safety_talk_schedule
+                (id, "timestamp", tanggal, bulan, judul_materi, deskripsi_materi, nama_pemateri, nik_pemateri,
+                 jabatan_pemateri, perusahaan_target, status, created_by)
+              VALUES (${id}, ${g(r,'TIMESTAMP')}, ${g(r,'TANGGAL')}, ${g(r,'BULAN')}, ${g(r,'JUDUL_MATERI')},
+                      ${g(r,'DESKRIPSI_MATERI')}, ${g(r,'NAMA_PEMATERI')}, ${g(r,'NIK_PEMATERI')}, ${g(r,'JABATAN_PEMATERI')},
+                      ${g(r,'PERUSAHAAN_TARGET')}, ${g(r,'STATUS') || 'AKTIF'}, ${g(r,'CREATED_BY')})
+              ON CONFLICT (id) DO NOTHING`;
+            sMig++;
+          }
+        }
+        if ((await sql`SELECT count(*)::int n FROM safety_talk_absensi`)[0].n === 0) {
+          let rows = []; try { rows = await getSheetData(sheets, 'SafetyTalk_Absensi'); } catch {}
+          for (const r of rows) {
+            const sid = g(r, 'SCHEDULE_ID').trim(), nik = g(r, 'NIK').trim();
+            if (!sid || !nik) continue;
+            await sql`
+              INSERT INTO safety_talk_absensi
+                (schedule_id, nik, bulan, nama, perusahaan, departemen, jabatan, status_kehadiran, quiz_done, checked_by, checked_at)
+              VALUES (${sid}, ${nik}, ${g(r,'BULAN')}, ${g(r,'NAMA')}, ${g(r,'PERUSAHAAN')}, ${g(r,'DEPARTEMEN')},
+                      ${g(r,'JABATAN')}, ${g(r,'STATUS_KEHADIRAN') || 'HADIR'}, ${g(r,'QUIZ_DONE')}, ${g(r,'CHECKED_BY')}, ${g(r,'CHECKED_AT')})
+              ON CONFLICT (schedule_id, nik) DO NOTHING`;
+            aMig++;
+          }
+        }
+        const cnt = await sql`SELECT (SELECT count(*)::int FROM safety_talk_schedule) AS sched, (SELECT count(*)::int FROM safety_talk_absensi) AS abs`;
+        return res.status(200).json({ status: 'success', schedule_migrated: sMig, absensi_migrated: aMig, schedule_total: cnt[0].sched, absensi_total: cnt[0].abs });
+      }
+
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
       await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
@@ -2044,7 +2055,7 @@ module.exports = async (req, res) => {
         case 'getSafetyTalkSchedules': {
           if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           let stRows = [];
-          try { stRows = await getCachedSheet(sheets, 'SafetyTalk_Schedule', 30_000); } catch {}
+          try { stRows = (await getSql()`SELECT * FROM safety_talk_schedule`).map(_stSchedOut); } catch {}
           if (!isSuperAdmin(auth.role)) {
             const co = String(auth.perusahaan || '').trim();
             stRows = stRows.filter(r => !r['PERUSAHAAN_TARGET'] || r['PERUSAHAAN_TARGET'] === co);
@@ -2056,11 +2067,13 @@ module.exports = async (req, res) => {
           if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           const schedId = String(req.query.schedule_id || '').trim();
           let abRows = [];
-          try { abRows = await getCachedSheet(sheets, 'SafetyTalk_Absensi', 30_000); } catch {}
-          result = {
-            status: 'success',
-            data: schedId ? abRows.filter(r => String(r['SCHEDULE_ID'] || '') === schedId) : abRows,
-          };
+          try {
+            const sql = getSql();
+            abRows = (schedId
+              ? await sql`SELECT * FROM safety_talk_absensi WHERE schedule_id = ${schedId}`
+              : await sql`SELECT * FROM safety_talk_absensi`).map(_stAbsOut);
+          } catch {}
+          result = { status: 'success', data: abRows };
           break;
         }
         case 'saveSBODraft': {
@@ -2235,36 +2248,9 @@ module.exports = async (req, res) => {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           if (!data.id) throw new Error('ID jadwal wajib diisi.');
           const delId = String(data.id).trim();
-          // Hapus baris jadwal (clear + rewrite tanpa baris ini)
-          const schedRaw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule' });
-          const schedRows = schedRaw.data.values || [];
-          if (schedRows.length > 1) {
-            const head = schedRows[0];
-            const idIdx = head.indexOf('ID');
-            const remaining = schedRows.filter((r, i) => i === 0 || String(r[idIdx] || '') !== delId);
-            await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule' });
-            await sheets.spreadsheets.values.update({
-              spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule',
-              valueInputOption: 'USER_ENTERED', requestBody: { values: remaining },
-            });
-          }
-          // Hapus absensi terkait
-          try {
-            const abRaw = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
-            const abRows = abRaw.data.values || [];
-            if (abRows.length > 1) {
-              const abHead = abRows[0];
-              const abScIdx = abHead.indexOf('SCHEDULE_ID');
-              const abRemaining = abRows.filter((r, i) => i === 0 || String(r[abScIdx] || '') !== delId);
-              await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
-              await sheets.spreadsheets.values.update({
-                spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi',
-                valueInputOption: 'USER_ENTERED', requestBody: { values: abRemaining },
-              });
-            }
-          } catch {}
-          invalidateCache('SafetyTalk_Schedule');
-          invalidateCache('SafetyTalk_Absensi');
+          const sql = getSql();
+          await sql`DELETE FROM safety_talk_absensi WHERE schedule_id = ${delId}`;
+          await sql`DELETE FROM safety_talk_schedule WHERE id = ${delId}`;
           result = { status: 'success', message: 'Jadwal berhasil dihapus.' };
           break;
         }
@@ -2292,45 +2278,33 @@ module.exports = async (req, res) => {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           if (!data.tanggal?.trim()) throw new Error('Tanggal wajib diisi.');
           if (!data.judul_materi?.trim()) throw new Error('Judul materi wajib diisi.');
-          await _ensureSafetyTalkSheets(sheets);
           const stId = 'ST-' + Date.now();
-          const stRow = [
-            stId, new Date().toISOString(),
-            data.tanggal, data.tanggal.slice(0, 7),
-            data.judul_materi?.trim() || '',
-            data.deskripsi_materi?.trim() || '',
-            data.nama_pemateri?.trim() || '',
-            data.nik_pemateri?.trim() || '',
-            data.jabatan_pemateri?.trim() || '',
-            data.perusahaan_target?.trim() || '',
-            'AKTIF',
-            authUser.nik || '',
-          ];
-          await sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Schedule',
-            valueInputOption: 'USER_ENTERED', requestBody: { values: [stRow] },
-          });
-          invalidateCache('SafetyTalk_Schedule');
+          await getSql()`
+            INSERT INTO safety_talk_schedule
+              (id, "timestamp", tanggal, bulan, judul_materi, deskripsi_materi, nama_pemateri, nik_pemateri,
+               jabatan_pemateri, perusahaan_target, status, created_by)
+            VALUES
+              (${stId}, ${new Date().toISOString()}, ${data.tanggal}, ${data.tanggal.slice(0, 7)},
+               ${data.judul_materi?.trim() || ''}, ${data.deskripsi_materi?.trim() || ''}, ${data.nama_pemateri?.trim() || ''},
+               ${data.nik_pemateri?.trim() || ''}, ${data.jabatan_pemateri?.trim() || ''}, ${data.perusahaan_target?.trim() || ''},
+               'AKTIF', ${authUser.nik || ''})`;
           result = { status: 'success', id: stId, message: 'Jadwal Safety Talk berhasil dibuat.' };
           break;
         }
         case 'updateSafetyTalkSchedule': {
           if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           if (!data.id) throw new Error('ID jadwal wajib diisi.');
-          const updFields = {};
-          if (data.status)            updFields['STATUS']            = data.status;
-          if (data.judul_materi)      updFields['JUDUL_MATERI']      = data.judul_materi;
-          if (data.deskripsi_materi !== undefined) updFields['DESKRIPSI_MATERI'] = data.deskripsi_materi;
-          if (data.tanggal) {
-            updFields['TANGGAL'] = data.tanggal;
-            updFields['BULAN']   = data.tanggal.slice(0, 7); // YYYY-MM
-          }
-          if (data.nama_pemateri    !== undefined) updFields['NAMA_PEMATERI']    = data.nama_pemateri;
-          if (data.nik_pemateri     !== undefined) updFields['NIK_PEMATERI']     = data.nik_pemateri;
-          if (data.jabatan_pemateri !== undefined) updFields['JABATAN_PEMATERI'] = data.jabatan_pemateri;
-          if (data.perusahaan_target  !== undefined) updFields['PERUSAHAAN_TARGET']  = data.perusahaan_target;
-          await updateWorkflowFields(sheets, 'SafetyTalk_Schedule', data.id, updFields);
-          invalidateCache('SafetyTalk_Schedule');
+          // Update kolom yang dikirim (satu tagged-template per kolom — aman & parameterized)
+          const sql = getSql();
+          const _id = data.id;
+          if (data.status)             await sql`UPDATE safety_talk_schedule SET status = ${data.status} WHERE id = ${_id}`;
+          if (data.judul_materi)       await sql`UPDATE safety_talk_schedule SET judul_materi = ${data.judul_materi} WHERE id = ${_id}`;
+          if (data.deskripsi_materi !== undefined) await sql`UPDATE safety_talk_schedule SET deskripsi_materi = ${data.deskripsi_materi} WHERE id = ${_id}`;
+          if (data.tanggal)            await sql`UPDATE safety_talk_schedule SET tanggal = ${data.tanggal}, bulan = ${data.tanggal.slice(0, 7)} WHERE id = ${_id}`;
+          if (data.nama_pemateri    !== undefined) await sql`UPDATE safety_talk_schedule SET nama_pemateri = ${data.nama_pemateri} WHERE id = ${_id}`;
+          if (data.nik_pemateri     !== undefined) await sql`UPDATE safety_talk_schedule SET nik_pemateri = ${data.nik_pemateri} WHERE id = ${_id}`;
+          if (data.jabatan_pemateri !== undefined) await sql`UPDATE safety_talk_schedule SET jabatan_pemateri = ${data.jabatan_pemateri} WHERE id = ${_id}`;
+          if (data.perusahaan_target !== undefined) await sql`UPDATE safety_talk_schedule SET perusahaan_target = ${data.perusahaan_target} WHERE id = ${_id}`;
           result = { status: 'success', message: 'Jadwal berhasil diperbarui.' };
           break;
         }
@@ -2339,46 +2313,39 @@ module.exports = async (req, res) => {
           // Support both legacy {niks_hadir} and new {absensi} format
           const { schedule_id, niks_hadir, absensi } = data || {};
           if (!schedule_id) throw new Error('schedule_id wajib diisi.');
-          await _ensureSafetyTalkSheets(sheets);
-          const schedRows = await getSheetData(sheets, 'SafetyTalk_Schedule');
-          const sched = schedRows.find(r => String(r['ID'] || '') === String(schedule_id));
+          const sql = getSql();
+          const sched = (await sql`SELECT bulan, tanggal FROM safety_talk_schedule WHERE id = ${schedule_id}`)[0];
           if (!sched) throw new Error('Jadwal tidak ditemukan.');
-          const bulan = String(sched['BULAN'] || sched['TANGGAL']?.slice(0, 7) || '');
-          const ST_AB_HDR = ['SCHEDULE_ID','BULAN','NIK','NAMA','PERUSAHAAN','DEPARTEMEN','JABATAN','STATUS_KEHADIRAN','QUIZ_DONE','CHECKED_BY','CHECKED_AT'];
-          let existing = [];
-          try { existing = await getSheetData(sheets, 'SafetyTalk_Absensi'); } catch {}
-          const others = existing.filter(r => String(r['SCHEDULE_ID'] || '') !== String(schedule_id));
+          const bulan = String(sched.bulan || (sched.tanggal || '').slice(0, 7) || '');
           const now = new Date().toISOString();
-          // Normalize input: baru pakai absensi[], lama pakai niks_hadir[] (semua HADIR)
           const VALID_STATUS = new Set(['HADIR','CUTI','DINAS_LUAR','SHIFT_MALAM','LIBUR','SECURITY_JAGA','MANGKIR']);
           const inputList = Array.isArray(absensi)
             ? absensi
             : (Array.isArray(niks_hadir) ? niks_hadir.map(k => ({ ...k, status_kehadiran: 'HADIR', quiz_done: '' })) : []);
-          const newRows = inputList.map(k => {
+          const norm = inputList.map(k => {
             const status = VALID_STATUS.has(String(k.status_kehadiran || '').toUpperCase())
               ? String(k.status_kehadiran).toUpperCase() : 'HADIR';
-            // MANGKIR tidak boleh punya quiz; HADIR juga tidak perlu
             const quizDone = (status !== 'HADIR' && status !== 'MANGKIR') ? (k.quiz_done ? 'YA' : '') : '';
-            return [schedule_id, bulan, k.nik || '', k.nama || '', k.perusahaan || '',
-              k.departemen || '', k.jabatan || '', status, quizDone, authUser.nik || '', now];
+            return { nik: k.nik || '', nama: k.nama || '', perusahaan: k.perusahaan || '',
+              departemen: k.departemen || '', jabatan: k.jabatan || '', status, quizDone };
           });
-          // Pertahankan row lama (kolom lama) — petakan ke header baru
-          const othersRows = others.map(r => ST_AB_HDR.map(h => {
-            if (h === 'STATUS_KEHADIRAN') return r[h] || 'HADIR'; // backward compat
-            if (h === 'QUIZ_DONE') return r[h] || '';
-            return r[h] || '';
-          }));
-          const allData = [ST_AB_HDR, ...othersRows, ...newRows];
-          await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi' });
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: SPREADSHEET_ID, range: 'SafetyTalk_Absensi',
-            valueInputOption: 'RAW', requestBody: { values: allData },
-          });
-          invalidateCache('SafetyTalk_Absensi');
-          const hadirCount  = newRows.filter(r => r[7] === 'HADIR').length;
-          const quizCount   = newRows.filter(r => r[8] === 'YA').length;
-          const mangkirCount = newRows.filter(r => r[7] === 'MANGKIR').length;
-          result = { status: 'success', count: newRows.length,
+          // Ganti absensi jadwal ini: hapus lalu insert (transaksi ringan via 2 statement)
+          await sql`DELETE FROM safety_talk_absensi WHERE schedule_id = ${schedule_id}`;
+          for (const k of norm) {
+            await sql`
+              INSERT INTO safety_talk_absensi
+                (schedule_id, bulan, nik, nama, perusahaan, departemen, jabatan, status_kehadiran, quiz_done, checked_by, checked_at)
+              VALUES (${schedule_id}, ${bulan}, ${k.nik}, ${k.nama}, ${k.perusahaan}, ${k.departemen}, ${k.jabatan},
+                      ${k.status}, ${k.quizDone}, ${authUser.nik || ''}, ${now})
+              ON CONFLICT (schedule_id, nik) DO UPDATE SET
+                bulan=EXCLUDED.bulan, nama=EXCLUDED.nama, perusahaan=EXCLUDED.perusahaan, departemen=EXCLUDED.departemen,
+                jabatan=EXCLUDED.jabatan, status_kehadiran=EXCLUDED.status_kehadiran, quiz_done=EXCLUDED.quiz_done,
+                checked_by=EXCLUDED.checked_by, checked_at=EXCLUDED.checked_at`;
+          }
+          const hadirCount   = norm.filter(r => r.status === 'HADIR').length;
+          const quizCount    = norm.filter(r => r.quizDone === 'YA').length;
+          const mangkirCount = norm.filter(r => r.status === 'MANGKIR').length;
+          result = { status: 'success', count: norm.length,
             message: `Hadir: ${hadirCount}, Quiz: ${quizCount}, Mangkir: ${mangkirCount}.` };
           break;
         }
