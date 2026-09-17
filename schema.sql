@@ -122,25 +122,23 @@ CREATE INDEX ix_ins_status  ON inspection_report (status_perbaikan);
 CREATE INDEX ix_ins_tanggal ON inspection_report (tanggal_inspeksi);
 
 -- ── SBO (Safe Behavior Observation) ─────────────────────────────────────────
+-- Semua kolom TEXT (cermin persis sheet SBO_Report) — migrasi setia.
 CREATE TABLE sbo_report (
   id                    TEXT PRIMARY KEY,
-  created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-  tgl_observasi         DATE,
+  "timestamp"           TEXT,
+  tgl_observasi         TEXT,
   nama_pekerjaan        TEXT,
   lokasi                TEXT,
-  -- observer
   nama_observer         TEXT,
   nik_observer          TEXT,
   jabatan_observer      TEXT,
   departemen_observer   TEXT,
   perusahaan_observer   TEXT,
-  -- observee
   nama_observee         TEXT,
   perusahaan_observee   TEXT,
   subcont_observee      TEXT,
   jabatan_observee      TEXT,
   departemen_observee   TEXT,
-  -- kategori observasi
   tindakan_segera       TEXT,
   potensi_bahaya        TEXT,
   apd                   TEXT,
@@ -154,7 +152,6 @@ CREATE TABLE sbo_report (
   foto_temuan           TEXT,               -- URL Google Drive
   rencana_tindakan      TEXT,
   referensi_sop         TEXT,
-  -- PIC & workflow
   nama_pic              TEXT,
   nik_pic               TEXT,
   perusahaan_pic        TEXT,
@@ -162,11 +159,13 @@ CREATE TABLE sbo_report (
   departemen_pic        TEXT,
   jabatan_pic           TEXT,
   no_wa_pic             TEXT,
-  batas_waktu           DATE,
+  batas_waktu           TEXT,
   upload_foto_perbaikan_pic TEXT,           -- URL Drive
-  status_perbaikan      TEXT NOT NULL DEFAULT 'OPEN',
+  status_perbaikan      TEXT DEFAULT 'OPEN',
   pernyataan            TEXT,
-  wa_pic_status         TEXT
+  wa_pic_status         TEXT,
+  catatan_closing       TEXT,
+  tanggal_closing       TEXT
 );
 CREATE INDEX ix_sbo_observer ON sbo_report (nik_observer);
 CREATE INDEX ix_sbo_status   ON sbo_report (status_perbaikan);

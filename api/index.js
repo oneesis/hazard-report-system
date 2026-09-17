@@ -1416,7 +1416,7 @@ const getSBODraftForUser    = (s, n)    => _fetchDraftRow(s, 'SBO_Drafts', n);
 const clearSBODraftForUser  = (s, n)    => _deleteDraftRow(s, 'SBO_Drafts', n);
 
 async function submitSBOReport(sheets, data) {
-  await ensureSBOSheet(sheets);
+  const sql = getSql();
   const id = 'SBO-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   const hasFinding = data.status_observasi === 'ADA_TEMUAN';
 
@@ -1431,42 +1431,25 @@ async function submitSBOReport(sheets, data) {
   if (hasFinding && !data.no_wa_pic && data.nama_pic)
     data.no_wa_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont_pic, data.nama_pic).catch(() => '');
 
-  const row = [
-    id, new Date().toISOString(), data.tgl_observasi || '', data.nama_pekerjaan || '', data.lokasi || '',
-    data.nama_observer || '', data.nik_observer || '', data.jabatan_observer || '',
-    data.departemen_observer || '', data.perusahaan_observer || '',
-    data.nama_observee || '', data.perusahaan_observee || '', data.subcont_observee || '',
-    data.jabatan_observee || '', data.departemen_observee || '',
-    data.tindakan_segera || '', data.potensi_bahaya || '', data.apd || '',
-    data.alat_peralatan || '', data.prosedur || '', data.kebersihan || '',
-    data.status_observasi || 'AMAN',
-    hasFinding ? (data.jenis_temuan || '') : '',
-    hasFinding ? (data.kategori_temuan || '') : '',
-    hasFinding ? (data.deskripsi_temuan || '') : '',
-    fotoUrl,
-    hasFinding ? (data.rencana_tindakan || '') : '',
-    hasFinding ? (data.referensi_sop || '') : '',
-    hasFinding ? (data.nama_pic || '') : '',
-    hasFinding ? (data.nik_pic || '') : '',
-    hasFinding ? (data.perusahaan_pic || '') : '',
-    hasFinding ? (data.subcont_pic || '') : '',
-    hasFinding ? (data.departemen_pic || '') : '',
-    hasFinding ? (data.jabatan_pic || '') : '',
-    hasFinding ? (data.no_wa_pic || '') : '',
-    hasFinding ? (data.batas_waktu || '') : '',
-    '',                            // UPLOAD_FOTO_PERBAIKAN_PIC
-    hasFinding ? 'OPEN' : 'AMAN', // STATUS_PERBAIKAN
-    data.pernyataan || '',
-    '',                            // WA_PIC_STATUS — diisi oleh writeWaStatusToSheet
-  ];
-
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'SBO_Report',
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [row] }
-  });
-  invalidateCache('SBO_Report');
+  const F = v => hasFinding ? (v || '') : ''; // field hanya diisi bila ada temuan
+  await sql`
+    INSERT INTO sbo_report
+      ("timestamp", id, tgl_observasi, nama_pekerjaan, lokasi, nama_observer, nik_observer, jabatan_observer,
+       departemen_observer, perusahaan_observer, nama_observee, perusahaan_observee, subcont_observee, jabatan_observee,
+       departemen_observee, tindakan_segera, potensi_bahaya, apd, alat_peralatan, prosedur, kebersihan, status_observasi,
+       jenis_temuan, kategori_temuan, deskripsi_temuan, foto_temuan, rencana_tindakan, referensi_sop,
+       nama_pic, nik_pic, perusahaan_pic, subcont_pic, departemen_pic, jabatan_pic, no_wa_pic, batas_waktu,
+       upload_foto_perbaikan_pic, status_perbaikan, pernyataan, wa_pic_status)
+    VALUES
+      (${new Date().toISOString()}, ${id}, ${data.tgl_observasi || ''}, ${data.nama_pekerjaan || ''}, ${data.lokasi || ''},
+       ${data.nama_observer || ''}, ${data.nik_observer || ''}, ${data.jabatan_observer || ''}, ${data.departemen_observer || ''},
+       ${data.perusahaan_observer || ''}, ${data.nama_observee || ''}, ${data.perusahaan_observee || ''}, ${data.subcont_observee || ''},
+       ${data.jabatan_observee || ''}, ${data.departemen_observee || ''}, ${data.tindakan_segera || ''}, ${data.potensi_bahaya || ''},
+       ${data.apd || ''}, ${data.alat_peralatan || ''}, ${data.prosedur || ''}, ${data.kebersihan || ''}, ${data.status_observasi || 'AMAN'},
+       ${F(data.jenis_temuan)}, ${F(data.kategori_temuan)}, ${F(data.deskripsi_temuan)}, ${fotoUrl}, ${F(data.rencana_tindakan)},
+       ${F(data.referensi_sop)}, ${F(data.nama_pic)}, ${F(data.nik_pic)}, ${F(data.perusahaan_pic)}, ${F(data.subcont_pic)},
+       ${F(data.departemen_pic)}, ${F(data.jabatan_pic)}, ${F(data.no_wa_pic)}, ${F(data.batas_waktu)},
+       ${''}, ${hasFinding ? 'OPEN' : 'AMAN'}, ${data.pernyataan || ''}, ${''})`;
 
   let waStatus = 'TIDAK ADA WA';
   if (hasFinding && data.no_wa_pic && data.nama_pic) {
@@ -1481,7 +1464,7 @@ async function submitSBOReport(sheets, data) {
     const sent = await sendWaNotification(data.no_wa_pic, msg).catch(() => false);
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
-  await writeWaStatusToSheet(sheets, 'SBO_Report', id, waStatus);
+  await sql`UPDATE sbo_report SET wa_pic_status = ${waStatus} WHERE id = ${id}`;
 
   if (hasFinding && data.nik_pic) await sendPushToNik(sheets, data.nik_pic, {
     title: 'Kamu Ditunjuk sebagai PIC SBO 📋',
@@ -1493,14 +1476,10 @@ async function submitSBOReport(sheets, data) {
 }
 
 async function getSBOReports(sheets, auth) {
+  const sql = getSql();
   let rows;
-  try { rows = await getSheetData(sheets, 'SBO_Report'); } catch { return { status: 'success', data: [] }; }
-  let data = rows.map(obj => {
-    const n = {};
-    Object.keys(obj).forEach(k => { n[normalizeHeader(k)] = obj[k]; });
-    n.report_type = 'SBO';
-    return n;
-  }).filter(r => String(r.id || '').trim());
+  try { rows = await sql`SELECT * FROM sbo_report`; } catch { return { status: 'success', data: [] }; }
+  let data = rows.map(r => ({ ...r, report_type: 'SBO' })).filter(r => String(r.id || '').trim());
   if (!isSuperAdmin(auth?.role)) {
     const co = String(auth?.perusahaan || '').trim().toUpperCase();
     if (co) data = data.filter(r => String(r.perusahaan_observer || '').trim().toUpperCase() === co);
@@ -1972,6 +1951,42 @@ module.exports = async (req, res) => {
         return res.status(200).json({ status: 'success', migrated: ok, total: after[0].n });
       }
 
+      // Migrasi sekali-pakai SBO_Report (Sheets → Neon). Empty-guard.
+      if (action === 'migrate_sbo') {
+        const sql = getSql();
+        const cur = await sql`SELECT count(*)::int AS n FROM sbo_report`;
+        if (cur[0].n > 0) return res.status(200).json({ status: 'success', already: true, count: cur[0].n });
+        let rows = []; try { rows = await getSheetData(sheets, 'SBO_Report'); } catch {}
+        const g = (r, k) => { const v = r[k]; return (v === undefined || v === null) ? '' : String(v); };
+        let ok = 0;
+        for (const r of rows) {
+          const id = g(r, 'ID').trim(); if (!id) continue;
+          await sql`
+            INSERT INTO sbo_report
+              ("timestamp", id, tgl_observasi, nama_pekerjaan, lokasi, nama_observer, nik_observer, jabatan_observer,
+               departemen_observer, perusahaan_observer, nama_observee, perusahaan_observee, subcont_observee, jabatan_observee,
+               departemen_observee, tindakan_segera, potensi_bahaya, apd, alat_peralatan, prosedur, kebersihan, status_observasi,
+               jenis_temuan, kategori_temuan, deskripsi_temuan, foto_temuan, rencana_tindakan, referensi_sop,
+               nama_pic, nik_pic, perusahaan_pic, subcont_pic, departemen_pic, jabatan_pic, no_wa_pic, batas_waktu,
+               upload_foto_perbaikan_pic, status_perbaikan, pernyataan, wa_pic_status, catatan_closing, tanggal_closing)
+            VALUES
+              (${g(r,'TIMESTAMP')}, ${id}, ${g(r,'TGL_OBSERVASI')}, ${g(r,'NAMA_PEKERJAAN')}, ${g(r,'LOKASI')},
+               ${g(r,'NAMA_OBSERVER')}, ${g(r,'NIK_OBSERVER')}, ${g(r,'JABATAN_OBSERVER')}, ${g(r,'DEPARTEMEN_OBSERVER')},
+               ${g(r,'PERUSAHAAN_OBSERVER')}, ${g(r,'NAMA_OBSERVEE')}, ${g(r,'PERUSAHAAN_OBSERVEE')}, ${g(r,'SUBCONT_OBSERVEE')},
+               ${g(r,'JABATAN_OBSERVEE')}, ${g(r,'DEPARTEMEN_OBSERVEE')}, ${g(r,'TINDAKAN_SEGERA')}, ${g(r,'POTENSI_BAHAYA')},
+               ${g(r,'APD')}, ${g(r,'ALAT_PERALATAN')}, ${g(r,'PROSEDUR')}, ${g(r,'KEBERSIHAN')}, ${g(r,'STATUS_OBSERVASI')},
+               ${g(r,'JENIS_TEMUAN')}, ${g(r,'KATEGORI_TEMUAN')}, ${g(r,'DESKRIPSI_TEMUAN')}, ${g(r,'FOTO_TEMUAN')},
+               ${g(r,'RENCANA_TINDAKAN')}, ${g(r,'REFERENSI_SOP')}, ${g(r,'NAMA_PIC')}, ${g(r,'NIK_PIC')}, ${g(r,'PERUSAHAAN_PIC')},
+               ${g(r,'SUBCONT_PIC')}, ${g(r,'DEPARTEMEN_PIC')}, ${g(r,'JABATAN_PIC')}, ${g(r,'NO_WA_PIC')}, ${g(r,'BATAS_WAKTU')},
+               ${g(r,'UPLOAD_FOTO_PERBAIKAN_PIC')}, ${g(r,'STATUS_PERBAIKAN')}, ${g(r,'PERNYATAAN')}, ${g(r,'WA_PIC_STATUS')},
+               ${g(r,'CATATAN_CLOSING')}, ${g(r,'TANGGAL_CLOSING')})
+            ON CONFLICT (id) DO NOTHING`;
+          ok++;
+        }
+        const after = await sql`SELECT count(*)::int AS n FROM sbo_report`;
+        return res.status(200).json({ status: 'success', migrated: ok, total: after[0].n });
+      }
+
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
       await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
@@ -2398,35 +2413,55 @@ module.exports = async (req, res) => {
           result = await submitSBOReport(sheets, data);
           break;
         case 'updateSBOReport': {
+          const _sql = getSql();
+          const sboRow = (await _sql`SELECT * FROM sbo_report WHERE id = ${String(data.id || '').trim()}`)[0];
+          if (!sboRow) throw new Error('Laporan tidak ditemukan.');
           if (data.action_type === 'komitmen') {
             // Observee menyatakan komitmen → status KOMITMEN, notif WA ke PIC
             if (!data.pernyataan?.trim()) throw new Error('Pernyataan komitmen wajib diisi.');
-            const sboRows = await getSheetData(sheets, 'SBO_Report');
-            const sboRow  = sboRows.find(x => String(x['ID']||x['id']||'').trim() === String(data.id||'').trim());
-            if (!sboRow) throw new Error('Laporan tidak ditemukan.');
-            // Cek akses: observee sendiri atau admin
             if (!isAdminOrAbove(authUser.role)) {
-              const obsNik = String(sboRow['NIK_OBSERVEE']||sboRow['nik_observee']||'').trim();
-              const myNik  = String(authUser.nik||'').trim();
+              const obsNik = String(sboRow.nik_observee || '').trim();
+              const myNik  = String(authUser.nik || '').trim();
               if (obsNik && myNik && obsNik !== myNik)
                 throw Object.assign(new Error('Akses ditolak: kamu bukan observee laporan ini.'), { httpStatus: 403 });
             }
-            await updateWorkflowFields(sheets, 'SBO_Report', data.id, {
-              'PERNYATAAN':      data.pernyataan,
-              'STATUS_PERBAIKAN': 'KOMITMEN',
-            });
-            // Notif WA ke PIC agar segera tindak lanjut
-            const noWaPic = String(sboRow['NO_WA_PIC']||sboRow['no_wa_pic']||'').trim();
-            const namaPic = String(sboRow['NAMA_PIC']||sboRow['nama_pic']||'').trim();
+            await _sql`UPDATE sbo_report SET pernyataan = ${data.pernyataan}, status_perbaikan = 'KOMITMEN' WHERE id = ${data.id}`;
+            const noWaPic = String(sboRow.no_wa_pic || '').trim();
+            const namaPic = String(sboRow.nama_pic || '').trim();
             if (noWaPic) {
               await sendWaNotification(noWaPic,
-                `Halo ${namaPic||'PIC'}, Observee telah menyatakan komitmen untuk laporan SBO *${data.id}*.\n\nSilakan lakukan tindak lanjut perbaikan:\n🔗 https://sap-ebl.vercel.app/sbo.html`
+                `Halo ${namaPic || 'PIC'}, Observee telah menyatakan komitmen untuk laporan SBO *${data.id}*.\n\nSilakan lakukan tindak lanjut perbaikan:\n🔗 https://sap-ebl.vercel.app/sbo.html`
               ).catch(() => {});
             }
             result = { status: 'success', message: 'Komitmen observee berhasil disimpan.' };
           } else {
             // PIC melakukan tindak lanjut → langsung CLOSED
-            result = await updateReport(sheets, data, 'SBO_Report', '-SBO-Closing', authUser);
+            assertReportRole(sboRow, authUser, 'pic'); // cek kepemilikan PIC
+            let fotoUrl = '';
+            if (data.upload_foto_perbaikan_pic) {
+              const folder = process.env.FOLDER_CLOSING_ID || process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID;
+              fotoUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, folder, data.id + '-SBO-Closing');
+            }
+            const st = data.status_perbaikan || 'CLOSED';
+            await _sql`
+              UPDATE sbo_report SET status_perbaikan = ${st},
+                upload_foto_perbaikan_pic = COALESCE(NULLIF(${fotoUrl}, ''), upload_foto_perbaikan_pic),
+                catatan_closing = ${data.catatan_closing || ''},
+                tanggal_closing = ${st === 'CLOSED' ? new Date().toISOString() : (sboRow.tanggal_closing || '')}
+              WHERE id = ${data.id}`;
+            // Notif ke observer saat selesai
+            if (st === 'CLOSED' && sboRow.nik_observer) {
+              await sendPushToNik(sheets, String(sboRow.nik_observer).trim(), {
+                title: 'Laporan Selesai ✅', body: `Laporan ${data.id} telah berhasil ditutup.`,
+                url: 'https://sap-ebl.vercel.app/sbo.html',
+              }).catch(() => {});
+            } else if (sboRow.nik_observer) {
+              await sendPushToNik(sheets, String(sboRow.nik_observer).trim(), {
+                title: 'PIC SBO Telah Submit Perbaikan 📸', body: `PIC laporan SBO ${data.id} telah upload foto perbaikan.`,
+                url: 'https://sap-ebl.vercel.app/sbo.html',
+              }).catch(() => {});
+            }
+            result = { status: 'success', message: 'Laporan berhasil diperbarui.', id: data.id, foto_perbaikan_url: fotoUrl };
           }
           break;
         }
