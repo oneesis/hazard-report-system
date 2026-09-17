@@ -75,9 +75,12 @@ async function initDetailPage() {
   if (!id) return showError('Tidak ada ID laporan pada URL.');
 
   try {
-    const all = await fetchAllReports();
-    const report = all.find(r => getReportId(r) === id);
-    if (!report) return showError(`Laporan "${id}" tidak ditemukan.`);
+    // Ambil 1 laporan PENUH by id (termasuk tanda tangan) — tak perlu tarik
+    // seluruh daftar (yang kini ramping tanpa tanda tangan).
+    const res  = await fetch(`/api?action=getReport&id=${encodeURIComponent(id)}`);
+    const json = await res.json().catch(() => null);
+    const report = json && json.status === 'success' ? json.data : null;
+    if (!report) return showError(json?.message || `Laporan "${id}" tidak ditemukan.`);
 
     detailReport = report;
     renderDetail(report);

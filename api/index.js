@@ -837,9 +837,13 @@ function stripSensitiveKaryawan(rows) {
   });
 }
 
+// Field berat (tanda tangan base64 ~40KB/baris) dibuang dari DAFTAR — hanya
+// dibutuhkan di halaman/ modal detail, yang mengambilnya lewat action getReport.
+function _stripHeavy(o) { delete o.tanda_tangan; delete o.signature; return o; }
+
 async function getHazardReports(sheets, auth) {
   let result = (await getSql()`SELECT data FROM hazard_report`)
-    .map(r => ({ ...r.data, report_type: 'HAZARD' }))
+    .map(r => _stripHeavy({ ...r.data, report_type: 'HAZARD' }))
     .filter(obj => String(obj.id || '').trim());
   // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
   if (!isSuperAdmin(auth?.role)) {
@@ -851,7 +855,7 @@ async function getHazardReports(sheets, auth) {
 
 async function getInspectionReports(sheets, auth) {
   let data = (await getSql()`SELECT jenis, data FROM inspection_report`)
-    .map(r => ({ ...r.data, report_type: 'INSPECTION', inspection_sheet: r.jenis }))
+    .map(r => _stripHeavy({ ...r.data, report_type: 'INSPECTION', inspection_sheet: r.jenis }))
     .filter(obj => String(obj.id || '').trim());
   // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
   if (!isSuperAdmin(auth?.role)) {
@@ -889,6 +893,36 @@ async function getAllReports(sheets, nik, nama, role, perusahaan) {
     combined = combined.filter(r => isReportVisibleForUser(r, userNik, userName));
   }
   return { status: 'success', data: combined };
+}
+
+// Satu laporan PENUH (termasuk tanda_tangan) by id — dipakai halaman/modal detail
+// supaya daftar bisa ramping tanpa tanda tangan. Cek visibilitas seperti getAllReports.
+async function getReportById(id, auth) {
+  const sql = getSql();
+  const idT = String(id || '').trim();
+  if (!idT) return { status: 'error', message: 'ID kosong.' };
+  let row = (await sql`SELECT data FROM hazard_report WHERE id = ${idT}`)[0];
+  let report = row ? { ...row.data, report_type: 'HAZARD' } : null;
+  if (!report) {
+    row = (await sql`SELECT jenis, data FROM inspection_report WHERE id = ${idT}`)[0];
+    report = row ? { ...row.data, report_type: 'INSPECTION', inspection_sheet: row.jenis } : null;
+  }
+  if (!report) return { status: 'error', message: 'Laporan tidak ditemukan.' };
+  // Scope perusahaan (non-super-admin) + kepemilikan (user biasa)
+  const roleU = normalizeRole(auth?.role);
+  if (roleU !== 'SUPER_ADMIN') {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (roleU === 'ADMIN') {
+      if (co && String(report.perusahaan || '').trim().toUpperCase() !== co)
+        return { status: 'error', message: 'Akses ditolak.' };
+    } else {
+      const un = String(auth?.nik || '').trim().toLowerCase();
+      const nm = String(auth?.nama || '').trim().toLowerCase();
+      if ((un || nm) && !isReportVisibleForUser(report, un, nm))
+        return { status: 'error', message: 'Akses ditolak.' };
+    }
+  }
+  return { status: 'success', data: report };
 }
 
 function mapInspectionValue(header, data) {
@@ -2102,6 +2136,7 @@ module.exports = async (req, res) => {
         case 'getPCReports':        result = await getPCReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
+        case 'getReport':            result = await getReportById(req.query.id, auth); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         case 'getMyObj': {

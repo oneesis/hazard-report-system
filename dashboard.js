@@ -1625,8 +1625,16 @@ function openReportModal(report) {
     reporterSignature.src = signatureValue;
     reporterSignature.classList.remove("hidden");
   } else {
+    // Daftar kini tak memuat tanda tangan (hemat payload) — ambil lazy by id.
     reporterSignature.removeAttribute("src");
     reporterSignature.classList.add("hidden");
+    fetch(`/api?action=getReport&id=${encodeURIComponent(hazardNumber)}`)
+      .then(r => r.json())
+      .then(j => {
+        const sig = j && j.status === "success" ? getReportValue(j.data, ["tanda_tangan", "signature"], "") : "";
+        if (sig) { reporterSignature.src = sig; reporterSignature.classList.remove("hidden"); }
+      })
+      .catch(() => {});
   }
 
   // "Buka halaman detail" link
