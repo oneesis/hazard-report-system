@@ -2224,8 +2224,12 @@ module.exports = async (req, res) => {
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         case 'getMyObj': {
-          const rows = await _karyawanRows(sheets);
-          const me = rows.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
+          // Query 1 baris langsung (bukan tarik seluruh roster) — beranda ringan.
+          const _sqlMy = getSql();
+          const _nik = String(auth.nik || '').trim();
+          const me = _sqlMy
+            ? (await _sqlMy`SELECT data FROM karyawan WHERE nik = ${_nik}`)[0]?.data
+            : (await _karyawanRows(sheets)).find(r => String(r['NIK'] || '').trim() === _nik);
           result = {
             status: 'success',
             data: {
