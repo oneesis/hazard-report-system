@@ -1056,6 +1056,10 @@ async function submitHazardReport(sheets, data) {
       data.no_whatsapp_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont2, data.nama_pic).catch(() => '');
   }
 
+  // Tanda tangan disimpan sebagai URL Drive (bukan base64) agar DB & daftar ramping.
+  if (data.tanda_tangan && String(data.tanda_tangan).startsWith('data:'))
+    data.tanda_tangan = await saveBase64ImageToDrive(data.tanda_tangan, process.env.FOLDER_HAZARD_ID, id + '-TTD.png').catch(() => data.tanda_tangan);
+
   const row = [
     id, new Date().toISOString(), data.perusahaan, data.subcont1, data.nama, data.nik,
     data.jabatan, data.departemen, data.no_whatsapp, data.tanggal_kejadian, data.shift_kejadian,
@@ -1123,6 +1127,10 @@ async function submitInspectionReport(sheets, data) {
     else if (data.nama_pic)
       data.no_whatsapp_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont2, data.nama_pic).catch(() => '');
   }
+
+  // Tanda tangan disimpan sebagai URL Drive (bukan base64) agar DB & daftar ramping.
+  if (data.tanda_tangan && String(data.tanda_tangan).startsWith('data:'))
+    data.tanda_tangan = await saveBase64ImageToDrive(data.tanda_tangan, process.env.FOLDER_HAZARD_ID, id + '-TTD.png').catch(() => data.tanda_tangan);
 
   const headers = await getSheetHeaders(sheets, sheetName);
   const rowData = { ...data, id, timestamp: new Date().toISOString(), upload_foto_inspeksi: fotoInspeksiUrl, status_perbaikan: 'OPEN' };
@@ -2019,6 +2027,35 @@ module.exports = async (req, res) => {
           ON CONFLICT (nik) DO NOTHING`;
         const n = (await sql`SELECT count(*)::int n FROM karyawan`)[0].n;
         return res.status(200).json({ status: 'success', migrated: recs.length, total: n });
+      }
+
+      // Backfill tanda tangan base64 → URL Drive. Bertahap (batch) supaya tak
+      // timeout: panggil berulang sampai remaining = 0. Publik (hanya konversi,
+      // tak balikkan data). ?limit=N (default 12, maks 30).
+      if (action === 'migrate_signatures') {
+        const sql = getSql();
+        const LIMIT = Math.min(parseInt(req.query.limit || '12', 10) || 12, 30);
+        const folder = process.env.FOLDER_HAZARD_ID;
+        let migrated = 0;
+        for (const tbl of ['hazard_report', 'inspection_report']) {
+          if (migrated >= LIMIT) break;
+          const rows = tbl === 'hazard_report'
+            ? await sql`SELECT id, data FROM hazard_report WHERE data->>'tanda_tangan' LIKE 'data:%' LIMIT ${LIMIT - migrated}`
+            : await sql`SELECT id, data FROM inspection_report WHERE data->>'tanda_tangan' LIKE 'data:%' LIMIT ${LIMIT - migrated}`;
+          for (const r of rows) {
+            try {
+              const url = await saveBase64ImageToDrive(r.data.tanda_tangan, folder, r.id + '-TTD.png');
+              if (!url) continue;
+              const patch = JSON.stringify({ tanda_tangan: url });
+              if (tbl === 'hazard_report') await sql`UPDATE hazard_report SET data = data || ${patch}::jsonb WHERE id = ${r.id}`;
+              else await sql`UPDATE inspection_report SET data = data || ${patch}::jsonb WHERE id = ${r.id}`;
+              migrated++;
+            } catch { /* baris gagal dilewati, coba lagi di batch berikutnya */ }
+          }
+        }
+        const remH = (await sql`SELECT count(*)::int n FROM hazard_report WHERE data->>'tanda_tangan' LIKE 'data:%'`)[0].n;
+        const remI = (await sql`SELECT count(*)::int n FROM inspection_report WHERE data->>'tanda_tangan' LIKE 'data:%'`)[0].n;
+        return res.status(200).json({ status: 'success', migrated, remaining: remH + remI });
       }
 
       // Semua action GET lainnya wajib token valid

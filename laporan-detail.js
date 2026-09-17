@@ -169,7 +169,9 @@ function renderDetail(r) {
   const sig = getReportValue(r, ['tanda_tangan','signature'], '');
   if (sig) {
     const sigEl = document.getElementById('dfSignature');
-    sigEl.src = sig; sigEl.style.display = '';
+    // base64 lama dipakai apa adanya; URL Drive baru dinormalisasi jadi thumbnail.
+    sigEl.src = sig.startsWith('data:') ? sig : normalizeImageUrl(sig);
+    sigEl.style.display = '';
   }
 
   // Tindak lanjut

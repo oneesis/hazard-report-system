@@ -1621,8 +1621,9 @@ function openReportModal(report) {
   if (afterPhotoInput) {
     afterPhotoInput.value = "";
   }
+  const _sigSrc = (s) => s.startsWith("data:") ? s : normalizeImageUrl(s);
   if (signatureValue) {
-    reporterSignature.src = signatureValue;
+    reporterSignature.src = _sigSrc(signatureValue);
     reporterSignature.classList.remove("hidden");
   } else {
     // Daftar kini tak memuat tanda tangan (hemat payload) — ambil lazy by id.
@@ -1632,7 +1633,7 @@ function openReportModal(report) {
       .then(r => r.json())
       .then(j => {
         const sig = j && j.status === "success" ? getReportValue(j.data, ["tanda_tangan", "signature"], "") : "";
-        if (sig) { reporterSignature.src = sig; reporterSignature.classList.remove("hidden"); }
+        if (sig) { reporterSignature.src = _sigSrc(sig); reporterSignature.classList.remove("hidden"); }
       })
       .catch(() => {});
   }
