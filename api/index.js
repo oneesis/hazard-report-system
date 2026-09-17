@@ -869,14 +869,8 @@ function stripSensitiveKaryawan(rows) {
 }
 
 async function getHazardReports(sheets, auth) {
-  const data = await getCachedSheet(sheets, 'Hazard_Report', 300_000);
-  let result = data
-    .map(obj => {
-      const normalized = {};
-      Object.keys(obj).forEach(k => { normalized[normalizeHeader(k)] = obj[k]; });
-      normalized.report_type = 'HAZARD';
-      return normalized;
-    })
+  let result = (await getSql()`SELECT data FROM hazard_report`)
+    .map(r => ({ ...r.data, report_type: 'HAZARD' }))
     .filter(obj => String(obj.id || '').trim());
   // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
   if (!isSuperAdmin(auth?.role)) {
@@ -887,23 +881,9 @@ async function getHazardReports(sheets, auth) {
 }
 
 async function getInspectionReports(sheets, auth) {
-  // ponytail: parallel fetches — 8 sheets sequential was ~8x slower
-  const results = await Promise.allSettled(
-    INSPECTION_SHEETS.map(sheetName => getCachedSheet(sheets, sheetName, 300_000).then(rows => ({ sheetName, rows })))
-  );
-  let data = [];
-  for (const result of results) {
-    if (result.status !== 'fulfilled') continue;
-    const { sheetName, rows } = result.value;
-    rows.forEach(row => {
-      const normalized = {};
-      Object.keys(row).forEach(k => { normalized[normalizeHeader(k)] = row[k]; });
-      if (!String(normalized.id || '').trim()) return;
-      normalized.report_type = 'INSPECTION';
-      normalized.inspection_sheet = sheetName;
-      data.push(normalized);
-    });
-  }
+  let data = (await getSql()`SELECT jenis, data FROM inspection_report`)
+    .map(r => ({ ...r.data, report_type: 'INSPECTION', inspection_sheet: r.jenis }))
+    .filter(obj => String(obj.id || '').trim());
   // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
   if (!isSuperAdmin(auth?.role)) {
     const co = String(auth?.perusahaan || '').trim().toUpperCase();
@@ -1050,21 +1030,10 @@ async function ensureWaStatusColumn(sheets, sheetName) {
   return col;
 }
 
+// Tulis status WA PIC. Hazard/Inspeksi kini di Postgres (JSONB) — set field.
 async function writeWaStatusToSheet(sheets, sheetName, reportId, waStatus) {
-  try {
-    const waCol = await ensureWaStatusColumn(sheets, sheetName);
-    const dataRes = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
-    const rows = dataRes.data.values || [];
-    // Search all columns — ID might not always be in col A
-    const rowIdx = rows.findIndex((row, i) => i > 0 && row.some(cell => String(cell || '').trim() === reportId));
-    if (rowIdx === -1) { console.error('writeWaStatus: row not found for', reportId, 'in', sheetName); return; }
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${sheetName}!${colIndexToLetter(waCol)}${rowIdx + 1}`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [[waStatus]] }
-    });
-  } catch (err) { console.error('writeWaStatus error:', err?.message || err); }
+  try { await _reportSet(sheetName, reportId, { 'WA_PIC_STATUS': waStatus }); }
+  catch (err) { console.error('writeWaStatus error:', err?.message || err); }
 }
 
 async function submitHazardReport(sheets, data) {
@@ -1093,12 +1062,14 @@ async function submitHazardReport(sheets, data) {
     data.departemen_pic, data.jabatan_pic, data.nama_pic, data.no_whatsapp_pic, data.batas_waktu,
     '', 'OPEN', data.pernyataan, data.tanda_tangan
   ];
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Hazard_Report',
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [row] }
-  });
+  // Bangun objek ter-normalisasi (key = header sheet ter-normalisasi) agar konsisten
+  // dengan getHazardReports & migrasi, lalu simpan sebagai data JSONB di Postgres.
+  const _hzHeaders = await getSheetHeaders(sheets, 'Hazard_Report');
+  const _hzData = {};
+  _hzHeaders.forEach((h, i) => { _hzData[normalizeHeader(h)] = row[i] ?? ''; });
+  await getSql()`
+    INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
+    VALUES (${id}, ${_hzData.nik || ''}, ${_hzData.perusahaan || ''}, ${_hzData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_hzData)}::jsonb)`;
 
   let waStatus = 'TIDAK ADA WA';
   if (data.no_whatsapp_pic && data.nama_pic) {
@@ -1154,12 +1125,12 @@ async function submitInspectionReport(sheets, data) {
   const rowData = { ...data, id, timestamp: new Date().toISOString(), upload_foto_inspeksi: fotoInspeksiUrl, status_perbaikan: 'OPEN' };
   const row = headers.map(h => mapInspectionValue(h, rowData));
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: sheetName,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [row] }
-  });
+  // Simpan sebagai data JSONB (key = header ter-normalisasi) di inspection_report.
+  const _insData = {};
+  headers.forEach((h, i) => { _insData[normalizeHeader(h)] = row[i] ?? ''; });
+  await getSql()`
+    INSERT INTO inspection_report (id, jenis, nik, perusahaan, status_perbaikan, data)
+    VALUES (${id}, ${sheetName}, ${_insData.nik || ''}, ${_insData.perusahaan || ''}, ${_insData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_insData)}::jsonb)`;
 
   let waStatus = 'TIDAK ADA WA';
   if (data.no_whatsapp_pic && data.nama_pic) {
@@ -1500,25 +1471,38 @@ async function getSBOReports(sheets, auth) {
   return { status: 'success', data };
 }
 
+// ── Report store (Postgres, JSONB) — hazard + inspeksi ──────────────────────
+// Hazard_Report → tabel hazard_report; INS_* → inspection_report (kolom jenis).
+// Baris disimpan sebagai `data` JSONB (objek ter-normalisasi, sama seperti yang
+// dulu dihasilkan getHazardReports/getInspectionReports dari sheet).
+async function _reportFind(sheetName, id) {
+  const sql = getSql();
+  const idT = String(id || '').trim();
+  if (sheetName === 'Hazard_Report') {
+    const r = (await sql`SELECT data FROM hazard_report WHERE id = ${idT}`)[0];
+    return r ? { ...r.data, report_type: 'HAZARD' } : null;
+  }
+  const r = (await sql`SELECT jenis, data FROM inspection_report WHERE id = ${idT}`)[0];
+  return r ? { ...r.data, report_type: 'INSPECTION', inspection_sheet: r.jenis } : null;
+}
+async function _reportSet(sheetName, id, fields) {
+  const sql = getSql();
+  const idT = String(id || '').trim();
+  const obj = {};
+  for (const [k, v] of Object.entries(fields)) obj[normalizeHeader(k)] = v;
+  const patch = JSON.stringify(obj);
+  const newStatus = obj.status_perbaikan ?? null; // COALESCE menjaga nilai lama bila tak diubah
+  if (sheetName === 'Hazard_Report')
+    await sql`UPDATE hazard_report SET data = data || ${patch}::jsonb, status_perbaikan = COALESCE(${newStatus}, status_perbaikan) WHERE id = ${idT}`;
+  else
+    await sql`UPDATE inspection_report SET data = data || ${patch}::jsonb, status_perbaikan = COALESCE(${newStatus}, status_perbaikan) WHERE id = ${idT}`;
+}
+
 async function updateWorkflowFields(sheets, sheetName, reportId, fields) {
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
-  const rows = res.data.values || [];
-  if (rows.length < 2) throw new Error('Data tidak ditemukan.');
-  const headers = rows[0].map(normalizeHeader);
-  const idCol = headers.indexOf('id');
-  if (idCol === -1) throw new Error('Kolom ID tidak ditemukan.');
-  const rowIndex = rows.findIndex((row, i) => i > 0 && String(row[idCol] || '').trim() === String(reportId).trim());
-  if (rowIndex === -1) throw new Error('Laporan tidak ditemukan.');
-  const actualRow = rowIndex + 1;
-  const reportRow = {};
-  headers.forEach((h, i) => { reportRow[h] = rows[rowIndex][i] ?? ''; });
-  const updates = Object.entries(fields).map(([key, value]) => {
-    const colIdx = headers.indexOf(normalizeHeader(key));
-    return colIdx !== -1 ? { range: `${sheetName}!${colIndexToLetter(colIdx)}${actualRow}`, values: [[value]] } : null;
-  }).filter(Boolean);
-  if (updates.length)
-    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: 'USER_ENTERED', data: updates } });
-  return reportRow;
+  const pre = await _reportFind(sheetName, reportId); // baris SEBELUM update (untuk kontak WA/push)
+  if (!pre) throw new Error('Laporan tidak ditemukan.');
+  await _reportSet(sheetName, reportId, fields);
+  return pre;
 }
 
 // Cek bahwa caller adalah PIC atau pelapor laporan (skip jika NIK tidak tersedia di report lama)
@@ -1540,10 +1524,8 @@ function assertReportRole(reportRow, auth, requiredRole) {
 async function submitActionPlan(sheets, data, sheetName, auth) {
   if (!data.rencana_tindakan?.trim()) throw new Error('Rencana tindakan wajib diisi.');
   // Baca dulu untuk cek ownership sebelum update
-  const checkRows = await getSheetData(sheets, sheetName);
-  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
-  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
-  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  const checkNorm = await _reportFind(sheetName, data.id);
+  if (!checkNorm) throw new Error('Laporan tidak ditemukan.');
   assertReportRole(checkNorm, auth, 'pic');
   const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, {
     'RENCANA_TINDAKAN':  data.rencana_tindakan.trim(),
@@ -1577,10 +1559,8 @@ async function reviewActionPlan(sheets, data, sheetName, auth) {
   if (decision !== 'approved' && decision !== 'rejected') throw new Error('Decision harus approved atau rejected.');
   if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Komentar wajib diisi jika menolak.');
   // Cek ownership: harus pelapor atau admin
-  const checkRows = await getSheetData(sheets, sheetName);
-  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
-  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
-  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  const checkNorm = await _reportFind(sheetName, data.id);
+  if (!checkNorm) throw new Error('Laporan tidak ditemukan.');
   assertReportRole(checkNorm, auth, 'reporter');
   const fields = {
     'PLAN_STATUS':          decision,
@@ -1611,80 +1591,44 @@ async function reviewActionPlan(sheets, data, sheetName, auth) {
 }
 
 async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: sheetName });
-  const rows = res.data.values || [];
-  if (rows.length < 2) throw new Error('Data tidak ditemukan.');
-
-  const headers = rows[0].map(normalizeHeader);
-  const idCol = headers.indexOf('id');
-  if (idCol === -1) throw new Error('Kolom ID tidak ditemukan.');
-
-  const rowIndex = rows.findIndex((row, i) => i > 0 && String(row[idCol] || '').trim() === String(data.id || '').trim());
-  if (rowIndex === -1) throw new Error('Data tidak ditemukan.');
-  const actualRow = rowIndex + 1; // 1-indexed, rows[0]=header=row1, rows[1]=data=row2
-
-  // Cek ownership: PIC yang boleh update status laporan
-  if (auth) {
-    const rowObj = {};
-    headers.forEach((h, i) => { rowObj[h] = rows[rowIndex][i] ?? ''; });
-    assertReportRole(rowObj, auth, 'pic');
-  }
+  const rowObj = await _reportFind(sheetName, data.id);
+  if (!rowObj) throw new Error('Data tidak ditemukan.');
+  if (auth) assertReportRole(rowObj, auth, 'pic');
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic) {
-    // Fallback: FOLDER_CLOSING_ID → FOLDER_SBO_ID → FOLDER_HAZARD_ID
     const closingFolder = process.env.FOLDER_CLOSING_ID || process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID;
     fotoPerbaikanUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, closingFolder, data.id + folderSuffix);
   }
 
-  const updates = [];
-  const setCell = (headerName, value) => {
-    const colIdx = headers.indexOf(normalizeHeader(headerName));
-    if (colIdx !== -1 && value != null)
-      updates.push({ range: `${sheetName}!${colIndexToLetter(colIdx)}${actualRow}`, values: [[value]] });
+  const fields = {
+    'STATUS PERBAIKAN': data.status_perbaikan || 'OPEN',
+    'CATATAN CLOSING':  data.catatan_closing || '',
   };
+  if (fotoPerbaikanUrl) fields['UPLOAD FOTO PERBAIKAN PIC'] = fotoPerbaikanUrl;
+  if (data.status_perbaikan === 'CLOSED') fields['TANGGAL CLOSING'] = new Date().toISOString();
+  if (data.closing_status) fields['CLOSING_STATUS'] = data.closing_status;
+  await _reportSet(sheetName, data.id, fields);
 
-  setCell('STATUS PERBAIKAN', data.status_perbaikan || 'OPEN');
-  if (fotoPerbaikanUrl) setCell('UPLOAD FOTO PERBAIKAN PIC', fotoPerbaikanUrl);
-  setCell('CATATAN CLOSING', data.catatan_closing || '');
-  if (data.status_perbaikan === 'CLOSED')   setCell('TANGGAL CLOSING',  new Date().toISOString());
-  if (data.closing_status)                  setCell('CLOSING_STATUS',   data.closing_status);
-
-  if (updates.length) {
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
-    });
-  }
   // [PUSH-START] — push/WA ke pelapor saat laporan FOLLOWUP atau CLOSED
   if (data.status_perbaikan === 'CLOSED' || data.status_perbaikan === 'FOLLOWUP') {
-    const rowData = {};
-    headers.forEach((h, i) => { rowData[h] = rows[rowIndex][i] ?? ''; });
-    // nik_observer = SBO, nik_pelapor = Inspeksi, nik = Hazard
-    const reporterNik = rowData['nik_observer'] || rowData['nik'] || rowData['nik_pelapor'] || '';
+    const reporterNik = rowObj['nik_observer'] || rowObj['nik'] || rowObj['nik_pelapor'] || '';
     const isSBO = sheetName === 'SBO_Report';
-    const detailUrl = isSBO
-      ? `https://sap-ebl.vercel.app/sbo.html`
-      : `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
+    const detailUrl = isSBO ? `https://sap-ebl.vercel.app/sbo.html` : `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
     if (data.status_perbaikan === 'CLOSED') {
       if (reporterNik) await sendPushToNik(sheets, reporterNik, {
-        title: 'Laporan Selesai ✅',
-        body: `Laporan ${data.id} telah berhasil ditutup.`,
-        url: detailUrl
+        title: 'Laporan Selesai ✅', body: `Laporan ${data.id} telah berhasil ditutup.`, url: detailUrl
       }).catch(() => {});
     } else {
-      // no_whatsapp = Hazard; no_wa_observer tidak ada di SBO (tidak simpan WA observer)
-      const noWa = rowData['no_whatsapp'] || '';
-      const nama  = rowData['nama'] || rowData['nama_observer'] || '';
+      const noWa = rowObj['no_whatsapp'] || '';
+      const nama = rowObj['nama'] || rowObj['nama_observer'] || '';
       if (noWa && !isSBO) {
         const msg = `Halo ${nama}, PIC laporan *${data.id}* telah menyelesaikan perbaikan dan meminta konfirmasimu.\n\nSilakan konfirmasi apakah perbaikan sudah sesuai:\n🔗 ${detailUrl}`;
         await sendWaNotification(noWa, msg).catch(() => {});
       }
       if (reporterNik) await sendPushToNik(sheets, reporterNik, {
         title: isSBO ? 'PIC SBO Telah Submit Perbaikan 📸' : 'Perlu Konfirmasi Closing 🔔',
-        body: isSBO
-          ? `PIC laporan SBO ${data.id} telah upload foto perbaikan.`
-          : `PIC laporan ${data.id} telah submit closing. Silakan konfirmasi.`,
+        body: isSBO ? `PIC laporan SBO ${data.id} telah upload foto perbaikan.` : `PIC laporan ${data.id} telah submit closing. Silakan konfirmasi.`,
         url: detailUrl
       }).catch(() => {});
     }
@@ -1694,6 +1638,8 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
 }
 
 async function ensureClosingColumns(sheets, sheetName) {
+  return; // Hazard/Inspeksi kini Postgres JSONB — tak perlu kolom sheet.
+  // eslint-disable-next-line no-unreachable
   const needed = ['CLOSING_STATUS', 'CLOSING_REVIEW_COMMENT', 'CLOSING_REVIEWED_AT'];
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!1:1` });
   const existing = (res.data.values?.[0] || []).map(h => normalizeHeader(h));
@@ -1732,10 +1678,8 @@ async function reviewClosing(sheets, data, sheetName, auth) {
   if (decision !== 'confirmed' && decision !== 'rejected') throw new Error('Decision harus confirmed atau rejected.');
   if (decision === 'rejected' && !data.comment?.trim()) throw new Error('Catatan wajib diisi jika menolak closing.');
   // Cek ownership: harus pelapor atau admin
-  const checkRows = await getSheetData(sheets, sheetName);
-  const checkRow  = checkRows.find(r => String(r['ID'] || r['id'] || '').trim() === String(data.id || '').trim());
-  if (!checkRow) throw new Error('Laporan tidak ditemukan.');
-  const checkNorm = {}; Object.keys(checkRow).forEach(k => { checkNorm[normalizeHeader(k)] = checkRow[k]; });
+  const checkNorm = await _reportFind(sheetName, data.id);
+  if (!checkNorm) throw new Error('Laporan tidak ditemukan.');
   assertReportRole(checkNorm, auth, 'reporter');
 
   await ensureClosingColumns(sheets, sheetName);
@@ -1996,6 +1940,45 @@ module.exports = async (req, res) => {
         }
         const cnt = await sql`SELECT (SELECT count(*)::int FROM safety_talk_schedule) AS sched, (SELECT count(*)::int FROM safety_talk_absensi) AS abs`;
         return res.status(200).json({ status: 'success', schedule_migrated: sMig, absensi_migrated: aMig, schedule_total: cnt[0].sched, absensi_total: cnt[0].abs });
+      }
+
+      // Migrasi sekali-pakai Hazard_Report → hazard_report (JSONB). Empty-guard.
+      if (action === 'migrate_hazard') {
+        const sql = getSql();
+        // Idempoten per-baris (ON CONFLICT) — aman dijalankan ulang tanpa memblokir
+        let rows = []; try { rows = await getSheetData(sheets, 'Hazard_Report'); } catch {}
+        let ok = 0;
+        for (const r of rows) {
+          const d = {}; Object.keys(r).forEach(k => { d[normalizeHeader(k)] = r[k]; });
+          const id = String(d.id || '').trim(); if (!id) continue;
+          await sql`INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
+            VALUES (${id}, ${d.nik || ''}, ${d.perusahaan || ''}, ${d.status_perbaikan || ''}, ${JSON.stringify(d)}::jsonb)
+            ON CONFLICT (id) DO NOTHING`;
+          ok++;
+        }
+        const n = (await sql`SELECT count(*)::int n FROM hazard_report`)[0].n;
+        return res.status(200).json({ status: 'success', migrated: ok, total: n });
+      }
+
+      // Migrasi sekali-pakai 8 sheet INS_* → inspection_report (JSONB). Empty-guard.
+      if (action === 'migrate_inspection') {
+        const sql = getSql();
+        let ok = 0, perSheet = {};
+        for (const sheetName of INSPECTION_SHEETS) {
+          let rows = []; try { rows = await getSheetData(sheets, sheetName); } catch {}
+          let c = 0;
+          for (const r of rows) {
+            const d = {}; Object.keys(r).forEach(k => { d[normalizeHeader(k)] = r[k]; });
+            const id = String(d.id || '').trim(); if (!id) continue;
+            await sql`INSERT INTO inspection_report (id, jenis, nik, perusahaan, status_perbaikan, data)
+              VALUES (${id}, ${sheetName}, ${d.nik || ''}, ${d.perusahaan || ''}, ${d.status_perbaikan || ''}, ${JSON.stringify(d)}::jsonb)
+              ON CONFLICT (id) DO NOTHING`;
+            ok++; c++;
+          }
+          perSheet[sheetName] = c;
+        }
+        const n = (await sql`SELECT count(*)::int n FROM inspection_report`)[0].n;
+        return res.status(200).json({ status: 'success', migrated: ok, total: n, per_sheet: perSheet });
       }
 
       // Semua action GET lainnya wajib token valid
