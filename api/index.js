@@ -1956,6 +1956,17 @@ module.exports = async (req, res) => {
       // Migrasi sekali-pakai Master_Karyawan → karyawan (JSONB). Empty-guard.
       // Publik (tanpa token) KARENA login bergantung roster: harus bisa mengisi
       // Postgres sebelum ada yang login. Hanya balikkan hitungan — tak bocorkan data.
+      // Ping ringan untuk "menghangatkan" Neon (cegah cold-start). Publik, tanpa
+      // token. Jalankan SELECT 1 supaya DB bangun dari scale-to-zero. Dipakai
+      // penjadwal eksternal HANYA di jam kerja (jangan 24 jam — hemat compute).
+      if (action === 'ping') {
+        const t = Date.now();
+        let db = 'skip';
+        const sql = getSql();
+        if (sql) { try { await sql`SELECT 1`; db = 'ok'; } catch { db = 'error'; } }
+        return res.status(200).json({ status: 'success', db, ms: Date.now() - t });
+      }
+
       if (action === 'migrate_karyawan') {
         const sql = getSql();
         const cur = (await sql`SELECT count(*)::int n FROM karyawan`)[0].n;
