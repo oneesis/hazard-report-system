@@ -266,11 +266,12 @@ function openUMModal(user, action) {
         </div>
 
         <p class="um-section-label">Target Bulanan</p>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0 12px">
           ${umFieldNum('OBJ HR','Hazard Report',user['OBJ HR']||'0')}
           ${umFieldNum('OBJ INS','Inspeksi',user['OBJ INS']||'0')}
           ${umFieldNum('OBJ SBO','SBO',user['OBJ SBO']||'0')}
           ${umFieldNum('OBJ PC','PC',user['OBJ PC']||'0')}
+          ${umFieldNum('OBJ_ST','Safety Talk',user['OBJ_ST']||user['OBJ ST']||'0')}
         </div>
 
         <p id="umModalMsg" class="cp-msg" style="margin-top:14px;margin-bottom:0"></p>
@@ -317,7 +318,7 @@ async function submitUMModal(action, originalNik) {
     JABATAN: get('JABATAN'), DEPARTEMEN: get('DEPARTEMEN'),
     'NO WHATSAPP': get('NO_WHATSAPP'), EMAIL: get('EMAIL'), ROLE: get('ROLE'),
     'OBJ HR': get('OBJ_HR'), 'OBJ INS': get('OBJ_INS'),
-    'OBJ SBO': get('OBJ_SBO'), 'OBJ PC': get('OBJ_PC')
+    'OBJ SBO': get('OBJ_SBO'), 'OBJ PC': get('OBJ_PC'), 'OBJ_ST': get('OBJ_ST')
   };
 
   if (action === 'ADD') {
