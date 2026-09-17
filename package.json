@@ -5,6 +5,7 @@
     "googleapis": "^144.0.0",
     "jsonwebtoken": "^9.0.3",
     "web-push": "^3.6.7",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "@neondatabase/serverless": "^0.10.4"
   }
 }
