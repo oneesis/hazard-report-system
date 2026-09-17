@@ -67,7 +67,7 @@ async function sendEmailOtp(to, code) {
 
 // Cari NIK di Master_Karyawan; balikkan { nama, email } atau null.
 async function _findKaryawanEmail(sheets, nik) {
-  const rows = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const rows = await _karyawanRows(sheets);
   const target = String(nik || '').trim();
   const r = rows.find(x => String(x['NIK'] || '').trim() === target);
   if (!r) return null;
@@ -76,7 +76,7 @@ async function _findKaryawanEmail(sheets, nik) {
 
 // Cek email sudah dipakai NIK lain?
 async function _emailTakenByOther(sheets, email, nik) {
-  const rows = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const rows = await _karyawanRows(sheets);
   const e = String(email || '').trim().toLowerCase();
   return rows.some(x => String(x['EMAIL'] || '').trim().toLowerCase() === e && String(x['NIK'] || '').trim() !== String(nik || '').trim());
 }
@@ -178,6 +178,26 @@ async function getCachedSheet(sheets, sheetName, ttlMs = 60_000) {
 
 function invalidateCache(sheetName) {
   _dataCache.delete(`sheet:${sheetName}`);
+}
+
+// Roster (Master_Karyawan) — sumber utama kini Postgres (tabel karyawan, kolom
+// data JSONB berisi baris lengkap dengan key HEADER ASLI, mis. r['NIK'],
+// r['PERUSAHAAN'], r['PASSWORD']). Fallback ke Sheets bila Postgres kosong/gagal
+// supaya login TIDAK PERNAH putus (pra-migrasi / DB down). Cache dipakai bareng
+// key 'sheet:Master_Karyawan' agar invalidateCache('Master_Karyawan') tetap jalan.
+async function _karyawanRows(sheets) {
+  const key = 'sheet:Master_Karyawan';
+  const now = Date.now();
+  const hit = _dataCache.get(key);
+  if (hit && now < hit.expAt) return hit.data;
+  let data = [];
+  const sql = getSql();
+  if (sql) {
+    try { data = (await sql`SELECT data FROM karyawan`).map(x => x.data || {}); } catch { data = []; }
+  }
+  if (!data.length) { try { data = await getSheetData(sheets, 'Master_Karyawan'); } catch { data = []; } }
+  _dataCache.set(key, { data, expAt: now + 30_000 });
+  return data;
 }
 
 function normalizeHeader(h) {
@@ -415,7 +435,7 @@ function requireAuth(req) {
 
 // #2 — Cek apakah token sudah di-invalidasi via logout (LAST_LOGOUT_AT di sheet)
 async function checkTokenValid(sheets, auth) {
-  const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const data = await _karyawanRows(sheets);
   const user = data.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
   if (!user) return;
   const lastLogout = Number(user['LAST_LOGOUT_AT'] || 0);
@@ -427,32 +447,22 @@ async function checkTokenValid(sheets, auth) {
   await assertNotCuti(sheets, auth);
 }
 
-// Helper: update satu kolom di baris karyawan (dipakai item 1 & 2)
+// Helper: set satu field di baris karyawan (Postgres JSONB). colName = key
+// HEADER ASLI persis seperti dibaca client (mis. 'EMAIL', 'LOGIN_LOCKED_UNTIL',
+// 'LAST_LOGOUT_AT'). Sinkron kolom top-level role/email untuk quiz-she & index.
 async function _updateKaryawanCol(sheets, nik, colName, value) {
   try {
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
-    const rows = res.data.values || [];
-    if (!rows.length) return;
-    const headers = rows[0].map(h => String(h).trim().toUpperCase());
-    let colIdx = headers.indexOf(colName.toUpperCase());
-    if (colIdx === -1) {
-      // Kolom belum ada — tambah header dulu
-      colIdx = headers.length;
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `Master_Karyawan!${colIndexToLetter(colIdx)}1`,
-        valueInputOption: 'RAW', requestBody: { values: [[colName]] }
-      });
-    }
-    const nikStr = String(nik || '').trim();
-    const nikColIdx = headers.indexOf('NIK');
-    const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikColIdx] || '').trim() === nikStr);
-    if (rowIdx === -1) return;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `Master_Karyawan!${colIndexToLetter(colIdx)}${rowIdx + 1}`,
-      valueInputOption: 'RAW', requestBody: { values: [[value]] }
-    });
+    const sql = getSql(); if (!sql) return;
+    const nikStr = String(nik || '').trim(); if (!nikStr) return;
+    const val = value === undefined || value === null ? '' : String(value);
+    const patch = JSON.stringify({ [colName]: val });
+    const up = colName.toUpperCase();
+    if (up === 'ROLE')
+      await sql`UPDATE karyawan SET data = data || ${patch}::jsonb, role = ${val} WHERE nik = ${nikStr}`;
+    else if (up === 'EMAIL')
+      await sql`UPDATE karyawan SET data = data || ${patch}::jsonb, email = ${val} WHERE nik = ${nikStr}`;
+    else
+      await sql`UPDATE karyawan SET data = data || ${patch}::jsonb WHERE nik = ${nikStr}`;
     invalidateCache('Master_Karyawan');
   } catch { /* fail silently — jangan break alur utama */ }
 }
@@ -464,7 +474,7 @@ async function login(sheets, nik, password, ip) {
   const rateCheck = checkLoginRateLimit(nik);
   if (!rateCheck.ok) return { status: 'error', message: rateCheck.message };
 
-  const data = await getCachedSheet(sheets, 'Master_Karyawan', 30_000);
+  const data = await _karyawanRows(sheets);
   const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
 
   // #1 — Persistent lockout check (survives cold start / multi-instance)
@@ -530,29 +540,16 @@ async function changePassword(sheets, nik, oldPassword, newPassword) {
   if (isWeakPassword(newPassword))
     throw Object.assign(new Error('Password terlalu umum. Gunakan kombinasi huruf, angka, atau simbol.'), { httpStatus: 400 });
 
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
-  const rows = res.data.values || [];
-  if (rows.length < 2) throw new Error('Data karyawan tidak ditemukan.');
+  const sql = getSql(); if (!sql) throw new Error('Database tidak tersedia.');
+  const nikStr = String(nik || '').trim();
+  const row = (await sql`SELECT data FROM karyawan WHERE nik = ${nikStr}`)[0];
+  if (!row) throw new Error('User tidak ditemukan.');
 
-  const headers = rows[0].map(h => String(h).trim().toUpperCase());
-  const nikCol = headers.indexOf('NIK');
-  const pwCol  = headers.indexOf('PASSWORD');
-  if (nikCol === -1 || pwCol === -1) throw new Error('Kolom NIK/PASSWORD tidak ditemukan.');
-
-  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(nik || '').trim());
-  if (rowIdx === -1) throw new Error('User tidak ditemukan.');
-
-  if (!verifyPassword(oldPassword, rows[rowIdx][pwCol]))
+  if (!verifyPassword(oldPassword, row.data['PASSWORD']))
     throw Object.assign(new Error('Password lama salah.'), { httpStatus: 400 });
 
   const hash = bcrypt.hashSync(newPassword, 10);
-  const colLetter = colIndexToLetter(pwCol);
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `Master_Karyawan!${colLetter}${rowIdx + 1}`,
-    valueInputOption: 'RAW',
-    requestBody: { values: [[hash]] }
-  });
+  await sql`UPDATE karyawan SET data = data || ${JSON.stringify({ PASSWORD: hash })}::jsonb WHERE nik = ${nikStr}`;
   invalidateCache('Master_Karyawan');
   return { status: 'success', message: 'Password berhasil diubah.' };
 }
@@ -564,25 +561,13 @@ async function adminResetPassword(sheets, auth, targetNik, newPassword) {
   if (isWeakPassword(newPassword))
     throw Object.assign(new Error('Password terlalu umum. Gunakan kombinasi huruf, angka, atau simbol.'), { httpStatus: 400 });
 
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
-  const rows = res.data.values || [];
-  if (rows.length < 2) throw new Error('Data karyawan tidak ditemukan.');
-
-  const headers = rows[0].map(h => String(h).trim().toUpperCase());
-  const nikCol = headers.indexOf('NIK');
-  const pwCol  = headers.indexOf('PASSWORD');
-  if (nikCol === -1 || pwCol === -1) throw new Error('Kolom NIK/PASSWORD tidak ditemukan.');
-
-  const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[nikCol] || '').trim() === String(targetNik || '').trim());
-  if (rowIdx === -1) throw new Error('Karyawan tidak ditemukan.');
+  const sql = getSql(); if (!sql) throw new Error('Database tidak tersedia.');
+  const nikStr = String(targetNik || '').trim();
+  const row = (await sql`SELECT nik FROM karyawan WHERE nik = ${nikStr}`)[0];
+  if (!row) throw new Error('Karyawan tidak ditemukan.');
 
   const hash = bcrypt.hashSync(newPassword, 10);
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `Master_Karyawan!${colIndexToLetter(pwCol)}${rowIdx + 1}`,
-    valueInputOption: 'RAW',
-    requestBody: { values: [[hash]] }
-  });
+  await sql`UPDATE karyawan SET data = data || ${JSON.stringify({ PASSWORD: hash })}::jsonb WHERE nik = ${nikStr}`;
   invalidateCache('Master_Karyawan');
   return { status: 'success', message: 'Password berhasil direset.' };
 }
@@ -695,7 +680,7 @@ async function resolveNikFromWa(sheets, wa) {
   // Normalise ke 62-prefix agar "081x" == "6281x" == "81x"
   const norm = p => p.replace(/^0/, '62').replace(/^(?!62)/, '62');
   const target = norm(phone);
-  const karyawan = await getSheetData(sheets, 'Master_Karyawan');
+  const karyawan = await _karyawanRows(sheets);
   // Header sheet adalah 'NO WHATSAPP' dan 'NIK' (uppercase sesuai KARYAWAN_HEADERS)
   const match = karyawan.find(r => norm(String(r['NO WHATSAPP'] || '').replace(/\D/g, '')) === target);
   const nik = String(match?.['NIK'] || '').trim();
@@ -705,7 +690,7 @@ async function resolveNikFromWa(sheets, wa) {
 // [PUSH-END]
 
 async function getKaryawan(sheets, auth) {
-  const rows = await getSheetData(sheets, 'Master_Karyawan');
+  const rows = await _karyawanRows(sheets);
   const roleKey = rows.length ? (Object.keys(rows[0]).find(k => k.trim().toUpperCase() === 'ROLE') || 'ROLE') : 'ROLE';
   const active = rows.filter(r => normalizeRole(r[roleKey]) !== 'DELETED');
   let visible;
@@ -743,7 +728,7 @@ async function proposeChange(sheets, auth, action, data) {
     valueInputOption: 'USER_ENTERED', requestBody: { values: [row] }
   });
   // WA ke semua SUPER_ADMIN
-  const karyawan = await getSheetData(sheets, 'Master_Karyawan');
+  const karyawan = await _karyawanRows(sheets);
   for (const sa of karyawan.filter(r => isSuperAdmin(r['ROLE']))) {
     if (sa['NO WHATSAPP']) {
       const msg = `Halo ${sa['NAMA']}, ada permohonan *${action.toUpperCase()}* data karyawan dari *${auth.nama}* (${auth.perusahaan}).\n\n👤 User: ${data.NAMA || data.NIK || '-'}\n\nSilakan buka dashboard untuk review dan approval.`;
@@ -764,57 +749,41 @@ async function getPendingChanges(sheets, auth) {
 }
 
 async function applyUserChange(sheets, action, data) {
+  const sql = getSql(); if (!sql) throw new Error('Database tidak tersedia.');
   if (action === 'ADD') {
     if (data.PASSWORD && !/^\$2[aby]\$/.test(data.PASSWORD))
       data.PASSWORD = bcrypt.hashSync(data.PASSWORD, 10);
-    const row = KARYAWAN_HEADERS.map(h => data[h] ?? '');
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan',
-      valueInputOption: 'USER_ENTERED', requestBody: { values: [row] }
-    });
+    // Baris disimpan dengan key HEADER ASLI (sama seperti getSheetData) agar
+    // read via _karyawanRows tetap kompatibel dengan client.
+    const obj = {}; KARYAWAN_HEADERS.forEach(h => { obj[h] = data[h] ?? ''; });
+    const nik = String(obj.NIK || '').trim();
+    if (!nik) throw new Error('NIK wajib diisi.');
+    await sql`
+      INSERT INTO karyawan (nik, role, email, data)
+      VALUES (${nik}, ${String(obj.ROLE || '')}, ${String(obj.EMAIL || '')}, ${JSON.stringify(obj)}::jsonb)
+      ON CONFLICT (nik) DO UPDATE SET role = EXCLUDED.role, email = EXCLUDED.email, data = EXCLUDED.data`;
   } else if (action === 'EDIT' || action === 'DELETE') {
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan' });
-    const rows = res.data.values || [];
-    const headers = rows[0].map(h => String(h).trim().toUpperCase());
-    const nikCol  = headers.indexOf('NIK');
-    const namaCol = headers.indexOf('NAMA');
     const dataNik  = String(data.NIK  || '').trim();
     const dataNama = String(data.NAMA || '').trim().toLowerCase();
-    const rowIdx = rows.findIndex((r, i) => {
-      if (i === 0) return false;
-      const nikMatch  = String(r[nikCol]  || '').trim() === dataNik;
-      const namaMatch = namaCol !== -1 && String(r[namaCol] || '').trim().toLowerCase() === dataNama;
-      // Cocokkan NIK + NAMA sekaligus — cegah hapus orang yang salah
-      return nikMatch && namaMatch;
-    });
-    if (rowIdx === -1) throw new Error(`User ${data.NAMA || data.NIK || '?'} tidak ditemukan di sheet.`);
+    const row = (await sql`SELECT data FROM karyawan WHERE nik = ${dataNik}`)[0];
+    // Cocokkan NIK + NAMA sekaligus — cegah ubah/hapus orang yang salah
+    const namaMatch = row && String(row.data['NAMA'] || '').trim().toLowerCase() === dataNama;
+    if (!row || !namaMatch) throw new Error(`User ${data.NAMA || data.NIK || '?'} tidak ditemukan.`);
     if (action === 'DELETE') {
-      // Hapus baris secara fisik agar tidak perlu filter client-side
-      const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: 'sheets.properties' });
-      const sheetMeta = meta.data.sheets.find(s => s.properties.title === 'Master_Karyawan');
-      if (!sheetMeta) throw new Error('Sheet Master_Karyawan tidak ditemukan.');
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: { requests: [{ deleteDimension: {
-          range: { sheetId: sheetMeta.properties.sheetId, dimension: 'ROWS', startIndex: rowIdx, endIndex: rowIdx + 1 }
-        }}]}
-      });
+      await sql`DELETE FROM karyawan WHERE nik = ${dataNik}`;
     } else {
       // Email yang diisi admin dianggap tervalidasi (tanpa OTP) — set timestamp.
       if (typeof data.EMAIL === 'string' && data.EMAIL.trim() && data.EMAIL_VERIFIED_AT === undefined)
         data.EMAIL_VERIFIED_AT = new Date().toISOString();
-      const updates = Object.entries(data)
-        .filter(([k]) => k.toUpperCase() !== 'PASSWORD')
-        .map(([k, v]) => ({ col: headers.indexOf(k.toUpperCase()), val: v }))
-        .filter(({ col }) => col !== -1)
-        .map(({ col, val }) => ({ range: `Master_Karyawan!${colIndexToLetter(col)}${rowIdx + 1}`, values: [[val]] }));
-      if (updates.length)
-        await sheets.spreadsheets.values.batchUpdate({
-          spreadsheetId: SPREADSHEET_ID,
-          requestBody: { valueInputOption: 'USER_ENTERED', data: updates }
-        });
+      const patch = {};
+      for (const [k, v] of Object.entries(data)) { if (k.toUpperCase() !== 'PASSWORD') patch[k] = v; }
+      const merged = { ...row.data, ...patch };
+      await sql`UPDATE karyawan SET data = ${JSON.stringify(merged)}::jsonb,
+                  role = ${String(merged.ROLE || '')}, email = ${String(merged.EMAIL || '')}
+                WHERE nik = ${dataNik}`;
     }
   }
+  invalidateCache('Master_Karyawan');
 }
 
 async function reviewChange(sheets, auth, changeId, decision, reason) {
@@ -846,7 +815,7 @@ async function reviewChange(sheets, auth, changeId, decision, reason) {
 
   // WA ke proposer
   const proposerNik = String(rows[rowIdx][col('PROPOSED_BY_NIK')] || '');
-  const karyawan = await getSheetData(sheets, 'Master_Karyawan');
+  const karyawan = await _karyawanRows(sheets);
   const proposer = karyawan.find(r => String(r['NIK'] || '').trim() === proposerNik);
   if (proposer?.['NO WHATSAPP']) {
     const icon = decision === 'APPROVE' ? '✅' : '❌';
@@ -955,14 +924,14 @@ function mapInspectionValue(header, data) {
 
 async function resolveWaFromNik(sheets, nik) {
   if (!nik) return '';
-  const rows = await getSheetData(sheets, 'Master_Karyawan');
+  const rows = await _karyawanRows(sheets);
   const match = rows.find(r => String(r['NIK'] || '').trim() === String(nik).trim());
   return String(match?.['NO WHATSAPP'] || '').replace(/\D/g, '');
 }
 
 async function resolveWaByIdentity(sheets, perusahaan, subcont, nama) {
   if (!nama) return '';
-  const rows = await getSheetData(sheets, 'Master_Karyawan');
+  const rows = await _karyawanRows(sheets);
   const norm = s => String(s || '').trim().toUpperCase();
   const match = rows.find(r =>
     norm(r['NAMA']) === norm(nama) &&
@@ -1984,6 +1953,29 @@ module.exports = async (req, res) => {
         return res.status(200).json({ status: 'success', migrated: ok, total: n, per_sheet: perSheet });
       }
 
+      // Migrasi sekali-pakai Master_Karyawan → karyawan (JSONB). Empty-guard.
+      // Publik (tanpa token) KARENA login bergantung roster: harus bisa mengisi
+      // Postgres sebelum ada yang login. Hanya balikkan hitungan — tak bocorkan data.
+      if (action === 'migrate_karyawan') {
+        const sql = getSql();
+        const cur = (await sql`SELECT count(*)::int n FROM karyawan`)[0].n;
+        if (cur > 0) return res.status(200).json({ status: 'success', already: true, count: cur });
+        let rows = []; try { rows = await getSheetData(sheets, 'Master_Karyawan'); } catch {}
+        const recs = [];
+        for (const r of rows) {
+          const nik = String(r['NIK'] || '').trim(); if (!nik) continue;
+          recs.push({ nik, role: String(r['ROLE'] || ''), email: String(r['EMAIL'] || ''), data: r });
+        }
+        if (recs.length) await sql`
+          INSERT INTO karyawan (nik, role, email, data)
+          SELECT nik, role, email, data
+          FROM jsonb_to_recordset(${JSON.stringify(recs)}::jsonb)
+               AS t(nik text, role text, email text, data jsonb)
+          ON CONFLICT (nik) DO NOTHING`;
+        const n = (await sql`SELECT count(*)::int n FROM karyawan`)[0].n;
+        return res.status(200).json({ status: 'success', migrated: recs.length, total: n });
+      }
+
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
       await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
@@ -1991,7 +1983,7 @@ module.exports = async (req, res) => {
       let result;
       switch (action) {
         case 'masterKaryawan': {
-          const allRows = await annotateStatusKerja(sheets, await getCachedSheet(sheets, 'Master_Karyawan', 60_000));
+          const allRows = await annotateStatusKerja(sheets, await _karyawanRows(sheets));
           if (isSuperAdmin(auth.role)) {
             // SUPER_ADMIN: semua data lengkap
             result = stripSensitiveKaryawan(allRows);
@@ -2102,7 +2094,7 @@ module.exports = async (req, res) => {
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         case 'getMyObj': {
-          const rows = await getCachedSheet(sheets, 'Master_Karyawan', 60_000);
+          const rows = await _karyawanRows(sheets);
           const me = rows.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
           result = {
             status: 'success',
@@ -2148,7 +2140,7 @@ module.exports = async (req, res) => {
 
         // OTP disimpan di Postgres/Neon (tabel email_otp) — UPSERT atomik,
         // menggantikan pola "clear seluruh sheet lalu tulis ulang" yang rapuh.
-        // Roster (Master_Karyawan) masih di Google Sheets untuk saat ini.
+        // Roster (tabel karyawan) juga sudah di Postgres.
         const sql = getSql();
         if (!sql) return res.status(503).json({ status: 'error', message: 'Database belum dikonfigurasi.' });
 
@@ -2241,23 +2233,10 @@ module.exports = async (req, res) => {
           break;
         }
         case 'addObjStColumn': {
-          // Satu kali: tambah header OBJ_ST ke Master_Karyawan jika belum ada
+          // Roster kini JSONB (Postgres) — tak ada konsep "kolom" tetap; OBJ_ST
+          // otomatis tersimpan saat user disimpan lewat Manajemen User. No-op.
           if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
-          const hdrRes = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Master_Karyawan!1:1' });
-          const hdrRow = (hdrRes.data.values || [[]])[0] || [];
-          if (hdrRow.includes('OBJ_ST')) {
-            result = { status: 'success', message: 'Kolom OBJ_ST sudah ada.' };
-          } else {
-            const nextCol = colIndexToLetter(hdrRow.length);
-            await sheets.spreadsheets.values.update({
-              spreadsheetId: SPREADSHEET_ID,
-              range: `Master_Karyawan!${nextCol}1`,
-              valueInputOption: 'RAW',
-              requestBody: { values: [['OBJ_ST']] },
-            });
-            invalidateCache('Master_Karyawan');
-            result = { status: 'success', message: `Kolom OBJ_ST berhasil ditambahkan di kolom ${nextCol}.` };
-          }
+          result = { status: 'success', message: 'OBJ_ST tersimpan otomatis (roster berbasis JSONB).' };
           break;
         }
         case 'createSafetyTalkSchedule': {
