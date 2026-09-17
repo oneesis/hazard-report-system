@@ -1215,33 +1215,25 @@ async function ensurePCSheet(sheets) {
 }
 
 async function submitPCReport(sheets, data) {
-  await ensurePCSheet(sheets);
+  const sql = getSql();
   const id = 'PC-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
 
   let fotoUrl = '';
   if (data.foto_pc)
     fotoUrl = await saveMultipleImagesToDrive(data.foto_pc, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, id + '-PC');
 
-  const row = [
-    id, new Date().toISOString(), data.tgl_pc || '', data.lokasi_pc || '',
-    data.nama_coach || '', data.nik_coach || '', data.jabatan_coach || '',
-    data.departemen_coach || '', data.perusahaan_coach || '',
-    data.nama_coachee || '', data.nik_coachee || '', data.jabatan_coachee || '',
-    data.departemen_coachee || '', data.perusahaan_coachee || '',
-    data.subcont_coachee || '', data.no_wa_coachee || '',
-    data.topik_coaching || '', data.judul_coaching || '',
-    data.deskripsi_coaching || '', data.komitmen_perbaikan || '',
-    data.batas_waktu_pc || '',
-    fotoUrl, 'OPEN', '', '', '', '',
-  ];
-
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'PC_Report',
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [row] }
-  });
-  invalidateCache('PC_Report');
+  await sql`
+    INSERT INTO pc_report
+      ("timestamp", id, tgl_pc, lokasi_pc, nama_coach, nik_coach, jabatan_coach, departemen_coach, perusahaan_coach,
+       nama_coachee, nik_coachee, jabatan_coachee, departemen_coachee, perusahaan_coachee, subcont_coachee, no_wa_coachee,
+       topik_coaching, judul_coaching, deskripsi_coaching, komitmen_perbaikan, batas_waktu_pc, foto_pc, status)
+    VALUES
+      (${new Date().toISOString()}, ${id}, ${data.tgl_pc || ''}, ${data.lokasi_pc || ''}, ${data.nama_coach || ''},
+       ${data.nik_coach || ''}, ${data.jabatan_coach || ''}, ${data.departemen_coach || ''}, ${data.perusahaan_coach || ''},
+       ${data.nama_coachee || ''}, ${data.nik_coachee || ''}, ${data.jabatan_coachee || ''}, ${data.departemen_coachee || ''},
+       ${data.perusahaan_coachee || ''}, ${data.subcont_coachee || ''}, ${data.no_wa_coachee || ''},
+       ${data.topik_coaching || ''}, ${data.judul_coaching || ''}, ${data.deskripsi_coaching || ''},
+       ${data.komitmen_perbaikan || ''}, ${data.batas_waktu_pc || ''}, ${fotoUrl}, 'OPEN')`;
 
   // Kirim WA ke coachee
   let waStatus = 'TIDAK ADA WA';
@@ -1256,7 +1248,7 @@ async function submitPCReport(sheets, data) {
     const sent = await sendWaNotification(data.no_wa_coachee, msg).catch(() => false);
     waStatus = sent ? 'TERKIRIM' : 'GAGAL';
   }
-  await writeWaStatusToSheet(sheets, 'PC_Report', id, waStatus);
+  await sql`UPDATE pc_report SET wa_pic_status = ${waStatus} WHERE id = ${id}`;
 
   // Push notif ke coachee
   if (data.nik_coachee) await sendPushToNik(sheets, data.nik_coachee, {
@@ -1269,14 +1261,10 @@ async function submitPCReport(sheets, data) {
 }
 
 async function getPCReports(sheets, auth) {
+  const sql = getSql();
   let rows;
-  try { rows = await getSheetData(sheets, 'PC_Report'); } catch { return { status: 'success', data: [] }; }
-  let data = rows.map(obj => {
-    const n = {};
-    Object.keys(obj).forEach(k => { n[normalizeHeader(k)] = obj[k]; });
-    n.report_type = 'PC';
-    return n;
-  }).filter(r => String(r.id || '').trim());
+  try { rows = await sql`SELECT * FROM pc_report`; } catch { return { status: 'success', data: [] }; }
+  let data = rows.map(r => ({ ...r, report_type: 'PC' })).filter(r => String(r.id || '').trim());
   if (!isSuperAdmin(auth?.role)) {
     const co = String(auth?.perusahaan || '').trim().toUpperCase();
     if (co) data = data.filter(r =>
@@ -1288,21 +1276,18 @@ async function getPCReports(sheets, auth) {
 }
 
 async function updatePCReport(sheets, data, auth) {
+  const sql = getSql();
   let fotoUrl = '';
   if (data.foto_komitmen)
     fotoUrl = await saveMultipleImagesToDrive(data.foto_komitmen, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, data.id + '-Komitmen');
 
-  // Gunakan updateWorkflowFields — handles kolom > Z dengan benar
-  const coachRow = await updateWorkflowFields(sheets, 'PC_Report', data.id, {
-    'STATUS':          'CLOSED',
-    'FOTO_KOMITMEN':   fotoUrl,
-    'PESAN_KOMITMEN':  data.pesan_komitmen || '',
-    'TIMESTAMP_CLOSE': new Date().toISOString(),
-  });
-  invalidateCache('PC_Report');
+  const upd = await sql`
+    UPDATE pc_report SET status = 'CLOSED', foto_komitmen = ${fotoUrl},
+      pesan_komitmen = ${data.pesan_komitmen || ''}, timestamp_close = ${new Date().toISOString()}
+    WHERE id = ${data.id} RETURNING nik_coach`;
 
   // Push notif ke coach
-  const nikCoach = String(coachRow?.nik_coach || '').trim();
+  const nikCoach = String(upd[0]?.nik_coach || '').trim();
   if (nikCoach) await sendPushToNik(sheets, nikCoach, {
     title: 'Coachee Telah Konfirmasi Komitmen ✅',
     body:  `Coachee untuk PC ${data.id} telah mengkonfirmasi komitmennya.`,
@@ -1954,6 +1939,37 @@ module.exports = async (req, res) => {
           invalidateCache('SafetyTalk_Absensi');
         }
         return res.status(200).json({ status: 'success', updated: updates.length, checked: cand.length });
+      }
+
+      // Migrasi sekali-pakai PC_Report (Sheets → Neon). Empty-guard: hanya jalan
+      // bila tabel pc_report kosong. Baca sheet via service account runtime.
+      if (action === 'migrate_pc') {
+        const sql = getSql();
+        const cur = await sql`SELECT count(*)::int AS n FROM pc_report`;
+        if (cur[0].n > 0) return res.status(200).json({ status: 'success', already: true, count: cur[0].n });
+        let rows = []; try { rows = await getSheetData(sheets, 'PC_Report'); } catch {}
+        const g = (r, k) => { const v = r[k]; return (v === undefined || v === null) ? '' : String(v); };
+        let ok = 0;
+        for (const r of rows) {
+          const id = g(r, 'ID').trim(); if (!id) continue;
+          await sql`
+            INSERT INTO pc_report
+              ("timestamp", id, tgl_pc, lokasi_pc, nama_coach, nik_coach, jabatan_coach, departemen_coach, perusahaan_coach,
+               nama_coachee, nik_coachee, jabatan_coachee, departemen_coachee, perusahaan_coachee, subcont_coachee, no_wa_coachee,
+               topik_coaching, judul_coaching, deskripsi_coaching, komitmen_perbaikan, batas_waktu_pc, foto_pc, status,
+               foto_komitmen, pesan_komitmen, timestamp_close, wa_pic_status)
+            VALUES
+              (${g(r,'TIMESTAMP')}, ${id}, ${g(r,'TGL_PC')}, ${g(r,'LOKASI_PC')}, ${g(r,'NAMA_COACH')}, ${g(r,'NIK_COACH')},
+               ${g(r,'JABATAN_COACH')}, ${g(r,'DEPARTEMEN_COACH')}, ${g(r,'PERUSAHAAN_COACH')}, ${g(r,'NAMA_COACHEE')},
+               ${g(r,'NIK_COACHEE')}, ${g(r,'JABATAN_COACHEE')}, ${g(r,'DEPARTEMEN_COACHEE')}, ${g(r,'PERUSAHAAN_COACHEE')},
+               ${g(r,'SUBCONT_COACHEE')}, ${g(r,'NO_WA_COACHEE')}, ${g(r,'TOPIK_COACHING')}, ${g(r,'JUDUL_COACHING')},
+               ${g(r,'DESKRIPSI_COACHING')}, ${g(r,'KOMITMEN_PERBAIKAN')}, ${g(r,'BATAS_WAKTU_PC')}, ${g(r,'FOTO_PC')},
+               ${g(r,'STATUS') || 'OPEN'}, ${g(r,'FOTO_KOMITMEN')}, ${g(r,'PESAN_KOMITMEN')}, ${g(r,'TIMESTAMP_CLOSE')}, ${g(r,'WA_PIC_STATUS')})
+            ON CONFLICT (id) DO NOTHING`;
+          ok++;
+        }
+        const after = await sql`SELECT count(*)::int AS n FROM pc_report`;
+        return res.status(200).json({ status: 'success', migrated: ok, total: after[0].n });
       }
 
       // Semua action GET lainnya wajib token valid

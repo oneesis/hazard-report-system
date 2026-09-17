@@ -173,18 +173,18 @@ CREATE INDEX ix_sbo_status   ON sbo_report (status_perbaikan);
 CREATE INDEX ix_sbo_tanggal  ON sbo_report (tgl_observasi);
 
 -- ── Personal Contact / Coaching ─────────────────────────────────────────────
+-- Semua kolom TEXT (cermin persis sheet PC_Report) — migrasi setia, tanpa ubah
+-- format ke client. "timestamp" = kolom TIMESTAMP sheet (dinormalisasi client).
 CREATE TABLE pc_report (
   id                    TEXT PRIMARY KEY,
-  created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-  tgl_pc                DATE,
+  "timestamp"           TEXT,
+  tgl_pc                TEXT,
   lokasi_pc             TEXT,
-  -- coach
   nama_coach            TEXT,
   nik_coach             TEXT,
   jabatan_coach         TEXT,
   departemen_coach      TEXT,
   perusahaan_coach      TEXT,
-  -- coachee
   nama_coachee          TEXT,
   nik_coachee           TEXT,
   jabatan_coachee       TEXT,
@@ -192,22 +192,20 @@ CREATE TABLE pc_report (
   perusahaan_coachee    TEXT,
   subcont_coachee       TEXT,
   no_wa_coachee         TEXT,
-  -- isi coaching
   topik_coaching        TEXT,
   judul_coaching        TEXT,
   deskripsi_coaching    TEXT,
   komitmen_perbaikan    TEXT,
-  batas_waktu_pc        DATE,
+  batas_waktu_pc        TEXT,
   foto_pc               TEXT,               -- URL Google Drive
-  status                TEXT NOT NULL DEFAULT 'OPEN',
+  status                TEXT DEFAULT 'OPEN',
   foto_komitmen         TEXT,               -- URL Drive
   pesan_komitmen        TEXT,
-  timestamp_close       TIMESTAMPTZ,
+  timestamp_close       TEXT,
   wa_pic_status         TEXT
 );
 CREATE INDEX ix_pc_coach   ON pc_report (nik_coach);
 CREATE INDEX ix_pc_coachee ON pc_report (nik_coachee);
-CREATE INDEX ix_pc_tanggal ON pc_report (tgl_pc);
 
 -- ── Safety Talk: jadwal ─────────────────────────────────────────────────────
 CREATE TABLE safety_talk_schedule (
