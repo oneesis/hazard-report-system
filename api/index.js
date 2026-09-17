@@ -1945,19 +1945,22 @@ module.exports = async (req, res) => {
       // Migrasi sekali-pakai Hazard_Report → hazard_report (JSONB). Empty-guard.
       if (action === 'migrate_hazard') {
         const sql = getSql();
-        // Idempoten per-baris (ON CONFLICT) — aman dijalankan ulang tanpa memblokir
+        // Bulk insert satu round-trip (jsonb_to_recordset) — hindari timeout.
         let rows = []; try { rows = await getSheetData(sheets, 'Hazard_Report'); } catch {}
-        let ok = 0;
+        const recs = [];
         for (const r of rows) {
           const d = {}; Object.keys(r).forEach(k => { d[normalizeHeader(k)] = r[k]; });
           const id = String(d.id || '').trim(); if (!id) continue;
-          await sql`INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
-            VALUES (${id}, ${d.nik || ''}, ${d.perusahaan || ''}, ${d.status_perbaikan || ''}, ${JSON.stringify(d)}::jsonb)
-            ON CONFLICT (id) DO NOTHING`;
-          ok++;
+          recs.push({ id, nik: d.nik || '', perusahaan: d.perusahaan || '', status_perbaikan: d.status_perbaikan || '', data: d });
         }
+        if (recs.length) await sql`
+          INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
+          SELECT id, nik, perusahaan, status_perbaikan, data
+          FROM jsonb_to_recordset(${JSON.stringify(recs)}::jsonb)
+               AS t(id text, nik text, perusahaan text, status_perbaikan text, data jsonb)
+          ON CONFLICT (id) DO NOTHING`;
         const n = (await sql`SELECT count(*)::int n FROM hazard_report`)[0].n;
-        return res.status(200).json({ status: 'success', migrated: ok, total: n });
+        return res.status(200).json({ status: 'success', migrated: recs.length, total: n });
       }
 
       // Migrasi sekali-pakai 8 sheet INS_* → inspection_report (JSONB). Empty-guard.
