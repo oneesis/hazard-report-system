@@ -388,6 +388,21 @@ async function saveBase64ImageToDrive(base64Data, folderId, fileName) {
   return `https://drive.google.com/file/d/${file.data.id}/view`;
 }
 
+// Upload teks (mis. JSON backup) ke Drive. TIDAK dibuat publik — isinya sensitif.
+async function saveTextToDrive(text, folderId, fileName, mimeType = 'application/json') {
+  if (!folderId) throw new Error('Folder ID Google Drive belum dikonfigurasi.');
+  if (!process.env.GOOGLE_OAUTH_REFRESH_TOKEN) throw new Error('GOOGLE_OAUTH_REFRESH_TOKEN belum dikonfigurasi.');
+  const { Readable } = require('stream');
+  const drive = getDriveClient();
+  const buffer = Buffer.from(String(text), 'utf8');
+  const file = await drive.files.create({
+    requestBody: { name: fileName, parents: [folderId] },
+    media: { mimeType, body: Readable.from(buffer) },
+    fields: 'id',
+  });
+  return `https://drive.google.com/file/d/${file.data.id}/view`;
+}
+
 async function saveMultipleImagesToDrive(base64DataField, folderId, idPrefix) {
   if (!base64DataField) return '';
   let list;
@@ -2007,6 +2022,30 @@ module.exports = async (req, res) => {
         const sql = getSql();
         if (sql) { try { await sql`SELECT 1`; db = 'ok'; } catch { db = 'error'; } }
         return res.status(200).json({ status: 'success', db, ms: Date.now() - t });
+      }
+
+      // Backup seluruh DB (kedua app — 13 tabel) → JSON ke Google Drive (privat,
+      // TIDAK dipublikkan). Dijaga BACKUP_TOKEN. Dipanggil cron GitHub Actions harian.
+      if (action === 'backup') {
+        const token = process.env.BACKUP_TOKEN;
+        const provided = req.headers['x-backup-token'] || req.query.token;
+        if (!token || provided !== token) return res.status(403).json({ status: 'error', message: 'Forbidden' });
+        const sql = getSql();
+        const [karyawan, hazard_report, inspection_report, safety_talk_schedule, safety_talk_absensi,
+               pc_report, sbo_report, pending_change, push_subscription, partisipasi, topik, sesi] = await Promise.all([
+          sql`SELECT * FROM karyawan`, sql`SELECT * FROM hazard_report`, sql`SELECT * FROM inspection_report`,
+          sql`SELECT * FROM safety_talk_schedule`, sql`SELECT * FROM safety_talk_absensi`, sql`SELECT * FROM pc_report`,
+          sql`SELECT * FROM sbo_report`, sql`SELECT * FROM pending_change`, sql`SELECT * FROM push_subscription`,
+          sql`SELECT * FROM partisipasi`, sql`SELECT * FROM topik`, sql`SELECT * FROM sesi`,
+        ]);
+        const tables = { karyawan, hazard_report, inspection_report, safety_talk_schedule, safety_talk_absensi,
+                         pc_report, sbo_report, pending_change, push_subscription, partisipasi, topik, sesi };
+        const json = JSON.stringify({ generated_at: new Date().toISOString(), tables });
+        const fileName = `sap-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        const folder = process.env.FOLDER_BACKUP_ID || process.env.FOLDER_HAZARD_ID;
+        const url = await saveTextToDrive(json, folder, fileName, 'application/json');
+        const counts = {}; for (const k in tables) counts[k] = tables[k].length;
+        return res.status(200).json({ status: 'success', file: fileName, bytes: Buffer.byteLength(json), url, counts });
       }
 
       if (action === 'migrate_karyawan') {

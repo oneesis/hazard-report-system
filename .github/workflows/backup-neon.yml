@@ -1,0 +1,23 @@
+name: Backup Neon ke Drive
+
+# Backup harian seluruh database Neon (kedua app, 13 tabel) → file JSON di Google
+# Drive (privat). Kredensial DB & Drive TETAP di Vercel; workflow hanya memanggil
+# endpoint /api?action=backup dengan token rahasia (header, tak muncul di URL/log).
+on:
+  schedule:
+    - cron: '0 20 * * *'   # 20:00 UTC = 03:00 WIB, harian
+  workflow_dispatch:         # bisa dijalankan manual dari tab Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backup
+        run: |
+          code=$(curl -s -o resp.json -w "%{http_code}" \
+            -H "x-backup-token: ${{ secrets.BACKUP_TOKEN }}" \
+            "https://sap-ebl.vercel.app/api?action=backup")
+          echo "HTTP $code"
+          # tampilkan ringkasan tanpa membocorkan apa pun sensitif
+          cat resp.json; echo
+          [ "$code" = "200" ] || { echo "Backup GAGAL"; exit 1; }
