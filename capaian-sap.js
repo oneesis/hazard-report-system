@@ -186,22 +186,24 @@ function computeAndRender() {
     // Safety Talk — HADIR = tercatat; MANGKIR = tidak tercatat; status lain
     // (Cuti/Dinas Luar/Shift Malam/Libur) tercatat HANYA jika lulus quiz.
     // Baris lama tanpa STATUS_KEHADIRAN dianggap HADIR (kompatibilitas mundur).
-    let stHadir = null;
+    // Capaian ST = JUMLAH Safety Talk yang dihadiri/terpenuhi bulan itu (bukan
+    // biner), dihitung terhadap target OBJ ST — konsisten dgn HR/INS/SBO/PC.
+    let achST = null;
     if (monthStr) {
-      stHadir = _capStAbsensi
+      achST = _capStAbsensi
         .filter(ab =>
           String(ab['NIK'] || '').trim() === nik &&
           String(ab['BULAN'] || '').slice(0, 7) === monthStr
         )
-        .some(ab => {
+        .filter(ab => {
           const st = String(ab['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase();
           if (st === 'HADIR')   return true;
           if (st === 'MANGKIR') return false;
           return String(ab['QUIZ_DONE'] || '').toUpperCase() === 'YA';
-        });
+        }).length;
     }
-    const achST = stHadir === null ? null : (stHadir ? 1 : 0);
-    const pctST = (objST > 0 && achST !== null) ? (stHadir ? 100 : 0) : null;
+    const stHadir = achST === null ? null : achST > 0; // dipakai agregat dashboard
+    const pctST = (objST > 0 && achST !== null) ? Math.min(100, Math.round(achST / objST * 100)) : null;
     // %Total = rata-rata semua komponen yang memiliki target
     const pctVals  = [pctHR, pctINS, pctSBO, pctPC, pctST].filter(v => v !== null);
     const pctTotal = pctVals.length > 0 ? Math.round(pctVals.reduce((a, b) => a + b, 0) / pctVals.length) : null;
