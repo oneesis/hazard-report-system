@@ -273,6 +273,37 @@ async function getCachedSheetFrom(sheets, spreadsheetId, sheetName, ttlMs = 30_0
 // seluruh roster sekaligus — hindari N request paralel ke Sheets API kalau
 // dipanggil dalam loop (mis. anotasi dropdown PIC untuk semua karyawan).
 async function loadCutiSources(sheets) {
+  // Sumber cuti kini di Neon: SISTER MINER sm."Karyawan" + SIMANTRA
+  // simantra."akun_karyawan"/"training_records" (sheet-nya sudah beku setelah
+  // migrasi). Cache 30s (dipanggil tiap request via assertNotCuti). Fallback ke
+  // Sheets bila DATABASE_URL belum ada. Fail-open: error → null (cuti nonaktif,
+  // TIDAK mematahkan login/request).
+  const CK = 'cuti:sources';
+  const hit = _dataCache.get(CK);
+  if (hit && Date.now() < hit.expAt) return hit.data;
+
+  const sql = getSql();
+  if (sql) {
+    try {
+      const [karyawan, bridgeRows, records] = await Promise.all([
+        sql`SELECT data FROM sm."Karyawan"`,
+        sql`SELECT data FROM simantra."akun_karyawan"`,
+        sql`SELECT data FROM simantra."training_records"`,
+      ]);
+      const data = {
+        karyawan: karyawan.map(r => r.data || {}),
+        bridgeRows: bridgeRows.map(r => r.data || {}),
+        records: records.map(r => r.data || {}),
+      };
+      _dataCache.set(CK, { data, expAt: Date.now() + 30_000 });
+      return data;
+    } catch (err) {
+      console.error('[cuti] gagal baca Neon (sm/simantra), fitur cuti nonaktif sementara:', err.message);
+      return null;
+    }
+  }
+
+  // Fallback lama: baca Sheets langsung (pra-migrasi / tanpa DATABASE_URL)
   const sisterId = process.env.SISTER_MINER_SPREADSHEET_ID;
   if (!sisterId) return null;
   const simantraId = process.env.SIMANTRA_SPREADSHEET_ID;
@@ -284,9 +315,6 @@ async function loadCutiSources(sheets) {
     ]);
     return { karyawan, bridgeRows, records };
   } catch (err) {
-    // Fail-open (2026-08-20): salah ID / akses belum di-share ke spreadsheet
-    // SISTER MINER TIDAK BOLEH bikin login/semua request patah — cuma bikin
-    // fitur cuti mati sementara (semua dianggap "aktif"). Log biar ketauan.
     console.error('[cuti] gagal baca SISTER MINER/SIMANTRA, fitur cuti nonaktif sementara:', err.message);
     return null;
   }
