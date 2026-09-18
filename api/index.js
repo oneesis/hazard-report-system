@@ -2039,20 +2039,24 @@ module.exports = async (req, res) => {
         const provided = req.headers['x-backup-token'] || req.query.token;
         if (!token || provided !== token) return res.status(403).json({ status: 'error', message: 'Forbidden' });
         const sql = getSql();
-        const [karyawan, hazard_report, inspection_report, safety_talk_schedule, safety_talk_absensi,
-               pc_report, sbo_report, pending_change, push_subscription, partisipasi, topik, sesi] = await Promise.all([
-          sql`SELECT * FROM karyawan`, sql`SELECT * FROM hazard_report`, sql`SELECT * FROM inspection_report`,
-          sql`SELECT * FROM safety_talk_schedule`, sql`SELECT * FROM safety_talk_absensi`, sql`SELECT * FROM pc_report`,
-          sql`SELECT * FROM sbo_report`, sql`SELECT * FROM pending_change`, sql`SELECT * FROM push_subscription`,
-          sql`SELECT * FROM partisipasi`, sql`SELECT * FROM topik`, sql`SELECT * FROM sesi`,
-        ]);
-        const tables = { karyawan, hazard_report, inspection_report, safety_talk_schedule, safety_talk_absensi,
-                         pc_report, sbo_report, pending_change, push_subscription, partisipasi, topik, sesi };
-        const json = JSON.stringify({ generated_at: new Date().toISOString(), tables });
+        // Backup DINAMIS seluruh DB bersama: schema public (ONE-SAP + quiz-she),
+        // sm (SISTER MINER), simantra (SIMANTRA). Enumerasi dari katalog → tabel
+        // baru otomatis ikut. Identifier dari pg_tables (tepercaya) + dikutip.
+        const qDyn = (strings, ...vals) =>
+          sql(Object.assign([...strings], { raw: [...strings] }), ...vals);
+        const tbls = await sql`
+          SELECT schemaname, tablename FROM pg_tables
+          WHERE schemaname IN ('public','sm','simantra') ORDER BY schemaname, tablename`;
+        const schemas = {}; const counts = {};
+        for (const { schemaname, tablename } of tbls) {
+          const rows = await qDyn([`SELECT * FROM "${schemaname}"."${tablename}"`]);
+          (schemas[schemaname] = schemas[schemaname] || {})[tablename] = rows;
+          counts[`${schemaname}.${tablename}`] = rows.length;
+        }
+        const json = JSON.stringify({ generated_at: new Date().toISOString(), schemas });
         const fileName = `sap-backup-${new Date().toISOString().slice(0, 10)}.json`;
         const folder = process.env.FOLDER_BACKUP_ID || process.env.FOLDER_HAZARD_ID;
         const url = await saveTextToDrive(json, folder, fileName, 'application/json');
-        const counts = {}; for (const k in tables) counts[k] = tables[k].length;
         return res.status(200).json({ status: 'success', file: fileName, bytes: Buffer.byteLength(json), url, counts });
       }
 
