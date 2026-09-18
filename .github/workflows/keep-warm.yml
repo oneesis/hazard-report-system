@@ -15,5 +15,12 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping ONE-SAP (wake Neon)
+      - name: Ping ONE-SAP (wake Neon DB)
         run: curl -fsS "https://sap-ebl.vercel.app/api?action=ping" && echo
+      # Hangatkan juga fungsi serverless app lain (DB sudah warm dari ping di atas
+      # karena satu Neon DB) — root redirect ke /login itu ringan & cepat.
+      - name: Ping app lain (wake fungsi)
+        run: |
+          for u in https://simantra-k3.vercel.app https://sister-miner.vercel.app https://sikap.vercel.app; do
+            curl -fsS -o /dev/null "$u" && echo "warm: $u" || echo "skip: $u"
+          done
