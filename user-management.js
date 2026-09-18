@@ -7,6 +7,22 @@ const UM_PAGE_SIZE = 20;
 let umSortCol = null;
 let umSortDir = 1; // 1 = asc, -1 = desc
 
+// Filter per-kolom (field header asli → nilai filter)
+let umColFilters = {};
+const UM_COLS = [
+  { key: 'co',    field: 'PERUSAHAAN',  label: 'Perusahaan' },
+  { key: 'nama',  field: 'NAMA',        label: 'Nama' },
+  { key: 'nik',   field: 'NIK',         label: 'NIK' },
+  { key: 'jbt',   field: 'JABATAN',     label: 'Jabatan' },
+  { key: 'dept',  field: 'DEPARTEMEN',  label: 'Departemen' },
+  { key: 'wa',    field: 'NO WHATSAPP', label: 'WhatsApp' },
+  { key: 'email', field: 'EMAIL',       label: 'Email', noSort: true },
+  { key: 'hr',    field: 'OBJ HR',      label: 'OBJ HR',  center: true },
+  { key: 'ins',   field: 'OBJ INS',     label: 'OBJ INS', center: true },
+  { key: 'sbo',   field: 'OBJ SBO',     label: 'OBJ SBO', center: true },
+  { key: 'pc',    field: 'OBJ PC',      label: 'OBJ PC',  center: true },
+];
+
 function _umSortIcon(col) {
   if (umSortCol !== col) return '<span style="opacity:.2;font-size:.65rem;margin-left:2px">⇅</span>';
   return umSortDir === 1
@@ -66,38 +82,56 @@ async function loadPendingChanges() {
   } catch { /* silent */ }
 }
 
-function filterUsers() {
+// Filter global (kotak cari) + filter per-kolom digabung (AND).
+function applyUMFilters() {
   const q = (document.getElementById('umSearch')?.value || '').toLowerCase();
-  umFiltered = umUsers.filter(u =>
-    !q ||
-    String(u['NAMA'] || '').toLowerCase().includes(q) ||
-    String(u['NIK'] || '').toLowerCase().includes(q) ||
-    String(u['DEPARTEMEN'] || '').toLowerCase().includes(q)
-  );
+  const cols = Object.entries(umColFilters).filter(([, v]) => String(v || '').trim() !== '');
+  umFiltered = umUsers.filter(u => {
+    if (q && !(
+      String(u['NAMA'] || '').toLowerCase().includes(q) ||
+      String(u['NIK'] || '').toLowerCase().includes(q) ||
+      String(u['DEPARTEMEN'] || '').toLowerCase().includes(q)
+    )) return false;
+    for (const [field, val] of cols) {
+      if (!String(u[field] ?? '').toLowerCase().includes(String(val).toLowerCase())) return false;
+    }
+    return true;
+  });
   umPage = 1;
-  renderUMTable();
+  renderUMBody();
+}
+// Kotak cari lama tetap memanggil ini
+function filterUsers() { applyUMFilters(); }
+// Dipanggil tiap ketik di input filter kolom (tidak me-render ulang thead → fokus input tetap)
+window._umColFilter = function (field, val) { umColFilters[field] = val; applyUMFilters(); };
+
+// Header + baris filter. Dipisah dari body supaya mengetik di filter tidak
+// membangun ulang thead (fokus input tetap). Dipanggil saat load & saat sort.
+function renderUMHead(canEdit) {
+  const thead = document.querySelector('#umTable thead');
+  if (!thead) return;
+  const headTh = (c) => c.noSort
+    ? `<th class="${c.center ? 'um-center' : ''}" style="white-space:nowrap">${c.label}</th>`
+    : `<th class="${c.center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${c.key}')">${c.label}${_umSortIcon(c.key)}</th>`;
+  const filterTh = (c) =>
+    `<th style="padding:2px 4px"><input type="text" value="${escapeHTML(umColFilters[c.field] || '')}" oninput="_umColFilter('${c.field.replace(/'/g, "\\'")}', this.value)" placeholder="cari…" style="width:100%;min-width:56px;box-sizing:border-box;font-weight:400;font-size:.72rem;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px" /></th>`;
+  thead.innerHTML =
+    `<tr>${UM_COLS.map(headTh).join('')}${canEdit ? '<th>Aksi</th>' : ''}</tr>` +
+    `<tr class="um-filter-row">${UM_COLS.map(filterTh).join('')}${canEdit ? '<th></th>' : ''}</tr>`;
 }
 
 function renderUMTable() {
+  const user = getCurrentUser();
+  renderUMHead(isAdminOrAbove(user?.role));
+  renderUMBody();
+}
+
+function renderUMBody() {
   const tbody = document.getElementById('umTableBody');
   if (!tbody) return;
   const user     = getCurrentUser();
   const canEdit  = isAdminOrAbove(user?.role);
   const canResetPw = isSuperAdminRole(user?.role);
-
-  // #7 — Render sortable thead
-  const thead = document.querySelector('#umTable thead');
-  if (thead) {
-    const th = (col, label, center) =>
-      `<th class="${center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${col}')">${label}${_umSortIcon(col)}</th>`;
-    thead.innerHTML = `<tr>
-      ${th('co','Perusahaan')}${th('nama','Nama')}${th('nik','NIK')}
-      ${th('jbt','Jabatan')}${th('dept','Departemen')}${th('wa','WhatsApp')}<th style="white-space:nowrap">Email</th>
-      ${th('hr','OBJ HR',true)}${th('ins','OBJ INS',true)}
-      ${th('sbo','OBJ SBO',true)}${th('pc','OBJ PC',true)}
-      ${canEdit ? '<th>Aksi</th>' : ''}
-    </tr>`;
-  }
 
   // Sort sebelum paginate
   const sorted = umSortCol
