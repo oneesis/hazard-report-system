@@ -112,15 +112,21 @@ body:has(.app-layout) {
    ============================================= */
 .app-sidebar {
   width: 260px;
-  min-height: 100vh;
+  /* 100dvh = tinggi viewport yang BENAR-BENAR terlihat di mobile (di luar
+     toolbar browser). Pakai 100vh sbg fallback. Tanpa ini, footer sidebar
+     (aktivasi notifikasi / ganti password / logout) jatuh di bawah area
+     terlihat & tak bisa di-scroll. */
+  height: 100vh;
+  height: 100dvh;
   background: var(--color-primary-dark);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   position: fixed;
-  left: 0; top: 0; bottom: 0;
+  left: 0; top: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   z-index: 100;
   transition: left .25s ease;
 }
@@ -270,9 +276,10 @@ body:has(.app-layout) {
   font-size: .82rem;
   font-weight: 600;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Nama panjang boleh turun ke 2 baris, jangan dipotong ellipsis. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .sidebar-user-role {
