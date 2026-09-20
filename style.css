@@ -1,5 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+/* ===== PWA/mobile: tampilan app-like, ukuran item tetap proporsional =====
+   Cegah pinch/double-tap zoom & iOS auto-resize teks (viewport meta juga
+   sudah user-scalable=no). touch-action: manipulation menonaktifkan
+   double-tap-to-zoom tapi scroll/tap normal tetap jalan. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  touch-action: manipulation;
+}
+* { -webkit-tap-highlight-color: transparent; }
+
 /* ===== TOAST ===== */
 .toast {
   position: fixed; top: 24px; right: 24px;
