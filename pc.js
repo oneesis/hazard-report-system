@@ -155,6 +155,14 @@ function showDetail(r) {
 
   const foto = v(r,'foto_pc');
   const fotoKomitmen = v(r,'foto_komitmen');
+  // URL Drive ".../view" tidak bisa jadi <img> langsung — ubah ke thumbnail Drive.
+  const _thumb = (u) => {
+    const mf = u.match(/\/d\/([a-zA-Z0-9_-]+)/), mi = u.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const id = mf ? mf[1] : mi ? mi[1] : '';
+    return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w400` : u;
+  };
+  const _fotoThumbs = (val) => String(val || '').split(',').map(u => u.trim()).filter(Boolean)
+    .map(u => `<a href="${escH(u)}" target="_blank" rel="noopener"><img src="${escH(_thumb(u))}" loading="lazy" style="height:64px;border-radius:6px;border:1px solid #e2e8f0;margin:2px"></a>`).join('');
 
   document.getElementById('detailContent').innerHTML = `
     ${row('ID', v(r,'id'))}
@@ -173,8 +181,8 @@ function showDetail(r) {
     ${rowPre('Komitmen', v(r,'komitmen_perbaikan'))}
     ${row('Batas Waktu', v(r,'batas_waktu_pc'))}
     ${row('Status', v(r,'status') || 'OPEN')}
-    ${foto ? `<div class="detail-row"><span class="detail-label">Foto Sesi</span><a href="${escH(foto)}" target="_blank" style="color:#0d9488;font-weight:600">Lihat Foto →</a></div>` : ''}
-    ${fotoKomitmen ? `<div class="detail-row"><span class="detail-label">Foto Bukti</span><a href="${escH(fotoKomitmen)}" target="_blank" style="color:#0d9488;font-weight:600">Lihat Bukti →</a></div>` : ''}
+    ${foto ? `<div class="detail-row"><span class="detail-label">Foto Sesi</span><span class="detail-value">${_fotoThumbs(foto)}</span></div>` : ''}
+    ${fotoKomitmen ? `<div class="detail-row"><span class="detail-label">Foto Bukti</span><span class="detail-value">${_fotoThumbs(fotoKomitmen)}</span></div>` : ''}
     ${v(r,'pesan_komitmen') ? rowPre('Pesan Coachee', v(r,'pesan_komitmen')) : ''}
   `;
   openModal('detailModal');

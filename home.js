@@ -162,7 +162,11 @@ function renderHazardDraft() {
   const card    = document.getElementById('hazardDraftCard');
   if (!section || !card) return;
   try {
-    const raw = localStorage.getItem('hazard_draft');
+    // Key HARUS sama dengan AUTOSAVE_KEY di script.js (per-NIK), kalau tidak
+    // kartu draft tak pernah ketemu → seolah "draft belum ada".
+    const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const draftKey = `hazard_draft_${u?.nik || u?.nama || 'guest'}`;
+    const raw = localStorage.getItem(draftKey) || localStorage.getItem('hazard_draft');
     if (!raw) { section.style.display = 'none'; return; }
     const d = JSON.parse(raw);
     const saved = d._savedAt ? new Date(d._savedAt) : null;
@@ -197,7 +201,10 @@ function renderHazardDraft() {
 }
 
 function deleteHazardDraft() {
-  localStorage.removeItem('hazard_draft');
+  const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  localStorage.removeItem(`hazard_draft_${u?.nik || u?.nama || 'guest'}`);
+  localStorage.removeItem('hazard_draft'); // jaga-jaga key lama
+  if (typeof _draftClearServer === 'function') _draftClearServer('Hazard');
   const section = document.getElementById('hazardDraftSection');
   if (section) section.style.display = 'none';
 }

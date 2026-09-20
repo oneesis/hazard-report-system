@@ -161,19 +161,23 @@ function openSboModal(id) {
       <div class="checklist-display">${renderChecklistVal(r[key] || '{}', key)}</div>`;
   }
 
+  // Foto: URL Drive ".../view" tidak bisa jadi <img> langsung — ubah ke URL
+  // thumbnail Drive supaya preview benar-benar tampil (link tetap ke aslinya).
+  const _thumb = (u) => {
+    const mf = u.match(/\/d\/([a-zA-Z0-9_-]+)/), mi = u.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const id = mf ? mf[1] : mi ? mi[1] : '';
+    return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w400` : u;
+  };
+  const _fotoThumbs = (val) => String(val || '').split(',').map(u => u.trim()).filter(Boolean)
+    .map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${_thumb(u)}" loading="lazy" style="height:64px;border-radius:6px;border:1px solid #e2e8f0;margin:2px"></a>`).join('');
+
   // Foto temuan
   let fotoHtml = '-';
-  if (r.foto_temuan) {
-    const urls = String(r.foto_temuan).split(',').map(u => u.trim()).filter(Boolean);
-    fotoHtml = urls.map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" style="height:64px;border-radius:6px;border:1px solid #e2e8f0;margin:2px"></a>`).join('');
-  }
+  if (r.foto_temuan) fotoHtml = _fotoThumbs(r.foto_temuan) || '-';
 
   // Foto perbaikan
   let fotoPerbaikanHtml = '-';
-  if (r.upload_foto_perbaikan_pic) {
-    const urls2 = String(r.upload_foto_perbaikan_pic).split(',').map(u => u.trim()).filter(Boolean);
-    fotoPerbaikanHtml = urls2.map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" style="height:64px;border-radius:6px;border:1px solid #e2e8f0;margin:2px"></a>`).join('');
-  }
+  if (r.upload_foto_perbaikan_pic) fotoPerbaikanHtml = _fotoThumbs(r.upload_foto_perbaikan_pic) || '-';
 
   const dl = (label, val) => `<div class="sbo-dl-item"><div class="sbo-dl-label">${label}</div><div class="sbo-dl-val">${val || '-'}</div></div>`;
 
