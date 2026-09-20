@@ -110,7 +110,6 @@ function renderInsGrid() {
     <a class="ins-card" href="inspection-form.html?type=${area.type}" aria-label="${area.name}">
       <div class="ins-card-icon"><i class="fa-solid ${area.icon}"></i></div>
       <div class="ins-card-name">${area.name}</div>
-      <div class="ins-card-sub">${area.sub}</div>
       <span class="ins-card-go">Mulai <i class="fa-solid fa-arrow-right"></i></span>
     </a>
   `).join('');
