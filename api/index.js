@@ -82,7 +82,7 @@ async function _emailTakenByOther(sheets, email, nik) {
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const TOKEN_TTL = '12h';
+const TOKEN_TTL = '30d'; // sesi lama untuk PWA/mobile — tak sering logout otomatis (tetap bisa logout manual + lockout)
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
