@@ -938,6 +938,73 @@ async function getAllReports(sheets, nik, nama, role, perusahaan) {
   return { status: 'success', data: combined };
 }
 
+// Absensi Safety Talk milik user sbg "laporan" ringkas untuk feed beranda —
+// join ke schedule buat tanggal + judul materi. Scope perusahaan spt getter lain.
+async function getSafetyTalkFeed(auth) {
+  const sql = getSql();
+  let rows;
+  try {
+    rows = await sql`
+      SELECT a.schedule_id, a.nik, a.nama, a.perusahaan, a.status_kehadiran, a.checked_at,
+             s.tanggal AS s_tanggal, s.bulan AS s_bulan, s.judul_materi
+      FROM safety_talk_absensi a
+      LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id`;
+  } catch { return { status: 'success', data: [] }; }
+  let data = rows.map(r => ({
+    id: `ST-${r.schedule_id}-${r.nik}`,
+    report_type: 'ST',
+    nik: r.nik || '',
+    nama: r.nama || '',
+    perusahaan: r.perusahaan || '',
+    status_kehadiran: r.status_kehadiran || '',
+    timestamp: r.checked_at || r.s_tanggal || '',
+    tanggal_laporan: r.s_tanggal || '',
+    deskripsi: r.judul_materi ? `Safety Talk: ${r.judul_materi}` : `Safety Talk ${r.s_bulan || ''}`.trim(),
+  }));
+  if (!isSuperAdmin(auth?.role)) {
+    const co = String(auth?.perusahaan || '').trim().toUpperCase();
+    if (co) data = data.filter(r => String(r.perusahaan || '').trim().toUpperCase() === co);
+  }
+  return { status: 'success', data };
+}
+
+// Aktivitas SBO/PC/ST MILIK user (feed "Laporan Terakhir" di beranda) — dinormalisasi
+// ke bentuk seragam (nik/nama pelapor, timestamp, deskripsi, status_perbaikan) supaya
+// bisa digabung dgn HR/INS di sisi klien. Selalu difilter ke kepemilikan user (nik/nama);
+// endpoint TERPISAH dari getAllReports agar halaman Export (HR/INS) tak terpengaruh.
+async function getMyActivityExtras(sheets, auth) {
+  const [sbo, pc, st] = await Promise.all([
+    getSBOReports(sheets, auth).catch(() => ({ data: [] })),
+    getPCReports(sheets, auth).catch(() => ({ data: [] })),
+    getSafetyTalkFeed(auth).catch(() => ({ data: [] })),
+  ]);
+  const sboN = (sbo.data || []).map(r => ({
+    ...r,
+    report_type: 'SBO',
+    nik: r.nik_observer || '',
+    nama: r.nama_observer || '',
+    timestamp: r.timestamp || r.tgl_observasi || '',
+    deskripsi: r.deskripsi_temuan || r.nama_pekerjaan || 'Observasi SBO',
+  }));
+  const pcN = (pc.data || []).map(r => ({
+    ...r,
+    report_type: 'PC',
+    nik: r.nik_coach || '',
+    nama: r.nama_coach || '',
+    status_perbaikan: r.status || 'OPEN',
+    timestamp: r.timestamp || r.tgl_pc || '',
+    deskripsi: r.judul_coaching || r.topik_coaching || r.deskripsi_coaching || 'Personal Contact',
+  }));
+  let all = [...sboN, ...pcN, ...(st.data || [])];
+
+  const nik  = String(auth?.nik  || '').trim().toLowerCase();
+  const nama = String(auth?.nama || '').trim().toLowerCase();
+  all = all.filter(r =>
+    (nik && String(r.nik || '').trim().toLowerCase() === nik) ||
+    (nama && String(r.nama || '').trim().toLowerCase() === nama));
+  return { status: 'success', data: all };
+}
+
 // Satu laporan PENUH (termasuk tanda_tangan) by id — dipakai halaman/modal detail
 // supaya daftar bisa ramping tanpa tanda tangan. Cek visibilitas seperti getAllReports.
 async function getReportById(id, auth) {
@@ -2252,6 +2319,7 @@ module.exports = async (req, res) => {
         case 'getPCReports':        result = await getPCReports(sheets, auth); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
+        case 'getMyActivityExtras':  result = await getMyActivityExtras(sheets, auth); break;
         case 'getReport':            result = await getReportById(req.query.id, auth); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;

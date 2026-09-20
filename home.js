@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', initHomePage);
 
 let _currentObj = null;
+let _extraActivities = []; // SBO/PC/ST milik user (feed "Laporan Terakhir")
 
 const INSPECTION_AREAS = [
   { type: 'INS_CB', name: 'Conveyor Belt',     sub: 'Area Produksi',    icon: 'fa-gears' },
@@ -23,29 +24,34 @@ async function initHomePage() {
   initNotificationBell();
 
   try {
-    const [reports, obj] = await Promise.all([refreshNotifications(), fetchMyObj()]);
+    const [reports, obj, extras] = await Promise.all([refreshNotifications(), fetchMyObj(), fetchMyActivityExtras()]);
     _currentObj = obj;
+    _extraActivities = extras;
 
+    // Banner & quick-stats tetap HANYA HR/INS (punya siklus OPEN/CLOSED & PIC).
+    // Feed "Laporan Terakhir" + capaian SAP gabung SBO/PC/ST.
+    const feed = [...reports, ...extras];
     renderActionBanner(reports);
-    renderMyReports(reports);
+    renderMyReports(feed);
     renderQuickStats(reports);
-    renderSapAchievement(reports, obj);
+    renderSapAchievement(feed, obj);
 
     // search filter
-    let _allReports = reports;
+    let _allReports = feed;
     document.getElementById('myReportsSearch')?.addEventListener('input', function () {
       const q = this.value.trim().toLowerCase();
       renderMyReports(_allReports, q);
     });
 
-    // update saat auto-refresh dari layout.js
+    // update saat auto-refresh dari layout.js (e.detail = HR/INS terbaru)
     document.addEventListener('reportsRefreshed', e => {
-      _allReports = e.detail;
+      const merged = [...(e.detail || []), ..._extraActivities];
+      _allReports = merged;
       const q = (document.getElementById('myReportsSearch')?.value || '').trim().toLowerCase();
       renderActionBanner(e.detail);
-      renderMyReports(e.detail, q);
+      renderMyReports(merged, q);
       renderQuickStats(e.detail);
-      renderSapAchievement(e.detail, _currentObj);
+      renderSapAchievement(merged, _currentObj);
     });
   } catch (e) {
     console.error('Home load error', e);
@@ -64,6 +70,17 @@ async function fetchMyObj() {
     const json = await res.json();
     return json.status === 'success' ? json.data : null;
   } catch { return null; }
+}
+
+// SBO/PC/ST milik user untuk feed "Laporan Terakhir". Fail-open ([]) supaya
+// beranda tetap tampil kalau endpoint gagal.
+async function fetchMyActivityExtras() {
+  try {
+    const res = await fetch('/api?action=getMyActivityExtras');
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json.data) ? json.data : [];
+  } catch { return []; }
 }
 
 function renderGreeting() {
@@ -118,10 +135,12 @@ function renderMyReports(reports, query = '') {
     return isNaN(d) ? 0 : d.getTime();
   };
   const sorted = pool.sort((a, b) => getTs(b) - getTs(a));
+  const descOf = r => (r.deskripsi_bahaya || r.temuan || r.deskripsi_temuan ||
+    r.judul_coaching || r.topik_coaching || r.deskripsi_coaching || r.deskripsi || '');
   const recent = query
     ? sorted.filter(r => {
         const id   = (getReportId(r) || '').toLowerCase();
-        const desc = (r.deskripsi_bahaya || r.temuan || '').toLowerCase();
+        const desc = descOf(r).toLowerCase();
         return id.includes(query) || desc.includes(query);
       }).slice(0, 10)
     : sorted.slice(0, 5);
@@ -134,25 +153,55 @@ function renderMyReports(reports, query = '') {
     return;
   }
 
+  const TYPE_META = {
+    HAZARD:     { label: 'HR',  color: '#ef4444' },
+    INSPECTION: { label: 'INS', color: '#6366f1' },
+    SBO:        { label: 'SBO', color: '#0ea5e9' },
+    PC:         { label: 'PC',  color: '#10b981' },
+    ST:         { label: 'ST',  color: '#f59e0b' },
+  };
+
   el.innerHTML = recent.map(r => {
-    const status  = (getReportStatus(r) || 'OPEN').toUpperCase();
+    const type    = String(r.report_type || 'HAZARD').toUpperCase();
+    const meta    = TYPE_META[type] || TYPE_META.HAZARD;
     const id      = escapeHTML(getReportId(r) || '-');
-    const desc    = escapeHTML((r.deskripsi_bahaya || r.temuan || '-').substring(0, 60));
-    const dateVal = r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || r.timestamp || '';
+    const desc    = escapeHTML((descOf(r) || '-').substring(0, 60));
+    const dateVal = r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || r.tgl_observasi || r.tgl_pc || r.timestamp || '';
     const date    = dateVal ? new Date(dateVal).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '';
-    const due     = r.batas_waktu || r.due_date || '';
-    const dueDate = due ? new Date(due) : null;
-    const isOverdue = dueDate && !isNaN(dueDate) && status !== 'CLOSED' && dueDate < new Date();
-    const dotCls  = `dot-${status.toLowerCase()}`;
-    const badgeCls = `badge-${status.toLowerCase()}`;
-    return `<a class="report-item${isOverdue ? ' report-item--overdue' : ''}" href="laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}">
+
+    // ST tak punya siklus OPEN/CLOSED → pakai status kehadiran. Sisanya OPEN/CLOSED.
+    let statusLabel, badgeCls, dotCls, isOverdue = false;
+    if (type === 'ST') {
+      statusLabel = String(r.status_kehadiran || 'HADIR').toUpperCase();
+      const ok = statusLabel === 'HADIR';
+      badgeCls = ok ? 'badge-closed' : 'badge-open';
+      dotCls   = ok ? 'dot-closed' : 'dot-open';
+    } else {
+      const status = (getReportStatus(r) || 'OPEN').toUpperCase();
+      statusLabel  = status;
+      const due     = r.batas_waktu || r.due_date || '';
+      const dueDate = due ? new Date(due) : null;
+      isOverdue = dueDate && !isNaN(dueDate) && status !== 'CLOSED' && dueDate < new Date();
+      dotCls   = `dot-${status.toLowerCase()}`;
+      badgeCls = `badge-${status.toLowerCase()}`;
+    }
+
+    // HR/INS punya halaman detail; SBO/PC/ST diarahkan ke modulnya masing-masing.
+    const href = type === 'SBO' ? 'sbo.html'
+      : type === 'PC' ? 'pc.html'
+      : type === 'ST' ? 'capaian-sap.html'
+      : `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
+
+    const typeChip = `<span style="display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.03em;color:#fff;background:${meta.color};padding:1px 6px;border-radius:5px;margin-right:6px;vertical-align:middle">${meta.label}</span>`;
+
+    return `<a class="report-item${isOverdue ? ' report-item--overdue' : ''}" href="${href}">
       <div class="report-item-dot ${dotCls}"></div>
       <div class="report-item-body">
-        <div class="report-item-id">${id}${isOverdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</div>
+        <div class="report-item-id">${typeChip}${id}${isOverdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</div>
         <div class="report-item-desc">${desc}</div>
         ${date ? `<div class="report-item-meta">${date}</div>` : ''}
       </div>
-      <span class="report-item-badge ${badgeCls}">${status}</span>
+      <span class="report-item-badge ${badgeCls}">${statusLabel}</span>
     </a>`;
   }).join('');
 }
@@ -338,14 +387,13 @@ function renderSapAchievement(reports, obj) {
     return !isNaN(d) && d.getFullYear() === y && d.getMonth() === m;
   });
 
-  const hrCount  = mine.filter(r => r.report_type === 'HAZARD').length;
-  const insCount = mine.filter(r => r.report_type === 'INSPECTION').length;
+  const cnt = t => mine.filter(r => String(r.report_type || '').toUpperCase() === t).length;
 
   const rows = [
-    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: hrCount,  target: obj.hr  },
-    { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: insCount, target: obj.ins },
-    { label: 'SBO',           icon: 'fa-eye',                   count: 0,        target: obj.sbo },
-    { label: 'Personal Contact', icon: 'fa-handshake',           count: 0,        target: obj.pc  },
+    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: cnt('HAZARD'),     target: obj.hr  },
+    { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: cnt('INSPECTION'), target: obj.ins },
+    { label: 'SBO',           icon: 'fa-eye',                   count: cnt('SBO'),        target: obj.sbo },
+    { label: 'Personal Contact', icon: 'fa-handshake',           count: cnt('PC'),         target: obj.pc  },
   ].filter(r => r.target > 0);
 
   if (!rows.length) { el.style.display = 'none'; return; }
