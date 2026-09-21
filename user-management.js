@@ -102,22 +102,63 @@ function applyUMFilters() {
 }
 // Kotak cari lama tetap memanggil ini
 function filterUsers() { applyUMFilters(); }
-// Dipanggil tiap ketik di input filter kolom (tidak me-render ulang thead → fokus input tetap)
-window._umColFilter = function (field, val) { umColFilters[field] = val; applyUMFilters(); };
+// Dipanggil tiap ketik di input filter kolom (tidak me-render ulang thead → fokus input tetap).
+// Sekalian warnai ikon corong kolom itu (aktif=biru) tanpa render ulang head.
+window._umColFilter = function (field, val) {
+  umColFilters[field] = val;
+  const ic = document.querySelector(`[data-umfico="${field}"]`);
+  if (ic) ic.style.color = String(val || '').trim() ? '#6366f1' : '#cbd5e1';
+  applyUMFilters();
+};
+
+// Toggle baris filter (default tersembunyi) + fokus ke kolom yang ikon-nya diklik.
+window._umToggleFilters = function (field) {
+  const row = document.getElementById('umFilterRow');
+  if (!row) return;
+  const willShow = row.style.display === 'none' || !row.style.display;
+  row.style.display = willShow ? '' : 'none';
+  if (willShow && field) {
+    const inp = row.querySelector(`input[data-umf="${field}"]`);
+    if (inp) inp.focus();
+  }
+};
 
 // Header + baris filter. Dipisah dari body supaya mengetik di filter tidak
 // membangun ulang thead (fokus input tetap). Dipanggil saat load & saat sort.
+// Baris filter tersembunyi; dibuka lewat ikon corong di tiap header (lebih ringkas).
 function renderUMHead(canEdit) {
   const thead = document.querySelector('#umTable thead');
   if (!thead) return;
+  const funnel = (c) => {
+    const active = !!(umColFilters[c.field] && String(umColFilters[c.field]).trim());
+    return `<i class="fa-solid fa-filter" data-umfico="${escapeHTML(c.field)}" title="Filter ${escapeHTML(c.label)}" style="margin-left:6px;cursor:pointer;font-size:.7rem;color:${active ? '#6366f1' : '#cbd5e1'}" onclick="event.stopPropagation();_umToggleFilters('${c.field.replace(/'/g, "\\'")}')"></i>`;
+  };
   const headTh = (c) => c.noSort
-    ? `<th class="${c.center ? 'um-center' : ''}" style="white-space:nowrap">${c.label}</th>`
-    : `<th class="${c.center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${c.key}')">${c.label}${_umSortIcon(c.key)}</th>`;
+    ? `<th class="${c.center ? 'um-center' : ''}" style="white-space:nowrap">${c.label}${funnel(c)}</th>`
+    : `<th class="${c.center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_umThClick('${c.key}')">${c.label}${_umSortIcon(c.key)}${funnel(c)}</th>`;
   const filterTh = (c) =>
-    `<th style="padding:2px 4px"><input type="text" value="${escapeHTML(umColFilters[c.field] || '')}" oninput="_umColFilter('${c.field.replace(/'/g, "\\'")}', this.value)" placeholder="cari…" style="width:100%;min-width:56px;box-sizing:border-box;font-weight:400;font-size:.72rem;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px" /></th>`;
+    `<th style="padding:2px 4px"><input type="text" data-umf="${escapeHTML(c.field)}" value="${escapeHTML(umColFilters[c.field] || '')}" oninput="_umColFilter('${c.field.replace(/'/g, "\\'")}', this.value)" placeholder="cari…" style="width:100%;min-width:56px;box-sizing:border-box;font-weight:400;font-size:.72rem;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px" /></th>`;
   thead.innerHTML =
     `<tr>${UM_COLS.map(headTh).join('')}${canEdit ? '<th>Aksi</th>' : ''}</tr>` +
-    `<tr class="um-filter-row">${UM_COLS.map(filterTh).join('')}${canEdit ? '<th></th>' : ''}</tr>`;
+    `<tr class="um-filter-row" id="umFilterRow" style="display:none">${UM_COLS.map(filterTh).join('')}${canEdit ? '<th></th>' : ''}</tr>`;
+}
+
+// Unduh data user (Excel/CSV) — mengikuti filter yang sedang aktif; kalau tak ada
+// filter, seluruh user. PASSWORD sengaja tidak diikutkan.
+function downloadUsersExcel() {
+  const rows = (umFiltered && umFiltered.length) ? umFiltered : umUsers;
+  if (!rows.length) { showToast('Tidak ada data untuk diunduh.', 'error'); return; }
+  const cols = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','EMAIL','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
+  const esc = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [cols.join(','), ...rows.map(u => cols.map(c => esc(u[c])).join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM → Excel baca UTF-8
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `data-user-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast(`${rows.length} user diunduh.`, 'success');
 }
 
 function renderUMTable() {
