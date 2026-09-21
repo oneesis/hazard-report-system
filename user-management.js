@@ -21,6 +21,7 @@ const UM_COLS = [
   { key: 'ins',   field: 'OBJ INS',     label: 'OBJ INS', center: true },
   { key: 'sbo',   field: 'OBJ SBO',     label: 'OBJ SBO', center: true },
   { key: 'pc',    field: 'OBJ PC',      label: 'OBJ PC',  center: true },
+  { key: 'st',    field: 'OBJ_ST',      label: 'OBJ ST',  center: true },
 ];
 
 function _umSortIcon(col) {
@@ -45,6 +46,7 @@ function _umSortVal(u, col) {
     case 'ins':  return Number(u['OBJ INS'] || 0);
     case 'sbo':  return Number(u['OBJ SBO'] || 0);
     case 'pc':   return Number(u['OBJ PC'] || 0);
+    case 'st':   return Number(u['OBJ_ST'] || u['OBJ ST'] || 0);
     default:     return '';
   }
 }
@@ -60,7 +62,7 @@ async function initUserManagement() {
 
 async function loadUsers() {
   const tbody = document.getElementById('umTableBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px">Memuat...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:20px">Memuat...</td></tr>';
   try {
     const res = await fetch('/api?action=getKaryawan', { cache: 'no-store' });
     const result = await res.json();
@@ -69,7 +71,7 @@ async function loadUsers() {
     umPage = 1;
     renderUMTable();
   } catch (e) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:#ef4444">${e.message}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#ef4444">${e.message}</td></tr>`;
   }
 }
 
@@ -148,9 +150,10 @@ function renderUMHead(canEdit) {
 function downloadUsersExcel() {
   const rows = (umFiltered && umFiltered.length) ? umFiltered : umUsers;
   if (!rows.length) { showToast('Tidak ada data untuk diunduh.', 'error'); return; }
-  const cols = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','EMAIL','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
+  const cols = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','EMAIL','OBJ HR','OBJ INS','OBJ SBO','OBJ PC','OBJ ST'];
+  const valOf = (u, c) => c === 'OBJ ST' ? (u['OBJ_ST'] ?? u['OBJ ST'] ?? '') : u[c];
   const esc = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const csv = [cols.join(','), ...rows.map(u => cols.map(c => esc(u[c])).join(','))].join('\n');
+  const csv = [cols.join(','), ...rows.map(u => cols.map(c => esc(valOf(u, c))).join(','))].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM → Excel baca UTF-8
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -186,7 +189,7 @@ function renderUMBody() {
   const page  = sorted.slice(start, start + UM_PAGE_SIZE);
 
   if (!page.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:20px;color:#94a3b8">Tidak ada data</td></tr>';
     renderUMPagination();
     return;
   }
@@ -205,6 +208,7 @@ function renderUMBody() {
       <td class="um-center">${escapeHTML(String(u['OBJ INS'] || '0'))}</td>
       <td class="um-center">${escapeHTML(String(u['OBJ SBO'] || '0'))}</td>
       <td class="um-center">${escapeHTML(String(u['OBJ PC'] || '0'))}</td>
+      <td class="um-center">${escapeHTML(String(u['OBJ_ST'] || u['OBJ ST'] || '0'))}</td>
       ${canEdit ? `<td class="um-actions">
         <button class="um-btn-edit" onclick="openEditUser(window._umPageArr[${idx}])">Edit</button>
         <button class="um-btn-delete" onclick="confirmDeleteUser(window._umPageArr[${idx}])">Hapus</button>
@@ -630,7 +634,7 @@ function renderMyHistory(list) {
 
 // ===== CSV IMPORT/EXPORT =====
 
-const CSV_COLUMNS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','OBJ HR','OBJ INS','OBJ SBO','OBJ PC'];
+const CSV_COLUMNS = ['PERUSAHAAN','SUBCONT','NAMA','NIK','JABATAN','DEPARTEMEN','NO WHATSAPP','PASSWORD','OBJ HR','OBJ INS','OBJ SBO','OBJ PC','OBJ ST'];
 
 function downloadCsvTemplate() {
   const header = CSV_COLUMNS.join(',');
@@ -687,6 +691,7 @@ async function _executeCsvImport(users) {
       ROLE: 'USER',
       'OBJ HR': u['OBJ HR'] || '0', 'OBJ INS': u['OBJ INS'] || '0',
       'OBJ SBO': u['OBJ SBO'] || '0', 'OBJ PC': u['OBJ PC'] || '0',
+      'OBJ_ST': u['OBJ ST'] || u['OBJ_ST'] || '0',
     };
     try {
       const res = await fetch('/api', {

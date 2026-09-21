@@ -2337,6 +2337,7 @@ module.exports = async (req, res) => {
               ins: parseInt(me?.['OBJ INS'] || 0) || 0,
               sbo: parseInt(me?.['OBJ SBO'] || 0) || 0,
               pc:  parseInt(me?.['OBJ PC']  || 0) || 0,
+              st:  parseInt(me?.['OBJ_ST']  || me?.['OBJ ST'] || 0) || 0,
             }
           };
           break;
