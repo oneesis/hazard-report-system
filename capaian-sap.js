@@ -667,9 +667,14 @@ function copyWa() {
       .forEach(r => {
         const nama  = r.k['NAMA'] || '-';
         const total = r.pctTotal !== null ? r.pctTotal + '%' : '-';
-        const hr    = r.pctHR    !== null ? `HR: ${r.pctHR}%` : '';
-        const ins   = r.pctINS   !== null ? `INS: ${r.pctINS}%` : '';
-        const detail = [hr, ins].filter(Boolean).join(' | ');
+        // Tampilkan tiap komponen hanya bila OBJ-nya > 0 (pct null = OBJ 0).
+        const detail = [
+          r.pctHR  !== null ? `HR: ${r.pctHR}%`   : '',
+          r.pctINS !== null ? `INS: ${r.pctINS}%` : '',
+          r.pctSBO !== null ? `SBO: ${r.pctSBO}%` : '',
+          r.pctPC  !== null ? `PC: ${r.pctPC}%`   : '',
+          r.pctST  !== null ? `ST: ${r.pctST}%`   : '',
+        ].filter(Boolean).join(' | ');
         text += `• ${nama}: *${total}*${detail ? ` (${detail})` : ''}\n`;
       });
   });
