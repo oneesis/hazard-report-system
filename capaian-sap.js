@@ -673,7 +673,6 @@ function copyWa() {
           r.pctINS !== null ? `INS: ${r.pctINS}%` : '',
           r.pctSBO !== null ? `SBO: ${r.pctSBO}%` : '',
           r.pctPC  !== null ? `PC: ${r.pctPC}%`   : '',
-          r.pctST  !== null ? `ST: ${r.pctST}%`   : '',
         ].filter(Boolean).join(' | ');
         text += `• ${nama}: *${total}*${detail ? ` (${detail})` : ''}\n`;
       });
