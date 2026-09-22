@@ -208,6 +208,29 @@
     document.getElementById('sidebarOverlay')?.classList.remove('active');
   }
 
+  // Tombol Manual Book (ikon ?) di topbar kanan — buka PDF panduan di tab baru.
+  function injectManualButton() {
+    const topbar = document.querySelector('.app-topbar');
+    if (!topbar || topbar.querySelector('.topbar-help-btn')) return;
+    if (!document.getElementById('topbarHelpStyle')) {
+      const st = document.createElement('style');
+      st.id = 'topbarHelpStyle';
+      st.textContent = '.topbar-help-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;color:#64748b;font-size:1.2rem;text-decoration:none;flex-shrink:0;transition:background .15s,color .15s}.topbar-help-btn:hover{background:#eef2ff;color:#4338ca}';
+      document.head.appendChild(st);
+    }
+    const a = document.createElement('a');
+    a.href = 'manual/one-sap.pdf';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'topbar-help-btn';
+    a.title = 'Manual Book (Panduan Penggunaan)';
+    a.setAttribute('aria-label', 'Manual Book');
+    a.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
+    const bell = topbar.querySelector('#notificationBell');
+    if (bell) topbar.insertBefore(a, bell);
+    else topbar.appendChild(a);
+  }
+
   function injectIosInstallBanner() {
     const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
     if (!isIOS || window.navigator.standalone === true) return;
@@ -249,6 +272,7 @@
     renderSidebar();
     renderMobileNav();
     injectAdminStrip();
+    injectManualButton();
     injectIosInstallBanner();
     if (typeof initNotificationBell === 'function') initNotificationBell();
     if (typeof initPushNotifications === 'function') initPushNotifications();
