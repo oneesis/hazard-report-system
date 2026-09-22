@@ -454,18 +454,38 @@ function autoFillObservee() {
   set('nik_observee',       found['NIK'] || '');
 }
 
+// Kompres di klien -- foto HP mentah bikin body kegedean → server balas
+// "Request Entity Too Large" (bukan JSON). Sama seperti form Hazard/PC.
+function _sboCompress(base64Str, maxW = 800, maxH = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; } }
+      else       { if (h > maxH) { w = Math.round((w * maxH) / h); h = maxH; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+}
+
 function onSboFotoChange(input) {
   const preview = document.getElementById('sboFotoPreview');
   sboSelectedPhotos = [];
   if (!input.files?.length) { if (preview) preview.innerHTML = ''; return; }
   const reads = [...input.files].map(f => new Promise(res => {
     const fr = new FileReader();
-    fr.onload = e => res(e.target.result);
+    fr.onload = e => _sboCompress(e.target.result).then(res);
+    fr.onerror = () => res(null);
     fr.readAsDataURL(f);
   }));
   Promise.all(reads).then(results => {
-    sboSelectedPhotos = results;
-    if (preview) preview.innerHTML = results.map(d =>
+    sboSelectedPhotos = results.filter(Boolean);
+    if (preview) preview.innerHTML = sboSelectedPhotos.map(d =>
       `<img src="${d}" style="height:64px;border-radius:8px;border:1.5px solid #e2e8f0;object-fit:cover">`
     ).join('');
   });

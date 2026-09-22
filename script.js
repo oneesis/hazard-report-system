@@ -105,6 +105,13 @@ function loadPerusahaanOptions() {
   list.forEach(item => select.add(new Option(item, item)));
 }
 
+// SUBCONT: anggap "" / "N/A" / "-" setara (perusahaan induk spt PT EBL tidak
+// punya subcont). Dipakai agar dropdown & filter nama tetap jalan untuk mereka.
+function _subEq(a, b) {
+  const n = s => { const t = String(s || "").trim().toUpperCase(); return (t === "N/A" || t === "-" || t === "NA") ? "" : t; };
+  return n(a) === n(b);
+}
+
 function loadSubcontOptions(skipClear = false) {
   const perusahaan = document.getElementById("perusahaan").value;
   const select = document.getElementById("subcont1");
@@ -121,6 +128,8 @@ function loadSubcontOptions(skipClear = false) {
     masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan)
       .map(item => item["SUBCONT"]).filter(Boolean)
   )].sort();
+  // Perusahaan tanpa subcont (mis. PT EBL) -> tetap sediakan opsi "N/A".
+  if (!list.length) list.push("N/A");
   list.forEach(item => select.add(new Option(item, item)));
 }
 
@@ -140,7 +149,7 @@ function loadNamaOptions(skipClear = false) {
   }
 
   const list = [...new Set(
-    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont)
+    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && _subEq(item["SUBCONT"], subcont))
       .map(item => item["NAMA"]).filter(Boolean)
   )].sort();
   list.forEach(item => select.add(new Option(item, item)));
@@ -161,7 +170,7 @@ function autoFillData() {
   const nama = document.getElementById("nama").value;
 
   const selected = masterKaryawan.find(
-    item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont && item["NAMA"] === nama
+    item => item["PERUSAHAAN"] === perusahaan && _subEq(item["SUBCONT"], subcont) && item["NAMA"] === nama
   );
 
   if (!selected) return;
@@ -287,6 +296,7 @@ function loadSubcontPicOptions() {
     masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan)
       .map(item => item["SUBCONT"]).filter(Boolean)
   )].sort();
+  if (!list.length) list.push("N/A");
   list.forEach(item => select.add(new Option(item, item)));
 }
 
@@ -305,12 +315,12 @@ function loadNamaPicOptions() {
   }
 
   const list = [...new Set(
-    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont)
+    masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && _subEq(item["SUBCONT"], subcont))
       .map(item => item["NAMA"]).filter(Boolean)
   )].sort();
   list.forEach(item => {
     const employee = masterKaryawan.find(row =>
-      row["PERUSAHAAN"] === perusahaan && row["SUBCONT"] === subcont && row["NAMA"] === item
+      row["PERUSAHAAN"] === perusahaan && _subEq(row["SUBCONT"], subcont) && row["NAMA"] === item
     );
     // Cuti (2026-08-20) — tidak eligible jadi PIC; tampil disabled + label
     // status. Ini cuma UX, penolakan sebenarnya tetap di backend saat submit.
@@ -330,7 +340,7 @@ function autoFillDataPic() {
   const nama = document.getElementById("nama_pic").value;
 
   const selected = masterKaryawan.find(
-    item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont && item["NAMA"] === nama
+    item => item["PERUSAHAAN"] === perusahaan && _subEq(item["SUBCONT"], subcont) && item["NAMA"] === nama
   );
 
   if (!selected) return;

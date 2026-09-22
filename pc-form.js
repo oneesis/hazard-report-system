@@ -78,17 +78,38 @@ function pcPrev() {
 }
 
 // ── Foto ─────────────────────────────────────────────────────
+// Kompres di klien sebelum kirim (JSON base64) -- tanpa ini foto HP mentah
+// bikin body kegedean → server balas "Request Entity Too Large" (bukan JSON)
+// → "Unexpected token 'R'". Sama seperti compressImage di form Hazard.
+function _pcCompress(base64Str, maxW = 800, maxH = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; } }
+      else       { if (h > maxH) { w = Math.round((w * maxH) / h); h = maxH; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+}
+
 function onPcFotoChange(input) {
   const preview = document.getElementById('pcFotoPreview');
   pcPhotos = [];
   if (!input.files?.length) { if (preview) preview.innerHTML = ''; return; }
   Promise.all([...input.files].map(f => new Promise(res => {
     const fr = new FileReader();
-    fr.onload = e => res(e.target.result);
+    fr.onload = e => _pcCompress(e.target.result).then(res);
+    fr.onerror = () => res(null);
     fr.readAsDataURL(f);
   }))).then(results => {
-    pcPhotos = results;
-    if (preview) preview.innerHTML = results.map(d =>
+    pcPhotos = results.filter(Boolean);
+    if (preview) preview.innerHTML = pcPhotos.map(d =>
       `<img src="${d}">`
     ).join('');
   });
