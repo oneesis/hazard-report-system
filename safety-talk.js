@@ -304,6 +304,8 @@ Waktu        : 07.00 WITA - Selesai
 Pemateri     : ${pemateri}
 ${deptPemateri ? `Departemen   : ${deptPemateri}\n` : ''}Topik        : ${topik}${deskripsi}
 
+*Semua karyawan diwajibkan hadir tepat waktu.*
+
 *Atribut Peserta:*
 ∙ Menggunakan seragam perusahaan dalam kondisi rapi.
 ∙ Membawa serta mengenakan Alat Pelindung Diri (APD) lengkap sesuai standar.
