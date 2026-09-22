@@ -452,6 +452,44 @@ async function saveMultipleImagesToDrive(base64DataField, folderId, idPrefix) {
   return urls.join(', ');
 }
 
+// Subfolder jenis (HR/INS/SBO/PC) di dalam folder DOKUMENTASI LAPORAN/CLOSING SAP
+// (2026-09-22). find-or-create, di-cache per instance function. Fail-open: kalau
+// gagal, pakai folder induk supaya upload tetap jalan.
+const _subfolderCache = new Map();
+async function driveSubfolderId(parentId, name) {
+  if (!parentId || !name) return parentId;
+  const key = parentId + '/' + name;
+  if (_subfolderCache.has(key)) return _subfolderCache.get(key);
+  try {
+    const drive = getDriveClient();
+    const q = `name='${name}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const list = await drive.files.list({ q, fields: 'files(id)', pageSize: 1 });
+    let id = list.data.files?.[0]?.id;
+    if (!id) {
+      const created = await drive.files.create({
+        requestBody: { name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
+        fields: 'id',
+      });
+      id = created.data.id;
+    }
+    _subfolderCache.set(key, id);
+    return id;
+  } catch (e) {
+    console.error('[drive] subfolder gagal, pakai folder induk:', e.message);
+    return parentId;
+  }
+}
+
+// report_type / konteks -> nama subfolder jenis (null = tidak dikelompokkan)
+function _docTypeFolder(t) {
+  const u = String(t || '').toUpperCase();
+  if (u === 'HAZARD' || u === 'HR') return 'HR';
+  if (u === 'INSPECTION' || u === 'INS') return 'INS';
+  if (u === 'SBO') return 'SBO';
+  if (u === 'PC') return 'PC';
+  return null;
+}
+
 // ===== ACTIONS =====
 
 function verifyPassword(input, stored) {
@@ -1154,7 +1192,7 @@ async function submitHazardReport(sheets, data) {
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
   if (data.upload_foto_bahaya)
-    fotoBahayaUrl = await saveMultipleImagesToDrive(data.upload_foto_bahaya, process.env.FOLDER_HAZARD_ID, id + '-Hazard');
+    fotoBahayaUrl = await saveMultipleImagesToDrive(data.upload_foto_bahaya, await driveSubfolderId(process.env.FOLDER_HAZARD_ID, 'HR'), id + '-Hazard');
 
   // Resolve WA dari master data jika tidak dikirim dari form
   if (!data.no_whatsapp && data.nik)
@@ -1226,7 +1264,7 @@ async function submitInspectionReport(sheets, data) {
   const id = 'INSP-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoInspeksiUrl = '';
   if (data.upload_foto_inspeksi)
-    fotoInspeksiUrl = await saveMultipleImagesToDrive(data.upload_foto_inspeksi, process.env.FOLDER_HAZARD_ID, id + '-Inspection');
+    fotoInspeksiUrl = await saveMultipleImagesToDrive(data.upload_foto_inspeksi, await driveSubfolderId(process.env.FOLDER_HAZARD_ID, 'INS'), id + '-Inspection');
 
   // Resolve WA dari master data jika tidak dikirim dari form
   if (!data.no_whatsapp && data.nik)
@@ -1312,7 +1350,7 @@ async function submitPCReport(sheets, data) {
 
   let fotoUrl = '';
   if (data.foto_pc)
-    fotoUrl = await saveMultipleImagesToDrive(data.foto_pc, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, id + '-PC');
+    fotoUrl = await saveMultipleImagesToDrive(data.foto_pc, await driveSubfolderId(process.env.FOLDER_HAZARD_ID, 'PC'), id + '-PC');
 
   await sql`
     INSERT INTO pc_report
@@ -1371,7 +1409,7 @@ async function updatePCReport(sheets, data, auth) {
   const sql = getSql();
   let fotoUrl = '';
   if (data.foto_komitmen)
-    fotoUrl = await saveMultipleImagesToDrive(data.foto_komitmen, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, data.id + '-Komitmen');
+    fotoUrl = await saveMultipleImagesToDrive(data.foto_komitmen, await driveSubfolderId(process.env.FOLDER_CLOSING_ID || process.env.FOLDER_HAZARD_ID, 'PC'), data.id + '-Komitmen');
 
   const upd = await sql`
     UPDATE pc_report SET status = 'CLOSED', foto_komitmen = ${fotoUrl},
@@ -1529,7 +1567,7 @@ async function submitSBOReport(sheets, data) {
 
   let fotoUrl = '';
   if (hasFinding && data.foto_temuan)
-    fotoUrl = await saveMultipleImagesToDrive(data.foto_temuan, process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID, id + '-SBO');
+    fotoUrl = await saveMultipleImagesToDrive(data.foto_temuan, await driveSubfolderId(process.env.FOLDER_HAZARD_ID, 'SBO'), id + '-SBO');
 
   if (hasFinding && !data.no_wa_pic && data.nik_pic)
     data.no_wa_pic = await resolveWaFromNik(sheets, data.nik_pic).catch(() => '');
@@ -1718,7 +1756,8 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
 
   let fotoPerbaikanUrl = '';
   if (data.upload_foto_perbaikan_pic) {
-    const closingFolder = process.env.FOLDER_CLOSING_ID || process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID;
+    const closingParent = process.env.FOLDER_CLOSING_ID || process.env.FOLDER_HAZARD_ID;
+    const closingFolder = await driveSubfolderId(closingParent, sheetName === 'Hazard_Report' ? 'HR' : 'INS');
     fotoPerbaikanUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, closingFolder, data.id + folderSuffix);
   }
 
@@ -2320,6 +2359,25 @@ module.exports = async (req, res) => {
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getMyActivityExtras':  result = await getMyActivityExtras(sheets, auth); break;
+        case 'ensureDocFolders': {
+          // Buat (kalau belum ada) subfolder HR/INS/SBO/PC di DOKUMENTASI LAPORAN
+          // SAP (FOLDER_HAZARD_ID) & DOKUMENTASI CLOSING SAP (FOLDER_CLOSING_ID).
+          // Super admin only. Sekalian balikin nama folder induk utk verifikasi.
+          if (normalizeRole(auth.role) !== 'SUPER_ADMIN') { result = { status: 'error', message: 'Hanya super admin.' }; break; }
+          const drive = getDriveClient();
+          const parents = { LAPORAN: process.env.FOLDER_HAZARD_ID, CLOSING: process.env.FOLDER_CLOSING_ID };
+          const out = {};
+          for (const [label, pid] of Object.entries(parents)) {
+            if (!pid) { out[label] = { error: 'env belum diset' }; continue; }
+            let parentName = '(?)';
+            try { parentName = (await drive.files.get({ fileId: pid, fields: 'name' })).data.name; } catch {}
+            const subs = {};
+            for (const t of ['HR', 'INS', 'SBO', 'PC']) subs[t] = await driveSubfolderId(pid, t);
+            out[label] = { folder: parentName, sub: subs };
+          }
+          result = { status: 'success', data: out };
+          break;
+        }
         case 'getReport':            result = await getReportById(req.query.id, auth); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
@@ -2606,7 +2664,7 @@ module.exports = async (req, res) => {
             assertReportRole(sboRow, authUser, 'pic'); // cek kepemilikan PIC
             let fotoUrl = '';
             if (data.upload_foto_perbaikan_pic) {
-              const folder = process.env.FOLDER_CLOSING_ID || process.env.FOLDER_SBO_ID || process.env.FOLDER_HAZARD_ID;
+              const folder = await driveSubfolderId(process.env.FOLDER_CLOSING_ID || process.env.FOLDER_HAZARD_ID, 'SBO');
               fotoUrl = await saveMultipleImagesToDrive(data.upload_foto_perbaikan_pic, folder, data.id + '-SBO-Closing');
             }
             const st = data.status_perbaikan || 'CLOSED';
