@@ -101,6 +101,9 @@
           </div>
         </div>
         <div class="sidebar-user-actions">
+          <a href="manual/one-sap.pdf" target="_blank" rel="noopener noreferrer" class="sidebar-logout-btn" title="Manual Book (Panduan Penggunaan)">
+            <i class="fa-solid fa-circle-question"></i>
+          </a>
           <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>
           <button class="sidebar-logout-btn push-notif-btn" onclick="togglePushNotification()" title="Aktifkan push notification">
             <i class="fa-solid fa-bell-slash"></i>

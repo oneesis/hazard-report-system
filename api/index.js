@@ -2309,14 +2309,24 @@ module.exports = async (req, res) => {
           break;
         }
         case 'getSafetyTalkAbsensi': {
-          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          // Admin/Super Admin: semua (atau per schedule). USER: HANYA absensi
+          // miliknya sendiri (dipakai Capaian SAP agar ST-nya terbaca) — tanpa
+          // ini USER kena 403 & capaian ST-nya selalu kosong (fix 2026-09-22).
           const schedId = String(req.query.schedule_id || '').trim();
+          const admin = isAdminOrAbove(auth.role);
           let abRows = [];
           try {
             const sql = getSql();
-            abRows = (schedId
-              ? await sql`SELECT * FROM safety_talk_absensi WHERE schedule_id = ${schedId}`
-              : await sql`SELECT * FROM safety_talk_absensi`).map(_stAbsOut);
+            let rows;
+            if (admin) {
+              rows = schedId
+                ? await sql`SELECT * FROM safety_talk_absensi WHERE schedule_id = ${schedId}`
+                : await sql`SELECT * FROM safety_talk_absensi`;
+            } else {
+              const nik = String(auth.nik || '').trim();
+              rows = await sql`SELECT * FROM safety_talk_absensi WHERE nik = ${nik}`;
+            }
+            abRows = rows.map(_stAbsOut);
           } catch {}
           result = { status: 'success', data: abRows };
           break;
