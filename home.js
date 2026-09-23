@@ -21,6 +21,7 @@ async function initHomePage() {
   renderGreeting();
   renderInsGrid();
   renderHazardDraft();
+  renderPenggantiST();
   initNotificationBell();
 
   try {
@@ -246,6 +247,30 @@ function renderHazardDraft() {
       </a>`;
     section.style.display = '';
   } catch { section.style.display = 'none'; }
+}
+
+// Kartu "Pengganti Safety Talk" — buka quiz-she dgn NRP karyawan (auto-login,
+// tanpa ketik NIK) untuk mengganti Safety Talk yang tak dihadiri (Cuti/Dinas/
+// Shift/Off) dengan kuis. Terhubung via data NRP.
+function renderPenggantiST() {
+  const el = document.getElementById('penggantiST');
+  if (!el) return;
+  const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const nik = String(u?.nik || '').trim();
+  if (!nik) { el.style.display = 'none'; return; }
+  const url = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
+  el.style.marginTop = '20px';
+  el.innerHTML = `
+    <a href="${url}" target="_blank" rel="noopener noreferrer"
+       style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,#eef2ff,#faf5ff);border:1.5px solid #e0e7ff;border-radius:16px;padding:18px 20px;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.04)">
+      <div style="width:48px;height:48px;border-radius:12px;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0"><i class="fa-solid fa-graduation-cap"></i></div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;color:#1e293b;font-size:1rem;margin-bottom:3px">Pengganti Safety Talk</div>
+        <div style="color:#64748b;font-size:.85rem;line-height:1.5">Berhalangan hadir Safety Talk (Cuti / Dinas Luar / Shift Malam / Off)? Kerjakan kuis pengganti agar capaian ST tetap terpenuhi. Terhubung langsung dengan NRP kamu — tanpa login ulang.</div>
+      </div>
+      <span style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;background:#6366f1;color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;font-size:.85rem">Kerjakan Kuis <i class="fa-solid fa-arrow-right"></i></span>
+    </a>`;
+  el.style.display = '';
 }
 
 function deleteHazardDraft() {

@@ -188,7 +188,6 @@ function renderTable() {
     return true;
   });
 
-  document.getElementById('totalCount').textContent = _abFiltered.length;
   updateSummary();
 
   const tbody = document.getElementById('abTbody');
@@ -264,20 +263,29 @@ async function _fetchOneDirect(nik) {
 }
 
 function updateSummary() {
-  let hadir = 0, quizLulus = 0, mangkir = 0, quizBelum = 0;
+  // Hitung jumlah per status kehadiran + yang belum diberi status
+  // ("Belum Teridentifikasi") + rekap quiz (lulus/belum).
+  const cnt = {}; STATUS_OPTIONS.forEach(s => { cnt[s.value] = 0; });
+  let quizLulus = 0, quizBelum = 0, belumId = 0;
   _abKaryawan.forEach(k => {
     const nik = String(k['NIK'] || '').trim();
     const st  = _abStatus[nik] || '';
-    if (st === 'HADIR')   hadir++;
-    else if (st === 'MANGKIR') mangkir++;
-    else if (QUIZ_REQUIRED.has(st)) {
+    if (!st) { belumId++; return; }
+    if (cnt[st] !== undefined) cnt[st]++;
+    if (QUIZ_REQUIRED.has(st)) {
       if (_abQuizResult[nik]?.passed) quizLulus++; else quizBelum++;
     }
   });
-  document.getElementById('hadirCount').textContent   = hadir;
-  document.getElementById('quizCount').textContent    = quizLulus;
-  document.getElementById('mangkirCount').textContent = mangkir;
-  document.getElementById('belumCount').textContent   = quizBelum;
+  const el = document.getElementById('abSummary');
+  if (!el) return;
+  const chip = (label, val, color, bg, icon) =>
+    `<span class="ab-chip" style="background:${bg};color:${color}">${icon ? `<i class="fa-solid ${icon}"></i> ` : ''}${label}: <b>${val}</b></span>`;
+  let html = STATUS_OPTIONS.map(s => chip(s.label, cnt[s.value], s.color, s.bg)).join('');
+  html += chip('Belum Teridentifikasi', belumId, '#475569', '#e2e8f0', 'fa-circle-question');
+  html += chip('Quiz Lulus', quizLulus, '#4338ca', '#e0e7ff', 'fa-clipboard-check');
+  html += chip('Belum Quiz', quizBelum, '#b45309', '#fef3c7', 'fa-clock');
+  html += `<span style="font-size:.78rem;color:#94a3b8;margin-left:4px;align-self:center">dari <b>${_abKaryawan.length}</b></span>`;
+  el.innerHTML = html;
 }
 
 function isiSemua(status) {
