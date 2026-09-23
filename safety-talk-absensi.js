@@ -353,6 +353,7 @@ function salinRekapWA() {
   });
   const terpenuhi = cnt.HADIR + quizLulus;
   const pct = diabsen > 0 ? Math.round(terpenuhi / diabsen * 100) : 0;
+  const belumId = _abKaryawan.length - diabsen; // belum diberi status kehadiran
 
   const tgl = _abSchedule?.['TANGGAL']
     ? new Date(_abSchedule['TANGGAL']).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -371,9 +372,10 @@ ${_abSchedule?.['JUDUL_MATERI'] || '-'}
 🗓️ ${tgl}
 🏢 ${co}
 
-Total diabsen: ${diabsen} orang
+Total karyawan: ${_abKaryawan.length} orang
+Sudah diabsen: ${diabsen} orang
 ${baris || '- (belum ada yang diabsen)'}
-
+${belumId > 0 ? `- Belum Teridentifikasi: ${belumId}\n` : ''}
 📝 Wajib quiz: ${quizLulus + quizBelum} (lulus ${quizLulus}, belum ${quizBelum})
 ✅ Kepatuhan: ${terpenuhi}/${diabsen} (${pct}%)
 
