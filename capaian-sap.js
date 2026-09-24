@@ -210,6 +210,15 @@ function computeAndRender() {
     return { k, achHR, achINS, achSBO, achPC, objHR, objINS, objSBO, objPC, pctHR, pctINS, pctSBO, pctPC, objST, achST, pctST, pctTotal, picOpen, pctClosing, stHadir };
   });
 
+  // Magang tidak wajib SAP → keluarkan dari SEMUA metrik Capaian SAP (tabel, KPI,
+  // chart, Salin WA, CSV). Ditandai lewat semua OBJ = 0 (unik magang; level lain
+  // minimal punya target ST > 0) atau jabatan bertuliskan magang/intern/pkl/dsb.
+  _capComputed = _capComputed.filter(row => {
+    const jab = String(row.k['JABATAN'] || '').toUpperCase();
+    const allObjZero = (row.objHR + row.objINS + row.objSBO + row.objPC + row.objST) === 0;
+    return !(allObjZero || /MAGANG|INTERN|APPRENTICE|\bPKL\b|PRAKERIN|SISWA|MAHASISWA/.test(jab));
+  });
+
   _capFiltered = _capComputed.filter(row => {
     // Exact match — bukan includes — agar "CA" tidak cocok dengan "HCA"
     const dept = String(row.k['DEPARTEMEN'] || '').toLowerCase();
