@@ -13,7 +13,27 @@ const INSPECTION_TYPE_LABELS = {
 };
 
 let masterKaryawan = [];
+let namaPicChoices = null; // Choices.js — dropdown Nama PIC searchable
 let signaturePad;
+
+// Bungkus #nama_pic dengan Choices.js agar bisa diketik/dicari. Destroy dulu
+// instance lama sebelum re-init (opsi di-rebuild tiap cascade perusahaan/subcont).
+function initNamaPicChoices() {
+  if (typeof Choices === "undefined") return; // library belum termuat — biarkan select biasa
+  if (namaPicChoices) { try { namaPicChoices.destroy(); } catch {} namaPicChoices = null; }
+  const el = document.getElementById("nama_pic");
+  if (!el) return;
+  namaPicChoices = new Choices(el, {
+    searchEnabled: true,
+    itemSelectText: "",
+    shouldSort: false,
+    placeholder: true,
+    placeholderValue: "Cari dan pilih nama PIC",
+    noResultsText: "Data tidak ditemukan",
+    noChoicesText: "Tidak ada data",
+    searchFloor: 1,
+  });
+}
 let currentStep = 1;
 const TOTAL_STEPS = 5;
 let inspectionChecklist = [];
@@ -1049,7 +1069,7 @@ function loadNamaPicOptions() {
   const select = document.getElementById("nama_pic");
   select.innerHTML = '<option value="">Pilih Nama PIC</option>';
   clearAutoFillPic();
-  if (!perusahaan || !subcont) return;
+  if (!perusahaan || !subcont) { initNamaPicChoices(); return; }
   const list = [...new Set(
     masterKaryawan.filter(item => item["PERUSAHAAN"] === perusahaan && item["SUBCONT"] === subcont)
       .map(item => item["NAMA"]).filter(Boolean)
@@ -1069,6 +1089,7 @@ function loadNamaPicOptions() {
     option.disabled = cuti;
     select.add(option);
   });
+  initNamaPicChoices();
 }
 
 function autoFillDataPic() {
@@ -1094,6 +1115,7 @@ function resetNamaPicDropdown() {
   const select = document.getElementById("nama_pic");
   if (!select) return;
   select.innerHTML = '<option value="">Pilih Nama PIC</option>';
+  initNamaPicChoices();
 }
 
 // ========================================
