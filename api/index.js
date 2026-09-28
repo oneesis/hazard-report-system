@@ -2330,9 +2330,11 @@ module.exports = async (req, res) => {
           break;
         }
         case 'getSafetyTalkAbsensi': {
-          // Admin/Super Admin: semua (atau per schedule). USER: HANYA absensi
-          // miliknya sendiri (dipakai Capaian SAP agar ST-nya terbaca) — tanpa
-          // ini USER kena 403 & capaian ST-nya selalu kosong (fix 2026-09-22).
+          // Admin/Super Admin: semua (atau per schedule). USER: absensi
+          // se-DEPARTEMEN-nya (perusahaan+departemen sama) supaya angka ST
+          // departemennya nyata (dulu cuma NIK sendiri → agregat 0, 2026-09-28).
+          // Capaian SAP tetap benar (client memfilter ke NIK sendiri). Fallback ke
+          // NIK sendiri bila departemen kosong (hindari bocor lintas-departemen).
           const schedId = String(req.query.schedule_id || '').trim();
           const admin = isAdminOrAbove(auth.role);
           let abRows = [];
@@ -2344,8 +2346,17 @@ module.exports = async (req, res) => {
                 ? await sql`SELECT * FROM safety_talk_absensi WHERE schedule_id = ${schedId}`
                 : await sql`SELECT * FROM safety_talk_absensi`;
             } else {
-              const nik = String(auth.nik || '').trim();
-              rows = await sql`SELECT * FROM safety_talk_absensi WHERE nik = ${nik}`;
+              const nik  = String(auth.nik || '').trim();
+              const co   = String(auth.perusahaan || '').trim();
+              const dept = String(auth.departemen || '').trim();
+              if (co && dept) {
+                rows = await sql`
+                  SELECT * FROM safety_talk_absensi
+                  WHERE upper(trim(coalesce(departemen, ''))) = upper(${dept})
+                    AND upper(trim(coalesce(perusahaan, ''))) = upper(${co})`;
+              } else {
+                rows = await sql`SELECT * FROM safety_talk_absensi WHERE nik = ${nik}`;
+              }
             }
             abRows = rows.map(_stAbsOut);
           } catch {}
