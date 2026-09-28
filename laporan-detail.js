@@ -433,15 +433,18 @@ async function submitDetailClosing() {
   if (!detailReport) return;
   const note = document.getElementById('detailClosingNote')?.value.trim() || '';
 
-  if (detailStatus === 'CLOSED' && !note) {
+  // "Submit Closing" = PIC menyatakan perbaikan selesai → ajukan closing (intent
+  // CLOSED). Backend mengubahnya jadi FOLLOWUP + pending_review → pelapor
+  // verifikasi akhir → auto CLOSED saat di-acc. Catatan + foto after wajib.
+  if (!note) {
     showToast('Catatan Closing wajib diisi.', 'error');
     document.getElementById('detailClosingNote')?.focus();
     return;
   }
 
   const existingAfter = getReportValue(detailReport, ['upload_foto_perbaikan_pic','upload_foto_perbaikan','foto_perbaikan'], '');
-  if (detailStatus === 'CLOSED' && !detailAfterPhotos.length && !existingAfter) {
-    showToast('Upload Foto Perbaikan wajib jika status CLOSED.', 'error');
+  if (!detailAfterPhotos.length && !existingAfter) {
+    showToast('Upload Foto Perbaikan (after) wajib untuk mengajukan closing.', 'error');
     return;
   }
 
@@ -454,7 +457,7 @@ async function submitDetailClosing() {
       inspection_sheet: detailReport.inspection_sheet || '',
       catatan_closing: note,
       tanggal_closing: new Date().toISOString(),
-      status_perbaikan: detailStatus
+      status_perbaikan: 'CLOSED'
     };
     if (detailAfterPhotos.length) payload.upload_foto_perbaikan_pic = JSON.stringify(detailAfterPhotos);
 
