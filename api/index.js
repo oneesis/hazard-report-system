@@ -65,6 +65,27 @@ async function sendEmailOtp(to, code) {
   });
 }
 
+// Email berisi tombol "Ganti Password" → laman reset-password.html. Dipakai
+// alur Lupa Password (publik). Link berlaku 30 menit & sekali pakai.
+async function sendPasswordResetEmail(to, nama, link) {
+  const t = _getMailer();
+  if (!t) throw Object.assign(new Error('Layanan email belum dikonfigurasi.'), { httpStatus: 503 });
+  await t.sendMail({
+    from: `ONE-SAP <${process.env.GMAIL_SENDER}>`,
+    to,
+    subject: 'Ganti Password ONE-SAP',
+    text: `Halo ${nama || ''},\n\nKlik tautan berikut untuk mengganti password ONE-SAP kamu:\n${link}\n\nTautan berlaku 30 menit dan hanya bisa dipakai sekali. Jika kamu tidak meminta ini, abaikan email ini.`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:460px;margin:auto">
+      <h2 style="color:#1e2a52;margin:0 0 8px">ONE-SAP</h2>
+      <p>Halo ${nama || ''},</p>
+      <p>Kamu meminta penggantian password. Klik tombol di bawah untuk membuat password baru:</p>
+      <p style="margin:20px 0"><a href="${link}" style="background:#f0b429;color:#1e2a52;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block">Ganti Password</a></p>
+      <p style="color:#64748b;font-size:13px">Atau salin tautan ini:<br><a href="${link}">${link}</a></p>
+      <p style="color:#64748b;font-size:13px">Tautan berlaku 30 menit dan hanya bisa dipakai sekali. Jika kamu tidak meminta ini, abaikan email ini.</p>
+    </div>`,
+  });
+}
+
 // Cari NIK di Master_Karyawan; balikkan { nama, email } atau null.
 async function _findKaryawanEmail(sheets, nik) {
   const rows = await _karyawanRows(sheets);
@@ -2484,6 +2505,61 @@ module.exports = async (req, res) => {
         await _updateKaryawanCol(sheets, nik, 'EMAIL_VERIFIED_AT', new Date().toISOString());
         await sql`DELETE FROM email_otp WHERE nik = ${nik}`;
         return res.status(200).json({ status: 'success', message: 'Email terverifikasi.', email: emailStored });
+      }
+
+      // Lupa Password — publik. requestPasswordReset: kirim link "Ganti Password"
+      // ke email karyawan bila terdaftar; kalau belum daftar email → arahkan ke
+      // SHE PT EBL (jangan kirim). resetPassword: set password baru pakai token
+      // (sekali pakai, disimpan sbg hash di roster JSONB, berlaku 30 menit).
+      if (action === 'requestPasswordReset' || action === 'resetPassword') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        const sql = getSql();
+        if (!sql) return res.status(503).json({ status: 'error', message: 'Database belum dikonfigurasi.' });
+        const nik = String(data?.nik || '').trim();
+        if (!nik) return res.status(400).json({ status: 'error', message: 'NIK wajib diisi.' });
+
+        if (action === 'requestPasswordReset') {
+          const kar = await _findKaryawanEmail(sheets, nik);
+          if (!kar) return res.status(404).json({ status: 'error', message: 'NIK tidak terdaftar.' });
+          if (!kar.email || !EMAIL_RE.test(kar.email)) {
+            return res.status(200).json({ status: 'no_email', message: 'Kamu belum mendaftarkan email. Silakan hubungi SHE PT EBL untuk reset password.' });
+          }
+          if (!_getMailer()) return res.status(503).json({ status: 'error', message: 'Layanan email belum aktif. Hubungi SHE PT EBL.' });
+          // Cooldown 60 dtk per NIK
+          const cur = (await sql`SELECT data->>'PWRESET_AT' AS at FROM karyawan WHERE nik = ${nik}`)[0];
+          if (cur?.at && Date.now() - Number(cur.at) < 60000)
+            return res.status(429).json({ status: 'error', message: 'Tunggu sebentar sebelum minta ulang.' });
+          const token = require('crypto').randomBytes(24).toString('hex');
+          const patch = { PWRESET: bcrypt.hashSync(token, 8), PWRESET_EXP: String(Date.now() + 30 * 60 * 1000), PWRESET_AT: String(Date.now()) };
+          await sql`UPDATE karyawan SET data = data || ${JSON.stringify(patch)}::jsonb WHERE nik = ${nik}`;
+          invalidateCache('Master_Karyawan');
+          const base = 'https://' + (req.headers['x-forwarded-host'] || req.headers.host || 'sap-ebl.vercel.app');
+          const link = `${base}/reset-password.html?nik=${encodeURIComponent(nik)}&token=${token}`;
+          try { await sendPasswordResetEmail(kar.email, kar.nama, link); }
+          catch (e) { return res.status(e.httpStatus || 502).json({ status: 'error', message: e.message || 'Gagal mengirim email.' }); }
+          const masked = kar.email.replace(/^(.).*(@.*)$/, (m, a, b) => a + '***' + b);
+          return res.status(200).json({ status: 'success', message: `Link ganti password sudah dikirim ke ${masked}. Cek email (termasuk folder spam).` });
+        }
+
+        // resetPassword
+        const token = String(data?.token || '').trim();
+        const newPassword = String(data?.new_password || '');
+        if (!token) return res.status(400).json({ status: 'error', message: 'Token tidak valid.' });
+        if (!newPassword || newPassword.length < 8) return res.status(400).json({ status: 'error', message: 'Password baru minimal 8 karakter.' });
+        if (isWeakPassword(newPassword)) return res.status(400).json({ status: 'error', message: 'Password terlalu umum. Gunakan kombinasi huruf, angka, atau simbol.' });
+        const row = (await sql`SELECT data FROM karyawan WHERE nik = ${nik}`)[0];
+        if (!row) return res.status(404).json({ status: 'error', message: 'NIK tidak terdaftar.' });
+        const h = String(row.data['PWRESET'] || '');
+        const exp = Number(row.data['PWRESET_EXP'] || 0);
+        if (!h || !exp || Date.now() > exp) return res.status(400).json({ status: 'error', message: 'Link kadaluarsa atau tidak valid. Minta ulang.' });
+        if (!bcrypt.compareSync(token, h)) return res.status(400).json({ status: 'error', message: 'Token tidak valid.' });
+        const hash = bcrypt.hashSync(newPassword, 10);
+        const patch = { PASSWORD: hash, PWRESET: null, PWRESET_EXP: null, PWRESET_AT: null };
+        await sql`UPDATE karyawan SET data = data || ${JSON.stringify(patch)}::jsonb WHERE nik = ${nik}`;
+        invalidateCache('Master_Karyawan');
+        return res.status(200).json({ status: 'success', message: 'Password berhasil diubah. Silakan login.' });
       }
 
       // Semua action POST lainnya wajib token valid

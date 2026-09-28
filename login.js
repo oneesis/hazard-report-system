@@ -19,6 +19,45 @@ if (passwordToggle && passwordInput) {
   });
 }
 
+// Lupa Password — kirim link "Ganti Password" ke email karyawan. Pakai NIK yang
+// sudah diketik di kolom atas. Kalau belum daftar email, server balas no_email
+// dan user diarahkan menghubungi SHE PT EBL.
+const forgotLink = document.querySelector(".forgot-link");
+if (forgotLink) {
+  forgotLink.addEventListener("click", async function (e) {
+    e.preventDefault();
+    const nik = document.getElementById("nik").value.trim().replace(/\D/g, "");
+    errorMessage.style.color = "";
+    errorMessage.textContent = "";
+    if (!nik) {
+      errorMessage.style.color = "#b45309";
+      errorMessage.textContent = "Isi NIK dulu di kolom di atas, lalu klik Lupa Password lagi.";
+      document.getElementById("nik").focus();
+      return;
+    }
+    const orig = forgotLink.textContent;
+    forgotLink.textContent = "Mengirim...";
+    forgotLink.style.pointerEvents = "none";
+    try {
+      const res = await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "requestPasswordReset", data: { nik } }),
+      });
+      const result = await res.json();
+      errorMessage.style.color =
+        result.status === "success" ? "#15803d" : result.status === "no_email" ? "#b45309" : "#dc2626";
+      errorMessage.textContent = result.message || "Terjadi kesalahan.";
+    } catch {
+      errorMessage.style.color = "#dc2626";
+      errorMessage.textContent = "Gagal menghubungi server. Coba lagi.";
+    } finally {
+      forgotLink.textContent = orig;
+      forgotLink.style.pointerEvents = "";
+    }
+  });
+}
+
 if (loginForm) {
   let _submitting = false; // guard double-submit (iOS autofill + tap tombol)
 
