@@ -641,10 +641,13 @@ function copyWa() {
   const coF      = document.getElementById('capPerusahaan')?.value || '';
   const deptF    = document.getElementById('capDept')?.value || '';
 
-  // Hanya yang belum 100%
-  const belum = _capFiltered.filter(r => r.pctTotal === null || r.pctTotal < 100);
+  // Hanya yang HR/INS/SBO/PC-nya belum 100% (ST tidak dihitung). Karyawan yang
+  // keempatnya sudah 100% (atau tak punya target keempatnya) tidak dimunculkan.
+  const belum = _capFiltered.filter(r =>
+    [r.pctHR, r.pctINS, r.pctSBO, r.pctPC].some(v => v !== null && v < 100)
+  );
   if (!belum.length) {
-    showToast('Semua karyawan sudah mencapai 100%! 🎉');
+    showToast('Semua karyawan sudah mencapai 100% (HR/INS/SBO/PC)! 🎉');
     return;
   }
 
