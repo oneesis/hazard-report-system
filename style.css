@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 /* ===== PWA/mobile: tampilan app-like, ukuran item tetap proporsional =====
    Cegah pinch/double-tap zoom & iOS auto-resize teks (viewport meta juga
    sudah user-scalable=no). touch-action: manipulation menonaktifkan
