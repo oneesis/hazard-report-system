@@ -23,6 +23,7 @@ async function initHomePage() {
   renderHazardDraft();
   renderPenggantiST();
   initNotificationBell();
+  maybeShowStQuizPopup(); // popup kuis pengganti ST bila capaian belum 100% & bukan mangkir
 
   try {
     const [reports, obj, extras] = await Promise.all([refreshNotifications(), fetchMyObj(), fetchMyActivityExtras()]);
@@ -273,6 +274,49 @@ function renderPenggantiST() {
   el.style.display = '';
 }
 
+// Popup kuis pengganti Safety Talk saat buka app. Muncul HANYA bila user punya
+// baris absensi ST bulan ini yang butuh kuis (status bukan HADIR/MANGKIR) & kuis
+// belum dikerjakan → artinya capaian ST belum 100% & bukan mangkir. Mangkir/hadir
+// tidak memicu. Sekali per sesi.
+async function maybeShowStQuizPopup() {
+  try { if (sessionStorage.getItem('st_quiz_popup_shown')) return; } catch {}
+  const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const nik = String(u?.nik || '').trim();
+  if (!nik) return;
+  let rows;
+  try {
+    const res = await fetch('/api?action=getSafetyTalkAbsensi');
+    if (!res.ok) return;
+    const json = await res.json();
+    rows = Array.isArray(json.data) ? json.data : [];
+  } catch { return; }
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const pending = rows.some(r => {
+    if (String(r.NIK || '').trim() !== nik) return false;
+    if (String(r.BULAN || '').slice(0, 7) !== ym) return false;
+    const st = String(r.STATUS_KEHADIRAN || 'HADIR').toUpperCase();
+    if (st === 'HADIR' || st === 'MANGKIR') return false; // hadir=selesai, mangkir=tak bisa diganti kuis
+    return String(r.QUIZ_DONE || '').toUpperCase() !== 'YA';
+  });
+  if (!pending) return;
+  try { sessionStorage.setItem('st_quiz_popup_shown', '1'); } catch {}
+  const url = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
+  const ov = document.createElement('div');
+  ov.id = 'stQuizPopup';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;max-width:380px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center">
+      <div style="width:60px;height:60px;border-radius:16px;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 14px"><i class="fa-solid fa-graduation-cap"></i></div>
+      <h3 style="margin:0 0 8px;font-size:1.15rem;color:#1e293b">Kuis Pengganti Safety Talk</h3>
+      <p style="margin:0 0 20px;color:#64748b;font-size:.9rem;line-height:1.5">Capaian Safety Talk kamu bulan ini belum 100%. Kerjakan kuis pengganti sekarang agar capaian ST-mu terpenuhi.</p>
+      <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;background:#6366f1;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;font-size:.95rem;margin-bottom:10px">Kerjakan Kuis Sekarang</a>
+      <button type="button" onclick="document.getElementById('stQuizPopup')?.remove()" style="background:none;border:none;color:#94a3b8;font-size:.9rem;cursor:pointer;padding:6px">Nanti saja</button>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
 function deleteHazardDraft() {
   const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   localStorage.removeItem(`hazard_draft_${u?.nik || u?.nama || 'guest'}`);
@@ -392,17 +436,32 @@ function renderActionBanner(reports) {
   </div>`;
 }
 
-function renderSapAchievement(reports, obj) {
+let _sapFeed = [], _sapObj = null, _sapMonthOffset = 0;
+
+// Navigasi bulan: geser kiri = bulan sebelumnya, kanan = berikutnya (maks bulan ini).
+window.sapMonthNav = function (delta) {
+  const next = _sapMonthOffset + delta;
+  if (next > 0 || next < -24) return; // tak ke masa depan; batas 24 bln ke belakang
+  renderSapAchievement(undefined, undefined, next);
+};
+
+function renderSapAchievement(reports, obj, offset) {
   const el = document.getElementById('sapAchievement');
+  // Simpan data utk navigasi bulan; offset dipertahankan saat refresh data.
+  if (reports !== undefined) _sapFeed = reports || [];
+  if (obj !== undefined) _sapObj = obj;
+  if (offset !== undefined) _sapMonthOffset = offset;
+  reports = _sapFeed; obj = _sapObj;
   if (!el || !obj) { if (el) el.style.display = 'none'; return; }
 
   const user   = getCurrentUser();
   const myNik  = String(user?.nik  || '').trim();
   const myNama = String(user?.nama || '').trim().toLowerCase();
-  const now    = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
+  const base   = new Date();
+  const target = new Date(base.getFullYear(), base.getMonth() + _sapMonthOffset, 1);
+  const y = target.getFullYear(), m = target.getMonth();
 
-  // Hanya laporan bulan ini di mana user adalah PELAPOR
+  // Hanya laporan bulan terpilih di mana user adalah PELAPOR
   const mine = (reports || []).filter(r => {
     const rNik  = String(r.nik_pelapor || r.nik || '').trim();
     const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
@@ -425,12 +484,18 @@ function renderSapAchievement(reports, obj) {
   const pct      = (c, t) => t > 0 ? Math.min(100, Math.round(c / t * 100)) : 0;
   const barColor = p => p >= 100 ? '#22c55e' : p >= 50 ? '#F2A900' : '#3b82f6';
 
+  const canNext = _sapMonthOffset < 0;
+  const navBtn = 'width:26px;height:26px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-size:1rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
   el.style.display = '';
   el.innerHTML = `
-    <div class="sap-ach-card">
+    <div class="sap-ach-card" id="sapAchCard">
       <div class="sap-ach-header">
-        <span class="sap-ach-title"><i class="fa-solid fa-trophy"></i> Capaian SAP Bulan Ini</span>
-        <span class="sap-ach-month">${MONTHS_ID[m]} ${y}</span>
+        <span class="sap-ach-title"><i class="fa-solid fa-trophy"></i> Capaian SAP</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <button type="button" onclick="sapMonthNav(-1)" aria-label="Bulan sebelumnya" style="${navBtn}">‹</button>
+          <span class="sap-ach-month" style="min-width:104px;text-align:center">${MONTHS_ID[m]} ${y}</span>
+          <button type="button" onclick="sapMonthNav(1)" aria-label="Bulan berikutnya" style="${navBtn};${canNext ? '' : 'opacity:.35;cursor:default;pointer-events:none'}">›</button>
+        </span>
       </div>
       <div class="sap-ach-rows">
         ${rows.map(r => {
@@ -448,6 +513,19 @@ function renderSapAchievement(reports, obj) {
         }).join('')}
       </div>
     </div>`;
+
+  // Geser (swipe) untuk pindah bulan: kiri = sebelumnya, kanan = berikutnya.
+  const card = document.getElementById('sapAchCard');
+  if (card) {
+    let sx = null;
+    card.addEventListener('touchstart', e => { sx = e.changedTouches[0].clientX; }, { passive: true });
+    card.addEventListener('touchend', e => {
+      if (sx == null) return;
+      const dx = e.changedTouches[0].clientX - sx; sx = null;
+      if (Math.abs(dx) < 40) return;
+      window.sapMonthNav(dx < 0 ? -1 : 1);
+    }, { passive: true });
+  }
 }
 
 window.toggleActionItem = function(idx) {
