@@ -6,7 +6,7 @@ const SBO_PAGE_SIZE = 20;
 
 async function loadSboReports() {
   try {
-    const res = await fetch(`${BASE_URL}?action=getSBOReports`);
+    const res = await fetch(`${BASE_URL}?action=getSBOReports&mine=1`);
     const json = await res.json();
     _sboData = (json.data || json || []).filter(r => r.id);
     populateSboFilters();

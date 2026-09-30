@@ -1411,7 +1411,7 @@ async function submitPCReport(sheets, data) {
   return { status: 'success', message: `PC ${id} berhasil disimpan. Notifikasi dikirim ke coachee.`, id, wa_coachee_status: waStatus };
 }
 
-async function getPCReports(sheets, auth) {
+async function getPCReports(sheets, auth, mineOnly) {
   const sql = getSql();
   let rows;
   try { rows = await sql`SELECT * FROM pc_report`; } catch { return { status: 'success', data: [] }; }
@@ -1422,6 +1422,13 @@ async function getPCReports(sheets, auth) {
       String(r.perusahaan_coach || '').trim().toUpperCase() === co ||
       String(r.perusahaan_coachee || '').trim().toUpperCase() === co
     );
+  }
+  // mineOnly (halaman daftar): USER hanya lihat PC yang dia terlibat (coach/coachee).
+  if (mineOnly && !isAdminOrAbove(auth?.role)) {
+    const un = String(auth?.nik || '').trim().toLowerCase();
+    const nm = String(auth?.nama || '').trim().toLowerCase();
+    data = data.filter(r => ['nik_coach', 'nama_coach', 'nik_coachee', 'nama_coachee']
+      .some(k => { const v = String(r[k] || '').trim().toLowerCase(); return v && (v === un || v === nm); }));
   }
   return { status: 'success', data };
 }
@@ -1639,7 +1646,7 @@ async function submitSBOReport(sheets, data) {
   return { status: 'success', message: 'Laporan SBO berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
-async function getSBOReports(sheets, auth) {
+async function getSBOReports(sheets, auth, mineOnly) {
   const sql = getSql();
   let rows;
   try { rows = await sql`SELECT * FROM sbo_report`; } catch { return { status: 'success', data: [] }; }
@@ -1647,6 +1654,13 @@ async function getSBOReports(sheets, auth) {
   if (!isSuperAdmin(auth?.role)) {
     const co = String(auth?.perusahaan || '').trim().toUpperCase();
     if (co) data = data.filter(r => String(r.perusahaan_observer || '').trim().toUpperCase() === co);
+  }
+  // mineOnly (halaman daftar): USER hanya lihat SBO yang dia terlibat (observer/PIC/observee).
+  if (mineOnly && !isAdminOrAbove(auth?.role)) {
+    const un = String(auth?.nik || '').trim().toLowerCase();
+    const nm = String(auth?.nama || '').trim().toLowerCase();
+    data = data.filter(r => ['nik_observer', 'nama_observer', 'nik_pic', 'nama_pic', 'nama_observee']
+      .some(k => { const v = String(r[k] || '').trim().toLowerCase(); return v && (v === un || v === nm); }));
   }
   return { status: 'success', data };
 }
@@ -2317,7 +2331,7 @@ module.exports = async (req, res) => {
         }
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
-        case 'getSBOReports':       result = await getSBOReports(sheets, auth); break;
+        case 'getSBOReports':       result = await getSBOReports(sheets, auth, req.query.mine === '1'); break;
         case 'getSafetyTalkSchedules': {
           if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
           let stRows = [];
@@ -2397,7 +2411,7 @@ module.exports = async (req, res) => {
           if (ftype) await _deleteDraftRow(sheets, ftype + '_Drafts', auth2.nik);
           result = { status: 'success' }; break;
         }
-        case 'getPCReports':        result = await getPCReports(sheets, auth); break;
+        case 'getPCReports':        result = await getPCReports(sheets, auth, req.query.mine === '1'); break;
         // Identitas & role diambil dari token — parameter query diabaikan
         case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getMyActivityExtras':  result = await getMyActivityExtras(sheets, auth); break;

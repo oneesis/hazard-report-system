@@ -12,7 +12,7 @@ function v(r, k) { return String(r[k] || r[k.toUpperCase()] || '').trim(); }
 // ── Load ─────────────────────────────────────────────────────
 async function loadPcReports() {
   try {
-    const res  = await fetch(`${BASE_URL}?action=getPCReports`);
+    const res  = await fetch(`${BASE_URL}?action=getPCReports&mine=1`);
     const json = await res.json();
     _pcData = Array.isArray(json) ? json : (json.data || []);
   } catch { _pcData = []; }
