@@ -81,13 +81,21 @@ async function initAbsensi() {
       }
     }
 
-    // Karyawan
+    // Karyawan. Magang tak wajib SAP → tak perlu masuk daftar Safety Talk.
+    // Deteksi sama dgn Capaian SAP: semua OBJ 0 (khas magang) atau jabatan magang.
+    const isMagang = k => {
+      const jab = String(k['JABATAN'] || '').toUpperCase();
+      if (/MAGANG|INTERN|APPRENTICE|\bPKL\b|PRAKERIN|SISWA|MAHASISWA/.test(jab)) return true;
+      return ['OBJ HR','OBJ INS','OBJ SBO','OBJ PC','OBJ_ST','OBJ ST']
+        .every(key => !(parseInt(k[key], 10) || 0));
+    };
     const allKar = Array.isArray(karRes) ? karRes : (karRes.data || []);
     const targetCo = String(_abSchedule['PERUSAHAAN_TARGET'] || '').trim();
     _abKaryawan = (targetCo
       ? allKar.filter(k => String(k['PERUSAHAAN'] || '').trim() === targetCo)
       : allKar
     ).filter(k => String(k['ROLE'] || '').toUpperCase().replace(/\s+/g,'_') !== 'DELETED')
+     .filter(k => !isMagang(k))
      .sort((a, b) => String(a['NAMA'] || '').localeCompare(String(b['NAMA'] || '')));
 
     // Status dari data tersimpan
