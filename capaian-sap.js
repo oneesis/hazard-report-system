@@ -644,13 +644,12 @@ function copyWa() {
   const coF      = document.getElementById('capPerusahaan')?.value || '';
   const deptF    = document.getElementById('capDept')?.value || '';
 
-  // Hanya yang HR/INS/SBO/PC-nya belum 100% (ST tidak dihitung). Karyawan yang
-  // keempatnya sudah 100% (atau tak punya target keempatnya) tidak dimunculkan.
+  // Munculkan karyawan yang ada komponen SAP (HR/INS/SBO/PC/ST) belum 100%.
   const belum = _capFiltered.filter(r =>
-    [r.pctHR, r.pctINS, r.pctSBO, r.pctPC].some(v => v !== null && v < 100)
+    [r.pctHR, r.pctINS, r.pctSBO, r.pctPC, r.pctST].some(v => v !== null && v < 100)
   );
   if (!belum.length) {
-    showToast('Semua karyawan sudah mencapai 100% (HR/INS/SBO/PC)! 🎉');
+    showToast('Semua karyawan sudah mencapai 100%! 🎉');
     return;
   }
 
@@ -682,12 +681,14 @@ function copyWa() {
       .forEach(r => {
         const nama  = r.k['NAMA'] || '-';
         const total = r.pctTotal !== null ? r.pctTotal + '%' : '-';
-        // Tampilkan tiap komponen hanya bila OBJ-nya > 0 (pct null = OBJ 0).
+        // Tampilkan HANYA komponen yang belum 100% (yang sudah 100%/tanpa target
+        // disembunyikan). ST ikut ditampilkan.
         const detail = [
-          r.pctHR  !== null ? `HR: ${r.pctHR}%`   : '',
-          r.pctINS !== null ? `INS: ${r.pctINS}%` : '',
-          r.pctSBO !== null ? `SBO: ${r.pctSBO}%` : '',
-          r.pctPC  !== null ? `PC: ${r.pctPC}%`   : '',
+          r.pctHR  !== null && r.pctHR  < 100 ? `HR: ${r.pctHR}%`   : '',
+          r.pctINS !== null && r.pctINS < 100 ? `INS: ${r.pctINS}%` : '',
+          r.pctSBO !== null && r.pctSBO < 100 ? `SBO: ${r.pctSBO}%` : '',
+          r.pctPC  !== null && r.pctPC  < 100 ? `PC: ${r.pctPC}%`   : '',
+          r.pctST  !== null && r.pctST  < 100 ? `ST: ${r.pctST}%`   : '',
         ].filter(Boolean).join(' | ');
         text += `• ${nama}: *${total}*${detail ? ` (${detail})` : ''}\n`;
       });
