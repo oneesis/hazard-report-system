@@ -236,39 +236,34 @@ function loadPerusahaanOptions() {
   list.forEach(item => select.add(new Option(item, item)));
 }
 
+// Data pelapor auto dari akun login → isi hidden fields (untuk submit) + kartu
+// tampilan (mirror form Hazard). Tidak ada input manual.
 function populatePelaporOptions() {
-  loadPerusahaanOptions();
-
   const { user, employee } = getCurrentEmployeeFromProfile();
   if (!user) return;
+  const rec = employee || {};
+  const val = (keys, fb) => getEmployeeValue(rec, keys) || fb || "";
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ""; };
 
-  const perusahaan = getEmployeeValue(employee || {}, ["PERUSAHAAN"]) || user.perusahaan || "";
-  const subcont = getEmployeeValue(employee || {}, [
-    "SUBCONT",
-    "PERUSAHAAN SUBCONT(1)",
-    "SUBCONT1"
-  ]) || user.subcont || "";
-  const nama = getEmployeeValue(employee || {}, ["NAMA"]) || user.nama || "";
+  set("perusahaan", val(["PERUSAHAAN"], user.perusahaan));
+  set("subcont1",   val(["SUBCONT", "PERUSAHAAN SUBCONT(1)", "SUBCONT1"], user.subcont) || "N/A");
+  set("nama",       val(["NAMA"], user.nama));
+  set("nik",        val(["NIK"], user.nik));
+  set("jabatan",    val(["JABATAN"], user.jabatan));
+  set("departemen", val(["DEPARTEMEN"], user.departemen));
+  set("no_whatsapp", val(["NO WHATSAPP"], user.no_whatsapp));
 
-  setSelectValue("perusahaan", perusahaan);
-  loadSubcontOptions(true);
-  setSelectValue("subcont1", subcont);
-  loadNamaOptions(true);
-  setSelectValue("nama", nama);
-
-  document.getElementById("nik").value = getEmployeeValue(employee || {}, ["NIK"]) || user.nik || "";
-  document.getElementById("jabatan").value =
-    getEmployeeValue(employee || {}, ["JABATAN"]) || user.jabatan || "";
-  document.getElementById("departemen").value =
-    getEmployeeValue(employee || {}, ["DEPARTEMEN"]) || user.departemen || "";
-  ["nik", "jabatan", "departemen"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.readOnly = true;
-  });
-  ["perusahaan", "subcont1", "nama"].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.disabled = true;
-  });
+  const nm = val(["NAMA"], user.nama) || "-";
+  const initial = document.getElementById("reporterInitial");
+  if (initial) initial.textContent = nm.charAt(0).toUpperCase();
+  const nameEl = document.getElementById("reporterName");
+  if (nameEl) nameEl.textContent = nm;
+  const subEl = document.getElementById("reporterSub");
+  if (subEl) subEl.textContent = [
+    val(["JABATAN"], user.jabatan),
+    val(["DEPARTEMEN"], user.departemen),
+    val(["PERUSAHAAN"], user.perusahaan),
+  ].filter(Boolean).join(" • ");
 }
 
 function loadSubcontOptions(skipClear = false) {
@@ -1303,28 +1298,14 @@ function setupInspectionAutosave() {
 
 function initializeInspectionForm(type) {
    setInspectionType(type);
-   loadPerusahaanOptions();
    populatePicOptions();
-   populatePelaporOptions();
+   populatePelaporOptions(); // data pelapor auto (kartu) — tak ada select manual lagi
    initializeSignaturePad();
    const todayStr = new Date().toISOString().split("T")[0];
    const tanggalInput = document.getElementById("tanggal_inspeksi");
    if (tanggalInput) tanggalInput.value = todayStr;
    const batasWaktuInput = document.getElementById("batas_waktu");
    if (batasWaktuInput) batasWaktuInput.min = todayStr;
-  document.getElementById("perusahaan")?.addEventListener("change", () => {
-    loadSubcontOptions();
-    toggleManualPelaporMode();
-  });
-  document.getElementById("subcont1")?.addEventListener("change", () => {
-    loadNamaOptions();
-    toggleManualPelaporMode();
-  });
-  document.getElementById("nama")?.addEventListener("change", () => {
-    autoFillData();
-    toggleManualPelaporMode();
-  });
-  document.getElementById("manualDataPelapor")?.addEventListener("change", toggleManualPelaporMode);
   document.getElementById("btnNext1")?.addEventListener("click", () => { if (validateStep1()) showStep(2); });
   document.getElementById("btnPrev2")?.addEventListener("click", () => showStep(1));
   document.getElementById("btnNext2")?.addEventListener("click", () => { if (validateStep2()) showStep(3); });
