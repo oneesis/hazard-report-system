@@ -8,11 +8,477 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Login - ONE-SAP</title>
   <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
-  <link rel="stylesheet" href="tokens.css">
+  <style>/* critical CSS inline (tokens.css + login.css) — hilangkan 2 request
+     render-blocking di login; edit sumbernya lalu re-inline bila berubah */
+/* ============================================================
+   DESIGN TOKENS — ONE-SAP
+   Muat sebagai stylesheet PERTAMA di semua halaman HTML.
+   Semua file CSS lain wajib memakai var ini; tidak boleh ada
+   hex hardcoded baru.
+   ============================================================ */
+
+:root {
+  /* Brand — palet resmi */
+  --color-primary:        #003087;  /* Ocean — header, elemen utama, bar chart */
+  --color-primary-dark:   #00205B;  /* Midnight — sidebar, top bar, permukaan gelap */
+  --color-accent:         #F2A900;  /* Sun — tombol utama, highlight, garis kumulatif */
+  --color-accent-soft:    #FFE264;  /* Sand — background highlight halus */
+  --color-info:           #307FE2;  /* Sky — link, aksen sekunder */
+
+  /* Teks di atas warna */
+  --color-on-primary:     #FFFFFF;
+  --color-on-accent:      #00205B;  /* teks Midnight di atas tombol Sun */
+
+  /* Status — semantik K3, JANGAN diganti warna brand */
+  --color-status-open:    #F2A900;
+  --color-status-closed:  #16A34A;
+  --color-status-overdue: #DC2626;
+  --color-risk-low:       #16A34A;
+  --color-risk-mid:       #F2A900;
+  --color-risk-high:      #DC2626;
+
+  /* Netral */
+  --color-bg:             #F5F7FB;
+  --color-surface:        #FFFFFF;
+  --color-border:         #E2E8F0;
+  --color-text:           #1E293B;
+  --color-text-muted:     #64748B;
+
+  /* Bentuk & ruang */
+  --radius-card:          12px;
+  --radius-control:       8px;
+  --shadow-card:          0 1px 3px rgba(0, 32, 91, 0.08);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Tipografi */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Touch target minimum */
+  --tap-min: 48px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  background: #00205B;
+}
+
+/* ============================================
+   SPLIT LAYOUT
+   ============================================ */
+.login-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+/* ============================================
+   LEFT — BRAND PANEL
+   ============================================ */
+.brand-panel {
+  background: linear-gradient(160deg, #003087 0%, #00205B 50%, #001440 100%);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 48px;
+  overflow: hidden;
+  color: #fff;
+}
+
+/* Subtle grid overlay for industrial feel */
+.brand-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Accent glow */
+.brand-panel::after {
+  content: '';
+  position: absolute;
+  top: -120px; right: -80px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(48,127,226,.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.brand-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.brand-logo-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #F2A900;
+  padding: 5px;
+}
+
+.brand-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: .04em;
+  line-height: 1.1;
+}
+
+.brand-sub {
+  font-size: .68rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.5);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.brand-body {
+  position: relative;
+  z-index: 1;
+}
+
+.brand-eyebrow {
+  font-size: .8rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.55);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.brand-headline {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+  margin-bottom: 12px;
+  letter-spacing: -.02em;
+}
+
+.brand-desc {
+  font-size: .95rem;
+  color: rgba(255,255,255,.65);
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.brand-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.brand-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.brand-feature-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(242,169,0,.15);
+  border: 1px solid rgba(242,169,0,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #F2A900;
+  flex-shrink: 0;
+}
+
+.brand-feature-item strong {
+  display: block;
+  font-size: .9rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.brand-feature-item span {
+  font-size: .8rem;
+  color: rgba(255,255,255,.55);
+  line-height: 1.5;
+}
+
+.brand-copyright {
+  font-size: .75rem;
+  color: rgba(255,255,255,.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   RIGHT — LOGIN PANEL
+   ============================================ */
+.login-panel {
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-heading {
+  margin-bottom: 32px;
+}
+
+.login-heading h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #00205B;
+  margin-bottom: 6px;
+  letter-spacing: -.02em;
+}
+
+.login-heading p {
+  font-size: .9rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Fields */
+.form-field {
+  margin-bottom: 20px;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+label, .label-row label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 0;
+}
+
+.forgot-link {
+  font-size: .8rem;
+  font-weight: 600;
+  color: #307FE2;
+  text-decoration: none;
+}
+.forgot-link:hover { text-decoration: underline; }
+
+.form-field > label { margin-bottom: 8px; }
+
+.input-shell {
+  position: relative;
+}
+
+.field-icon {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: .9rem;
+  z-index: 1;
+  pointer-events: none;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px 12px 42px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fafbfc;
+  color: #0f172a;
+  font-family: 'Inter', sans-serif;
+  font-size: .9rem;
+  box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: #307FE2;
+  box-shadow: 0 0 0 3px rgba(48,127,226,.12);
+  background: #fff;
+}
+
+input[type="password"] { padding-right: 48px; }
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  font-size: .95rem;
+  transition: color .15s;
+}
+.password-toggle:hover { color: #003087; }
+
+/* Remember me */
+.remember-row {
+  margin-bottom: 24px;
+}
+
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: .85rem;
+  color: #475569;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.remember-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  accent-color: #003087;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* MASUK button */
+.btn-masuk {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #F2A900;
+  color: #00205B;
+  font-family: 'Inter', sans-serif;
+  font-size: .95rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(242,169,0,.3);
+  transition: background .15s, box-shadow .15s, transform .1s;
+}
+
+.btn-masuk:hover {
+  background: #d99500;
+  box-shadow: 0 10px 24px rgba(242,169,0,.4);
+  transform: translateY(-1px);
+}
+
+.btn-masuk:active { transform: translateY(0); }
+
+.btn-masuk:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Error */
+.login-error {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: .85rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.login-error:empty { display: none; }
+
+/* Divider */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 16px;
+  color: #cbd5e1;
+  font-size: .8rem;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* Support text */
+.login-support {
+  font-size: .82rem;
+  color: #64748b;
+  line-height: 1.6;
+  text-align: center;
+}
+.login-support strong { color: #003087; }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-panel {
+    padding: 32px 28px;
+    min-height: auto;
+  }
+
+  .brand-headline { font-size: 1.5rem; }
+
+  .login-panel {
+    padding: 32px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-panel { padding: 24px 20px; }
+  .login-panel { padding: 24px 16px; }
+  .login-form-wrap { max-width: 100%; }
+}
+</style>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
-  <link rel="stylesheet" href="login.css">
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
