@@ -26,7 +26,7 @@ const forgotLink = document.querySelector(".forgot-link");
 if (forgotLink) {
   forgotLink.addEventListener("click", async function (e) {
     e.preventDefault();
-    const nik = document.getElementById("nik").value.trim().replace(/\D/g, "");
+    const nik = document.getElementById("nik").value.trim().replace(/\s+/g, "");
     errorMessage.style.color = "";
     errorMessage.textContent = "";
     if (!nik) {
@@ -66,9 +66,10 @@ if (loginForm) {
     if (_submitting) return;
     _submitting = true;
 
-    // iOS autocorrect bisa mengubah NIK — strip semua selain digit
+    // Buang spasi saja (jangan buang huruf) — NIK bisa alfanumerik spt "ebl01".
+    // Dulu strip semua non-digit → NIK ber-huruf gagal login (ebl01 → 01).
     const rawNik = document.getElementById("nik").value.trim();
-    const nik = rawNik.replace(/\D/g, ''); // buang karakter non-angka
+    const nik = rawNik.replace(/\s+/g, '');
     const password = passwordInput ? passwordInput.value.trim() : "";
 
     errorMessage.textContent = "";
