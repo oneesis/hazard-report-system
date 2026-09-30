@@ -177,7 +177,10 @@ function computeAndRender() {
     const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
     const objSBO   = parseInt(k['OBJ SBO'] || 0) || 0;
     const objPC    = parseInt(k['OBJ PC']  || 0) || 0;
-    const objST    = parseInt(k['OBJ_ST']  || k['OBJ ST'] || 0) || 0;
+    let objST      = parseInt(k['OBJ_ST']  || k['OBJ ST'] || 0) || 0;
+    // September 2026 = bulan awal sistem (baru jalan ~3 minggu) → target ST 3 utk
+    // yang punya kewajiban ST. Bulan lain pakai OBJ_ST tersimpan (4/2 per jabatan).
+    if (monthStr === '2026-09' && objST > 0) objST = 3;
     // Cap di 100% — kelebihan capaian tidak menambah persentase
     const pctHR    = objHR  > 0 ? Math.min(100, Math.round(achHR  / objHR  * 100)) : null;
     const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;
