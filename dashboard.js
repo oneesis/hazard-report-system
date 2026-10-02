@@ -27,6 +27,62 @@ let _sboReports = [];
 let _activeTab = 'general';
 let currentPage = 1;
 const PAGE_SIZE = 20;
+let _perusahaanFilter = ""; // filter per-perusahaan dashboard ("" = semua)
+
+// Rentang tanggal dari #dateRange (flatpickr range, format m/d/Y, pemisah "to"/"-").
+function _dashDateRange() {
+  const v = (document.getElementById("dateRange")?.value || "").trim();
+  if (!v) return { start: null, end: null };
+  const parts = v.split(/\s*(?:to|sampai|–|-)\s*/i).map((s) => s.trim()).filter(Boolean);
+  let start = parts[0] ? new Date(parts[0]) : null;
+  let end = parts[1] ? new Date(parts[1]) : start;
+  if (start && isNaN(start.getTime())) start = null;
+  if (end && isNaN(end.getTime())) end = null;
+  if (end) { end = new Date(end); end.setHours(23, 59, 59, 999); }
+  return { start, end };
+}
+
+// Filter konteks (perusahaan + tanggal) dipakai SEMUA bagian dashboard (KPI,
+// tabel, chart, analitik) supaya rentang waktu & perusahaan benar-benar berlaku,
+// bukan cuma di tabel. parseReportDate menangani berbagai field tanggal/report.
+function scopeByContext(list) {
+  const { start, end } = _dashDateRange();
+  const co = _perusahaanFilter;
+  if (!co && !start && !end) return list || [];
+  return (list || []).filter((r) => {
+    if (co && String(r.perusahaan || r.perusahaan_observer || r.company || "").trim() !== co) return false;
+    if (start || end) {
+      const d = parseReportDate(r);
+      if (!d) return false;
+      if (start && d < start) return false;
+      if (end && d > end) return false;
+    }
+    return true;
+  });
+}
+function visibleSbo() { return scopeByContext(_sboReports); }
+
+// Isi dropdown filter perusahaan dari data yang ada (HR/INS + SBO).
+function populatePerusahaanFilter() {
+  const sel = document.getElementById("perusahaanFilter");
+  if (!sel) return;
+  const set = new Set();
+  (reports || []).forEach((r) => { const c = String(r.perusahaan || r.company || "").trim(); if (c) set.add(c); });
+  (_sboReports || []).forEach((r) => { const c = String(r.perusahaan_observer || "").trim(); if (c) set.add(c); });
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Semua Perusahaan</option>' +
+    [...set].sort().map((c) => `<option value="${c}">${c}</option>`).join("");
+  if (cur && set.has(cur)) sel.value = cur;
+}
+
+// Re-render penuh saat filter konteks berubah (KPI + tabel + chart + analitik).
+function refreshDashboard() {
+  if (_activeTab === "general") { renderModuleSummary(getVisibleReportsFromCache()); return; }
+  updateKPI();
+  renderTable();
+  if (_activeTab === "sbo") renderSboSection();
+  if (_activeTab === "hr") updateAnalyticsKpi(getVisibleReportsFromCache());
+}
 
 // ========================================
 // INITIALIZE
@@ -58,12 +114,17 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("change", renderTable);
 
   document
+    .getElementById("perusahaanFilter")
+    ?.addEventListener("change", (e) => { _perusahaanFilter = e.target.value || ""; refreshDashboard(); });
+
+  document
     .getElementById("typeFilter")
     ?.addEventListener("change", renderTable);
 
+  // Rentang tanggal mengubah seluruh dashboard (KPI/chart/analitik), bukan cuma tabel.
   document
     .getElementById("dateRange")
-    ?.addEventListener("change", renderTable);
+    ?.addEventListener("change", refreshDashboard);
 
   document
     .getElementById("btnExportCsv")
@@ -157,6 +218,7 @@ async function loadReports() {
     ]);
     reports = allReports;
     _sboReports = (sboRes && sboRes.data) ? sboRes.data : [];
+    populatePerusahaanFilter();
 
     // Jika ada data di server tetapi pengguna tidak melihatnya karena visibilitas,
     // tampilkan pesan informatif di tabel agar mudah didiagnosis.
@@ -247,7 +309,9 @@ function switchTab(name) {
   renderTable();
   if (name === 'ins') renderInsSection();
   // HR tab: refresh analytics KPI dengan data HR
-  if (name === 'hr') updateAnalyticsKpi(reports);
+  if (name === 'hr') updateAnalyticsKpi(getVisibleReportsFromCache());
+  // Umum: module summary ikut filter konteks (perusahaan/tanggal)
+  if (name === 'general') renderModuleSummary(getVisibleReportsFromCache());
 }
 
 function isOverdue(report) {
@@ -260,7 +324,7 @@ function isOverdue(report) {
 }
 
 function getVisibleReportsFromCache() {
-  return getVisibleReports(reports);
+  return scopeByContext(getVisibleReports(reports));
 }
 
 function handleOpenReportQuery() {
@@ -285,7 +349,7 @@ function updateKPI() {
 
   // ── SBO tab: different KPI semantics ─────────────────────────────────────
   if (_activeTab === 'sbo') {
-    const sbo     = _sboReports;
+    const sbo     = visibleSbo();
     const total   = sbo.length;
     const aman    = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'AMAN').length;
     const temuan  = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN').length;
@@ -329,6 +393,16 @@ function updateKPI() {
   set("kpiClosed",   closedCount);
   set("kpiOverdue",  visibleReports.filter(isOverdue).length);
 
+  // Kondisi vs Tindakan Tidak Aman — khusus Hazard (field jenis_bahaya).
+  const showKT = _activeTab === 'hr';
+  const ktWrap = document.getElementById("kpiKondisiTindakan");
+  if (ktWrap) ktWrap.style.display = showKT ? 'contents' : 'none';
+  if (showKT) {
+    const jb = (r) => String(getReportValue(r, ['jenis_bahaya'], '')).toLowerCase();
+    set("kpiKondisi",  visibleReports.filter(r => jb(r).includes('kondisi tidak aman')).length);
+    set("kpiTindakan", visibleReports.filter(r => jb(r).includes('tindakan tidak aman')).length);
+  }
+
   // Avg. closing days
   const closed = visibleReports.filter(r => r.status_perbaikan === "CLOSED");
   if (closed.length) {
@@ -363,23 +437,9 @@ function renderTable() {
     document.getElementById("typeFilter")
       ?.value || "";
 
-  const dateRangeValue = (document.getElementById("dateRange")?.value || "").trim();
-  let startDate = null;
-  let endDate = null;
-  if (dateRangeValue) {
-    const parts = dateRangeValue.split(/\s*(?:to|\-|sampai)\s*/i);
-    if (parts.length >= 2) {
-      startDate = new Date(parts[0]);
-      endDate = new Date(parts[1]);
-    } else {
-      startDate = new Date(parts[0]);
-      endDate = new Date(parts[0]);
-    }
-    if (endDate) endDate.setHours(23, 59, 59, 999);
-  }
-
-  // SBO pakai _sboReports, HR/INS pakai visibleReports dari cache
-  const baseList = typeFilter === 'SBO' ? _sboReports : getVisibleReportsFromCache();
+  // Tanggal & perusahaan sudah difilter di scopeByContext (getVisibleReportsFromCache /
+  // visibleSbo) agar berlaku di KPI & chart juga, bukan cuma tabel ini.
+  const baseList = typeFilter === 'SBO' ? visibleSbo() : getVisibleReportsFromCache();
   const filtered = baseList.filter(report => {
     const status = report.status_perbaikan || report.status_observasi || "OPEN";
 
@@ -394,16 +454,11 @@ function renderTable() {
     // SBO sudah difilter dari baseList; HAZARD/INSPECTION tetap difilter
     const matchesType = typeFilter === 'SBO' || !typeFilter || getReportType(report) === typeFilter;
 
-    const reportDate = parseReportDate(report);
-    const matchesDate =
-      (!startDate || (reportDate && reportDate >= startDate)) &&
-      (!endDate   || (reportDate && reportDate <= endDate));
-
     const matchesOverdue = !overdueOnlyFilter || isOverdue(report);
     // Drill-down INS: filter per jenis inspeksi
     const matchesInsJenis = !_insJenisFilter || _activeTab !== 'ins' ||
       (report.inspection_sheet || '').trim().toUpperCase() === _insJenisFilter;
-    return matchesSearch && matchesStatus && matchesType && matchesDate && matchesOverdue && matchesInsJenis;
+    return matchesSearch && matchesStatus && matchesType && matchesOverdue && matchesInsJenis;
   });
 
   filteredReports = filtered;
@@ -411,7 +466,7 @@ function renderTable() {
 
   renderTablePage();
   // Hanya kirim HR+INS ke renderDashboardCharts (SBO punya renderSboSection sendiri)
-  const visForCharts = typeFilter === 'SBO' ? getVisibleReportsFromCache() : filtered;
+  const visForCharts = typeFilter === 'SBO' ? visibleSbo() : filtered;
   renderDashboardCharts(visForCharts);
 }
 
@@ -799,7 +854,7 @@ function renderModuleSummary(visibleReports) {
   _ms('msInsJenis',  insJenis || '-');
 
   // ── SBO stats ──
-  const sbo        = _sboReports;
+  const sbo        = visibleSbo();
   const sboTotal   = sbo.length;
   const sboAman    = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'AMAN').length;
   const sboTemuan  = sbo.filter(r => (r.status_observasi || '').toUpperCase() === 'ADA_TEMUAN').length;
@@ -860,7 +915,7 @@ function renderModuleTrend(visibleReports) {
 
   const hrM   = _countByMonth(hrList);
   const insM  = _countByMonth(insList);
-  const sboM  = _countByMonth(_sboReports);
+  const sboM  = _countByMonth(visibleSbo());
 
   const hrData  = months.map(m => hrM[m.key]  || 0);
   const insData = months.map(m => insM[m.key] || 0);
@@ -891,7 +946,7 @@ function renderModuleTrend(visibleReports) {
 // ── renderSboSection ─────────────────────────────────────────────────────────
 
 function renderSboSection() {
-  const sbo = _sboReports;
+  const sbo = visibleSbo();
   if (!sbo.length) return;
 
   // Pie: AMAN vs ADA_TEMUAN
@@ -974,7 +1029,7 @@ function renderSboSection() {
 // ── SBO Tab: render chartStatus/Lokasi/Trend dengan data SBO ─────────────────
 
 function _renderSboTabCharts() {
-  const sbo = _sboReports;
+  const sbo = visibleSbo();
   if (typeof Chart === 'undefined') return;
 
   // Update judul chart
@@ -2048,7 +2103,7 @@ function renderLeaderboard(reportsList, mode) {
 
   // SBO mode: gunakan _sboReports, field nama_observer
   const isSbo = (mode === 'sbo') || (_activeTab === 'sbo');
-  const list = isSbo ? _sboReports : reportsList;
+  const list = isSbo ? visibleSbo() : reportsList;
 
   // Update judul leaderboard
   const lbTitle = document.getElementById('leaderboardTitle');
@@ -2103,7 +2158,7 @@ function renderDeptBreakdown(reportsList, mode) {
   if (!el) return;
 
   const isSbo = (mode === 'sbo') || (_activeTab === 'sbo');
-  const list = isSbo ? _sboReports : reportsList;
+  const list = isSbo ? visibleSbo() : reportsList;
 
   const counts = {};
   list.forEach(r => {
@@ -2168,7 +2223,7 @@ function initAnalyticsSection() {
       section.querySelectorAll('.range-chip').forEach(b => b.classList.remove('range-chip--active'));
       btn.classList.add('range-chip--active');
       analyticsRange = Number(btn.dataset.range);
-      updateAnalyticsKpi(reports);
+      updateAnalyticsKpi(getVisibleReportsFromCache());
     });
   });
 

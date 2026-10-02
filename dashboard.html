@@ -243,6 +243,17 @@
         <div id="kpiAvgClose" class="kpi-value">-</div>
         <div class="kpi-unit" id="kpiAvgUnit">hari</div>
       </div>
+      <!-- Kondisi/Tindakan Tidak Aman — khusus tab Hazard (ditoggle oleh updateKPI) -->
+      <span id="kpiKondisiTindakan" style="display:none">
+        <div class="kpi-card open">
+          <div class="kpi-title">KONDISI TIDAK AMAN</div>
+          <div id="kpiKondisi" class="kpi-value">0</div>
+        </div>
+        <div class="kpi-card progress">
+          <div class="kpi-title">TINDAKAN TIDAK AMAN</div>
+          <div id="kpiTindakan" class="kpi-value">0</div>
+        </div>
+      </span>
     </section>
 
     <!-- CHARTS SECTION -->
@@ -356,6 +367,10 @@
         <option value="OPEN">OPEN</option>
         <option value="PROGRESS">PROGRESS</option>
         <option value="CLOSED">CLOSED</option>
+      </select>
+
+      <select id="perusahaanFilter" aria-label="Filter perusahaan">
+        <option value="">Semua Perusahaan</option>
       </select>
 
       <select id="typeFilter" aria-label="Filter jenis laporan" style="display:none">
