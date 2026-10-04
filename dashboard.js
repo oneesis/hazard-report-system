@@ -575,6 +575,23 @@ function goToPage(page) {
   document.querySelector(".table-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// Label angka pada chart (chartjs-plugin-datalabels): line → di atas titik, lainnya → di tengah; sembunyikan nol.
+if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined' && !Chart.registry.plugins.get('datalabels')) {
+  Chart.register(ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', {
+    color: (c) => c.chart.config.type === 'line' ? '#334155' : '#fff',
+    textStrokeColor: (c) => c.chart.config.type === 'line' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.45)',
+    textStrokeWidth: 2,
+    font: { weight: '700', size: 10 },
+    anchor: (c) => c.chart.config.type === 'line' ? 'end' : 'center',
+    align:  (c) => c.chart.config.type === 'line' ? 'top' : 'center',
+    formatter: (v) => {
+      const n = (v && typeof v === 'object') ? (v.y ?? v.r ?? null) : v;
+      return (n === 0 || n == null || n === '') ? null : n;
+    },
+  });
+}
+
 function renderDashboardCharts(reportsList) {
   if (typeof Chart === "undefined") {
     console.warn("Chart.js is not loaded yet.");

@@ -354,6 +354,22 @@ function _stTerpenuhi(row) {
   return _stQuizOf(row);
 }
 function _stPct(a, b) { return b > 0 ? Math.round(a / b * 100) : 0; }
+// Label angka pada chart (chartjs-plugin-datalabels): line → di atas titik, lainnya → di tengah; sembunyikan nol.
+if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined' && !Chart.registry.plugins.get('datalabels')) {
+  Chart.register(ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', {
+    color: (c) => c.chart.config.type === 'line' ? '#334155' : '#fff',
+    textStrokeColor: (c) => c.chart.config.type === 'line' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.45)',
+    textStrokeWidth: 2,
+    font: { weight: '700', size: 10 },
+    anchor: (c) => c.chart.config.type === 'line' ? 'end' : 'center',
+    align:  (c) => c.chart.config.type === 'line' ? 'top' : 'center',
+    formatter: (v) => {
+      const n = (v && typeof v === 'object') ? (v.y ?? v.r ?? null) : v;
+      return (n === 0 || n == null || n === '') ? null : n;
+    },
+  });
+}
 function _stChart(id, cfg) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -453,6 +469,7 @@ function renderStDashboard() {
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false },
+        datalabels: { formatter: v => v == null ? null : v + '%' },
         tooltip: { callbacks: { label: c => c.parsed.y == null ? ' tidak ada absensi' : ` ${c.parsed.y}% kepatuhan` } } },
       scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,.05)' } },
                 x: { grid: { display: false } } } },
