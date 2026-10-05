@@ -616,3 +616,87 @@ body.inspection-form-page .card {
   color: #16a34a;
 }
 .draft-status:empty { display: none; }
+
+/* ── Tombol form disederhanakan (Hazard, Inspeksi, SBO, PC) ─────────────
+   Header: Kembali & avatar datar kecil (tanpa efek 3D).
+   Navigasi: Sebelumnya | Selanjutnya sebaris, lebih ramping. */
+body.hazard-report-page .nav-home-btn,
+body.inspection-form-page .nav-home-btn {
+  padding: 7px 12px !important;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff !important;
+  color: #334155 !important;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: none !important;
+  transform: none !important;
+}
+body.hazard-report-page .nav-home-btn:hover,
+body.inspection-form-page .nav-home-btn:hover { background: #f8fafc !important; }
+body.hazard-report-page .nav-home-btn .icon,
+body.inspection-form-page .nav-home-btn .icon {
+  width: auto; height: auto; padding: 0; margin: 0;
+  background: none !important; border: 0 !important; box-shadow: none !important;
+  transform: none !important; color: inherit;
+}
+body.hazard-report-page .nav-home-btn .icon::before,
+body.hazard-report-page .nav-home-btn .icon::after,
+body.inspection-form-page .nav-home-btn .icon::before,
+body.inspection-form-page .nav-home-btn .icon::after { display: none !important; }
+body.hazard-report-page .nav-home-btn svg,
+body.inspection-form-page .nav-home-btn svg { width: 16px; height: 16px; }
+
+body.hazard-report-page .user-menu-button,
+body.inspection-form-page .user-menu-button {
+  width: auto !important; height: auto !important;
+  padding: 4px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+body.hazard-report-page .user-avatar,
+body.inspection-form-page .user-avatar { width: 28px; height: 28px; border-radius: 8px; box-shadow: none; }
+body.hazard-report-page .header-actions,
+body.inspection-form-page .header-actions { width: auto !important; }
+
+body.hazard-report-page .button-group,
+body.inspection-form-page .button-group,
+body.inspection-form-page .form-nav {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+body.hazard-report-page .button-group > button,
+body.inspection-form-page .button-group > button,
+body.inspection-form-page .form-nav > button {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: none;
+  transform: none;
+}
+@media (max-width: 768px) {
+  body.hazard-report-page .button-group,
+  body.inspection-form-page .button-group,
+  body.inspection-form-page .form-nav {
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    margin-top: 20px;
+    bottom: 0;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 12px 12px 0 0;
+  }
+}
+body.hazard-report-page .nav-home-btn .icon svg,
+body.inspection-form-page .nav-home-btn .icon svg {
+  display: block; width: 16px !important; height: 16px !important;
+  fill: currentColor !important; color: inherit !important; filter: none !important;
+}
+body.hazard-report-page .header-actions .user-menu,
+body.inspection-form-page .header-actions .user-menu { width: auto !important; }
