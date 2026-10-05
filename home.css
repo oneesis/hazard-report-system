@@ -5,8 +5,10 @@
 /* ── Page content wrapper ── */
 .home-content {
   padding: 24px;
+  width: 100%;         /* flex item .app-main + margin auto mematikan stretch → paksa 100% */
   max-width: 1200px;
   margin: 0 auto;
+  min-width: 0;
   overflow-x: hidden;
 }
 .home-content, .home-content * { box-sizing: border-box; }
