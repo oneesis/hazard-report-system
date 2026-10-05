@@ -25,6 +25,8 @@ let _insJenisFilter = '';   // kode aktif saat drill-down INS, '' = tampilkan se
 let _insSortedCodes = [];   // urutan kode sesuai chart (untuk highlight bar)
 let _sboReports = [];
 let _activeTab = 'general';
+// Kartu KPI aktif (diketuk) → filter tabel. Arti tergantung tab (lihat _kpiMatch).
+let _activeKpi = null;
 let currentPage = 1;
 const PAGE_SIZE = 20;
 let _perusahaanFilter = ""; // filter per-perusahaan dashboard ("" = semua)
@@ -264,6 +266,7 @@ document.getElementById('reportTableBody').innerHTML = `
 // ========================================
 function switchTab(name) {
   _activeTab = name;
+  _setActiveKpi(null);
 
   // Active tab style
   document.querySelectorAll('.dash-tab').forEach(t =>
@@ -421,6 +424,32 @@ function updateKPI() {
 // ========================================
 // RENDER TABLE
 // ========================================
+function _setActiveKpi(id) {
+  _activeKpi = id;
+  document.querySelectorAll('.kpi-card--active').forEach(c => c.classList.remove('kpi-card--active'));
+  if (id) document.getElementById(id)?.closest('.kpi-card')?.classList.add('kpi-card--active');
+}
+
+// Predikat filter kartu KPI. Tab SBO: kartu = Total / AMAN / ADA TEMUAN / Temuan OPEN.
+function _kpiMatch(r) {
+  if (!_activeKpi) return true;
+  const st  = String(r.status_perbaikan || 'OPEN').toUpperCase();
+  const obs = String(r.status_observasi || '').toUpperCase();
+  if (_activeTab === 'sbo') {
+    if (_activeKpi === 'kpiProgress') return obs === 'AMAN';
+    if (_activeKpi === 'kpiClosed')   return obs === 'ADA_TEMUAN';
+    if (_activeKpi === 'kpiOverdue')  return obs === 'ADA_TEMUAN' && st !== 'CLOSED';
+    return true; // kpiOpen = Total Observasi
+  }
+  if (_activeKpi === 'kpiOpen')     return st === 'OPEN';
+  if (_activeKpi === 'kpiProgress') return st === 'PROGRESS';
+  if (_activeKpi === 'kpiClosed')   return st === 'CLOSED';
+  if (_activeKpi === 'kpiOverdue')  return isOverdue(r);
+  if (_activeKpi === 'kpiKondisi')  return String(r.jenis_bahaya || '') === 'Kondisi Tidak Aman';
+  if (_activeKpi === 'kpiTindakan') return String(r.jenis_bahaya || '') === 'Tindakan Tidak Aman';
+  return true;
+}
+
 function renderTable() {
   const tbody =
     document.getElementById("reportTableBody");
@@ -458,7 +487,7 @@ function renderTable() {
     // Drill-down INS: filter per jenis inspeksi
     const matchesInsJenis = !_insJenisFilter || _activeTab !== 'ins' ||
       (report.inspection_sheet || '').trim().toUpperCase() === _insJenisFilter;
-    return matchesSearch && matchesStatus && matchesType && matchesOverdue && matchesInsJenis;
+    return matchesSearch && matchesStatus && matchesType && matchesOverdue && matchesInsJenis && _kpiMatch(report);
   });
 
   filteredReports = filtered;
@@ -2250,6 +2279,25 @@ function initAnalyticsSection() {
     renderTable();
     document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+
+  // Kartu KPI bisa diketuk → filter tabel; ketuk lagi = lepas filter.
+  ['kpiOpen', 'kpiProgress', 'kpiClosed', 'kpiOverdue', 'kpiKondisi', 'kpiTindakan'].forEach(valId => {
+    const card = document.getElementById(valId)?.closest('.kpi-card');
+    if (!card) return;
+    card.classList.add('kpi-card--clickable');
+    card.setAttribute('role', 'button');
+    card.tabIndex = 0;
+    card.title = 'Ketuk untuk filter tabel';
+    const apply = () => {
+      _setActiveKpi(_activeKpi === valId ? null : valId);
+      renderTable();
+      document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    card.addEventListener('click', apply);
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); apply(); } });
+  });
+  // Ubah filter status manual → lepas sorotan kartu KPI agar tak membingungkan.
+  document.getElementById('statusFilter')?.addEventListener('change', () => _setActiveKpi(null));
 
   document.getElementById('drilldownClose')?.addEventListener('click', closeDrilldown);
 }

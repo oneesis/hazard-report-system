@@ -3227,3 +3227,8 @@ th[data-sort] {
 
 /* ===== TAB: icon spacing ===== */
 .dash-tab i { margin-right: 5px; }
+
+/* Kartu KPI bisa diketuk → filter tabel */
+.kpi-card--clickable { cursor: pointer; }
+.kpi-card--clickable:focus-visible { outline: 2px solid #00205B; outline-offset: 2px; }
+.kpi-card--active { outline: 3px solid #00205B; outline-offset: 2px; }
