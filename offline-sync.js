@@ -126,7 +126,7 @@ const OneSapOfflineSync = {
     if (!this._pill) {
       const st = document.createElement('style');
       st.textContent = `
-        .osync-pill{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:9000;display:none;
+        .osync-pill{position:fixed;left:0;right:0;margin:0 auto;width:max-content;bottom:84px;z-index:9000;display:none;
           align-items:center;gap:8px;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:999px;
           font:600 .82rem/1.2 Inter,system-ui,sans-serif;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:default}
         .osync-pill.show{display:flex}

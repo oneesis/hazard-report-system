@@ -30,8 +30,37 @@ function setModBadge(key, n) {
 const DAYS_ID  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
+// ── Status data di bawah salam: waktu update / offline / laporan offline tertunda.
+let _lastUpdated = null, _pendingOffline = 0, _syncState = 'idle';
+function renderSyncStatus() {
+  const el = document.getElementById('greetingSync');
+  if (!el) return;
+  let icon, color, text;
+  if (!navigator.onLine) {
+    icon = 'fa-cloud'; color = '#b45309';
+    text = 'Offline · ' + (_pendingOffline ? `${_pendingOffline} laporan menunggu jaringan` : 'menampilkan data terakhir');
+  } else if (_syncState === 'syncing') {
+    icon = 'fa-arrows-rotate fa-spin'; color = '#2563eb'; text = 'Mengirim laporan offline…';
+  } else if (_pendingOffline) {
+    icon = 'fa-cloud-arrow-up'; color = '#b45309'; text = `${_pendingOffline} laporan offline menunggu dikirim`;
+  } else {
+    icon = 'fa-circle-check'; color = '#22c55e';
+    text = _lastUpdated ? 'Diperbarui ' + _lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 'Memuat data…';
+  }
+  el.innerHTML = `<i class="fa-solid ${icon}" style="color:${color};font-size:.7rem"></i> ${text}`;
+}
+window.addEventListener('online', renderSyncStatus);
+window.addEventListener('offline', renderSyncStatus);
+window.addEventListener('offlinequeuechange', e => {
+  _pendingOffline = e.detail?.pending || 0;
+  _syncState = e.detail?.state || 'idle';
+  if (_syncState === 'done') _lastUpdated = new Date();
+  renderSyncStatus();
+});
+
 async function initHomePage() {
   renderGreeting();
+  renderSyncStatus();
   renderInsGrid();
   renderHazardDraft();
   const stPromise = renderPenggantiST(); // resolve = jumlah kuis pengganti yg belum
@@ -53,6 +82,7 @@ async function initHomePage() {
     renderQuickStats(reports);
     renderSapAchievement(feed, obj);
     renderInsAreaInfo(reports);
+    _lastUpdated = new Date(); renderSyncStatus();
     stPromise.then(() => renderSapAchievement()); // tambah baris Safety Talk begitu riwayat ST tiba
 
     // Buka otomatis panel yang butuh tindakan: Safety Talk bila ada kuis tertunda.
@@ -76,6 +106,7 @@ async function initHomePage() {
       renderQuickStats(e.detail);
       renderSapAchievement(merged, _currentObj);
       renderInsAreaInfo(e.detail);
+      _lastUpdated = new Date(); renderSyncStatus();
     });
   } catch (e) {
     console.error('Home load error', e);
