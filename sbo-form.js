@@ -600,27 +600,41 @@ async function submitSboForm() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
   showSboLoading(sboSelectedPhotos.length > 0);
+  let formData;
 
   try {
-    const formData = collectFormData();
-    const res = await fetch(BASE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'submitSBOReport', data: formData }),
-    });
+    formData = collectFormData();
+    // Offline / koneksi putus → antre di HP, dikirim otomatis saat online (offline-sync.js).
+    if (!navigator.onLine) throw Object.assign(new Error('Tidak ada koneksi'), { offline: true });
+    let res;
+    try {
+      res = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submitSBOReport', data: formData }),
+      });
+    } catch (netErr) { throw Object.assign(netErr, { offline: true }); }
     const json = await res.json();
-    hideSboLoading();
     if (json.status !== 'success') throw new Error(json.message || 'Gagal menyimpan laporan.');
     clearDraft(); // Draft selesai — hapus dari localStorage
     const hasFinding = formData.status_observasi === 'ADA_TEMUAN';
-    const msgEl = document.getElementById('successModalMsg');
-    if (msgEl) {
-      msgEl.textContent = hasFinding
-        ? `Laporan SBO ${json.id} berhasil disimpan. WA notifikasi dikirim ke PIC.`
-        : `Laporan SBO ${json.id} berhasil disimpan. Observasi dinyatakan aman.`;
-    }
-    document.getElementById('successModal').classList.add('open');
+    SubmitResult.show({
+      title: 'Laporan SBO Terkirim', id: json.id,
+      message: hasFinding ? 'Ada temuan — notifikasi WA dikirim ke PIC.' : 'Observasi dinyatakan aman.',
+      actions: [
+        { label: 'Lihat Daftar SBO', href: 'sbo.html', icon: 'fa-list' },
+        { label: 'Buat Observasi Lagi', href: 'sbo-form.html', icon: 'fa-plus' },
+      ],
+    });
   } catch (e) {
+    if (e.offline && formData && typeof OneSapOfflineSync !== 'undefined') {
+      try {
+        await OneSapOfflineSync.queue('submitSBOReport', formData);
+        clearDraft();
+        SubmitResult.offline('Laporan SBO');
+        return;
+      } catch (qErr) { console.error('Gagal antre offline:', qErr); }
+    }
     hideSboLoading();
     showErr('Gagal: ' + e.message);
     btn.disabled = false;

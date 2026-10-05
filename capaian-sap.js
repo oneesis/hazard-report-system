@@ -431,6 +431,7 @@ function _capAggregateBy(rows, keyFn) {
 }
 
 function renderChart() {
+  const _capNarrow = window.innerWidth <= 480; // HP: label miring & font kecil agar semua muat
   const wrap = document.getElementById('capChartWrap');
   const back = document.getElementById('capChartBack');
   if (!wrap || !_capLoaded || !_capComputed.length) {
@@ -506,7 +507,7 @@ function renderChart() {
     afterDatasetsDraw(chart) {
       const { ctx: c, data } = chart;
       c.save();
-      c.font = 'bold 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+      c.font = `bold ${_capNarrow ? 9 : 11}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
       c.textAlign = 'center';
       c.textBaseline = 'bottom';
       data.datasets[0].data.forEach((val, i) => {
@@ -601,9 +602,13 @@ function renderChart() {
           border: { display: false },
           ticks: {
             color: '#475569',
-            font: { size: 11, weight: '600' },
-            maxRotation: 30,
+            // Semua label WAJIB tampil (dulu autoSkip menyembunyikan sebagian di mobile).
+            autoSkip: false,
+            font: { size: _capNarrow ? 9 : 11, weight: '600' },
+            maxRotation: _capNarrow ? 70 : 30,
+            minRotation: _capNarrow ? 50 : 0,
             padding: 6,
+            callback(v) { const l = String(this.getLabelForValue(v)); return l.length > 12 ? l.slice(0, 11) + '…' : l; },
           }
         }
       },

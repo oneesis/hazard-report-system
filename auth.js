@@ -500,3 +500,60 @@ window.SubmitLoading = (() => {
     hide() { if (el) el.classList.remove('show'); },
   };
 })();
+
+// ── Layar HASIL submit SERAGAM (sukses / tersimpan offline) untuk semua form.
+// SubmitResult.show({ offline, title, message, id, actions:[{label, href, icon}] })
+// actions[0] = tombol utama; selalu ada tautan kecil "Kembali ke Beranda".
+window.SubmitResult = (() => {
+  let el = null;
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  function ensure() {
+    if (el) return el;
+    const st = document.createElement('style');
+    st.textContent = `
+      .sr-overlay{position:fixed;inset:0;z-index:10001;display:none;align-items:center;justify-content:center;
+        background:rgba(15,23,42,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:20px}
+      .sr-overlay.show{display:flex}
+      .sr-card{background:#fff;border-radius:18px;padding:30px 24px 22px;width:min(340px,92vw);text-align:center;
+        box-shadow:0 24px 64px rgba(0,0,0,.3);animation:srPop .25s ease}
+      .sr-icon{width:64px;height:64px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.7rem}
+      .sr-icon.ok{background:#dcfce7;color:#16a34a}.sr-icon.off{background:#fef3c7;color:#b45309}
+      .sr-title{font-size:1.1rem;font-weight:800;color:#00205B;margin-bottom:6px}
+      .sr-id{display:inline-block;font:700 .78rem ui-monospace,monospace;color:#475569;background:#f1f5f9;
+        padding:4px 10px;border-radius:8px;margin-bottom:10px;word-break:break-all}
+      .sr-msg{font-size:.86rem;color:#64748b;line-height:1.5;margin-bottom:20px}
+      .sr-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;
+        font-weight:700;font-size:.9rem;text-decoration:none;margin-bottom:8px;box-sizing:border-box}
+      .sr-btn.pri{background:#00205B;color:#fff}.sr-btn.sec{background:#f1f5f9;color:#334155}
+      .sr-home{display:inline-block;margin-top:6px;font-size:.8rem;color:#64748b;text-decoration:none}
+      @keyframes srPop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}`;
+    document.head.appendChild(st);
+    el = document.createElement('div');
+    el.className = 'sr-overlay';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    document.body.appendChild(el);
+    return el;
+  }
+  return {
+    show({ offline = false, title, message, id, actions = [] } = {}) {
+      if (window.SubmitLoading) SubmitLoading.hide();
+      const o = ensure();
+      o.innerHTML = `<div class="sr-card">
+        <div class="sr-icon ${offline ? 'off' : 'ok'}"><i class="fa-solid ${offline ? 'fa-cloud-arrow-up' : 'fa-check'}"></i></div>
+        <div class="sr-title">${esc(title || (offline ? 'Tersimpan di HP' : 'Berhasil Terkirim'))}</div>
+        ${id ? `<div class="sr-id">${esc(id)}</div>` : ''}
+        <div class="sr-msg">${esc(message || '')}</div>
+        ${actions.map((a, i) => `<a href="${esc(a.href)}" class="sr-btn ${i ? 'sec' : 'pri'}">${a.icon ? `<i class="fa-solid ${esc(a.icon)}"></i>` : ''}${esc(a.label)}</a>`).join('')}
+        <a href="index-home.html" class="sr-home">Kembali ke Beranda</a>
+      </div>`;
+      o.classList.add('show');
+    },
+    // Varian standar "tersimpan offline" (sama utk semua modul).
+    offline(modul) {
+      this.show({ offline: true, title: 'Tersimpan di HP',
+        message: `Belum ada jaringan. ${modul} akan dikirim otomatis begitu online — tidak perlu isi ulang.`,
+        actions: [{ label: 'Kembali ke Beranda', href: 'index-home.html', icon: 'fa-house' }] });
+    },
+  };
+})();

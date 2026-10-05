@@ -198,40 +198,56 @@ async function submitPcReport() {
   SubmitLoading.show('Mengirim Personal Contact',
     pcPhotos.length ? 'Mengunggah foto & menyimpan data. Mohon tunggu…' : 'Menyimpan data. Mohon tunggu…');
 
+  const payload = {
+    tgl_pc:             val('tgl_pc'),
+    lokasi_pc:          val('lokasi_pc'),
+    nama_coachee:       val('nama_coachee'),
+    nik_coachee:        val('nik_coachee'),
+    perusahaan_coachee: val('perusahaan_coachee'),
+    subcont_coachee:    val('subcont_coachee'),
+    jabatan_coachee:    val('jabatan_coachee'),
+    departemen_coachee: val('departemen_coachee'),
+    no_wa_coachee:      val('no_wa_coachee'),
+    topik_coaching:     val('topik_coaching'),
+    judul_coaching:     val('judul_coaching'),
+    deskripsi_coaching: val('deskripsi_coaching'),
+    komitmen_perbaikan: val('komitmen_perbaikan'),
+    batas_waktu_pc:     val('batas_waktu_pc'),
+    foto_pc:            pcPhotos.length ? pcPhotos : null,
+  };
+
   try {
-    const res = await fetch(BASE_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'submitPCReport',
-        data: {
-          tgl_pc:             val('tgl_pc'),
-          lokasi_pc:          val('lokasi_pc'),
-          nama_coachee:       val('nama_coachee'),
-          nik_coachee:        val('nik_coachee'),
-          perusahaan_coachee: val('perusahaan_coachee'),
-          subcont_coachee:    val('subcont_coachee'),
-          jabatan_coachee:    val('jabatan_coachee'),
-          departemen_coachee: val('departemen_coachee'),
-          no_wa_coachee:      val('no_wa_coachee'),
-          topik_coaching:     val('topik_coaching'),
-          judul_coaching:     val('judul_coaching'),
-          deskripsi_coaching: val('deskripsi_coaching'),
-          komitmen_perbaikan: val('komitmen_perbaikan'),
-          batas_waktu_pc:     val('batas_waktu_pc'),
-          foto_pc:            pcPhotos.length ? pcPhotos : null,
-        }
-      }),
-    });
+    // Offline / koneksi putus → antre di HP, dikirim otomatis saat online (offline-sync.js).
+    if (!navigator.onLine) throw Object.assign(new Error('Tidak ada koneksi'), { offline: true });
+    let res;
+    try {
+      res = await fetch(BASE_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submitPCReport', data: payload }),
+      });
+    } catch (netErr) { throw Object.assign(netErr, { offline: true }); }
     const json = await res.json();
-    SubmitLoading.hide();
     if (!res.ok || json.status === 'error') throw new Error(json.message || 'Gagal menyimpan.');
 
     _pcClearDraft();
-    const msgEl = document.getElementById('pcSuccessMsg');
-    if (msgEl) msgEl.textContent = json.message || `PC ${json.id} berhasil disimpan.`;
-    document.getElementById('pcSuccessModal').classList.add('open');
+    SubmitResult.show({
+      title: 'Personal Contact Tersimpan', id: json.id,
+      message: json.message || 'Notifikasi WA telah dikirim ke coachee.',
+      actions: [
+        { label: 'Lihat Semua PC', href: 'pc.html', icon: 'fa-list' },
+        { label: 'Buat PC Baru', href: 'pc-form.html', icon: 'fa-plus' },
+      ],
+    });
   } catch (e) {
+    if (e.offline && typeof OneSapOfflineSync !== 'undefined') {
+      try {
+        await OneSapOfflineSync.queue('submitPCReport', payload);
+        _pcClearDraft();
+        SubmitResult.offline('Personal Contact');
+        return;
+      } catch (qErr) { console.error('Gagal antre offline:', qErr); }
+    }
     SubmitLoading.hide();
     showStepErr(3, 'Gagal: ' + e.message);
     btn.disabled = false;

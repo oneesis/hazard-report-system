@@ -1225,8 +1225,8 @@ async function submitForm() {
     if (!navigator.onLine) {
       if (typeof OneSapOfflineSync !== "undefined") {
         await OneSapOfflineSync.queueHazardReport(data);
-        showToast("Tidak ada koneksi. Laporan disimpan offline dan akan dikirim otomatis.", "warning");
-        setTimeout(() => { window.location.href = "index-home.html"; }, 2000);
+        clearDraft();
+        SubmitResult.offline("Hazard Report");
         return;
       }
     }
@@ -1242,8 +1242,8 @@ async function submitForm() {
       // Intercept network failure (connection drop) during fetch
       if (typeof OneSapOfflineSync !== "undefined") {
         await OneSapOfflineSync.queueHazardReport(data);
-        showToast("Gagal terhubung ke server. Laporan disimpan offline.", "warning");
-        setTimeout(() => { window.location.href = "index-home.html"; }, 2000);
+        clearDraft();
+        SubmitResult.offline("Hazard Report");
         return;
       }
       throw fetchError;
@@ -1258,8 +1258,15 @@ async function submitForm() {
     }
 
     if (result.status === "success") {
-      showToast("Hazard Report berhasil disimpan! ID: " + result.id);
-      setTimeout(() => { window.location.href = "index-home.html"; }, 1500);
+      clearDraft(); // dulu draft tak dihapus → isian lama muncul lagi saat form dibuka
+      SubmitResult.show({
+        title: "Hazard Report Terkirim", id: result.id,
+        message: "Laporan diteruskan ke PIC untuk ditindaklanjuti.",
+        actions: [
+          { label: "Lihat Laporan", href: "laporan-detail.html?id=" + encodeURIComponent(result.id || ""), icon: "fa-file-lines" },
+          { label: "Buat Laporan Lagi", href: "index.html", icon: "fa-plus" },
+        ],
+      });
     } else {
       throw new Error(result.message || "Gagal menyimpan data.");
     }

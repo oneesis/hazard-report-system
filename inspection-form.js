@@ -743,7 +743,6 @@ async function submitForm() {
   const data = getFormData();
   const btn = document.getElementById("btnSubmit");
   if (btn) btn.disabled = true;
-  // Overlay dibiarkan tampil saat sukses (halaman langsung pindah); ditutup hanya bila gagal.
   SubmitLoading.show("Mengirim Inspeksi", "Mengunggah foto & menyimpan data. Mohon tunggu…");
 
   // Intercept explicitly offline state
@@ -751,9 +750,8 @@ async function submitForm() {
     if (typeof OneSapOfflineSync !== "undefined") {
       try {
         await OneSapOfflineSync.queueInspectionReport(data);
-        showToast("Tidak ada koneksi. Inspeksi disimpan offline dan akan dikirim otomatis.", "warning");
         clearInspectionDraft();
-        window.location.href = "inspection.html";
+        SubmitResult.offline("Inspeksi");
         return;
       } catch (err) {
         console.error("Failed to queue offline:", err);
@@ -773,9 +771,8 @@ async function submitForm() {
       // Intercept network failure (connection drop) during fetch
       if (typeof OneSapOfflineSync !== "undefined") {
         await OneSapOfflineSync.queueInspectionReport(data);
-        showToast("Gagal terhubung ke server. Inspeksi disimpan offline.", "warning");
         clearInspectionDraft();
-        window.location.href = "inspection.html";
+        SubmitResult.offline("Inspeksi");
         return;
       }
       throw fetchErr;
@@ -784,9 +781,15 @@ async function submitForm() {
     const text = await response.text();
     const result = JSON.parse(text);
     if (result.status === "success") {
-      showToast("Inspeksi berhasil disimpan! ID: " + (result.id || "-"));
       clearInspectionDraft();
-      window.location.href = "inspection.html";
+      SubmitResult.show({
+        title: "Inspeksi Terkirim", id: result.id,
+        message: "Temuan inspeksi diteruskan ke PIC untuk ditindaklanjuti.",
+        actions: [
+          { label: "Lihat Laporan", href: "laporan-detail.html?id=" + encodeURIComponent(result.id || ""), icon: "fa-file-lines" },
+          { label: "Inspeksi Area Lain", href: "inspection.html", icon: "fa-clipboard-check" },
+        ],
+      });
     } else {
       throw new Error(result.message || "Gagal menyimpan inspeksi.");
     }
