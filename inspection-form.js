@@ -1180,6 +1180,7 @@ function saveInspectionDraft() {
   data._ts = Date.now();
 
   localStorage.setItem(key, JSON.stringify(data));
+  window.DraftStatus?.mark();
   showInspectionAutoSaveIndicator();
   // Sync ke server (cross-device)
   if (typeof _draftSaveToServer === 'function') _draftSaveToServer(_inspectionFormType(), data);

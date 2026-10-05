@@ -557,3 +557,16 @@ window.SubmitResult = (() => {
     },
   };
 })();
+
+// ── Tanda "Draft tersimpan HH:MM" di bar tombol form (Hazard/Inspeksi/SBO/PC).
+// Dipanggil fungsi auto-save draft tiap form setelah menulis localStorage.
+window.DraftStatus = {
+  mark() {
+    const t = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    document.querySelectorAll('.form-nav, .button-group').forEach(bar => {
+      let s = bar.querySelector('.draft-status');
+      if (!s) { s = document.createElement('div'); s.className = 'draft-status'; s.setAttribute('aria-live', 'polite'); bar.prepend(s); }
+      s.innerHTML = `<i class="fa-solid fa-circle-check"></i> Draft tersimpan ${t}`;
+    });
+  },
+};

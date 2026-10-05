@@ -585,3 +585,34 @@ body.inspection-form-page .card {
   line-height: 1.5;
   margin-bottom: 24px;
 }
+
+/* ── Tombol navigasi form menempel di bawah layar (HP) ───────────────
+   Hazard (.button-group), Inspeksi (.button-group), SBO & PC (.form-nav):
+   tombol Lanjut/Kirim selalu terjangkau tanpa scroll ke bawah. */
+@media (max-width: 768px) {
+  body.hazard-report-page .button-group,
+  body.inspection-form-page .button-group,
+  body.inspection-form-page .form-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    margin-top: 24px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, .97);
+    border-top: 1px solid #e2e8f0;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 20px -10px rgba(15, 23, 42, .25);
+  }
+}
+.form-nav { flex-wrap: wrap; }
+
+/* Tanda "Draft tersimpan HH:MM" — diisi DraftStatus.mark() (auth.js) */
+.draft-status {
+  flex-basis: 100%;
+  order: -1;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 600;
+  color: #16a34a;
+}
+.draft-status:empty { display: none; }

@@ -464,6 +464,7 @@ function saveDraft() {
   data._savedAt = new Date().toISOString();
   data._ts = Date.now();
   localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+  window.DraftStatus?.mark();
   showAutoSaveIndicator();
   // Sync ke server (cross-device)
   if (typeof _draftSaveToServer === 'function') _draftSaveToServer('Hazard', data);

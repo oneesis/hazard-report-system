@@ -666,7 +666,7 @@ function scheduleSaveDraft() {
   clearTimeout(_draftTimer);
   _draftTimer = setTimeout(() => {
     const d = _collectDraft();
-    try { localStorage.setItem(SBO_DRAFT_KEY, JSON.stringify(d)); } catch (e) {}
+    try { localStorage.setItem(SBO_DRAFT_KEY, JSON.stringify(d)); window.DraftStatus?.mark(); } catch (e) {}
     // Sync ke server juga (throttle lebih lambat — 4 detik)
     clearTimeout(_serverSaveTimer);
     _serverSaveTimer = setTimeout(() => _saveToServer(d), 4000);

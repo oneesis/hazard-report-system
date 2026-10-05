@@ -275,7 +275,7 @@ function _pcScheduleSave() {
   clearTimeout(_pcLTimer);
   _pcLTimer = setTimeout(() => {
     const d = _pcCollectDraft();
-    try { localStorage.setItem(_pcDraftKey, JSON.stringify(d)); } catch {}
+    try { localStorage.setItem(_pcDraftKey, JSON.stringify(d)); window.DraftStatus?.mark(); } catch {}
     clearTimeout(_pcSTimer);
     _pcSTimer = setTimeout(() => {
       if (typeof _draftSaveToServer === 'function') _draftSaveToServer('PC', d);
