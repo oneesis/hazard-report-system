@@ -1,6 +1,7 @@
 /* ===== DASHBOARD TABS ===== */
-.dashboard-tabs { display:flex; gap:8px; padding:12px 20px 0; border-bottom:2px solid #e2e8f0; margin-bottom:20px; }
-.dash-tab { padding:10px 20px; border:none; background:none; border-radius:8px 8px 0 0; cursor:pointer; font-weight:600; font-size:.9rem; color:#64748b; border-bottom:3px solid transparent; transition:.2s; }
+.dashboard-tabs { display:flex; gap:8px; padding:12px 20px 0; border-bottom:2px solid #e2e8f0; margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.dashboard-tabs::-webkit-scrollbar { display:none; }
+.dash-tab { flex:0 0 auto; white-space:nowrap; padding:10px 20px; border:none; background:none; border-radius:8px 8px 0 0; cursor:pointer; font-weight:600; font-size:.9rem; color:#64748b; border-bottom:3px solid transparent; transition:.2s; }
 .dash-tab.active { color:#003087; border-bottom-color:#003087; background:#f8fafc; }
 .dash-tab:hover:not(.active) { background:#f1f5f9; }
 
