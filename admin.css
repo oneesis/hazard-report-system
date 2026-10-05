@@ -302,3 +302,13 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Capaian SAP: filter & tombol memenuhi lebar layar di HP */
+@media (max-width: 600px) {
+  .cap-filters { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .cap-filters > * { width: 100% !important; min-width: 0; }
+  .cap-filters #capDept { grid-column: 1 / -1; order: 3; }
+  .cap-filters #capPerusahaan { width: 100% !important; }
+  .um-header:has(.cap-filters) .um-header-actions { width: 100%; flex-wrap: nowrap; }
+  .um-header:has(.cap-filters) .um-header-actions > .btn-secondary:not(.btn-icon) { flex: 1; justify-content: center; }
+}
