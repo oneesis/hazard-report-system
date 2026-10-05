@@ -14,9 +14,11 @@
   ],
   "functions": {
     "api/index.js":           { "maxDuration": 30 },
-    "api/cron-deadline.js":   { "maxDuration": 60 }
+    "api/cron-deadline.js":   { "maxDuration": 60 },
+    "api/cron-sap-reminder.js": { "maxDuration": 120 }
   },
   "crons": [
-    { "path": "/api/cron-deadline", "schedule": "0 1 * * *" }
+    { "path": "/api/cron-deadline", "schedule": "0 1 * * *" },
+    { "path": "/api/cron-sap-reminder", "schedule": "0 1 * * *" }
   ]
 }
