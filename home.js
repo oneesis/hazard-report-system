@@ -9,10 +9,21 @@ const INSPECTION_AREAS = [
   { type: 'INS_MD', name: 'Mess dan Dapur',     sub: 'Camp Utama',       icon: 'fa-utensils' },
   { type: 'INS_KG', name: 'Kantor & Gudang',    sub: 'Logistics Center', icon: 'fa-building' },
   { type: 'INS_SP', name: 'Settling Pond',      sub: 'Water Management', icon: 'fa-water' },
-  { type: 'INS_TB', name: 'Tambang',            sub: 'Pit West Wing',    icon: 'fa-helmet-safety' },
-  { type: 'INS_BB', name: 'Tangki BBM',         sub: 'Fuel Station',     icon: 'fa-gas-pump' },
+  { type: 'INS_T',  name: 'Tambang',            sub: 'Pit West Wing',    icon: 'fa-helmet-safety' },
+  { type: 'INS_TB', name: 'Tangki BBM',         sub: 'Fuel Station',     icon: 'fa-gas-pump' },
   { type: 'INS_WS', name: 'Workshop',           sub: 'Maintenance Yard', icon: 'fa-wrench' },
 ];
+
+// Satu palet warna modul — dipakai ikon beranda, label "Laporan Terakhir", dll.
+const MOD_COLORS = { HAZARD: '#d97706', INSPECTION: '#16a34a', SBO: '#4f46e5', PC: '#0d9488', ST: '#7c3aed' };
+
+// Badge angka di pojok ikon modul (0 = sembunyi).
+function setModBadge(key, n) {
+  const b = document.querySelector(`.mod-badge[data-badge="${key}"]`);
+  if (!b) return;
+  b.textContent = n > 9 ? '9+' : String(n);
+  b.hidden = !(n > 0);
+}
 
 const DAYS_ID  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -21,7 +32,7 @@ async function initHomePage() {
   renderGreeting();
   renderInsGrid();
   renderHazardDraft();
-  renderPenggantiST();
+  const stPromise = renderPenggantiST(); // resolve = jumlah kuis pengganti yg belum
   initNotificationBell();
   maybeShowStQuizPopup(); // popup kuis pengganti ST bila capaian belum 100% & bukan mangkir
 
@@ -37,6 +48,11 @@ async function initHomePage() {
     renderMyReports(feed);
     renderQuickStats(reports);
     renderSapAchievement(feed, obj);
+    renderInsAreaInfo(reports);
+
+    // Buka otomatis panel yang butuh tindakan: Safety Talk bila ada kuis tertunda.
+    const stPending = await stPromise;
+    if (stPending > 0 && !document.querySelector('.mod-panel.open')) toggleModule('st');
 
     // search filter
     let _allReports = feed;
@@ -54,6 +70,7 @@ async function initHomePage() {
       renderMyReports(merged, q);
       renderQuickStats(e.detail);
       renderSapAchievement(merged, _currentObj);
+      renderInsAreaInfo(e.detail);
     });
   } catch (e) {
     console.error('Home load error', e);
@@ -112,9 +129,32 @@ function renderInsGrid() {
     <a class="ins-card" href="inspection-form.html?type=${area.type}" aria-label="${area.name}">
       <div class="ins-card-icon"><i class="fa-solid ${area.icon}"></i></div>
       <div class="ins-card-name">${area.name}</div>
+      <div class="ins-card-meta" data-ins="${area.type}"></div>
       <span class="ins-card-go">Mulai <i class="fa-solid fa-arrow-right"></i></span>
     </a>
   `).join('');
+}
+
+// Info kecil per area: kapan terakhir diinspeksi (dari laporan yang terlihat user).
+function renderInsAreaInfo(reports) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const last = {};
+  (reports || []).forEach(r => {
+    if (String(r.report_type || '').toUpperCase() !== 'INSPECTION') return;
+    const code = String(r.inspection_sheet || r.jenis_inspeksi || r.tipe_inspeksi || '').trim().toUpperCase();
+    const d = new Date(r.tanggal_inspeksi || r.timestamp || '');
+    if (!code || isNaN(d)) return;
+    if (!last[code] || d > last[code]) last[code] = d;
+  });
+  document.querySelectorAll('.ins-card-meta[data-ins]').forEach(el => {
+    const d = last[el.dataset.ins];
+    if (!d) { el.textContent = 'Belum ada'; el.className = 'ins-card-meta ins-meta-none'; return; }
+    const days = Math.round((today - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+    el.textContent = 'Terakhir: ' + (days <= 0 ? 'hari ini' : days === 1 ? 'kemarin'
+      : days < 30 ? `${days} hr lalu` : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }));
+    el.className = 'ins-card-meta' + (days > 30 ? ' ins-meta-old' : '');
+  });
 }
 
 // ── Accordion modul beranda: klik ikon → slide-down panelnya, tutup yang lain.
@@ -186,11 +226,11 @@ function renderMyReports(reports, query = '') {
   }
 
   const TYPE_META = {
-    HAZARD:     { label: 'HR',  color: '#ef4444' },
-    INSPECTION: { label: 'INS', color: '#6366f1' },
-    SBO:        { label: 'SBO', color: '#0ea5e9' },
-    PC:         { label: 'PC',  color: '#10b981' },
-    ST:         { label: 'ST',  color: '#f59e0b' },
+    HAZARD:     { label: 'HR',  color: MOD_COLORS.HAZARD },
+    INSPECTION: { label: 'INS', color: MOD_COLORS.INSPECTION },
+    SBO:        { label: 'SBO', color: MOD_COLORS.SBO },
+    PC:         { label: 'PC',  color: MOD_COLORS.PC },
+    ST:         { label: 'ST',  color: MOD_COLORS.ST },
   };
 
   el.innerHTML = recent.map(r => {
@@ -292,7 +332,7 @@ async function renderPenggantiST() {
   if (!el) return;
   const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   const nik = String(u?.nik || '').trim();
-  if (!nik) { el.innerHTML = ''; return; }
+  if (!nik) { el.innerHTML = ''; return 0; }
   const quizUrl = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
   el.innerHTML = '<div class="st-empty">Memuat riwayat…</div>';
 
@@ -303,7 +343,7 @@ async function renderPenggantiST() {
     rows = Array.isArray(json.data) ? json.data : [];
   } catch {}
 
-  if (!rows.length) { el.innerHTML = '<div class="st-empty">Belum ada riwayat Safety Talk.</div>'; return; }
+  if (!rows.length) { el.innerHTML = '<div class="st-empty">Belum ada riwayat Safety Talk.</div>'; setModBadge('st', 0); return 0; }
 
   let pending = 0;
   const fmt = v => { const d = new Date(v); return isNaN(d) ? String(v || '').slice(0, 7) : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); };
@@ -326,9 +366,9 @@ async function renderPenggantiST() {
       : `<div class="st-row">${inner}</div>`;
   }).join('');
 
-  el.innerHTML = `<div class="st-list">${items}</div>` + (pending
-    ? `<a href="${quizUrl}" target="_blank" rel="noopener noreferrer" class="mod-act st-quiz-btn"><i class="fa-solid fa-graduation-cap"></i> Kerjakan Kuis Pengganti (${pending})</a>`
-    : '');
+  el.innerHTML = `<div class="st-list">${items}</div>`;
+  setModBadge('st', pending);
+  return pending;
 }
 
 // Popup kuis pengganti Safety Talk saat buka app. Muncul HANYA bila user punya
@@ -456,6 +496,7 @@ function renderActionBanner(reports) {
   if (!el) return;
   const user  = getCurrentUser();
   const items = computeActionItems(reports, user);
+  setModBadge('hr', items.reduce((s, it) => s + it.reports.length, 0));
   if (!items.length) { el.style.display = 'none'; return; }
 
   const reportRow = r => {
@@ -541,6 +582,12 @@ function renderSapAchievement(reports, obj, offset) {
   const pct      = (c, t) => t > 0 ? Math.min(100, Math.round(c / t * 100)) : 0;
   const barColor = p => p >= 100 ? '#22c55e' : p >= 50 ? '#F2A900' : '#3b82f6';
 
+  // Ringkasan 1 angka: total capaian (dibatasi per target) / total target.
+  const sumT = rows.reduce((s, r) => s + r.target, 0);
+  const sumC = rows.reduce((s, r) => s + Math.min(r.count, r.target), 0);
+  const tot  = sumT ? Math.round(sumC / sumT * 100) : 0;
+  const doneN = rows.filter(r => r.count >= r.target).length;
+
   const canNext = _sapMonthOffset < 0;
   const navBtn = 'width:26px;height:26px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-size:1rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
   el.style.display = '';
@@ -550,10 +597,17 @@ function renderSapAchievement(reports, obj, offset) {
         <span class="sap-ach-title"><i class="fa-solid fa-trophy"></i> Capaian SAP</span>
         <span style="display:flex;align-items:center;gap:8px">
           <button type="button" onclick="sapMonthNav(-1)" aria-label="Bulan sebelumnya" style="${navBtn}">‹</button>
-          <span class="sap-ach-month" style="min-width:104px;text-align:center">${MONTHS_ID[m]} ${y}</span>
+          <span class="sap-ach-month" style="min-width:84px;text-align:center">${MONTHS_ID[m]} ${y}</span>
           <button type="button" onclick="sapMonthNav(1)" aria-label="Bulan berikutnya" style="${navBtn};${canNext ? '' : 'opacity:.35;cursor:default;pointer-events:none'}">›</button>
         </span>
       </div>
+      <a href="capaian-sap.html" class="sap-ring-wrap">
+        <div class="sap-ring" style="--p:${tot};--c:${barColor(tot)}"><span>${tot}%</span></div>
+        <div class="sap-ring-txt">
+          <b>Capaian ${_sapMonthOffset === 0 ? 'bulan ini' : MONTHS_ID[m]}</b>
+          <small>${doneN} dari ${rows.length} target tercapai · Lihat detail <i class="fa-solid fa-arrow-right"></i></small>
+        </div>
+      </a>
       <div class="sap-ach-rows">
         ${rows.map(r => {
           const p     = pct(r.count, r.target);

@@ -80,6 +80,7 @@
   margin-bottom: 14px;
 }
 .sap-ach-title {
+  white-space: nowrap;
   font-size: .75rem;
   font-weight: 700;
   color: #00205B;
@@ -986,8 +987,45 @@
 .st-warn { background: #fffbeb; color: #b45309; }
 .st-bad  { background: #fef2f2; color: #b91c1c; }
 .st-empty { font-size: .82rem; color: #94a3b8; text-align: center; padding: 14px 0; }
-.st-quiz-btn { margin-top: 10px; background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
-.st-quiz-btn i { color: #6366f1; }
+/* badge angka di pojok ikon modul */
+.mod-badge {
+  position: absolute; top: 7px; left: calc(50% + 12px);
+  min-width: 19px; height: 19px; padding: 0 5px;
+  border-radius: 10px; border: 2px solid #fff;
+  background: #ef4444; color: #fff;
+  font-size: .64rem; font-weight: 800; line-height: 15px; text-align: center;
+  box-sizing: border-box;
+}
+.mod-badge[hidden] { display: none; }
+
+/* info terakhir diinspeksi per area */
+.ins-card-meta { font-size: .66rem; font-weight: 600; color: #16a34a; }
+.ins-card-meta:empty { display: none; }
+.ins-meta-old  { color: #b45309; }
+.ins-meta-none { color: #94a3b8; }
+
+/* cincin capaian SAP */
+.sap-ring-wrap {
+  display: flex; align-items: center; gap: 14px;
+  padding: 4px 0 14px; margin-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  text-decoration: none; color: inherit;
+}
+.sap-ring {
+  --p: 0; --c: #3b82f6;
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), #eef2f7 0);
+  display: grid; place-items: center; position: relative;
+}
+.sap-ring::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #fff; }
+.sap-ring span { position: relative; font-size: .95rem; font-weight: 800; color: #00205B; }
+.sap-ring-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sap-ring-txt b { font-size: .9rem; color: #0f172a; }
+.sap-ring-txt small { font-size: .74rem; color: #64748b; }
+.sap-ring-txt small i { font-size: .62rem; color: #307FE2; }
+
+/* topbar beranda: judul "Beranda" dobel dengan salam → sembunyikan (tetap makan tempat agar ikon kanan tak bergeser) */
+.app-topbar-title { visibility: hidden; }
 
 /* ringkasan card */
 .sum-card {
