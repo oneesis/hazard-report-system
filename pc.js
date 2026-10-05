@@ -203,10 +203,8 @@ function onBuktiFotoChange(input) {
   const preview = document.getElementById('buktiFotoPreview');
   _buktiFotos = [];
   if (!input.files?.length) { preview.innerHTML = ''; return; }
-  Promise.all([...input.files].map(f => new Promise(res => {
-    const fr = new FileReader(); fr.onload = e => res(e.target.result); fr.readAsDataURL(f);
-  }))).then(results => {
-    _buktiFotos = results;
+  Promise.all([...input.files].map(f => compressPhotoFile(f))).then(results => {
+    _buktiFotos = results.filter(Boolean);
     preview.innerHTML = results.map(d =>
       `<img src="${d}" style="height:64px;border-radius:8px;border:1.5px solid #e2e8f0;object-fit:cover">`
     ).join('');

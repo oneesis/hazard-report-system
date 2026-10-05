@@ -268,12 +268,8 @@ async function submitSboUpdate(id) {
   let fotoBase64 = '';
   const files = fileInput?.files || [];
   if (files.length) {
-    const reads = await Promise.all([...files].map(f => new Promise(res => {
-      const fr = new FileReader();
-      fr.onload = e => res(e.target.result);
-      fr.readAsDataURL(f);
-    })));
-    fotoBase64 = JSON.stringify(reads);
+    const reads = await Promise.all([...files].map(f => compressPhotoFile(f)));
+    fotoBase64 = JSON.stringify(reads.filter(Boolean));
   }
 
   try {

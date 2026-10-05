@@ -416,16 +416,14 @@ function handleDetailPhoto(e) {
   const preview = document.getElementById('afterPhotoPreview');
   preview.innerHTML = '';
 
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      detailAfterPhotos.push(ev.target.result);
-      const wrap = document.createElement('div');
-      wrap.className = 'detail-gallery-img';
-      wrap.innerHTML = `<img src="${ev.target.result}" alt="preview">`;
-      preview.appendChild(wrap);
-    };
-    reader.readAsDataURL(file);
+  files.forEach(async file => {
+    const data = await compressPhotoFile(file);
+    if (!data) return;
+    detailAfterPhotos.push(data);
+    const wrap = document.createElement('div');
+    wrap.className = 'detail-gallery-img';
+    wrap.innerHTML = `<img src="${data}" alt="preview">`;
+    preview.appendChild(wrap);
   });
 }
 
