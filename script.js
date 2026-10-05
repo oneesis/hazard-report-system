@@ -1152,35 +1152,13 @@ function hideAlert() {
 // ========================================
 // LOADING OVERLAY
 // ========================================
+// Loader seragam semua form → SubmitLoading (auth.js).
 function showLoading() {
-  const overlay = document.getElementById("loadingOverlay");
-  const progress = document.getElementById("loadingProgress");
-  const percent = document.getElementById("loadingPercent");
-
-  if (overlay) overlay.style.display = "flex";
-
-  if (progress) progress.style.width = "0%";
-  if (percent) percent.textContent = "0%";
-
-  setTimeout(() => updateLoading(20), 200);
-  setTimeout(() => updateLoading(45), 800);
-  setTimeout(() => updateLoading(70), 1500);
-  setTimeout(() => updateLoading(90), 2500);
-}
-
-function updateLoading(value) {
-  const progress = document.getElementById("loadingProgress");
-  const percent = document.getElementById("loadingPercent");
-  if (progress) progress.style.width = value + "%";
-  if (percent) percent.textContent = value + "%";
+  SubmitLoading.show('Mengirim Hazard Report', 'Mengunggah foto & menyimpan data. Mohon tunggu…');
 }
 
 function hideLoading() {
-  updateLoading(100);
-  setTimeout(() => {
-    const overlay = document.getElementById("loadingOverlay");
-    if (overlay) overlay.style.display = "none";
-  }, 500);
+  SubmitLoading.hide();
 }
 
 // ========================================

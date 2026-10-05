@@ -195,6 +195,8 @@ async function submitPcReport() {
   const btn = document.getElementById('pcSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  SubmitLoading.show('Mengirim Personal Contact',
+    pcPhotos.length ? 'Mengunggah foto & menyimpan data. Mohon tunggu…' : 'Menyimpan data. Mohon tunggu…');
 
   try {
     const res = await fetch(BASE_URL, {
@@ -222,6 +224,7 @@ async function submitPcReport() {
       }),
     });
     const json = await res.json();
+    SubmitLoading.hide();
     if (!res.ok || json.status === 'error') throw new Error(json.message || 'Gagal menyimpan.');
 
     _pcClearDraft();
@@ -229,6 +232,7 @@ async function submitPcReport() {
     if (msgEl) msgEl.textContent = json.message || `PC ${json.id} berhasil disimpan.`;
     document.getElementById('pcSuccessModal').classList.add('open');
   } catch (e) {
+    SubmitLoading.hide();
     showStepErr(3, 'Gagal: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Personal Contact';

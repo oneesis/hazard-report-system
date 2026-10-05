@@ -743,6 +743,8 @@ async function submitForm() {
   const data = getFormData();
   const btn = document.getElementById("btnSubmit");
   if (btn) btn.disabled = true;
+  // Overlay dibiarkan tampil saat sukses (halaman langsung pindah); ditutup hanya bila gagal.
+  SubmitLoading.show("Mengirim Inspeksi", "Mengunggah foto & menyimpan data. Mohon tunggu…");
 
   // Intercept explicitly offline state
   if (!navigator.onLine) {
@@ -789,6 +791,7 @@ async function submitForm() {
       throw new Error(result.message || "Gagal menyimpan inspeksi.");
     }
   } catch (error) {
+    SubmitLoading.hide();
     showToast("Terjadi kesalahan: " + error.message, "error");
   } finally {
     if (btn) btn.disabled = false;

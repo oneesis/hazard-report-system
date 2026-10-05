@@ -455,3 +455,48 @@ if ("serviceWorker" in navigator) {
     }
   });
 }
+
+// ── Loading submit SERAGAM untuk semua form (Hazard, Inspeksi, SBO, PC, dll).
+// Pakai: SubmitLoading.show('Mengirim Hazard Report', 'Mengunggah foto…');
+//        SubmitLoading.hide();
+// Membuat DOM + CSS sendiri saat pertama dipakai → tak perlu markup per halaman.
+window.SubmitLoading = (() => {
+  let el = null;
+  function ensure() {
+    if (el) return el;
+    const st = document.createElement('style');
+    st.textContent = `
+      .sl-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;
+        background:rgba(15,23,42,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:20px}
+      .sl-overlay.show{display:flex}
+      .sl-card{background:#fff;border-radius:18px;padding:32px 28px 26px;width:min(320px,90vw);text-align:center;
+        box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit}
+      .sl-spin{width:56px;height:56px;margin:0 auto 18px;border-radius:50%;border:5px solid #e2e8f0;
+        border-top-color:#00205B;animation:slSpin .9s linear infinite}
+      .sl-title{font-size:1.02rem;font-weight:800;color:#00205B;margin-bottom:6px}
+      .sl-sub{font-size:.84rem;color:#64748b;line-height:1.5;margin-bottom:18px}
+      .sl-bar{height:5px;border-radius:99px;background:#eef2f7;overflow:hidden;position:relative}
+      .sl-bar span{position:absolute;top:0;bottom:0;width:40%;border-radius:99px;background:#F2A900;
+        animation:slBar 1.3s ease-in-out infinite}
+      @keyframes slSpin{to{transform:rotate(360deg)}}
+      @keyframes slBar{0%{left:-40%}100%{left:100%}}`;
+    document.head.appendChild(st);
+    el = document.createElement('div');
+    el.className = 'sl-overlay';
+    el.setAttribute('role', 'alert');
+    el.setAttribute('aria-live', 'assertive');
+    el.innerHTML = '<div class="sl-card"><div class="sl-spin"></div><div class="sl-title"></div>'
+      + '<div class="sl-sub"></div><div class="sl-bar"><span></span></div></div>';
+    document.body.appendChild(el);
+    return el;
+  }
+  return {
+    show(title, sub) {
+      const o = ensure();
+      o.querySelector('.sl-title').textContent = title || 'Mengirim…';
+      o.querySelector('.sl-sub').textContent = sub || 'Mohon tunggu, jangan tutup halaman ini.';
+      o.classList.add('show');
+    },
+    hide() { if (el) el.classList.remove('show'); },
+  };
+})();

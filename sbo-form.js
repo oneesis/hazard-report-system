@@ -585,31 +585,13 @@ function collectFormData() {
   };
 }
 
+// Loader seragam semua form → SubmitLoading (auth.js).
 function showSboLoading(hasFoto) {
-  let ov = document.getElementById('sboLoadingOverlay');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'sboLoadingOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)';
-    document.body.appendChild(ov);
-  }
-  ov.innerHTML = `
-    <div style="background:#fff;border-radius:18px;padding:36px 44px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.35);max-width:320px;width:90%">
-      <div style="position:relative;width:64px;height:64px;margin:0 auto 20px">
-        <svg viewBox="0 0 64 64" style="width:64px;height:64px;animation:sboSpin 1s linear infinite">
-          <circle cx="32" cy="32" r="28" fill="none" stroke="#e2e8f0" stroke-width="6"/>
-          <path d="M32 4a28 28 0 0 1 28 28" fill="none" stroke="#00205B" stroke-width="6" stroke-linecap="round"/>
-        </svg>
-        <i class="fa-solid fa-file-circle-check" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#00205B"></i>
-      </div>
-      <div style="font-weight:700;font-size:1.05rem;color:#0f172a;margin-bottom:6px">Menyimpan Laporan SBO...</div>
-      <div style="font-size:.82rem;color:#64748b;line-height:1.5">${hasFoto ? 'Sedang upload foto ke server.<br>Mohon jangan tutup halaman ini.' : 'Mohon tunggu sebentar...'}</div>
-    </div>`;
-  ov.style.display = 'flex';
+  SubmitLoading.show('Mengirim Laporan SBO',
+    hasFoto ? 'Mengunggah foto & menyimpan data. Mohon tunggu…' : 'Menyimpan data. Mohon tunggu…');
 }
 function hideSboLoading() {
-  const ov = document.getElementById('sboLoadingOverlay');
-  if (ov) ov.style.display = 'none';
+  SubmitLoading.hide();
 }
 
 async function submitSboForm() {
