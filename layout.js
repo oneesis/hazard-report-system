@@ -138,14 +138,15 @@
       </a>`;
     }
 
+    // Lapor & Inspeksi dipindah ke launcher 5-modul di beranda (tak lagi di
+    // bottom nav agar tak dobel). Bottom nav = navigasi/pemantauan.
     el.innerHTML = `
       ${mbnLink('index-home.html','fa-house','Beranda','beranda')}
-      <a href="index.html" class="mbn-item mbn-fab-item${active==='hazard'?' mbn-active':''}">
-        <div class="mbn-fab-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <span>Lapor</span>
-      </a>
-      ${mbnLink('inspection.html','fa-list-check','Inspeksi','inspeksi')}
       ${mbnLink('dashboard.html','fa-chart-simple','Dashboard','dashboard')}
+      ${mbnLink('capaian-sap.html','fa-trophy','Capaian','capaian-sap')}
+      <a href="#" class="mbn-item" onclick="openMobileProfileSheet();return false;">
+        <i class="fa-solid fa-user"></i><span>Profil</span>
+      </a>
     `;
   }
 
