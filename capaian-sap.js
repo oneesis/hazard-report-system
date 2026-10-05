@@ -361,15 +361,27 @@ function renderKpi() {
   const stTotalCount = _capFiltered.filter(r => r.stHadir !== null).length;
   const stPct = stTotalCount > 0 ? Math.round(stHadirCount / stTotalCount * 100) : null;
 
-  el.style.display = 'flex';
+  const withTotal = _capFiltered.filter(r => r.pctTotal !== null);
+  const achieved  = withTotal.filter(r => r.pctTotal >= 100).length;
+  const achColor  = withTotal.length && achieved === withTotal.length ? '#22c55e' : achieved ? '#f59e0b' : '#ef4444';
+
+  el.style.display = '';
   el.innerHTML = `
     <div class="ach-kpi-cell">
       <i class="fa-solid fa-users" style="color:#64748b;font-size:1.1rem"></i>
       <div class="ach-kpi-num" style="color:#0f172a">${_capFiltered.length}</div>
       <div class="ach-kpi-label">Total Karyawan</div>
     </div>
+    ${withTotal.length ? `<div class="ach-kpi-cell">
+      <i class="fa-solid fa-circle-check" style="color:${achColor};font-size:1.1rem"></i>
+      <div class="ach-kpi-num" style="color:${achColor}">${achieved}/${withTotal.length}</div>
+      <div class="ach-kpi-label">Achieved 100%</div>
+    </div>` : ''}
     ${kpiItem('Rata-rata HR',    avg('pctHR'),    'fa-triangle-exclamation')}
     ${kpiItem('Rata-rata INS',   avg('pctINS'),   'fa-clipboard-check')}
+    ${kpiItem('Rata-rata SBO',   avg('pctSBO'),   'fa-eye')}
+    ${kpiItem('Rata-rata PC',    avg('pctPC'),    'fa-handshake')}
+    ${kpiItem('Rata-rata ST',    avg('pctST'),    'fa-chalkboard-user')}
     ${kpiItem('Rata-rata Total', avg('pctTotal'), 'fa-trophy')}
     ${stTotalCount > 0 ? `<div class="ach-kpi-cell">
       <i class="fa-solid fa-chalkboard-user" style="color:${stPct >= 80 ? '#22c55e' : stPct >= 50 ? '#f59e0b' : '#ef4444'};font-size:1.1rem"></i>

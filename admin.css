@@ -249,14 +249,18 @@
 
 /* CAPAIAN SAP KPI ROW */
 .ach-kpi-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
   margin-bottom: 14px;
 }
+@media (max-width: 480px) {
+  .ach-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* kartu ganjil terakhir melebar penuh, tak ada ruang kosong */
+  .ach-kpi-row > .ach-kpi-cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 .ach-kpi-cell {
-  flex: 1;
-  min-width: 130px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
