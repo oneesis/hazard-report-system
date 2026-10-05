@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', initHomePage);
 
 let _currentObj = null;
 let _extraActivities = []; // SBO/PC/ST milik user (feed "Laporan Terakhir")
+let _stRows = [];   // riwayat ST milik sendiri (getMySafetyTalkHistory) — panel ST & capaian ST
+let _stCounts = []; // jumlah jadwal ST per bulan×perusahaan (OBJ ST, lihat stObjForMonth)
 
 const INSPECTION_AREAS = [
   { type: 'INS_CB', name: 'Conveyor Belt',     sub: 'Area Produksi',    icon: 'fa-gears' },
@@ -37,7 +39,9 @@ async function initHomePage() {
   maybeShowStQuizPopup(); // popup kuis pengganti ST bila capaian belum 100% & bukan mangkir
 
   try {
-    const [reports, obj, extras] = await Promise.all([refreshNotifications(), fetchMyObj(), fetchMyActivityExtras()]);
+    const [reports, obj, extras, stCounts] = await Promise.all([refreshNotifications(), fetchMyObj(), fetchMyActivityExtras(),
+      fetch('/api?action=getStScheduleCounts').then(r => r.json()).then(j => j.data || []).catch(() => [])]);
+    _stCounts = stCounts;
     _currentObj = obj;
     _extraActivities = extras;
 
@@ -49,6 +53,7 @@ async function initHomePage() {
     renderQuickStats(reports);
     renderSapAchievement(feed, obj);
     renderInsAreaInfo(reports);
+    stPromise.then(() => renderSapAchievement()); // tambah baris Safety Talk begitu riwayat ST tiba
 
     // Buka otomatis panel yang butuh tindakan: Safety Talk bila ada kuis tertunda.
     const stPending = await stPromise;
@@ -349,6 +354,8 @@ async function renderPenggantiST() {
     rows = Array.isArray(json.data) ? json.data : [];
   } catch {}
 
+  _stRows = rows;
+  rows = rows.slice(0, 12); // panel: 12 sesi terakhir
   if (!rows.length) { el.innerHTML = '<div class="st-empty">Belum ada riwayat Safety Talk.</div>'; setModBadge('st', 0); return 0; }
 
   let pending = 0;
@@ -599,12 +606,19 @@ function renderSapAchievement(reports, obj, offset) {
   });
 
   const cnt = t => mine.filter(r => String(r.report_type || '').toUpperCase() === t).length;
+  const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
 
   const rows = [
     { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: cnt('HAZARD'),     target: obj.hr  },
     { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: cnt('INSPECTION'), target: obj.ins },
     { label: 'SBO',           icon: 'fa-eye',                   count: cnt('SBO'),        target: obj.sbo },
     { label: 'Personal Contact', icon: 'fa-handshake',           count: cnt('PC'),         target: obj.pc  },
+    // Safety Talk: terpenuhi = HADIR, atau tidak hadir (bukan mangkir) tapi kuis pengganti lulus.
+    { label: 'Safety Talk', icon: 'fa-bullhorn', target: stObjForMonth(obj.st, monthKey, user?.perusahaan, _stCounts),
+      count: _stRows.filter(s => String(s.bulan || '').slice(0, 7) === monthKey).filter(s => {
+        const st = String(s.status_kehadiran || 'HADIR').toUpperCase();
+        return st === 'HADIR' || (st !== 'MANGKIR' && String(s.quiz_done || '').toUpperCase() === 'YA');
+      }).length },
   ].filter(r => r.target > 0);
 
   if (!rows.length) { el.style.display = 'none'; return; }

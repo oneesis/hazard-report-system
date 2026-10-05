@@ -4,6 +4,7 @@ let _capInsReports = [];
 let _capSboReports = [];
 let _capPcReports  = [];
 let _capStAbsensi = []; // Safety Talk absensi rows
+let _capStCounts = [];  // jumlah jadwal ST per bulan×perusahaan (dasar OBJ ST mulai Okt 2026)
 let _capLoaded = false;
 let _capFiltered = [];
 let _capComputed = [];
@@ -33,13 +34,14 @@ async function loadCapaian() {
     // quiz-she. Kini tak memblokir; hasilnya tampil pada pembukaan berikutnya.
     fetch('/api?action=syncAllSafetyTalkQuiz').catch(() => {});
 
-    const [karRes, hrRes, insRes, sboRes, pcRes, stAbRes] = await Promise.all([
+    const [karRes, hrRes, insRes, sboRes, pcRes, stAbRes, stCntRes] = await Promise.all([
       fetch('/api?action=getKaryawan').then(r => r.json()),
       fetch('/api?action=getHazardReports').then(r => r.json()),
       fetch('/api?action=getInspectionReports').then(r => r.json()),
       fetch('/api?action=getSBOReports').then(r => r.json()).catch(() => ({ data: [] })),
       fetch('/api?action=getPCReports').then(r => r.json()).catch(() => ({ data: [] })),
       fetch('/api?action=getSafetyTalkAbsensi').then(r => r.json()).catch(() => ({ data: [] })),
+      fetch('/api?action=getStScheduleCounts').then(r => r.json()).catch(() => ({ data: [] })),
     ]);
 
     if (karRes.status !== 'success') throw new Error(karRes.message || 'Gagal memuat data karyawan');
@@ -52,6 +54,7 @@ async function loadCapaian() {
     _capSboReports    = sboRes.data || [];
     _capPcReports     = pcRes.data  || [];
     _capStAbsensi     = stAbRes.data || [];
+    _capStCounts      = stCntRes.data || [];
     _capLoaded = true;
 
     const isSA = isSuperAdminRole(getCurrentUser()?.role);
@@ -177,10 +180,9 @@ function computeAndRender() {
     const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
     const objSBO   = parseInt(k['OBJ SBO'] || 0) || 0;
     const objPC    = parseInt(k['OBJ PC']  || 0) || 0;
-    let objST      = parseInt(k['OBJ_ST']  || k['OBJ ST'] || 0) || 0;
-    // September 2026 = bulan awal sistem (baru jalan ~3 minggu) → target ST 3 utk
-    // yang punya kewajiban ST. Bulan lain pakai OBJ_ST tersimpan (4/2 per jabatan).
-    if (monthStr === '2026-09' && objST > 0) objST = 3;
+    // OBJ ST per bulan: mulai Okt 2026 = jumlah jadwal ST bulan itu (perusahaan
+    // karyawan); Sep 2026 = 3; sebelumnya OBJ tersimpan. Lihat stObjForMonth.
+    const objST    = stObjForMonth(parseInt(k['OBJ_ST'] || k['OBJ ST'] || 0) || 0, monthStr, k['PERUSAHAAN'], _capStCounts);
     // Cap di 100% — kelebihan capaian tidak menambah persentase
     const pctHR    = objHR  > 0 ? Math.min(100, Math.round(achHR  / objHR  * 100)) : null;
     const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;

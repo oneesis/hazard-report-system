@@ -273,3 +273,23 @@ function formatNotificationDate(value) {
     year: "numeric",
   });
 }
+
+// ── OBJ Safety Talk per bulan (aturan bersama beranda & Capaian SAP) ─────
+// Mulai Okt 2026: target = jumlah jadwal Safety Talk bulan itu untuk perusahaan
+// karyawan (jadwal tanpa perusahaan target ikut dihitung). Sep 2026 = 3 (bulan
+// awal sistem). Bulan sebelumnya = OBJ ST tersimpan di roster.
+// baseObj = OBJ ST roster; 0 = tidak wajib ST (mis. magang) → tetap 0.
+// counts = hasil /api?action=getStScheduleCounts.
+const ST_OBJ_SCHEDULE_FROM = '2026-10';
+function stObjForMonth(baseObj, bulan, perusahaan, counts) {
+  if (!(baseObj > 0)) return 0;
+  if (bulan >= ST_OBJ_SCHEDULE_FROM) {
+    const co = String(perusahaan || '').trim().toUpperCase();
+    return (counts || [])
+      .filter(c => String(c.bulan || '').slice(0, 7) === bulan &&
+        (!String(c.perusahaan_target || '').trim() || String(c.perusahaan_target).trim().toUpperCase() === co))
+      .reduce((s, c) => s + (Number(c.n) || 0), 0);
+  }
+  if (bulan === '2026-09') return 3;
+  return baseObj;
+}

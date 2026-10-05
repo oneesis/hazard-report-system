@@ -2343,6 +2343,23 @@ module.exports = async (req, res) => {
           result = { status: 'success', data: stRows };
           break;
         }
+        case 'getStScheduleCounts': {
+          // Jumlah jadwal Safety Talk per bulan × perusahaan target — dasar OBJ ST
+          // mulai Okt 2026 (lihat stObjForMonth di reports-utils.js). Agregat saja,
+          // aman utk semua user (endpoint jadwal lengkap khusus admin).
+          let rows = [];
+          try {
+            rows = await getSql()`
+              SELECT left(coalesce(bulan, ''), 7) AS bulan,
+                     coalesce(perusahaan_target, '') AS perusahaan_target,
+                     count(*)::int AS n
+              FROM safety_talk_schedule
+              WHERE upper(coalesce(status, '')) NOT LIKE '%BATAL%'
+              GROUP BY 1, 2`;
+          } catch {}
+          result = { status: 'success', data: rows };
+          break;
+        }
         case 'getMySafetyTalkHistory': {
           // Riwayat ST milik user sendiri + judul/tanggal sesi (untuk beranda).
           const nik = String(auth.nik || '').trim();
@@ -2354,7 +2371,7 @@ module.exports = async (req, res) => {
               LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id
               WHERE a.nik = ${nik}
               ORDER BY coalesce(s.tanggal, a.bulan) DESC
-              LIMIT 12`;
+              LIMIT 120`; // panel tampil 12; sisanya utk capaian ST per bulan
           } catch {}
           result = { status: 'success', data: rows };
           break;
