@@ -113,8 +113,14 @@ function renderGreeting() {
   const nameEl = document.getElementById('greetingName');
   const badge  = document.getElementById('greetingBadge');
 
-  if (dayEl)  dayEl.textContent  = dateStr;
-  if (nameEl) nameEl.textContent = user?.nama ? `${greet}, ${user.nama.split(' ')[0]}` : greet;
+  const role = String(user?.role || '').toUpperCase().replace(/\s+/g, '_');
+  const roleChip = role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : role === 'ADMIN' ? 'ADMIN' : '';
+  if (dayEl) dayEl.innerHTML = dateStr +
+    (roleChip ? ` <span class="role-chip"><i class="fa-solid fa-shield-halved"></i> ${roleChip}</span>` : '');
+  // Nama dari roster huruf besar semua ("ANDRE") → kapital awal ("Andre").
+  const first = String(user?.nama || '').trim().split(/\s+/)[0] || '';
+  const nice  = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  if (nameEl) nameEl.textContent = nice ? `${greet}, ${nice}` : greet;
 
   if (badge && user?.nama) {
     const initials = user.nama.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();

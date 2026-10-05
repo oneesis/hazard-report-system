@@ -1024,8 +1024,25 @@
 .sap-ring-txt small { font-size: .74rem; color: #64748b; }
 .sap-ring-txt small i { font-size: .62rem; color: #307FE2; }
 
-/* topbar beranda: judul "Beranda" dobel dengan salam → sembunyikan (tetap makan tempat agar ikon kanan tak bergeser) */
-.app-topbar-title { visibility: hidden; }
+/* topbar beranda: ganti judul "Beranda" (dobel dgn salam) dengan brand ONE-SAP */
+.app-topbar-title { display: none; }
+.topbar-brand {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 1rem; font-weight: 800; letter-spacing: -.01em;
+  color: var(--color-primary-dark, #00205B);
+}
+.topbar-brand img { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
+/* strip "ADMIN" satu baris penuh → diganti chip di salam */
+.app-admin-strip { display: none !important; }
+/* avatar di salam dobel dgn avatar topbar */
+.greeting-user-badge { display: none; }
+.role-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 8px; padding: 2px 8px; border-radius: 20px;
+  background: #00205B; color: #fff;
+  font-size: .62rem; font-weight: 800; letter-spacing: .06em; vertical-align: middle;
+}
 
 /* ringkasan card */
 .sum-card {
