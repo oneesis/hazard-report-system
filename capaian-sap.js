@@ -255,11 +255,11 @@ function renderTable() {
   // Thead sortable — re-render setiap kali agar ikon sort update
   const thead = document.getElementById('capTableHead');
   if (thead) {
-    const th = (col, label, center) =>
-      `<th class="${center ? 'um-center' : ''}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_capThClick('${col}')">${label}${_capSortIcon(col)}</th>`;
+    const th = (col, label, center, cls = '') =>
+      `<th class="${center ? 'um-center' : ''} ${cls}" style="cursor:pointer;white-space:nowrap;user-select:none" onclick="_capThClick('${col}')">${label}${_capSortIcon(col)}</th>`;
     thead.innerHTML = `<tr>
       ${isSA ? th('co', 'Perusahaan') : ''}
-      ${th('nama', 'Nama')}${th('nik', 'NIK')}${th('jabatan', 'Jabatan')}${th('dept', 'Departemen')}
+      ${th('nama', 'Nama', false, 'cap-nama')}${th('nik', 'NIK')}${th('jabatan', 'Jabatan')}${th('dept', 'Departemen')}
       ${th('objHR', 'OBJ HR', true)}${th('achHR', 'Capaian HR', true)}${th('pctHR', '% HR', true)}
       ${th('objINS', 'OBJ INS', true)}${th('achINS', 'Capaian INS', true)}${th('pctINS', '% INS', true)}
       ${th('objSBO', 'OBJ SBO', true)}${th('achSBO', 'Capaian SBO', true)}${th('pctSBO', '% SBO', true)}
@@ -295,10 +295,10 @@ function renderTable() {
     const picOpenColor = row.picOpen > 0 ? '#ef4444' : '#22c55e';
     return `<tr>
       ${isSA ? `<td>${escapeHTML(row.k['PERUSAHAAN'] || '')}</td>` : ''}
-      <td>${escapeHTML(row.k['NAMA'] || '')}</td>
+      <td class="cap-nama">${escapeHTML(row.k['NAMA'] || '')}</td>
       <td>${escapeHTML(String(row.k['NIK'] || '-'))}</td>
-      <td>${escapeHTML(row.k['JABATAN'] || '')}</td>
-      <td>${escapeHTML(row.k['DEPARTEMEN'] || '')}</td>
+      <td class="cap-clip" title="${escapeHTML(row.k['JABATAN'] || '')}">${escapeHTML(row.k['JABATAN'] || '')}</td>
+      <td class="cap-clip" title="${escapeHTML(row.k['DEPARTEMEN'] || '')}">${escapeHTML(row.k['DEPARTEMEN'] || '')}</td>
       <td class="um-center">${row.objHR || '-'}</td>
       <td class="um-center"><b>${row.achHR}</b></td>
       ${_capPctCell(row.pctHR)}

@@ -312,3 +312,22 @@
   .um-header:has(.cap-filters) .um-header-actions { width: 100%; flex-wrap: nowrap; }
   .um-header:has(.cap-filters) .um-header-actions > .btn-secondary:not(.btn-icon) { flex: 1; justify-content: center; }
 }
+
+/* Capaian SAP: tabel ringkas (lebih banyak baris terlihat) + kolom Nama dibekukan */
+#capTable { font-size: .78rem; }
+#capTable th, #capTable td { padding: 7px 10px; white-space: nowrap; }
+#capTable .cap-clip { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+#capTable .cap-nama {
+  position: sticky; left: 0; z-index: 1; background: #fff;
+  white-space: normal; min-width: 110px; max-width: 160px; line-height: 1.25; font-weight: 600;
+  box-shadow: 1px 0 0 #e2e8f0, 4px 0 6px -4px rgba(15,23,42,.15);
+}
+#capTable th.cap-nama { background: #f8fafc; z-index: 2; }
+#capTable tr:hover td.cap-nama { background: #f8fafc; }
+@media (max-width: 600px) {
+  #capTable { font-size: .72rem; }
+  #capTable th, #capTable td { padding: 6px 8px; }
+  #capTable th { font-size: .66rem; }
+  #capTable .cap-nama { min-width: 100px; max-width: 135px; }
+  #capTable .cap-clip { max-width: 120px; }
+}
