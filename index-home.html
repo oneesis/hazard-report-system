@@ -51,164 +51,103 @@
       <!-- ACTION BANNER: tampil jika ada laporan yang butuh tindakan -->
       <div id="actionBanner" style="display:none"></div>
 
-      <!-- SAP ACHIEVEMENT -->
+      <!-- MODULE BAR: 5 modul sebagai ikon (klik → slide-down) -->
+      <div class="mod-bar" id="modBar">
+        <button type="button" class="mod-btn" data-mod="hr" onclick="toggleModule('hr')" aria-expanded="false">
+          <span class="mod-ic ic-hr"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <span class="mod-lbl">Hazard</span>
+          <i class="fa-solid fa-chevron-down mod-chev"></i>
+        </button>
+        <button type="button" class="mod-btn" data-mod="ins" onclick="toggleModule('ins')" aria-expanded="false">
+          <span class="mod-ic ic-ins"><i class="fa-solid fa-clipboard-check"></i></span>
+          <span class="mod-lbl">Inspeksi</span>
+          <i class="fa-solid fa-chevron-down mod-chev"></i>
+        </button>
+        <button type="button" class="mod-btn" data-mod="sbo" onclick="toggleModule('sbo')" aria-expanded="false">
+          <span class="mod-ic ic-sbo"><i class="fa-solid fa-eye"></i></span>
+          <span class="mod-lbl">SBO</span>
+          <i class="fa-solid fa-chevron-down mod-chev"></i>
+        </button>
+        <button type="button" class="mod-btn" data-mod="pc" onclick="toggleModule('pc')" aria-expanded="false">
+          <span class="mod-ic ic-pc"><i class="fa-solid fa-comments"></i></span>
+          <span class="mod-lbl">PC</span>
+          <i class="fa-solid fa-chevron-down mod-chev"></i>
+        </button>
+        <button type="button" class="mod-btn" data-mod="st" onclick="toggleModule('st')" aria-expanded="false">
+          <span class="mod-ic ic-st"><i class="fa-solid fa-bullhorn"></i></span>
+          <span class="mod-lbl">Safety Talk</span>
+          <i class="fa-solid fa-chevron-down mod-chev"></i>
+        </button>
+      </div>
+
+      <!-- PANEL EXPAND per modul (accordion) -->
+      <div class="mod-panel" id="modPanel-hr">
+        <div class="mod-panel-in">
+          <a href="index.html" class="mod-act act-hr"><i class="fa-solid fa-plus"></i> Buat Laporan Hazard</a>
+          <a href="dashboard.html" class="mod-act"><i class="fa-solid fa-list-ul"></i> Lihat Laporan Saya</a>
+          <div id="hazardDraftSection" style="display:none;margin-top:4px">
+            <div class="hazard-draft-label"><i class="fa-solid fa-pen-to-square"></i> Draft Tersimpan</div>
+            <div id="hazardDraftCard"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mod-panel" id="modPanel-ins">
+        <div class="mod-panel-in">
+          <div class="ins-grid" id="insGrid"><!-- rendered by home.js --></div>
+          <a href="inspection.html" class="mod-act" style="margin-top:10px"><i class="fa-solid fa-list-ul"></i> Lihat Semua Inspeksi</a>
+        </div>
+      </div>
+
+      <div class="mod-panel" id="modPanel-sbo">
+        <div class="mod-panel-in">
+          <a href="sbo-form.html" class="mod-act act-sbo"><i class="fa-solid fa-plus"></i> Buat Observasi (SBO)</a>
+          <a href="sbo.html" class="mod-act"><i class="fa-solid fa-list-ul"></i> Lihat Semua SBO</a>
+        </div>
+      </div>
+
+      <div class="mod-panel" id="modPanel-pc">
+        <div class="mod-panel-in">
+          <a href="pc-form.html" class="mod-act act-pc"><i class="fa-solid fa-plus"></i> Buat Personal Contact</a>
+          <a href="pc.html" class="mod-act"><i class="fa-solid fa-list-ul"></i> Lihat Semua PC</a>
+        </div>
+      </div>
+
+      <div class="mod-panel" id="modPanel-st">
+        <div class="mod-panel-in">
+          <div id="penggantiST" class="pengganti-st"><!-- rendered by home.js --></div>
+          <a href="safety-talk.html" class="mod-act"><i class="fa-regular fa-calendar-check"></i> Jadwal &amp; Absensi Safety Talk</a>
+        </div>
+      </div>
+
+      <!-- SAP ACHIEVEMENT (ringkas) -->
       <div id="sapAchievement" style="display:none"></div>
 
-      <!-- 2-COL GRID -->
-      <div class="home-grid">
+      <!-- RINGKASAN LAPORAN (ringkas) -->
+      <div class="sum-card">
+        <p class="quick-stats-label">RINGKASAN LAPORAN SAYA</p>
+        <div class="quick-stats-grid" id="quickStatsGrid">
+          <div class="quick-stat"><div class="quick-stat-num" id="qsTotal">-</div><div class="quick-stat-desc">Total</div></div>
+          <div class="quick-stat"><div class="quick-stat-num qs-open" id="qsOpen">-</div><div class="quick-stat-desc">Open</div></div>
+          <div class="quick-stat"><div class="quick-stat-num qs-closed" id="qsClosed">-</div><div class="quick-stat-desc">Closed</div></div>
+          <div class="quick-stat"><div class="quick-stat-num qs-overdue" id="qsOverdue">-</div><div class="quick-stat-desc">Overdue</div></div>
+        </div>
+      </div>
 
-        <!-- LEFT: main -->
-        <div class="home-main">
-
-          <!-- HAZARD REPORT PANEL -->
-          <div class="hazard-panel">
-            <div class="hazard-panel-head">
-              <div class="hazard-panel-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-              <div class="hazard-panel-info">
-                <h2 class="hazard-panel-title">Hazard Report</h2>
-                <p class="hazard-panel-sub">Laporkan potensi bahaya di area kerja.</p>
-              </div>
-              <a href="index.html" class="hazard-panel-btn">
-                <i class="fa-solid fa-plus"></i> Buat Laporan
-              </a>
-            </div>
-
-            <!-- Draft hazard (dari localStorage) -->
-            <div id="hazardDraftSection" style="display:none">
-              <div class="hazard-draft-label"><i class="fa-solid fa-pen-to-square"></i> Draft Tersimpan</div>
-              <div id="hazardDraftCard"></div>
-            </div>
-          </div>
-
-          <!-- INSPEKSI PANEL -->
-          <div class="hazard-panel">
-            <div class="ins-panel-head">
-              <div class="ins-panel-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>
-              </div>
-              <div class="hazard-panel-info">
-                <h2 class="hazard-panel-title">Inspeksi K3</h2>
-                <p class="hazard-panel-sub">Pemeriksaan area kerja berkala untuk keselamatan.</p>
-              </div>
-              <a href="inspection.html" class="ins-panel-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Mulai Inspeksi
-              </a>
-            </div>
-            <div class="ins-panel-body">
-              <div class="ins-panel-row">
-                <span class="ins-panel-label"><span id="insAreaCount">8</span> Area Kerja</span>
-                <a href="inspection.html" class="ins-panel-all">Lihat Semua
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg>
-                </a>
-              </div>
-              <div class="ins-grid" id="insGrid">
-                <!-- rendered by home.js -->
-              </div>
-            </div>
-          </div>
-
-          <!-- SBO PANEL -->
-          <div class="hazard-panel" style="margin-top:0">
-            <div class="sbo-panel-head">
-              <div class="sbo-panel-icon"><i class="fa-solid fa-eye"></i></div>
-              <div class="hazard-panel-info">
-                <h2 class="hazard-panel-title">Safe Behavior Observation</h2>
-                <p class="hazard-panel-sub">Observasi perilaku keselamatan kerja di lapangan.</p>
-              </div>
-              <a href="sbo-form.html" class="sbo-panel-btn">
-                <i class="fa-solid fa-plus"></i> Buat Observasi
-              </a>
-            </div>
-            <div class="sbo-panel-link">
-              <a href="sbo.html"><i class="fa-solid fa-list-ul"></i> Lihat Semua Laporan SBO</a>
-            </div>
-          </div>
-
-          <!-- PC PANEL -->
-          <div class="hazard-panel" style="margin-top:0">
-            <div class="pc-panel-head">
-              <div class="pc-panel-icon"><i class="fa-solid fa-comments"></i></div>
-              <div class="hazard-panel-info">
-                <h2 class="hazard-panel-title">Personal Contact</h2>
-                <p class="hazard-panel-sub">Coaching keselamatan kerja satu-satu.</p>
-              </div>
-              <a href="pc-form.html" class="pc-panel-btn">
-                <i class="fa-solid fa-plus"></i> Buat PC
-              </a>
-            </div>
-            <div class="pc-panel-link">
-              <a href="pc.html"><i class="fa-solid fa-list-ul"></i> Lihat Semua Personal Contact</a>
-            </div>
-          </div>
-
-          <!-- DAILY SUMMARY (mobile only) -->
-          <div class="daily-summary" id="dailySummary" style="display:none">
-            <p class="daily-summary-label">RINGKASAN HARI INI</p>
-            <div class="daily-summary-row">
-              <div>
-                <div class="daily-num" id="dailyClosed">-</div>
-                <div class="daily-label">Laporan Selesai</div>
-              </div>
-              <div class="daily-divider"></div>
-              <div>
-                <div class="daily-num daily-num--urgent" id="dailyOpen">-</div>
-                <div class="daily-label">Butuh Follow-up</div>
-              </div>
-            </div>
-          </div>
-
-        </div><!-- end home-main -->
-
-        <!-- RIGHT: panel -->
-        <aside class="home-right">
-
-          <div class="my-reports-card">
-            <div class="my-reports-header">
-              <h3><i class="fa-solid fa-clock-rotate-left"></i> Laporan Terakhir Saya</h3>
-            </div>
-            <div class="my-reports-search">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <input type="search" id="myReportsSearch" placeholder="Cari ID atau deskripsi..." autocomplete="off">
-            </div>
-            <div class="my-reports-list" id="myReportsList">
-              <div class="skeleton-report-item"><div class="sk sk-dot"></div><div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div><div class="sk sk-badge"></div></div>
-              <div class="skeleton-report-item"><div class="sk sk-dot"></div><div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div><div class="sk sk-badge"></div></div>
-              <div class="skeleton-report-item"><div class="sk sk-dot"></div><div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div><div class="sk sk-badge"></div></div>
-            </div>
-            <a href="dashboard.html" class="btn-see-all">
-              Lihat Semua Riwayat <i class="fa-solid fa-arrow-right"></i>
-            </a>
-          </div>
-
-          <div class="quick-stats-card" id="quickStatsCard">
-            <p class="quick-stats-label">RINGKASAN LAPORAN SAYA</p>
-            <div class="quick-stats-grid" id="quickStatsGrid">
-              <div class="quick-stat">
-                <div class="quick-stat-num" id="qsTotal">-</div>
-                <div class="quick-stat-desc">Total Laporan</div>
-              </div>
-              <div class="quick-stat">
-                <div class="quick-stat-num qs-open" id="qsOpen">-</div>
-                <div class="quick-stat-desc">Open</div>
-              </div>
-              <div class="quick-stat">
-                <div class="quick-stat-num qs-closed" id="qsClosed">-</div>
-                <div class="quick-stat-desc">Closed</div>
-              </div>
-              <div class="quick-stat">
-                <div class="quick-stat-num qs-overdue" id="qsOverdue">-</div>
-                <div class="quick-stat-desc">Overdue</div>
-              </div>
-            </div>
-          </div>
-
-        </aside>
-
-      </div><!-- end home-grid -->
-
-      <!-- Pengganti Safety Talk → quiz-she (terhubung via NRP, tanpa login) -->
-      <div id="penggantiST" class="pengganti-st" style="display:none"></div>
+      <!-- LAPORAN TERAKHIR (ringkas) -->
+      <div class="my-reports-card">
+        <div class="my-reports-header">
+          <h3><i class="fa-solid fa-clock-rotate-left"></i> Laporan Terakhir Saya</h3>
+        </div>
+        <div class="my-reports-list" id="myReportsList">
+          <div class="skeleton-report-item"><div class="sk sk-dot"></div><div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div><div class="sk sk-badge"></div></div>
+          <div class="skeleton-report-item"><div class="sk sk-dot"></div><div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div><div class="sk sk-badge"></div></div>
+          <div class="skeleton-report-item"><div class="sk sk-dot"></div><div class="sk-body"><div class="sk sk-id"></div><div class="sk sk-desc"></div></div><div class="sk sk-badge"></div></div>
+        </div>
+        <a href="dashboard.html" class="btn-see-all">
+          Lihat Semua Riwayat <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
 
     </div><!-- end home-content -->
 

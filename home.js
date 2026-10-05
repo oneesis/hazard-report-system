@@ -117,6 +117,37 @@ function renderInsGrid() {
   `).join('');
 }
 
+// ── Accordion modul beranda: klik ikon → slide-down panelnya, tutup yang lain.
+function _closeModPanel(p, b) {
+  if (b) { b.classList.remove('active'); b.setAttribute('aria-expanded', 'false'); }
+  if (p.classList.contains('open')) {
+    // dari 'none' (atau px) → px dulu supaya bisa dianimasikan ke 0
+    p.style.maxHeight = p.scrollHeight + 'px';
+    requestAnimationFrame(() => { p.classList.remove('open'); p.style.maxHeight = '0px'; });
+  } else {
+    p.classList.remove('open'); p.style.maxHeight = '0px';
+  }
+}
+function _openModPanel(p, b) {
+  if (b) { b.classList.add('active'); b.setAttribute('aria-expanded', 'true'); }
+  p.classList.add('open');
+  p.style.maxHeight = p.scrollHeight + 'px';
+  // setelah animasi selesai, lepas batas supaya konten async (pengganti ST/draft) tak terpotong
+  const te = () => { if (p.classList.contains('open')) p.style.maxHeight = 'none'; p.removeEventListener('transitionend', te); };
+  p.addEventListener('transitionend', te);
+}
+function toggleModule(key) {
+  const panel = document.getElementById('modPanel-' + key);
+  const btn   = document.querySelector('.mod-btn[data-mod="' + key + '"]');
+  const isOpen = panel && panel.classList.contains('open');
+  document.querySelectorAll('.mod-panel').forEach(p => {
+    const b = document.querySelector('.mod-btn[data-mod="' + p.id.replace('modPanel-', '') + '"]');
+    _closeModPanel(p, b);
+  });
+  if (!isOpen && panel) _openModPanel(panel, btn);
+}
+window.toggleModule = toggleModule;
+
 function renderMyReports(reports, query = '') {
   const el  = document.getElementById('myReportsList');
   if (!el) return;

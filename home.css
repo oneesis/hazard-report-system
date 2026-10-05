@@ -887,6 +887,102 @@
 /* Light mode only */
 .home-content { color-scheme: light; }
 
+/* ============================================
+   MODULE BAR (5 ikon) + ACCORDION  — redesign beranda
+   ============================================ */
+.mod-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mod-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 6px 11px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s, transform .1s;
+}
+.mod-btn:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,48,135,.07); }
+.mod-btn:active { transform: translateY(0); }
+.mod-ic {
+  width: 46px; height: 46px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem;
+}
+.ic-hr  { background: rgba(217,119,6,.12);  color: #d97706; }
+.ic-ins { background: rgba(22,163,74,.12);  color: #16a34a; }
+.ic-sbo { background: rgba(79,70,229,.12);  color: #4f46e5; }
+.ic-pc  { background: rgba(13,148,136,.12); color: #0d9488; }
+.ic-st  { background: rgba(124,58,237,.12); color: #7c3aed; }
+.mod-lbl { font-size: .74rem; font-weight: 700; color: #334155; text-align: center; line-height: 1.15; }
+.mod-chev { font-size: .6rem; color: #cbd5e1; transition: transform .25s; }
+.mod-btn.active { border-color: #307FE2; box-shadow: 0 4px 16px rgba(0,48,135,.1); }
+.mod-btn.active .mod-chev { transform: rotate(180deg); color: #307FE2; }
+
+/* panel accordion */
+.mod-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s cubic-bezier(.4,0,.2,1);
+}
+.mod-panel.open { margin-bottom: 12px; }
+.mod-panel-in {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px;
+}
+.mod-act {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  text-decoration: none;
+  font-size: .85rem; font-weight: 700; color: #334155;
+  margin-bottom: 8px;
+  transition: background .12s, border-color .12s;
+}
+.mod-act:last-child { margin-bottom: 0; }
+.mod-act:hover { background: #f1f5f9; border-color: #e2e8f0; }
+.mod-act i { width: 18px; text-align: center; color: #94a3b8; }
+.mod-act.act-hr  { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.mod-act.act-hr i { color: #ea580c; }
+.mod-act.act-sbo { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.mod-act.act-sbo i { color: #4f46e5; }
+.mod-act.act-pc  { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }
+.mod-act.act-pc i { color: #0d9488; }
+
+/* ringkasan card */
+.sum-card {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.sum-card .quick-stats-grid { grid-template-columns: repeat(4, 1fr); }
+.my-reports-list { max-height: 340px; overflow-y: auto; }
+
+@media (max-width: 600px) {
+  .mod-bar { gap: 8px; }
+  .mod-ic { width: 42px; height: 42px; font-size: 1.1rem; border-radius: 12px; }
+  .mod-lbl { font-size: .64rem; }
+  .mod-chev { display: none; }
+  .mod-btn { padding: 11px 4px 9px; }
+}
+@media (max-width: 380px) {
+  .mod-ic { width: 38px; height: 38px; font-size: 1rem; }
+}
+
 /* ── Search bar di "Laporan Terakhir Saya" ── */
 .my-reports-search {
   display: flex;
