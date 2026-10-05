@@ -2343,6 +2343,22 @@ module.exports = async (req, res) => {
           result = { status: 'success', data: stRows };
           break;
         }
+        case 'getMySafetyTalkHistory': {
+          // Riwayat ST milik user sendiri + judul/tanggal sesi (untuk beranda).
+          const nik = String(auth.nik || '').trim();
+          let rows = [];
+          try {
+            rows = await getSql()`
+              SELECT a.status_kehadiran, a.quiz_done, a.bulan, s.tanggal, s.judul_materi
+              FROM safety_talk_absensi a
+              LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id
+              WHERE a.nik = ${nik}
+              ORDER BY coalesce(s.tanggal, a.bulan) DESC
+              LIMIT 12`;
+          } catch {}
+          result = { status: 'success', data: rows };
+          break;
+        }
         case 'getSafetyTalkAbsensi': {
           // Admin/Super Admin: semua (atau per schedule). USER: absensi
           // se-DEPARTEMEN-nya (perusahaan+departemen sama) supaya angka ST

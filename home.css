@@ -967,6 +967,26 @@
 .mod-act.act-pc  { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }
 .mod-act.act-pc i { color: #0d9488; }
 
+/* riwayat Safety Talk (panel ST) */
+.st-list { display: flex; flex-direction: column; }
+.st-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.st-row:last-child { border-bottom: none; }
+.st-main { flex: 1; min-width: 0; }
+.st-topic { font-size: .84rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-date { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+.st-why { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: 600; }
+.st-b { flex-shrink: 0; font-size: .68rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+.st-ok   { background: #f0fdf4; color: #15803d; }
+.st-warn { background: #fffbeb; color: #b45309; }
+.st-bad  { background: #fef2f2; color: #b91c1c; }
+.st-empty { font-size: .82rem; color: #94a3b8; text-align: center; padding: 14px 0; }
+.st-quiz-btn { margin-top: 10px; background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.st-quiz-btn i { color: #6366f1; }
+
 /* ringkasan card */
 .sum-card {
   background: #fff;

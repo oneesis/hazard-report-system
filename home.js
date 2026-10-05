@@ -284,25 +284,49 @@ function renderHazardDraft() {
 // Kartu "Pengganti Safety Talk" — buka quiz-she dgn NRP karyawan (auto-login,
 // tanpa ketik NIK) untuk mengganti Safety Talk yang tak dihadiri (Cuti/Dinas/
 // Shift/Off) dengan kuis. Terhubung via data NRP.
-function renderPenggantiST() {
+// Panel Safety Talk di beranda: riwayat kehadiran sendiri (ringkas). Tidak
+// hadir (Cuti/Dinas/Shift/Off) → tanda kuis pengganti sudah/belum; Mangkir →
+// tak bisa diganti kuis. Tombol kuis hanya muncul bila ada yang belum.
+async function renderPenggantiST() {
   const el = document.getElementById('penggantiST');
   if (!el) return;
   const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   const nik = String(u?.nik || '').trim();
-  if (!nik) { el.style.display = 'none'; return; }
-  const url = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
-  el.style.marginTop = '20px';
-  el.innerHTML = `
-    <a href="${url}" target="_blank" rel="noopener noreferrer"
-       style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,#eef2ff,#faf5ff);border:1.5px solid #e0e7ff;border-radius:16px;padding:18px 20px;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.04)">
-      <div style="width:48px;height:48px;border-radius:12px;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0"><i class="fa-solid fa-graduation-cap"></i></div>
-      <div style="flex:1;min-width:200px">
-        <div style="font-weight:700;color:#1e293b;font-size:1rem;margin-bottom:3px">Pengganti Safety Talk</div>
-        <div style="color:#64748b;font-size:.85rem;line-height:1.5">Berhalangan hadir Safety Talk (Cuti / Dinas Luar / Shift Malam / Off)? Kerjakan kuis pengganti agar capaian ST tetap terpenuhi. Terhubung langsung dengan NRP kamu — tanpa login ulang.</div>
-      </div>
-      <span style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;background:#6366f1;color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;font-size:.85rem">Kerjakan Kuis <i class="fa-solid fa-arrow-right"></i></span>
-    </a>`;
-  el.style.display = '';
+  if (!nik) { el.innerHTML = ''; return; }
+  const quizUrl = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
+  el.innerHTML = '<div class="st-empty">Memuat riwayat…</div>';
+
+  let rows = [];
+  try {
+    const res = await fetch('/api?action=getMySafetyTalkHistory');
+    const json = await res.json();
+    rows = Array.isArray(json.data) ? json.data : [];
+  } catch {}
+
+  if (!rows.length) { el.innerHTML = '<div class="st-empty">Belum ada riwayat Safety Talk.</div>'; return; }
+
+  let pending = 0;
+  const fmt = v => { const d = new Date(v); return isNaN(d) ? String(v || '').slice(0, 7) : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); };
+  const items = rows.map(r => {
+    const st = String(r.status_kehadiran || 'HADIR').toUpperCase();
+    const quizDone = String(r.quiz_done || '').toUpperCase() === 'YA';
+    let badge;
+    if (st === 'HADIR') badge = '<span class="st-b st-ok"><i class="fa-solid fa-check"></i> Hadir</span>';
+    else if (st === 'MANGKIR') badge = '<span class="st-b st-bad">Mangkir</span>';
+    else if (quizDone) badge = `<span class="st-b st-ok"><i class="fa-solid fa-check"></i> Kuis selesai</span>`;
+    else { pending++; badge = '<span class="st-b st-warn"><i class="fa-solid fa-hourglass-half"></i> Belum kuis</span>'; }
+    const sub = st === 'HADIR' || st === 'MANGKIR' ? '' : `<span class="st-why">${escapeHTML(st.charAt(0) + st.slice(1).toLowerCase())}</span>`;
+    return `<div class="st-row">
+      <div class="st-main">
+        <div class="st-topic">${escapeHTML(r.judul_materi || 'Safety Talk')}</div>
+        <div class="st-date">${fmt(r.tanggal || r.bulan)} ${sub}</div>
+      </div>${badge}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="st-list">${items}</div>` + (pending
+    ? `<a href="${quizUrl}" target="_blank" rel="noopener noreferrer" class="mod-act st-quiz-btn"><i class="fa-solid fa-graduation-cap"></i> Kerjakan Kuis Pengganti (${pending})</a>`
+    : '');
 }
 
 // Popup kuis pengganti Safety Talk saat buka app. Muncul HANYA bila user punya
