@@ -196,7 +196,44 @@
   text-align: center;
   flex-shrink: 0;
 }
-.action-banner-label { flex: 1; }
+.action-banner-label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ab-title { font-size: .86rem; font-weight: 700; }
+.ab-hint  { font-size: .72rem; font-weight: 500; opacity: .8; }
+.ab-hint b { font-weight: 800; }
+
+/* baris laporan perlu tindakan (2 baris: deskripsi + meta) */
+.ab-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  text-decoration: none; color: inherit;
+  border-bottom: 1px solid rgba(0,0,0,.05);
+  background: rgba(255,255,255,.55);
+}
+.ab-row:last-child { border-bottom: none; }
+.ab-row:hover, .ab-row:active { background: rgba(255,255,255,.95); }
+.ab-row--over { box-shadow: inset 3px 0 0 #ef4444; }
+.ab-row-main { flex: 1; min-width: 0; }
+.ab-row-desc {
+  font-size: .8rem; font-weight: 600; color: #1e293b; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ab-chip {
+  display: inline-block; vertical-align: 1px; margin-right: 6px;
+  padding: 1px 6px; border-radius: 5px;
+  font-size: .58rem; font-weight: 800; color: #fff; letter-spacing: .03em;
+}
+.ab-row-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.ab-row-where { flex: 1; min-width: 0; font-size: .68rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-row-where i { font-size: .62rem; }
+.ab-row-go { font-size: .62rem; color: #cbd5e1; flex-shrink: 0; }
+.ab-due { flex-shrink: 0; font-size: .66rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: #f1f5f9; color: #64748b; white-space: nowrap; }
+.ab-due--over { background: #fee2e2; color: #b91c1c; }
+.ab-due--soon { background: #fef3c7; color: #b45309; }
+.ab-more {
+  display: block; padding: 9px 12px; text-align: center;
+  font-size: .74rem; font-weight: 700; color: inherit; text-decoration: none;
+}
+.ab-more:hover { text-decoration: underline; }
 .ab-chevron { font-size: .7rem; opacity: .6; transition: transform .2s; flex-shrink: 0; }
 .ab-list {
   border-top: 1px solid rgba(0,0,0,.07);

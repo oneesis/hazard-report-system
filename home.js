@@ -490,10 +490,10 @@ function computeActionItems(reports, user) {
   }
 
   const items = [];
-  if (rejected.length) items.push({ reports: rejected, label: 'rencana kamu ditolak, perlu revisi segera', color: 'red', icon: 'fa-circle-xmark' });
-  if (rencana.length)  items.push({ reports: rencana,  label: 'menunggu rencana tindakan kamu', color: 'orange', icon: 'fa-pen-to-square' });
-  if (review.length)   items.push({ reports: review,   label: 'rencana PIC menunggu review kamu', color: 'blue', icon: 'fa-magnifying-glass' });
-  if (closing.length)  items.push({ reports: closing,  label: 'siap untuk closing kamu', color: 'green', icon: 'fa-flag-checkered' });
+  if (rejected.length) items.push({ reports: rejected, label: 'Rencana kamu ditolak',      hint: 'Revisi rencana perbaikan segera',      color: 'red',    icon: 'fa-circle-xmark' });
+  if (rencana.length)  items.push({ reports: rencana,  label: 'Perlu rencana tindakan',    hint: 'Kamu PIC — isi rencana perbaikannya',  color: 'orange', icon: 'fa-pen-to-square' });
+  if (review.length)   items.push({ reports: review,   label: 'Rencana PIC perlu ditinjau', hint: 'Setujui atau tolak rencana dari PIC',  color: 'blue',   icon: 'fa-magnifying-glass' });
+  if (closing.length)  items.push({ reports: closing,  label: 'Siap untuk closing',        hint: 'Rencana disetujui — kirim bukti closing', color: 'green', icon: 'fa-flag-checkered' });
   return items;
 }
 
@@ -505,23 +505,43 @@ function renderActionBanner(reports) {
   setModBadge('hr', items.reduce((s, it) => s + it.reports.length, 0));
   if (!items.length) { el.style.display = 'none'; return; }
 
+  // Baris laporan: deskripsi jadi utama, ID+lokasi kecil, batas waktu relatif.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dueInfo = r => {
+    const d = new Date(r.batas_waktu || r.due_date || '');
+    if (isNaN(d)) return { days: Infinity, html: '' };
+    d.setHours(0, 0, 0, 0);
+    const days = Math.round((d - today) / 864e5);
+    const html = days < 0 ? `<span class="ab-due ab-due--over">Terlambat ${-days} hr</span>`
+      : days === 0 ? '<span class="ab-due ab-due--over">Batas hari ini</span>'
+      : days <= 3 ? `<span class="ab-due ab-due--soon">${days} hr lagi</span>`
+      : `<span class="ab-due">s/d ${d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>`;
+    return { days, html };
+  };
+  const insName = code => (INSPECTION_AREAS.find(a => a.type === code)?.name) || '';
   const reportRow = r => {
-    const id   = escapeHTML(getReportId(r) || '-');
-    const desc = escapeHTML((r.deskripsi_bahaya || r.temuan_inspeksi || r.temuan || '').substring(0, 45) || '-');
+    const isIns = String(r.report_type || '').toUpperCase() === 'INSPECTION';
+    const code  = String(r.inspection_sheet || r.jenis_inspeksi || '').trim().toUpperCase();
+    let desc = String(r.deskripsi_bahaya || r.temuan_inspeksi || r.temuan || r.deskripsi_temuan || '')
+      .replace(/^\s*\d+\.\s*/, '').trim(); // buang nomor butir checklist "15. "
+    if (!desc) desc = isIns ? `Temuan inspeksi ${insName(code)}`.trim() : 'Tanpa deskripsi';
+    const lokasi = r.lokasi_bahaya || r.lokasi_inspeksi || r.lokasi || insName(code);
     const href = `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
-    const due  = r.batas_waktu || r.due_date || '';
-    const dueDate = due ? new Date(due) : null;
-    const isOverdue = dueDate && !isNaN(dueDate) && dueDate < new Date();
-    const dueStr = dueDate && !isNaN(dueDate)
-      ? dueDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
-      : '';
-    return `<a href="${href}" class="ab-report-row${isOverdue ? ' ab-report-row--overdue' : ''}">
-      <span class="ab-report-id">${id}</span>
-      <span class="ab-report-desc">${desc}</span>
-      ${dueStr ? `<span class="ab-report-due${isOverdue ? ' ab-report-due--over' : ''}">${isOverdue ? '⚠ ' : ''}${dueStr}</span>` : ''}
-      <i class="fa-solid fa-arrow-right"></i>
+    const due  = dueInfo(r);
+    const chip = isIns
+      ? `<span class="ab-chip" style="background:${MOD_COLORS.INSPECTION}">INS</span>`
+      : `<span class="ab-chip" style="background:${MOD_COLORS.HAZARD}">HR</span>`;
+    return `<a href="${href}" class="ab-row${due.days < 0 ? ' ab-row--over' : ''}">
+      <div class="ab-row-main">
+        <div class="ab-row-desc">${chip}${escapeHTML(desc)}</div>
+        <div class="ab-row-meta"><span class="ab-row-where">${lokasi ? `<i class="fa-solid fa-location-dot"></i> ${escapeHTML(lokasi)} · ` : ''}${escapeHTML(getReportId(r) || '-')}</span>${due.html}</div>
+      </div>
+      <i class="fa-solid fa-chevron-right ab-row-go"></i>
     </a>`;
   };
+  // Paling terlambat dulu; maks 5 baris per kelompok + tautan sisanya.
+  const sortByDue = list => [...list].sort((a, b) => dueInfo(a).days - dueInfo(b).days);
+  const MAX_ROWS = 5;
 
   el.style.display = '';
   el.innerHTML = `<div class="action-banner">
@@ -530,11 +550,15 @@ function renderActionBanner(reports) {
       <div class="action-banner-item action-banner-item--${it.color}" data-ab="${i}">
         <div class="ab-header" onclick="toggleActionItem(${i})">
           <span class="action-banner-count">${it.reports.length}</span>
-          <span class="action-banner-label"><i class="fa-solid ${it.icon}"></i> ${it.reports.length} laporan ${it.label}</span>
+          <span class="action-banner-label">
+            <span class="ab-title"><i class="fa-solid ${it.icon}"></i> ${it.label}</span>
+            <span class="ab-hint">${it.hint}${(() => { const o = it.reports.filter(r => dueInfo(r).days < 0).length; return o ? ` · <b>${o} terlambat</b>` : ''; })()}</span>
+          </span>
           <i class="fa-solid fa-chevron-down ab-chevron"></i>
         </div>
         <div class="ab-list" style="display:none">
-          ${it.reports.map(reportRow).join('')}
+          ${sortByDue(it.reports).slice(0, MAX_ROWS).map(reportRow).join('')}
+          ${it.reports.length > MAX_ROWS ? `<a href="dashboard.html" class="ab-more">+${it.reports.length - MAX_ROWS} laporan lainnya — lihat di Dashboard <i class="fa-solid fa-arrow-right"></i></a>` : ''}
         </div>
       </div>`).join('')}
   </div>`;
