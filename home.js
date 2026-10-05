@@ -310,18 +310,20 @@ async function renderPenggantiST() {
   const items = rows.map(r => {
     const st = String(r.status_kehadiran || 'HADIR').toUpperCase();
     const quizDone = String(r.quiz_done || '').toUpperCase() === 'YA';
-    let badge;
+    let badge, needQuiz = false;
     if (st === 'HADIR') badge = '<span class="st-b st-ok"><i class="fa-solid fa-check"></i> Hadir</span>';
     else if (st === 'MANGKIR') badge = '<span class="st-b st-bad">Mangkir</span>';
     else if (quizDone) badge = `<span class="st-b st-ok"><i class="fa-solid fa-check"></i> Kuis selesai</span>`;
-    else { pending++; badge = '<span class="st-b st-warn"><i class="fa-solid fa-hourglass-half"></i> Belum kuis</span>'; }
+    else { pending++; needQuiz = true; badge = '<span class="st-b st-warn">Kerjakan kuis <i class="fa-solid fa-arrow-right"></i></span>'; }
     const sub = st === 'HADIR' || st === 'MANGKIR' ? '' : `<span class="st-why">${escapeHTML(st.charAt(0) + st.slice(1).toLowerCase())}</span>`;
-    return `<div class="st-row">
-      <div class="st-main">
+    const inner = `<div class="st-main">
         <div class="st-topic">${escapeHTML(r.judul_materi || 'Safety Talk')}</div>
         <div class="st-date">${fmt(r.tanggal || r.bulan)} ${sub}</div>
-      </div>${badge}
-    </div>`;
+      </div>${badge}`;
+    // Belum kuis → seluruh baris langsung membuka laman kuis pengganti.
+    return needQuiz
+      ? `<a class="st-row st-row-link" href="${quizUrl}" target="_blank" rel="noopener noreferrer">${inner}</a>`
+      : `<div class="st-row">${inner}</div>`;
   }).join('');
 
   el.innerHTML = `<div class="st-list">${items}</div>` + (pending

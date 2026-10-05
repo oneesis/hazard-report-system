@@ -975,6 +975,8 @@
   border-bottom: 1px solid #f1f5f9;
 }
 .st-row:last-child { border-bottom: none; }
+.st-row-link { text-decoration: none; color: inherit; background: #fffbeb; border-radius: 10px; padding: 10px 8px; margin: 2px -6px; border-bottom: none; }
+.st-row-link:hover, .st-row-link:active { background: #fef3c7; }
 .st-main { flex: 1; min-width: 0; }
 .st-topic { font-size: .84rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-date { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
