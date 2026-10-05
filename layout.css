@@ -354,6 +354,15 @@ body:has(.app-layout) {
   flex-direction: column;
 }
 
+/* SEMUA HALAMAN: wrapper konten = flex item .app-main. `margin:0 auto` pada
+   flex item mematikan stretch → ia mengukur ke max-content → melebar lewat
+   lebar layar (geser ke kanan di mobile). Paksa ikut lebar container. */
+.app-main > * {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 /* Mobile admin strip — shows above topbar for ADMIN users */
 .app-admin-strip {
   background: var(--color-primary-dark);
