@@ -610,3 +610,55 @@ const SubmitRef = {
   },
   clear(key) { try { localStorage.removeItem('onesap_ref_' + key); } catch {} },
 };
+
+// Fitur 2.4 (2026-10-07): saran isian awal form — tanggal hari ini (jam HP, bukan UTC),
+// shift sesuai jam, dan tombol "lokasi terakhir". Semua tetap bisa diganti pelapor.
+// ponytail: jam pergantian shift tetap di sini — nanti dipindah ke pengaturan Super Admin.
+const FormDefaults = {
+  SHIFT1_MULAI: 7,  // 07.00–18.59 = Shift 1
+  SHIFT2_MULAI: 19, // 19.00–06.59 = Shift 2
+  today() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+  shiftNow() {
+    const h = new Date().getHours();
+    return h >= this.SHIFT1_MULAI && h < this.SHIFT2_MULAI ? 'Shift 1' : 'Shift 2';
+  },
+  fillShift(id) {
+    const el = document.getElementById(id);
+    if (!el || el.value) return;
+    el.value = this.shiftNow();
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  },
+  _lokKey: (k) => 'onesap_lokasi_terakhir_' + k,
+  rememberLokasi(k, v) {
+    v = String(v || '').trim();
+    if (!v) return;
+    try {
+      const list = JSON.parse(localStorage.getItem(this._lokKey(k)) || '[]').filter((x) => x !== v);
+      localStorage.setItem(this._lokKey(k), JSON.stringify([v, ...list].slice(0, 4)));
+    } catch {}
+  },
+  // Tombol lokasi terakhir di bawah field; onPick(v) mengisi field-nya.
+  lokasiChips(k, fieldEl, onPick) {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(this._lokKey(k)) || '[]'); } catch {}
+    const group = fieldEl?.closest('.form-group');
+    if (!group || !list.length) return;
+    group.querySelector('.lokasi-chips')?.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'lokasi-chips';
+    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center';
+    wrap.innerHTML = '<span style="font-size:.75rem;color:#64748b">Terakhir:</span>';
+    list.forEach((v) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = v;
+      b.style.cssText = 'border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:4px 10px;font-size:.78rem;color:#0f172a;cursor:pointer';
+      b.addEventListener('click', () => onPick(v));
+      wrap.appendChild(b);
+    });
+    group.appendChild(wrap);
+  },
+};

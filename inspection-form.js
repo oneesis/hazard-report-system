@@ -815,6 +815,7 @@ async function submitForm() {
     catch { throw new Error("Server tidak merespons dengan benar (koneksi/waktu habis). Tekan Kirim Inspeksi lagi — laporan tidak akan tercatat dobel."); }
     if (result.status === "success") {
       if (typeof MySignature !== "undefined") MySignature.remember(data.tanda_tangan); // simpan bila tanda tangan baru (fitur 2.1)
+      FormDefaults.rememberLokasi("ins_" + String(data.inspection_code || "").toUpperCase(), data.lokasi_inspeksi);
       clearInspectionDraft();
       SubmitResult.show({
         title: "Inspeksi Terkirim", id: result.id,
@@ -1343,9 +1344,16 @@ function initializeInspectionForm(type) {
    populatePicOptions();
    populatePelaporOptions(); // data pelapor auto (kartu) — tak ada select manual lagi
    initializeSignaturePad();
-   const todayStr = new Date().toISOString().split("T")[0];
+   // 2.4: tanggal menurut jam HP (bukan UTC), shift sesuai jam, tombol lokasi terakhir.
+   const todayStr = FormDefaults.today();
    const tanggalInput = document.getElementById("tanggal_inspeksi");
    if (tanggalInput) tanggalInput.value = todayStr;
+   FormDefaults.fillShift("shift_inspeksi");
+   FormDefaults.lokasiChips("ins_" + type, document.getElementById("lokasi_inspeksi"), (v) => {
+     const el = document.getElementById("lokasi_inspeksi");
+     el.value = v;
+     el.dispatchEvent(new Event("input", { bubbles: true }));
+   });
    const batasWaktuInput = document.getElementById("batas_waktu");
    if (batasWaktuInput) batasWaktuInput.min = todayStr;
   document.getElementById("btnNext1")?.addEventListener("click", () => { if (validateStep1()) showStep(2); });

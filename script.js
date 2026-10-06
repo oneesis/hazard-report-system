@@ -1289,6 +1289,7 @@ async function submitForm() {
 
     if (result.status === "success") {
       if (typeof MySignature !== "undefined") MySignature.remember(data.tanda_tangan); // simpan bila tanda tangan baru (fitur 2.1)
+      FormDefaults.rememberLokasi("hr", data.lokasi_bahaya);
       clearDraft(); // dulu draft tak dihapus → isian lama muncul lagi saat form dibuka
       SubmitResult.show({
         title: "Hazard Report Terkirim", id: result.id,
@@ -1372,9 +1373,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     initializeNamaPicChoices();
     initializeSignaturePad();
 
-    const today = new Date().toISOString().split("T")[0];
+    // 2.4: tanggal hari ini menurut jam HP (dulu UTC → sebelum 07.00 WIB terisi tanggal kemarin),
+    // shift sesuai jam, tombol lokasi terakhir. Semua tetap bisa diganti.
+    const today = FormDefaults.today();
     const tanggalInput = document.getElementById("tanggal_kejadian");
     if (tanggalInput) tanggalInput.value = today;
+    FormDefaults.fillShift("shift_kejadian");
+    FormDefaults.lokasiChips("hr", document.getElementById("lokasi_bahaya"), (v) => {
+      const sel = document.getElementById("lokasi_bahaya");
+      if (lokasiChoices) lokasiChoices.setChoiceByValue(v); else sel.value = v;
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    });
 
     const batasWaktuInput = document.getElementById("batas_waktu");
     if (batasWaktuInput) batasWaktuInput.min = today;
