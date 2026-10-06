@@ -100,6 +100,8 @@ module.exports = async (req, res) => {
   if (CRON_SECRET && req.headers.authorization !== `Bearer ${CRON_SECRET}`)
     return res.status(401).json({ error: 'Unauthorized' });
   const dry = (req.query || {}).dry === '1';
+  // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned). Nyalakan lagi: env WA_ENABLED=1 lalu redeploy.
+  if (!dry && process.env.WA_ENABLED !== '1') return res.status(200).json({ skipped: 'WA dinonaktifkan (WA_ENABLED != 1)' });
   if (!dry && !FONNTE_TOKEN) return res.status(500).json({ error: 'Env FONNTE_TOKEN belum diset' });
 
   const sql = neon(process.env.DATABASE_URL);

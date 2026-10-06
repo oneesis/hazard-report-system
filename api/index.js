@@ -1156,6 +1156,7 @@ async function resolveWaByIdentity(sheets, perusahaan, subcont, nama) {
 }
 
 async function sendWaNotification(target, message, _attempt = 0) {
+  if (process.env.WA_ENABLED !== '1') return false; // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned). Nyalakan lagi: env WA_ENABLED=1 lalu redeploy.
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return false;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
