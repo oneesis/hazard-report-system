@@ -1339,7 +1339,19 @@ function renderInsTemuanPanel(code) {
 
   // Sort desc, ambil maks 20 item teratas
   const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 20);
-  const labels = sorted.map(([k]) => k);
+  // Buang nomor urut checklist ("1. ") + bungkus jadi beberapa baris agar kalimat utuh.
+  const wrapW = window.innerWidth <= 600 ? 26 : 48;
+  const wrapLabel = (t) => {
+    const lines = [];
+    let cur = '';
+    for (const w of t.split(/\s+/)) {
+      if (cur && (cur + ' ' + w).length > wrapW) { lines.push(cur); cur = w; }
+      else cur = cur ? cur + ' ' + w : w;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  };
+  const labels = sorted.map(([k]) => wrapLabel(k.replace(/^\s*\d+\s*[.)]\s*/, '')));
   const values = sorted.map(([, v]) => v);
 
   // Warna gradasi: merah penuh untuk tertinggi, merah muda untuk terendah
@@ -1350,7 +1362,7 @@ function renderInsTemuanPanel(code) {
   });
 
   // Chart height proporsional ke jumlah bar (min 260px)
-  const chartH = Math.max(260, labels.length * 34);
+  const chartH = Math.max(260, labels.reduce((n, l) => n + Math.max(2, l.length), 0) * 17 + 60);
 
   panel.innerHTML = `
     <div class="section-heading" style="color:#dc2626;border-top-color:#fecaca;margin-top:16px">
@@ -1400,11 +1412,6 @@ function renderInsTemuanPanel(code) {
           ticks: {
             font: { size: 11 },
             autoSkip: false,
-            callback(val) {
-              const lbl = this.getLabelForValue(val);
-              // Potong label panjang > 35 karakter
-              return lbl.length > 35 ? lbl.slice(0, 33) + '…' : lbl;
-            },
           },
           grid: { display: false },
         },
