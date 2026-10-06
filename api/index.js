@@ -883,6 +883,17 @@ async function applyUserChange(sheets, action, data) {
       await sql`UPDATE karyawan SET data = ${JSON.stringify(merged)}::jsonb,
                   role = ${String(merged.ROLE || '')}, email = ${String(merged.EMAIL || '')}
                 WHERE nik = ${dataNik}`;
+      // Ikut perbarui SISTER MINER (sm."Karyawan", juga dibaca SIMANTRA K3) supaya
+      // roster tak menyimpang -- dulu edit di ONE-SAP berhenti di sini (2026-10-06).
+      const SM_FIELDS = { NAMA: 'nama', JABATAN: 'jabatan', DEPARTEMEN: 'departemen', PERUSAHAAN: 'perusahaan', EMAIL: 'email' };
+      const smPatch = {};
+      for (const [k, f] of Object.entries(SM_FIELDS)) if (typeof patch[k] === 'string') smPatch[f] = patch[k].trim();
+      if (Object.keys(smPatch).length) {
+        smPatch.updatedAt = new Date().toISOString();
+        await sql`UPDATE sm."Karyawan" SET data = data || ${JSON.stringify(smPatch)}::jsonb
+                  WHERE data->>'nrp' = ${dataNik}`
+          .catch(e => console.error('[applyUserChange] sync SISTER MINER gagal:', e.message));
+      }
     }
   }
   invalidateCache('Master_Karyawan');
