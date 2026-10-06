@@ -1155,8 +1155,35 @@ async function resolveWaByIdentity(sheets, perusahaan, subcont, nama) {
   return String(match?.['NO WHATSAPP'] || '').replace(/\D/g, '');
 }
 
+// WA dinonaktifkan → notifikasi dialihkan ke EMAIL pemilik nomor tsb (2026-10-06).
+// Peta nomor WA → email karyawan, cache 5 menit.
+let _waEmailMap = null, _waEmailExp = 0;
+const _normWa = (v) => String(v ?? '').replace(/\D/g, '').replace(/^62/, '0');
+async function _emailForWa(target) {
+  if (!_waEmailMap || Date.now() > _waEmailExp) {
+    const rows = await getSql()`SELECT data FROM karyawan WHERE coalesce(data->>'EMAIL', '') <> ''`;
+    _waEmailMap = new Map();
+    for (const { data: d } of rows) { const w = _normWa(d['NO WHATSAPP']); if (w) _waEmailMap.set(w, String(d.EMAIL).trim()); }
+    _waEmailExp = Date.now() + 300e3;
+  }
+  return _waEmailMap.get(_normWa(target)) || '';
+}
+async function _waAsEmail(target, message) {
+  try {
+    const to = await _emailForWa(target);
+    if (!to) return false;
+    const msg = String(message || '');
+    const url = (msg.match(/https?:\/\/\S+/) || [])[0] || '';
+    const text = msg.replace(/\*/g, '').replace(/\n?🔗[^\n]*https?:\/\/\S+/g, '').trim();
+    const id = (text.match(/\b(?:HR|INSP|SBO|PC)-[\w-]+/) || [])[0];
+    const first = (text.split('\n').find((l) => l.trim()) || 'Notifikasi').replace(/^Halo [^,]+,\s*/i, '');
+    const subject = `[ONE-SAP] ${id ? id + ' — ' : ''}${first.charAt(0).toUpperCase()}${first.slice(1, 90)}`;
+    return await _sendMail(to, subject, text, url);
+  } catch (e) { console.error('[wa→email]', e.message); return false; }
+}
+
 async function sendWaNotification(target, message, _attempt = 0) {
-  if (process.env.WA_ENABLED !== '1') return false; // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned). Nyalakan lagi: env WA_ENABLED=1 lalu redeploy.
+  if (process.env.WA_ENABLED !== '1') return _waAsEmail(target, message); // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned). Nyalakan lagi: env WA_ENABLED=1 lalu redeploy.
   const token = process.env.FONNTE_TOKEN;
   if (!token || !target) return false;
   const phone = String(target).replace(/\D/g, '').replace(/^0/, '62');
@@ -1804,7 +1831,7 @@ async function _notifyPerson(sheets, person, subject, text, url) {
   const nik = person.nik || k?.NIK;
   await Promise.allSettled([
     email && _sendMail(email, subject, text, url),
-    wa && sendWaNotification(wa, `${text}\n\n🔗 ${url}`),
+    wa && process.env.WA_ENABLED === '1' && sendWaNotification(wa, `${text}\n\n🔗 ${url}`),
     nik && sendPushToNik(sheets, String(nik), { title: subject, body: text.slice(0, 140), url }),
   ]);
 }

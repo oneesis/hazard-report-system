@@ -4,6 +4,8 @@
 // kolom 'no_whatsapp_pic' — padahal header aslinya salah ketik 'no_whattsapp_pic'
 // → reminder praktis tak pernah terkirim. Kini baca Neon + fallback WA dari roster.
 // Query uji: ?dry=1 (tak kirim, balas daftar)
+// [6 Okt 2026] WA Fonnte dinonaktifkan → reminder dikirim lewat EMAIL ke PIC
+// (email dicari via NIK / nama / nomor WA di roster). WA_ENABLED=1 → kembali WA.
 const { neon } = require('@neondatabase/serverless');
 const https = require('https');
 
@@ -46,14 +48,20 @@ function daysUntil(batas, now = Date.now()) {
 }
 
 // Inti (murni): daftar reminder dari laporan open + roster.
+const normWa = v => String(v ?? '').replace(/\D/g, '').replace(/^62/, '0');
+
 function buildReminders(hazard, inspection, karyawan, now = Date.now()) {
   const waByNik = new Map(), waByNama = new Map();
+  const emByNik = new Map(), emByNama = new Map(), emByWa = new Map();
   for (const k of karyawan) {
     const d = k.data || {};
     const wa = String(d['NO WHATSAPP'] || '').replace(/\D/g, '');
-    if (!wa) continue;
-    if (d.NIK) waByNik.set(String(d.NIK).trim(), wa);
-    if (d.NAMA) waByNama.set(low(d.NAMA), wa);
+    const em = String(d.EMAIL || '').trim();
+    if (wa && d.NIK) waByNik.set(String(d.NIK).trim(), wa);
+    if (wa && d.NAMA) waByNama.set(low(d.NAMA), wa);
+    if (em && d.NIK) emByNik.set(String(d.NIK).trim(), em);
+    if (em && d.NAMA) emByNama.set(low(d.NAMA), em);
+    if (em && wa) emByWa.set(normWa(wa), em);
   }
   const out = [];
   const seen = new Set();
@@ -68,10 +76,12 @@ function buildReminders(hazard, inspection, karyawan, now = Date.now()) {
       if (!id || seen.has(id)) continue;
       const wa = String(d.no_whattsapp_pic || d.no_whatsapp_pic || '').replace(/\D/g, '')
         || waByNik.get(String(d.nik_pic || '').trim()) || waByNama.get(low(d.nama_pic)) || '';
-      if (!wa) continue;
+      const email = emByNik.get(String(d.nik_pic || '').trim()) || emByNama.get(low(d.nama_pic))
+        || (wa && emByWa.get(normWa(wa))) || '';
+      if (!wa && !email) continue;
       seen.add(id);
       const desc = String(isIns ? d.temuan_inspeksi : d.deskripsi_bahaya || '').replace(/^\s*\d+\.\s*/, '').trim();
-      out.push({ id, wa, left, isIns, batas: d.batas_waktu,
+      out.push({ id, wa, email, left, isIns, batas: d.batas_waktu,
         namaPic: String(d.nama_pic || 'PIC').trim(), desc,
         lokasi: String(isIns ? d.lokasi : d.lokasi_bahaya || '').trim() });
     }
@@ -100,9 +110,12 @@ module.exports = async (req, res) => {
   if (CRON_SECRET && req.headers.authorization !== `Bearer ${CRON_SECRET}`)
     return res.status(401).json({ error: 'Unauthorized' });
   const dry = (req.query || {}).dry === '1';
-  // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned). Nyalakan lagi: env WA_ENABLED=1 lalu redeploy.
-  if (!dry && process.env.WA_ENABLED !== '1') return res.status(200).json({ skipped: 'WA dinonaktifkan (WA_ENABLED != 1)' });
-  if (!dry && !FONNTE_TOKEN) return res.status(500).json({ error: 'Env FONNTE_TOKEN belum diset' });
+  // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned) → kirim EMAIL.
+  // Nyalakan WA lagi: env WA_ENABLED=1 lalu redeploy.
+  const viaWa = process.env.WA_ENABLED === '1';
+  if (!dry && viaWa && !FONNTE_TOKEN) return res.status(500).json({ error: 'Env FONNTE_TOKEN belum diset' });
+  if (!dry && !viaWa && !(process.env.GMAIL_SENDER && process.env.GMAIL_APP_PASSWORD))
+    return res.status(500).json({ error: 'Env GMAIL_SENDER/GMAIL_APP_PASSWORD belum diset' });
 
   const sql = neon(process.env.DATABASE_URL);
   const [hazard, inspection, karyawan] = await Promise.all([
@@ -112,16 +125,33 @@ module.exports = async (req, res) => {
   ]);
   const list = buildReminders(hazard, inspection, karyawan);
 
-  if (dry) return res.json({ status: 'dry', open: hazard.length + inspection.length, akanDikirim: list.length,
-    daftar: list.map(r => ({ id: r.id, pic: r.namaPic, sisaHari: r.left, desc: r.desc.slice(0, 50) })) });
+  const targets = list.filter(r => (viaWa ? r.wa : r.email));
+  if (dry) return res.json({ status: 'dry', kanal: viaWa ? 'WA' : 'EMAIL', open: hazard.length + inspection.length,
+    akanDikirim: targets.length, tanpaKontak: list.length - targets.length,
+    daftar: list.map(r => ({ id: r.id, pic: r.namaPic, sisaHari: r.left, email: r.email ? 'ada' : '-', desc: r.desc.slice(0, 50) })) });
 
   let sent = 0;
-  for (const r of list) {
-    if (await sendWa(r.wa, buildMessage(r))) sent++;
-    await new Promise(t => setTimeout(t, 2500)); // jeda antar pesan
+  const mailer = viaWa ? null : require('nodemailer').createTransport({ service: 'gmail',
+    auth: { user: process.env.GMAIL_SENDER, pass: process.env.GMAIL_APP_PASSWORD } });
+  for (const r of targets) {
+    if (viaWa) {
+      if (await sendWa(r.wa, buildMessage(r))) sent++;
+      await new Promise(t => setTimeout(t, 2500)); // jeda antar pesan
+    } else {
+      const url = `${APP}/laporan-detail.html?id=${encodeURIComponent(r.id)}`;
+      const text = buildMessage(r).replace(/\*/g, '');
+      try {
+        await mailer.sendMail({ from: `ONE-SAP <${process.env.GMAIL_SENDER}>`, to: r.email,
+          subject: `[ONE-SAP] Pengingat batas waktu ${r.id} (${r.left === 0 ? 'hari ini' : r.left + ' hari lagi'})`,
+          text, html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto"><h2 style="color:#00205B;margin:0 0 12px">ONE-SAP</h2>
+            <div style="white-space:pre-line;font-size:14px;line-height:1.55;color:#0f172a">${text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</div>
+            <p style="margin:20px 0"><a href="${url}" style="background:#00205B;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">Buka Laporan</a></p></div>` });
+        sent++;
+      } catch (e) { console.error('[cron-deadline] email gagal', r.id, e.message); }
+    }
   }
   console.log(`[cron-deadline] open=${hazard.length + inspection.length} target=${list.length} terkirim=${sent}`);
-  return res.json({ status: 'ok', sent, target: list.length, checked: hazard.length + inspection.length, ts: new Date().toISOString() });
+  return res.json({ status: 'ok', kanal: viaWa ? 'WA' : 'EMAIL', sent, target: targets.length, tanpaKontak: list.length - targets.length, checked: hazard.length + inspection.length, ts: new Date().toISOString() });
 };
 
 // Self-check (node api/cron-deadline.js)
@@ -131,7 +161,7 @@ if (require.main === module) {
   assert.strictEqual(daysUntil('2026-10-06', now), 0);
   assert.strictEqual(daysUntil('2026-10-09', now), 3);
   assert.strictEqual(daysUntil('2026-10-05', now), -1);
-  const kar = [{ data: { NIK: '7', NAMA: 'BUDI', 'NO WHATSAPP': '0812' } }];
+  const kar = [{ data: { NIK: '7', NAMA: 'BUDI', 'NO WHATSAPP': '0812', EMAIL: 'budi@x.id' } }];
   const hz = [
     { id: 'H1', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-07', no_whattsapp_pic: '0811', nama_pic: 'ANDI', deskripsi_bahaya: 'Oli tumpah' } }, // field typo
     { id: 'H2', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-08', nama_pic: 'BUDI' } },        // WA dari roster (nama)
@@ -144,5 +174,9 @@ if (require.main === module) {
   const out = buildReminders(hz, ins, kar, now);
   assert.deepStrictEqual(out.map(r => r.id + ':' + r.wa), ['H1:0811', 'H2:0812', 'I1:0812']);
   assert.strictEqual(out[2].desc, 'Guarding lepas'); // nomor butir dibuang
+  assert.deepStrictEqual(out.map(r => r.email), ['', 'budi@x.id', 'budi@x.id']); // email via nama / NIK
+  const onlyEmail = buildReminders([{ id: 'H7', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-07', nama_pic: 'BUDI X' } }],
+    [], [{ data: { NAMA: 'BUDI X', EMAIL: 'bx@x.id' } }], now);
+  assert.strictEqual(onlyEmail[0]?.email, 'bx@x.id'); // tanpa WA tapi punya email → tetap diingatkan
   console.log('cron-deadline self-check OK');
 }
