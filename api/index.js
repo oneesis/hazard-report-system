@@ -1173,12 +1173,16 @@ async function sendWaNotification(target, message, _attempt = 0) {
       });
     });
     req.on('error', () => resolve(false));
+    // Batas 8 dtk (2026-10-06): Fonnte macet dulu menahan fungsi sampai timeout
+    // 30 dtk → klien lihat error padahal laporan SUDAH tersimpan → kirim ulang → dobel.
+    req.setTimeout(8000, () => { req.destroy(); resolve('timeout'); });
     req.write(payload);
     req.end();
   });
-  // #3 — 1x retry setelah 5 detik jika gagal
+  if (ok === 'timeout') return false; // tak diulang — waktu fungsi terbatas
+  // #3 — 1x retry setelah 2 detik jika gagal
   if (!ok && _attempt === 0) {
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 2000));
     return sendWaNotification(target, message, 1);
   }
   return ok;
@@ -1221,6 +1225,8 @@ async function writeWaStatusToSheet(sheets, sheetName, reportId, waStatus) {
 
 async function submitHazardReport(sheets, data) {
   await assertPicEligible(sheets, data.nik_pic, data.nama_pic); // Cuti (2026-08-20)
+  const dupId = await _findByClientRef('hazard_report', data.client_ref);
+  if (dupId) return { status: 'success', message: 'Hazard Report sudah tersimpan sebelumnya.', id: dupId, duplicate: true };
   const id = 'HR-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   let fotoBahayaUrl = '';
   if (data.upload_foto_bahaya)
@@ -1254,6 +1260,7 @@ async function submitHazardReport(sheets, data) {
   const _hzHeaders = await getSheetHeaders(sheets, 'Hazard_Report');
   const _hzData = {};
   _hzHeaders.forEach((h, i) => { _hzData[normalizeHeader(h)] = row[i] ?? ''; });
+  if (data.client_ref) _hzData.client_ref = String(data.client_ref);
   await getSql()`
     INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
     VALUES (${id}, ${_hzData.nik || ''}, ${_hzData.perusahaan || ''}, ${_hzData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_hzData)}::jsonb)`;
@@ -1288,9 +1295,23 @@ const INSPECTION_NAMES = {
   INS_TB: 'Inspeksi Tangki BBM', INS_WS: 'Inspeksi Workshop'
 };
 
+// Anti-dobel (2026-10-06): form mengirim client_ref unik per laporan. Bila respons
+// sebelumnya hilang (timeout/jaringan) dan form mengirim ulang, kembalikan laporan
+// yang sudah tersimpan alih-alih membuat baru.
+async function _findByClientRef(table, ref) {
+  const r = String(ref || '').trim();
+  if (!r) return null;
+  const rows = table === 'inspection_report'
+    ? await getSql()`SELECT id FROM inspection_report WHERE data->>'client_ref' = ${r} LIMIT 1`
+    : await getSql()`SELECT id FROM hazard_report WHERE data->>'client_ref' = ${r} LIMIT 1`;
+  return rows[0]?.id || null;
+}
+
 async function submitInspectionReport(sheets, data) {
   const sheetName = String(data.inspection_code || data.jenis_inspeksi || '').trim().toUpperCase();
   if (!INSPECTION_SHEETS.includes(sheetName)) throw new Error('Jenis inspeksi tidak valid: ' + sheetName);
+  const dupId = await _findByClientRef('inspection_report', data.client_ref);
+  if (dupId) return { status: 'success', message: 'Inspeksi sudah tersimpan sebelumnya.', id: dupId, duplicate: true };
   await assertPicEligible(sheets, data.nik_pic, data.nama_pic); // Cuti (2026-08-20)
 
   const id = 'INSP-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
@@ -1319,6 +1340,7 @@ async function submitInspectionReport(sheets, data) {
   // Simpan sebagai data JSONB (key = header ter-normalisasi) di inspection_report.
   const _insData = {};
   headers.forEach((h, i) => { _insData[normalizeHeader(h)] = row[i] ?? ''; });
+  if (data.client_ref) _insData.client_ref = String(data.client_ref);
   await getSql()`
     INSERT INTO inspection_report (id, jenis, nik, perusahaan, status_perbaikan, data)
     VALUES (${id}, ${sheetName}, ${_insData.nik || ''}, ${_insData.perusahaan || ''}, ${_insData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_insData)}::jsonb)`;

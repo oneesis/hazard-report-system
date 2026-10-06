@@ -12,6 +12,19 @@ const INSPECTION_TYPE_LABELS = {
   INS_WS: "Inspeksi Workshop"
 };
 
+// Jenis inspeksi wajib ada di URL (?type=). Bila hilang (halaman dibuka ulang dari
+// riwayat / PWA dipulihkan) form dulu tampil "Jenis inspeksi tidak valid" & tak bisa
+// dikirim. Pakai jenis terakhir di tab ini; bila tak ada, kembali ke daftar jenis.
+(function ensureInspectionType() {
+  const p = new URLSearchParams(location.search);
+  const t = (p.get("type") || "").toUpperCase();
+  if (INSPECTION_TYPE_LABELS[t]) { try { sessionStorage.setItem("onesap_ins_type", t); } catch {} return; }
+  let last = "";
+  try { last = sessionStorage.getItem("onesap_ins_type") || ""; } catch {}
+  if (INSPECTION_TYPE_LABELS[last]) { p.set("type", last); history.replaceState(null, "", location.pathname + "?" + p); return; }
+  location.replace("inspection.html");
+})();
+
 let masterKaryawan = [];
 let namaPicChoices = null; // Choices.js — dropdown Nama PIC searchable
 let signaturePad;
@@ -744,6 +757,7 @@ async function submitForm() {
   const btn = document.getElementById("btnSubmit");
   if (btn) btn.disabled = true;
   SubmitLoading.show("Mengirim Inspeksi", "Mengunggah foto & menyimpan data. Mohon tunggu…");
+  data.client_ref = SubmitRef.get("ins_" + _inspectionFormType()); // anti-dobel bila dikirim ulang
 
   // Intercept explicitly offline state
   if (!navigator.onLine) {
@@ -779,7 +793,9 @@ async function submitForm() {
     }
 
     const text = await response.text();
-    const result = JSON.parse(text);
+    let result;
+    try { result = JSON.parse(text); }
+    catch { throw new Error("Server tidak merespons dengan benar (koneksi/waktu habis). Tekan Kirim Inspeksi lagi — laporan tidak akan tercatat dobel."); }
     if (result.status === "success") {
       clearInspectionDraft();
       SubmitResult.show({
@@ -1263,6 +1279,7 @@ function loadInspectionDraft() {
 function clearInspectionDraft() {
   const key = getInspectionDraftKey();
   localStorage.removeItem(key);
+  SubmitRef.clear("ins_" + _inspectionFormType()); // laporan berikutnya dapat kode baru
   if (typeof _draftClearServer === 'function') _draftClearServer(_inspectionFormType());
   selectedInspeksiPhotos = [];
   const preview = document.getElementById("previewFotoInspeksi");

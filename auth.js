@@ -593,3 +593,18 @@ function compressPhotoFile(file, max = 1024, quality = 0.7) {
     fr.readAsDataURL(file);
   });
 }
+
+// Kode unik per laporan (anti-dobel, 2026-10-06). Dibuat sekali, dipakai ulang bila
+// pengiriman diulang (timeout, reload, antrean offline) → server mengembalikan
+// laporan yang sudah tersimpan, bukan membuat baru. Dibuang saat draft dihapus.
+const SubmitRef = {
+  get(key) {
+    const k = 'onesap_ref_' + key;
+    try {
+      let v = localStorage.getItem(k);
+      if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)); localStorage.setItem(k, v); }
+      return v;
+    } catch { return ''; }
+  },
+  clear(key) { try { localStorage.removeItem('onesap_ref_' + key); } catch {} },
+};

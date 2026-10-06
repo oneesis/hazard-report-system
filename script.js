@@ -615,6 +615,7 @@ function loadDraft() {
 
 function clearDraft() {
   localStorage.removeItem(AUTOSAVE_KEY);
+  SubmitRef.clear("hr"); // laporan berikutnya dapat kode baru
   if (typeof _draftClearServer === 'function') _draftClearServer('Hazard');
   selectedBahayaPhotos = [];
   const preview = document.getElementById("previewFotoBahaya");
@@ -1222,6 +1223,8 @@ async function submitForm() {
       btnSubmit.textContent = "Submitting...";
     }
 
+    data.client_ref = SubmitRef.get("hr"); // anti-dobel bila dikirim ulang
+
     // Intercept explicitly offline state
     if (!navigator.onLine) {
       if (typeof OneSapOfflineSync !== "undefined") {
@@ -1255,7 +1258,7 @@ async function submitForm() {
     try {
       result = JSON.parse(text);
     } catch (err) {
-      throw new Error("Response bukan JSON valid: " + text);
+      throw new Error("Server tidak merespons dengan benar (koneksi/waktu habis). Tekan Submit lagi — laporan tidak akan tercatat dobel.");
     }
 
     if (result.status === "success") {

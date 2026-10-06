@@ -13,7 +13,7 @@
     }
   ],
   "functions": {
-    "api/index.js":           { "maxDuration": 30 },
+    "api/index.js":           { "maxDuration": 60 },
     "api/cron-deadline.js":   { "maxDuration": 60 },
     "api/cron-sap-reminder.js": { "maxDuration": 120 }
   },
