@@ -1082,6 +1082,12 @@ async function getMyActivityExtras(sheets, auth) {
 async function _latestSignature(nik, nama) {
   const n = String(nik || '').trim(), nm = String(nama || '').trim();
   if (!n && !nm) return '';
+  // Tanda tangan tersimpan (profil, fitur 2.1) diutamakan.
+  const prof = (await getSql()`
+    SELECT s.data FROM user_signature s LEFT JOIN karyawan k ON k.nik = s.nik
+    WHERE (${n} <> '' AND s.nik = ${n}) OR (${nm} <> '' AND upper(k.data->>'NAMA') = upper(${nm}))
+    LIMIT 1`.catch(() => []))[0];
+  if (prof) return prof.data;
   const rows = await getSql()`
     SELECT ttd, ts FROM (
       SELECT data->>'tanda_tangan' ttd, data->>'timestamp' ts, data->>'nik' nik, data->>'nama' nama FROM hazard_report
@@ -1093,6 +1099,43 @@ async function _latestSignature(nik, nama) {
     ORDER BY (ts ~ '^\d{4}-') DESC, ts DESC
     LIMIT 1`;
   return rows[0]?.ttd || '';
+}
+
+// ── Tanda tangan tersimpan per orang (fitur 2.1, 2026-10-07) ─────────────────
+// Disimpan sebagai data URL PNG di tabel user_signature (bukan di roster: ±20 KB/orang
+// akan memberatkan setiap baca roster). Data URL — bukan link Drive — karena gambar
+// Drive di <canvas> membuat kanvas "tainted" dan toDataURL() gagal saat kirim laporan.
+async function _driveImageAsDataUrl(url) {
+  const m = String(url).match(/\/d\/([\w-]+)/) || String(url).match(/[?&]id=([\w-]+)/);
+  if (!m) return '';
+  const r = await getDriveClient().files.get({ fileId: m[1], alt: 'media' }, { responseType: 'arraybuffer' });
+  return 'data:image/png;base64,' + Buffer.from(r.data).toString('base64');
+}
+
+async function getMySignature(auth) {
+  const sql = getSql();
+  const nik = String(auth.nik || '').trim();
+  if (!nik) return { status: 'success', data: '' };
+  const row = (await sql`SELECT data FROM user_signature WHERE nik = ${nik}`)[0];
+  if (row) return { status: 'success', data: row.data };
+  // Belum punya: ambil sekali dari laporan terakhir yang ia buat sebagai pelapor.
+  const me = await _rosterByNik(nik);
+  let last = await _latestSignature(nik, me?.NAMA || auth.nama).catch(() => '');
+  if (last && !last.startsWith('data:')) last = await _driveImageAsDataUrl(last).catch(() => '');
+  if (!last) return { status: 'success', data: '' };
+  await sql`INSERT INTO user_signature (nik, data) VALUES (${nik}, ${last}) ON CONFLICT (nik) DO NOTHING`;
+  return { status: 'success', data: last, from_report: true };
+}
+
+async function saveMySignature(auth, data) {
+  const nik = String(auth.nik || '').trim();
+  const img = String(data?.tanda_tangan || '');
+  if (!nik) throw new Error('Akun tanpa NIK.');
+  if (!/^data:image\/(png|jpeg);base64,/.test(img)) throw new Error('Format tanda tangan tidak valid.');
+  if (img.length > 400_000) throw new Error('Gambar tanda tangan terlalu besar.');
+  await getSql()`INSERT INTO user_signature (nik, data, updated_at) VALUES (${nik}, ${img}, now())
+    ON CONFLICT (nik) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
+  return { status: 'success' };
 }
 
 async function getReportById(id, auth) {
@@ -2816,6 +2859,7 @@ module.exports = async (req, res) => {
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
         case 'getPicDisputes':      result = await getPicDisputes(auth); break;
+        case 'getMySignature':      result = await getMySignature(auth); break;
         case 'getMyObj': {
           // Query 1 baris langsung (bukan tarik seluruh roster) — beranda ringan.
           const _sqlMy = getSql();
@@ -3181,6 +3225,7 @@ module.exports = async (req, res) => {
           break;
         }
         case 'disputePic':          result = await disputePic(sheets, authUser, data); break;
+        case 'saveMySignature':     result = await saveMySignature(authUser, data); break;
         case 'resolvePicDispute':   result = await resolvePicDispute(sheets, authUser, data); break;
         case 'updateHazardReport': {
           if (data.status_perbaikan === 'CLOSED') {

@@ -266,6 +266,31 @@ function autoFillRisiko() {
   if (!selected) return;
 
   document.getElementById("tingkat_risiko").value = selected["RESIKO"] || selected["TINGKAT RESIKO"] || "";
+  autoFillBatasWaktu(document.getElementById("tingkat_risiko").value);
+}
+
+// Batas waktu otomatis dari tingkat risiko (fitur 2.3, 2026-10-07). Tetap bisa diubah;
+// isian manual pelapor tidak ditimpa.
+// ponytail: jumlah hari tetap di sini — nanti dipindah ke pengaturan Super Admin.
+const BATAS_HARI_PER_RISIKO = { HIGH: 1, "RISIKO TINGGI": 1, MEDIUM: 3, LOW: 7 };
+function autoFillBatasWaktu(risiko) {
+  const el = document.getElementById("batas_waktu");
+  const hari = BATAS_HARI_PER_RISIKO[String(risiko || "").trim().toUpperCase()];
+  if (!el || !hari) return;
+  if (el.value && el.dataset.auto !== "1") return; // sudah diisi manual
+  const d = new Date();
+  d.setDate(d.getDate() + hari);
+  el.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  el.dataset.auto = "1";
+  el.addEventListener("input", () => { el.dataset.auto = ""; }, { once: true });
+  let hint = el.parentElement.querySelector(".batas-auto-hint");
+  if (!hint) {
+    hint = document.createElement("div");
+    hint.className = "batas-auto-hint";
+    hint.style.cssText = "font-size:.78rem;color:#64748b;margin-top:6px";
+    el.insertAdjacentElement("afterend", hint);
+  }
+  hint.textContent = `Otomatis dari tingkat risiko ${risiko} (${hari} hari) — boleh diubah.`;
 }
 
 // ========================================
@@ -1263,6 +1288,7 @@ async function submitForm() {
     }
 
     if (result.status === "success") {
+      if (typeof MySignature !== "undefined") MySignature.remember(data.tanda_tangan); // simpan bila tanda tangan baru (fitur 2.1)
       clearDraft(); // dulu draft tak dihapus → isian lama muncul lagi saat form dibuka
       SubmitResult.show({
         title: "Hazard Report Terkirim", id: result.id,

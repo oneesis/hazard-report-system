@@ -1,4 +1,4 @@
-const CACHE_NAME = "onesap-cache-v16";
+const CACHE_NAME = "onesap-cache-v17";
 const ASSETS_TO_CACHE = [
   "./",
   "./index-home.html",
@@ -19,6 +19,7 @@ const ASSETS_TO_CACHE = [
   "./notifications.js",
   "./reports-utils.js",
   "./offline-sync.js",
+  "./my-signature.js",
   "./manifest.json",
   "./assets/Logo EBL.png",
   "./assets/Logo Hasnur.png",

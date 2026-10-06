@@ -137,6 +137,22 @@ async function loadInspectionChecklist() {
   }
 }
 
+// Fitur 2.5 (2026-10-07): setelah "Normal", geser ke butir berikut yang belum diisi.
+// Bila semua butir terisi: ke catatan Abnormal yang masih kosong, lalu ke foto bila
+// belum diunggah; bila semuanya lengkap → pindah ke halaman berikutnya.
+function checklistAdvance(row) {
+  const rows = [...document.querySelectorAll(".inspection-checklist-item")];
+  const i = rows.indexOf(row);
+  const go = (el) => setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+  const next = [...rows.slice(i + 1), ...rows.slice(0, i)].find((r) => !r.dataset.status);
+  if (next) return go(next);
+  const noNote = rows.find((r) => r.dataset.status === "Abnormal" && !r.querySelector(".inspection-checklist-notes")?.value.trim());
+  if (noNote) return go(noNote);
+  const foto = document.getElementById("upload_foto_inspeksi");
+  if (foto && !foto.dataset?.base64) return go(foto.closest(".form-group") || foto);
+  setTimeout(() => document.getElementById("btnNext3")?.click(), 350);
+}
+
 function renderInspectionChecklist() {
   const container = document.getElementById('inspectionChecklistItems');
   if (!container) return;
@@ -213,7 +229,7 @@ function renderInspectionChecklist() {
     };
 
     // Event listener untuk tombol
-    btnNormal.addEventListener('click', () => setStatus('Normal'));
+    btnNormal.addEventListener('click', () => { setStatus('Normal'); checklistAdvance(row); });
     btnAbnormal.addEventListener('click', () => setStatus('Abnormal'));
 
     fragment.appendChild(row);
@@ -798,6 +814,7 @@ async function submitForm() {
     try { result = JSON.parse(text); }
     catch { throw new Error("Server tidak merespons dengan benar (koneksi/waktu habis). Tekan Kirim Inspeksi lagi — laporan tidak akan tercatat dobel."); }
     if (result.status === "success") {
+      if (typeof MySignature !== "undefined") MySignature.remember(data.tanda_tangan); // simpan bila tanda tangan baru (fitur 2.1)
       clearInspectionDraft();
       SubmitResult.show({
         title: "Inspeksi Terkirim", id: result.id,
