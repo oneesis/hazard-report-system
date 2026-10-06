@@ -331,3 +331,8 @@
   #capTable .cap-nama { min-width: 100px; max-width: 135px; }
   #capTable .cap-clip { max-width: 120px; }
 }
+
+/* Tab sub-menu admin: geser sendiri di HP, jangan melebarkan halaman */
+.admin-subnav { overflow-x: auto; scrollbar-width: none; padding-left: 16px; padding-right: 16px; }
+.admin-subnav::-webkit-scrollbar { display: none; }
+.admin-subnav-btn { flex: 0 0 auto; white-space: nowrap; }
