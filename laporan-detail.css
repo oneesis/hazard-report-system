@@ -426,3 +426,8 @@
   .detail-text, .detail-timeline, .detail-timeline * { font-size: 11px !important; line-height: 1.4 !important; }
   .detail-timeline > * { padding-bottom: 6px !important; margin-bottom: 0 !important; }
 }
+@media print {
+  .detail-signature { display: none !important; }
+  .pt-sig { max-height: 52px; max-width: 90%; object-fit: contain; }
+  .pt-space td { vertical-align: middle; }
+}
