@@ -595,6 +595,7 @@ function hideSboLoading() {
 }
 
 async function submitSboForm() {
+  if (SubmitLoading.active) return; // sedang mengirim — abaikan tap berulang
   if (!validateStep(4)) return;
   const btn = document.getElementById('sboSubmitBtn');
   btn.disabled = true;
@@ -604,6 +605,7 @@ async function submitSboForm() {
 
   try {
     formData = collectFormData();
+    formData.client_ref = SubmitRef.get('sbo'); // anti-dobel bila dikirim ulang
     // Offline / koneksi putus → antre di HP, dikirim otomatis saat online (offline-sync.js).
     if (!navigator.onLine) throw Object.assign(new Error('Tidak ada koneksi'), { offline: true });
     let res;
@@ -684,6 +686,7 @@ async function _saveToServer(draft) {
 
 function clearDraft() {
   try { localStorage.removeItem(SBO_DRAFT_KEY); } catch (e) {}
+  SubmitRef.clear('sbo'); // laporan berikutnya dapat kode baru
   // Hapus dari server juga (best-effort)
   fetch(BASE_URL, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

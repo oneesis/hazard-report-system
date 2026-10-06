@@ -491,6 +491,8 @@ window.SubmitLoading = (() => {
     return el;
   }
   return {
+    // true selama overlay tampil — fungsi submit memakainya sebagai pengunci anti-dobel.
+    get active() { return !!(el && el.classList.contains('show')); },
     show(title, sub) {
       const o = ensure();
       o.querySelector('.sl-title').textContent = title || 'Mengirim…';

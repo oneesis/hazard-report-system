@@ -749,6 +749,7 @@ function validateStep5() {
 }
 
 async function submitForm() {
+  if (SubmitLoading.active) return; // sedang mengirim — abaikan tap berulang
   hideAlert();
   if (!validateStep1() || !validateStep2() || !validateStep3() || !validateStep4() || !validateStep5()) {
     return;

@@ -1289,9 +1289,10 @@ async function submitHazardReport(sheets, data) {
   const _hzData = {};
   _hzHeaders.forEach((h, i) => { _hzData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _hzData.client_ref = String(data.client_ref);
-  await getSql()`
+  const _hzDup = await _insertOnce('hazard_report', data.client_ref, () => getSql()`
     INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
-    VALUES (${id}, ${_hzData.nik || ''}, ${_hzData.perusahaan || ''}, ${_hzData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_hzData)}::jsonb)`;
+    VALUES (${id}, ${_hzData.nik || ''}, ${_hzData.perusahaan || ''}, ${_hzData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_hzData)}::jsonb)`, 'Hazard Report');
+  if (_hzDup) return _hzDup;
 
   let waStatus = 'TIDAK ADA WA';
   if (data.no_whatsapp_pic && data.nama_pic) {
@@ -1329,10 +1330,24 @@ const INSPECTION_NAMES = {
 async function _findByClientRef(table, ref) {
   const r = String(ref || '').trim();
   if (!r) return null;
-  const rows = table === 'inspection_report'
-    ? await getSql()`SELECT id FROM inspection_report WHERE data->>'client_ref' = ${r} LIMIT 1`
-    : await getSql()`SELECT id FROM hazard_report WHERE data->>'client_ref' = ${r} LIMIT 1`;
+  const sql = getSql();
+  const rows = table === 'inspection_report' ? await sql`SELECT id FROM inspection_report WHERE data->>'client_ref' = ${r} LIMIT 1`
+    : table === 'hazard_report' ? await sql`SELECT id FROM hazard_report WHERE data->>'client_ref' = ${r} LIMIT 1`
+    : table === 'sbo_report' ? await sql`SELECT id FROM sbo_report WHERE client_ref = ${r} LIMIT 1`
+    : await sql`SELECT id FROM pc_report WHERE client_ref = ${r} LIMIT 1`;
   return rows[0]?.id || null;
+}
+// Dua kiriman identik yang tiba BERSAMAAN lolos cek di atas → indeks unik
+// client_ref di DB menolak yang kedua (23505); kembalikan laporan yang pertama.
+async function _insertOnce(table, ref, insertFn, label) {
+  try { await insertFn(); return null; }
+  catch (e) {
+    if (e.code === '23505' && ref) {
+      const id = await _findByClientRef(table, ref);
+      if (id) return { status: 'success', message: `${label} sudah tersimpan sebelumnya.`, id, duplicate: true };
+    }
+    throw e;
+  }
 }
 
 async function submitInspectionReport(sheets, data) {
@@ -1369,9 +1384,10 @@ async function submitInspectionReport(sheets, data) {
   const _insData = {};
   headers.forEach((h, i) => { _insData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _insData.client_ref = String(data.client_ref);
-  await getSql()`
+  const _insDup = await _insertOnce('inspection_report', data.client_ref, () => getSql()`
     INSERT INTO inspection_report (id, jenis, nik, perusahaan, status_perbaikan, data)
-    VALUES (${id}, ${sheetName}, ${_insData.nik || ''}, ${_insData.perusahaan || ''}, ${_insData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_insData)}::jsonb)`;
+    VALUES (${id}, ${sheetName}, ${_insData.nik || ''}, ${_insData.perusahaan || ''}, ${_insData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_insData)}::jsonb)`, 'Inspeksi');
+  if (_insDup) return _insDup;
 
   let waStatus = 'TIDAK ADA WA';
   if (data.no_whatsapp_pic && data.nama_pic) {
@@ -1428,24 +1444,28 @@ async function ensurePCSheet(sheets) {
 
 async function submitPCReport(sheets, data) {
   const sql = getSql();
+  const ref = String(data.client_ref || '').trim() || null;
+  const pcDupId = await _findByClientRef('pc_report', ref);
+  if (pcDupId) return { status: 'success', message: 'Personal Contact sudah tersimpan sebelumnya.', id: pcDupId, duplicate: true };
   const id = 'PC-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
 
   let fotoUrl = '';
   if (data.foto_pc)
     fotoUrl = await saveMultipleImagesToDrive(data.foto_pc, await driveSubfolderId(process.env.FOLDER_HAZARD_ID, 'PC'), id + '-PC');
 
-  await sql`
+  const pcDup = await _insertOnce('pc_report', ref, () => sql`
     INSERT INTO pc_report
       ("timestamp", id, tgl_pc, lokasi_pc, nama_coach, nik_coach, jabatan_coach, departemen_coach, perusahaan_coach,
        nama_coachee, nik_coachee, jabatan_coachee, departemen_coachee, perusahaan_coachee, subcont_coachee, no_wa_coachee,
-       topik_coaching, judul_coaching, deskripsi_coaching, komitmen_perbaikan, batas_waktu_pc, foto_pc, status)
+       topik_coaching, judul_coaching, deskripsi_coaching, komitmen_perbaikan, batas_waktu_pc, foto_pc, status, client_ref)
     VALUES
       (${new Date().toISOString()}, ${id}, ${data.tgl_pc || ''}, ${data.lokasi_pc || ''}, ${data.nama_coach || ''},
        ${data.nik_coach || ''}, ${data.jabatan_coach || ''}, ${data.departemen_coach || ''}, ${data.perusahaan_coach || ''},
        ${data.nama_coachee || ''}, ${data.nik_coachee || ''}, ${data.jabatan_coachee || ''}, ${data.departemen_coachee || ''},
        ${data.perusahaan_coachee || ''}, ${data.subcont_coachee || ''}, ${data.no_wa_coachee || ''},
        ${data.topik_coaching || ''}, ${data.judul_coaching || ''}, ${data.deskripsi_coaching || ''},
-       ${data.komitmen_perbaikan || ''}, ${data.batas_waktu_pc || ''}, ${fotoUrl}, 'OPEN')`;
+       ${data.komitmen_perbaikan || ''}, ${data.batas_waktu_pc || ''}, ${fotoUrl}, 'OPEN', ${ref})`, 'Personal Contact');
+  if (pcDup) return pcDup;
 
   // Kirim WA ke coachee
   let waStatus = 'TIDAK ADA WA';
@@ -1649,6 +1669,9 @@ const clearSBODraftForUser  = (s, n)    => _deleteDraftRow(s, 'SBO_Drafts', n);
 
 async function submitSBOReport(sheets, data) {
   const sql = getSql();
+  const ref = String(data.client_ref || '').trim() || null;
+  const sboDupId = await _findByClientRef('sbo_report', ref);
+  if (sboDupId) return { status: 'success', message: 'Laporan SBO sudah tersimpan sebelumnya.', id: sboDupId, duplicate: true };
   const id = 'SBO-' + new Date().toISOString().replace(/\D/g, '').slice(0, 15);
   const hasFinding = data.status_observasi === 'ADA_TEMUAN';
 
@@ -1664,14 +1687,14 @@ async function submitSBOReport(sheets, data) {
     data.no_wa_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont_pic, data.nama_pic).catch(() => '');
 
   const F = v => hasFinding ? (v || '') : ''; // field hanya diisi bila ada temuan
-  await sql`
+  const sboDup = await _insertOnce('sbo_report', ref, () => sql`
     INSERT INTO sbo_report
       ("timestamp", id, tgl_observasi, nama_pekerjaan, lokasi, nama_observer, nik_observer, jabatan_observer,
        departemen_observer, perusahaan_observer, nama_observee, perusahaan_observee, subcont_observee, jabatan_observee,
        departemen_observee, tindakan_segera, potensi_bahaya, apd, alat_peralatan, prosedur, kebersihan, status_observasi,
        jenis_temuan, kategori_temuan, deskripsi_temuan, foto_temuan, rencana_tindakan, referensi_sop,
        nama_pic, nik_pic, perusahaan_pic, subcont_pic, departemen_pic, jabatan_pic, no_wa_pic, batas_waktu,
-       upload_foto_perbaikan_pic, status_perbaikan, pernyataan, wa_pic_status)
+       upload_foto_perbaikan_pic, status_perbaikan, pernyataan, wa_pic_status, client_ref)
     VALUES
       (${new Date().toISOString()}, ${id}, ${data.tgl_observasi || ''}, ${data.nama_pekerjaan || ''}, ${data.lokasi || ''},
        ${data.nama_observer || ''}, ${data.nik_observer || ''}, ${data.jabatan_observer || ''}, ${data.departemen_observer || ''},
@@ -1681,7 +1704,8 @@ async function submitSBOReport(sheets, data) {
        ${F(data.jenis_temuan)}, ${F(data.kategori_temuan)}, ${F(data.deskripsi_temuan)}, ${fotoUrl}, ${F(data.rencana_tindakan)},
        ${F(data.referensi_sop)}, ${F(data.nama_pic)}, ${F(data.nik_pic)}, ${F(data.perusahaan_pic)}, ${F(data.subcont_pic)},
        ${F(data.departemen_pic)}, ${F(data.jabatan_pic)}, ${F(data.no_wa_pic)}, ${F(data.batas_waktu)},
-       ${''}, ${hasFinding ? 'OPEN' : 'AMAN'}, ${data.pernyataan || ''}, ${''})`;
+       ${''}, ${hasFinding ? 'OPEN' : 'AMAN'}, ${data.pernyataan || ''}, ${''}, ${ref})`, 'Laporan SBO');
+  if (sboDup) return sboDup;
 
   let waStatus = 'TIDAK ADA WA';
   if (hasFinding && data.no_wa_pic && data.nama_pic) {

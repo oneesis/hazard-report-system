@@ -191,6 +191,7 @@ function autoFillCoachee() {
 
 // ── Submit ────────────────────────────────────────────────────
 async function submitPcReport() {
+  if (SubmitLoading.active) return; // sedang mengirim — abaikan tap berulang
   if (!validateStep(3)) return;
   const btn = document.getElementById('pcSubmitBtn');
   btn.disabled = true;
@@ -199,6 +200,7 @@ async function submitPcReport() {
     pcPhotos.length ? 'Mengunggah foto & menyimpan data. Mohon tunggu…' : 'Menyimpan data. Mohon tunggu…');
 
   const payload = {
+    client_ref: SubmitRef.get('pc'), // anti-dobel bila dikirim ulang
     tgl_pc:             val('tgl_pc'),
     lokasi_pc:          val('lokasi_pc'),
     nama_coachee:       val('nama_coachee'),
@@ -285,6 +287,7 @@ function _pcScheduleSave() {
 
 function _pcClearDraft() {
   try { localStorage.removeItem(_pcDraftKey); } catch {}
+  SubmitRef.clear('pc'); // laporan berikutnya dapat kode baru
   if (typeof _draftClearServer === 'function') _draftClearServer('PC');
 }
 

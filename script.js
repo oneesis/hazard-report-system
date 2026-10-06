@@ -1213,6 +1213,7 @@ function getFormData() {
 // SUBMIT FORM DATA
 // ========================================
 async function submitForm() {
+  if (SubmitLoading.active) return; // sedang mengirim — abaikan tap berulang
   try {
     const data = getFormData();
     showLoading();
