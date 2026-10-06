@@ -258,6 +258,8 @@ function renderDetail(r) {
   }
   if (picDisputed && !isAdmin) ["planForm", "closingForm"].forEach((x) => { const el = document.getElementById(x); if (el) el.style.display = "none"; });
 
+  renderPrintSheet(r, isInspection, status, planStatus, rencana, tanggalR);
+
   // Timeline
   renderTimeline(r, status, isInspection, planStatus, closingStatus, rencana, tanggalR, rejComment);
 }
@@ -566,6 +568,69 @@ function renderTimeline(r, status, isInspection, planStatus, closingStatus, renc
 }
 
 // ── Helpers ──
+// Lembar print (2026-10-06): kop, ringkasan tindak lanjut (foto & catatan closing yang
+// di layar ada di dalam form — form disembunyikan saat print), riwayat PIC, tanda tangan.
+function renderPrintSheet(r, isInspection, status, planStatus, rencana, tanggalR) {
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const v = (keys, d = '-') => getReportValue(r, keys, '') || d;
+  const id = getReportId(r);
+  const u = getCurrentUser() || {};
+  const STATUS = { OPEN: 'Open', PROGRESS: 'In Progress', CLOSED: 'Closed', FOLLOWUP: 'Menunggu Konfirmasi Pelapor' };
+  const PLAN = { pending_review: 'Menunggu review pelapor', approved: 'Disetujui pelapor', rejected: 'Ditolak pelapor' };
+  const INS = { INS_CB: 'Conveyor Belt', INS_JA: 'Jalan Angkut', INS_MD: 'Mess dan Dapur', INS_KG: 'Kantor & Gudang', INS_SP: 'Settling Pond', INS_T: 'Tambang', INS_TB: 'Tangki BBM', INS_WS: 'Workshop' };
+  const judul = isInspection ? `Laporan Inspeksi ${INS[r.inspection_sheet] || ''}`.trim() : 'Laporan Hazard (Bahaya)';
+  const now = new Date().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const row = (k, val) => `<tr><th>${k}</th><td>${val}</td></tr>`;
+
+  document.getElementById('printHeader').innerHTML = `
+    <div class="ph-top">
+      <img src="assets/Logo Hasnur.png" alt="" class="ph-logo">
+      <div class="ph-title">
+        <div class="ph-app">ONE-SAP · Safety Accountability Program</div>
+        <div class="ph-judul">${esc(judul)}</div>
+        <div class="ph-id">${esc(id)} · Status: <b>${esc(STATUS[status] || status)}</b>${r.batas_waktu && status !== 'CLOSED' && new Date(r.batas_waktu) < new Date() ? ' · <b style="color:#b91c1c">OVERDUE</b>' : ''}</div>
+      </div>
+      <div class="ph-logo"></div>
+    </div>
+    <table class="ph-meta">
+      ${row('Perusahaan', esc(v(['perusahaan'])))}
+      ${row('Pelapor', esc(`${v(['nama', 'pelapor'])} · ${v(['jabatan'], '')}`.replace(/ · $/, '')))}
+    </table>`;
+
+  const pic = [v(['jabatan_pic'], ''), v(['departemen_pic'], ''), v(['perusahaan_pic'], '')].filter(Boolean).join(', ');
+  const afterImgs = getImages(r, ['upload_foto_perbaikan_pic', 'upload_foto_perbaikan', 'foto_perbaikan', 'foto_after', 'foto_after_url', 'after_photo']);
+  const dispute = r.pic_dispute && typeof r.pic_dispute === 'object' ? r.pic_dispute : null;
+  const histori = (dispute?.log || []).map((x) => x.type === 'AJUAN'
+    ? `${esc(x.by_nama)} menyatakan bukan PIC — "${esc(x.alasan)}"`
+    : x.type === 'DIGANTI' ? `PIC diganti ${esc(x.dari)} → <b>${esc(x.ke)}</b> oleh ${esc(x.by_nama)}, batas baru ${esc(x.batas)}`
+    : `Pengajuan ditolak oleh ${esc(x.by_nama)} — ${esc(x.catatan)}`)
+    .map((t, i) => `<li>${t} <span class="pf-muted">(${new Date(dispute.log[i].at).toLocaleDateString('id-ID')})</span></li>`).join('');
+
+  document.getElementById('printFollowup').innerHTML = `
+    <div class="pf-card">
+      <div class="pf-head">Tindak Lanjut &amp; Closing</div>
+      <table class="pf-table">
+        ${row('PIC', `<b>${esc(v(['nama_pic', 'pic']))}</b>${pic ? ` — ${esc(pic)}` : ''}`)}
+        ${row('Batas Waktu', esc(fmt(v(['batas_waktu', 'due_date'], '-'))))}
+        ${row('Rencana Tindakan', esc(rencana || '-') + (tanggalR ? ` <span class="pf-muted">(target ${esc(fmt(tanggalR))})</span>` : ''))}
+        ${row('Status Rencana', esc(PLAN[planStatus] || (rencana ? planStatus : 'Belum diisi PIC')))}
+        ${row('Catatan Closing', esc(v(['catatan_closing', 'closing_note', 'catatan_closing_pic'])))}
+        ${row('Tanggal Closing', esc(status === 'CLOSED' ? fmt(v(['tanggal_closing', 'closing_date', 'tgl_closing'], '-')) : '-'))}
+        ${histori ? row('Riwayat PIC', `<ul class="pf-list">${histori}</ul>`) : ''}
+      </table>
+      <div class="pf-sub">Foto Perbaikan (After)</div>
+      <div class="pf-photos">${afterImgs.length ? afterImgs.map((u) => `<img src="${esc(u)}" alt="">`).join('') : '<span class="pf-muted">Belum ada foto perbaikan.</span>'}</div>
+    </div>`;
+
+  document.getElementById('printFooter').innerHTML = `
+    <table class="pt-sign">
+      <tr><th>Pelapor</th><th>PIC</th><th>Mengetahui (SHE)</th></tr>
+      <tr class="pt-space"><td></td><td></td><td></td></tr>
+      <tr><td>${esc(v(['nama', 'pelapor'], ''))}</td><td>${esc(v(['nama_pic', 'pic'], ''))}</td><td>&nbsp;</td></tr>
+    </table>
+    <div class="pt-note">Dicetak dari ONE-SAP pada ${esc(now)}${u.nama ? ` oleh ${esc(u.nama)}` : ''} · sap-ebl.vercel.app/laporan-detail.html?id=${esc(id)}</div>`;
+}
+
 function set(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
