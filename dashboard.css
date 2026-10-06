@@ -317,14 +317,14 @@ body.dark-mode .badge-overdue {
   .filter-bar {
     display: grid;
     /* date | search | status | type | refresh | export */
-    grid-template-columns: minmax(190px,230px) minmax(260px,1fr) 130px 130px 110px 110px;
+    grid-template-columns: minmax(220px,1fr) 160px 190px auto auto auto;
     align-items: center;
     column-gap: 20px;
   }
 
   .filter-bar .date-range { min-width: 200px; }
   .filter-bar .search-wrap { min-width: 0; width: 100%; flex: 1; }
-  .filter-bar select { max-width: 160px; }
+  .filter-bar select { max-width: none; min-width: 0; width: 100%; }
   .filter-bar .btn-primary, .filter-bar .btn-secondary { width: auto; min-width: 96px; white-space: nowrap; }
 }
 
@@ -3232,3 +3232,32 @@ th[data-sort] {
 .kpi-card--clickable { cursor: pointer; }
 .kpi-card--clickable:focus-visible { outline: 2px solid #00205B; outline-offset: 2px; }
 .kpi-card--active { outline: 3px solid #00205B; outline-offset: 2px; }
+
+/* Bar periode di atas dashboard (tombol cepat + rentang tanggal) */
+.period-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 4px 0 16px; }
+.period-bar .range-chips { margin: 0; }
+.period-bar .period-date { position: relative; display: flex; align-items: center; min-width: 0; }
+.period-bar .period-date .calendar-icon { position: absolute; left: 12px; color: #64748b; pointer-events: none; }
+.period-bar .date-input, .period-bar .period-date input { max-width: none; width: 240px; padding: 9px 12px 9px 34px; min-height: 0; border: 1px solid #dbe2ea; border-radius: 10px; font-size: 13px; background: #fff; }
+@media (max-width: 600px) {
+  .period-bar .period-date, .period-bar .period-date input { width: 100%; }
+}
+.range-chip--active:hover { color: #fff; border-color: var(--color-primary-dark); }
+.period-bar .period-date { width: auto; flex: 0 1 260px; }
+.period-bar .date-input, .period-bar .period-date input { width: 100%; }
+@media (max-width: 767px) {
+  .period-bar .range-chips {
+    position: static; padding: 0; border: 0; background: none;
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 1 1 100%;
+  }
+  .period-bar .range-chips::-webkit-scrollbar { display: none; }
+  .period-bar .range-chip { flex: 0 0 auto; padding: 6px 14px; }
+  .period-bar .period-date { flex: 1 1 100%; }
+}
+/* Baris filter (tanpa tanggal — pindah ke .period-bar): flex yang membungkus rapi */
+@media (min-width: 1024px) {
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 12px; padding: 20px 24px; }
+  .filter-bar .search-wrap { flex: 1 1 240px; width: auto; }
+  .filter-bar select { flex: 0 1 170px; width: auto; min-width: 140px; }
+  .filter-bar .btn-primary, .filter-bar .btn-secondary, .filter-bar a { flex: 0 0 auto; }
+}

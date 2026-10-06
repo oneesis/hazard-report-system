@@ -2,7 +2,6 @@
 let reports = [];
 let filteredReports = [];
 let currentReport = null;
-let analyticsRange = 1;    // months: 1, 3, 6
 let overdueOnlyFilter = false;
 let paretoChartInstance = null;
 let riskTrendChartInstance = null;
@@ -124,9 +123,31 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("change", renderTable);
 
   // Rentang tanggal mengubah seluruh dashboard (KPI/chart/analitik), bukan cuma tabel.
+  // Isi manual → lepas sorotan tombol cepat (kecuali dikosongkan = Semua).
   document
     .getElementById("dateRange")
-    ?.addEventListener("change", refreshDashboard);
+    ?.addEventListener("change", (e) => {
+      _setPeriodChip(e.target.value.trim() ? null : "0");
+      refreshDashboard();
+    });
+
+  // Tombol cepat periode: isi #dateRange (awal bulan N-1 bulan lalu s/d hari ini).
+  document.querySelectorAll("#periodChips .range-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const n = Number(btn.dataset.range);
+      const input = document.getElementById("dateRange");
+      const fp = input?._flatpickr;
+      if (n === 0) {
+        fp ? fp.clear(false) : (input.value = "");
+      } else {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - n + 1, 1);
+        fp ? fp.setDate([start, now], false) : (input.value = `${start.getMonth() + 1}/${start.getDate()}/${start.getFullYear()} to ${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`);
+      }
+      _setPeriodChip(String(n));
+      refreshDashboard();
+    });
+  });
 
   document
     .getElementById("btnExportCsv")
@@ -2271,15 +2292,6 @@ function initAnalyticsSection() {
   // Hanya tampil saat di tab HR (bukan General)
   if (_activeTab === 'hr') section.style.display = '';
 
-  section.querySelectorAll('.range-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      section.querySelectorAll('.range-chip').forEach(b => b.classList.remove('range-chip--active'));
-      btn.classList.add('range-chip--active');
-      analyticsRange = Number(btn.dataset.range);
-      updateAnalyticsKpi(getVisibleReportsFromCache());
-    });
-  });
-
   document.getElementById('akpiOverdueCard')?.addEventListener('click', () => {
     overdueOnlyFilter = !overdueOnlyFilter;
     document.getElementById('akpiOverdueCard').classList.toggle('akpi-overdue-card--active', overdueOnlyFilter);
@@ -2309,24 +2321,37 @@ function initAnalyticsSection() {
   document.getElementById('drilldownClose')?.addEventListener('click', closeDrilldown);
 }
 
+function _setPeriodChip(range) {
+  document.querySelectorAll('#periodChips .range-chip').forEach(b =>
+    b.classList.toggle('range-chip--active', b.dataset.range === range));
+}
+
+// Jendela analitik dari #dateRange; start null = semua data.
+function _analyticsWindow() {
+  const { start, end } = _dashDateRange();
+  if (!start) return { start: null, end: null };
+  const s = new Date(start); s.setHours(0, 0, 0, 0);
+  const e = end ? new Date(end) : new Date(); e.setHours(23, 59, 59, 999);
+  return { start: s, end: e };
+}
+
 function updateAnalyticsKpi(allReports) {
   const role = String((typeof getCurrentUser === 'function' ? getCurrentUser() : null)?.role || '').toUpperCase();
   if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
 
   const visible = getVisibleReports(allReports) || [];
-  const now = new Date();
 
-  const rangeStart = new Date(now.getFullYear(), now.getMonth() - analyticsRange + 1, 1);
-  rangeStart.setHours(0, 0, 0, 0);
-  const prevStart = new Date(now.getFullYear(), now.getMonth() - analyticsRange * 2 + 1, 1);
-  prevStart.setHours(0, 0, 0, 0);
-
+  // Periode = rentang tanggal dashboard (#dateRange). Kosong = semua data, tanpa pembanding.
+  const { start: rangeStart, end: rangeEnd } = _analyticsWindow();
   const dateKeys = ['timestamp','tanggal_laporan','tanggal_inspeksi','tanggal_kejadian','tanggal','date'];
   const inRange = visible.filter(r => {
+    if (!rangeStart) return true;
     const d = parseSheetDate(getReportValue(r, dateKeys, ''));
-    return d && d >= rangeStart;
+    return d && d >= rangeStart && d <= rangeEnd;
   });
-  const inPrev = visible.filter(r => {
+  // Pembanding: periode sepanjang yang sama tepat sebelum rangeStart.
+  const prevStart = rangeStart ? new Date(rangeStart.getTime() - (rangeEnd - rangeStart) - 1) : null;
+  const inPrev = !rangeStart ? [] : visible.filter(r => {
     const d = parseSheetDate(getReportValue(r, dateKeys, ''));
     return d && d >= prevStart && d < rangeStart;
   });
@@ -2409,14 +2434,13 @@ function renderParetoChart(allReports) {
   if (!ctx) return;
 
   const visible = getVisibleReports(allReports) || [];
-  const now = new Date();
-  const rangeStart = new Date(now.getFullYear(), now.getMonth() - analyticsRange + 1, 1);
-  rangeStart.setHours(0, 0, 0, 0);
+  const { start: rangeStart, end: rangeEnd } = _analyticsWindow();
 
   const dateKeys = ['timestamp','tanggal_laporan','tanggal_inspeksi','tanggal_kejadian','tanggal','date'];
   paretoInRange = visible.filter(r => {
+    if (!rangeStart) return true;
     const d = parseSheetDate(getReportValue(r, dateKeys, ''));
-    return d && d >= rangeStart;
+    return d && d >= rangeStart && d <= rangeEnd;
   });
 
   // Count by ketidaksesuaian_bahaya (hazard-only field)

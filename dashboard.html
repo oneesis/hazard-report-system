@@ -68,13 +68,23 @@
       <button class="dash-tab" data-tab="sbo"><i class="fa-solid fa-eye"></i> SBO</button>
     </nav>
 
-    <!-- ANALYTICS SECTION (admin-only, shown by JS) -->
-    <section id="analyticsSection" style="display:none">
-      <div class="range-chips">
-        <button class="range-chip range-chip--active" data-range="1">Bulan Ini</button>
+    <!-- PERIODE: satu rentang tanggal untuk SELURUH dashboard (kartu, grafik, analitik, tabel).
+         Tombol cepat hanya mengisi #dateRange. -->
+    <section class="period-bar">
+      <div class="range-chips" id="periodChips">
+        <button class="range-chip range-chip--active" data-range="0">Semua</button>
+        <button class="range-chip" data-range="1">Bulan Ini</button>
         <button class="range-chip" data-range="3">3 Bulan</button>
         <button class="range-chip" data-range="6">6 Bulan</button>
       </div>
+      <div class="date-inputs period-date">
+        <i class="fa-solid fa-calendar-days calendar-icon" aria-hidden="true"></i>
+        <input type="text" id="dateRange" class="date-input" aria-label="Rentang tanggal" placeholder="Pilih rentang tanggal" autocomplete="off" />
+      </div>
+    </section>
+
+    <!-- ANALYTICS SECTION (admin-only, shown by JS) -->
+    <section id="analyticsSection" style="display:none">
       <div class="akpi-grid">
         <div class="akpi-card akpi-total">
           <div class="akpi-label">Total Laporan</div>
@@ -335,23 +345,6 @@
 
     <!-- FILTER -->
     <section class="filter-bar">
-      <div class="date-range">
-        <label class="date-range-label">
-          <span class="sr-only">Filter Tanggal (opsional)</span>
-        </label>
-        <div class="date-inputs">
-          <i class="fa-solid fa-calendar-days calendar-icon" aria-hidden="true"></i>
-          <input
-            type="text"
-            id="dateRange"
-            class="date-input"
-            aria-label="Rentang tanggal"
-            placeholder="Dari - Sampai"
-            autocomplete="off"
-          />
-        </div>
-      </div>
-
       <div class="search-wrap">
         <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
         <input
@@ -585,7 +578,7 @@
           dateFormat: 'm/d/Y',
           allowInput: true,
           altInput: true,
-          altFormat: 'd F Y'
+          altFormat: 'd M Y'
         });
       }
     });
