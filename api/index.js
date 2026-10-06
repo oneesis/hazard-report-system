@@ -1657,6 +1657,247 @@ async function submitSBOReport(sheets, data) {
   return { status: 'success', message: 'Laporan SBO berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
+// ── "PIC yang dicantumkan salah" (2026-10-06) ───────────────────────────────
+// PIC menandai laporan (Hazard/Inspeksi/SBO) → email admin. Super Admin atau
+// Admin perusahaan pelapor menetapkan PIC baru (deadline dihitung ulang dari
+// tanggal penggantian, durasi = deadline awal − tanggal laporan) atau menolak.
+// Disimpan di pic_dispute: field JSONB di data (hazard/inspeksi), kolom jsonb (SBO).
+// Selama PENDING: reminder WA deadline dijeda & tak dihitung ke PIC Open capaian.
+const PIC_DISPUTE_EMAIL = process.env.PIC_DISPUTE_EMAIL || 'esmsrantau@gmail.com';
+const APP_URL = 'https://sap-ebl.vercel.app';
+const _todayWib = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+const _ymd = (v) => { const d = new Date(v); return isNaN(d) ? '' : d.toISOString().slice(0, 10); };
+
+function _disputeModul(modul, id) {
+  const m = String(modul || '').toUpperCase();
+  if (['HAZARD', 'INSPECTION', 'SBO'].includes(m)) return m;
+  const s = String(id || '').toUpperCase();
+  return s.startsWith('SBO') ? 'SBO' : s.startsWith('INSP') ? 'INSPECTION' : 'HAZARD';
+}
+
+async function _rosterByNik(nik) {
+  const n = String(nik || '').trim();
+  return n ? (await getSql()`SELECT data FROM karyawan WHERE nik = ${n}`)[0]?.data || null : null;
+}
+
+async function _disputeLoad(modul, id) {
+  const sql = getSql();
+  const idT = String(id || '').trim();
+  if (modul === 'SBO') {
+    const r = (await sql`SELECT * FROM sbo_report WHERE id = ${idT}`)[0];
+    if (!r) return null;
+    return {
+      modul, id: idT, label: 'SBO', lokasi: r.lokasi, perusahaan: r.perusahaan_observer,
+      status: String(r.status_perbaikan || '').toUpperCase(), batas: r.batas_waktu, tanggal: r.timestamp || r.tgl_observasi,
+      pic: { nik: r.nik_pic, nama: r.nama_pic, wa: r.no_wa_pic },
+      pelapor: { nik: r.nik_observer, nama: r.nama_observer },
+      dispute: r.pic_dispute || null,
+      url: `${APP_URL}/sbo.html?id=${encodeURIComponent(idT)}`,
+    };
+  }
+  const row = modul === 'INSPECTION'
+    ? (await sql`SELECT data FROM inspection_report WHERE id = ${idT}`)[0]
+    : (await sql`SELECT data FROM hazard_report WHERE id = ${idT}`)[0];
+  if (!row) return null;
+  const d = row.data || {};
+  return {
+    modul, id: idT, label: modul === 'INSPECTION' ? 'Inspeksi' : 'Hazard',
+    lokasi: d.lokasi_bahaya || d.lokasi || d.lokasi_inspeksi || '', perusahaan: d.perusahaan,
+    status: String(d.status_perbaikan || 'OPEN').toUpperCase(), batas: d.batas_waktu, tanggal: d.timestamp,
+    pic: { nik: d.nik_pic, nama: d.nama_pic, wa: d.no_whattsapp_pic || d.no_whatsapp_pic },
+    pelapor: { nik: d.nik, nama: d.nama, wa: d.no_whatsapp },
+    dispute: d.pic_dispute || null,
+    url: `${APP_URL}/laporan-detail.html?id=${encodeURIComponent(idT)}`,
+  };
+}
+
+// patch: field PIC baru (opsional) — nama key disesuaikan per tabel.
+async function _disputeSave(d, dispute, patch) {
+  const sql = getSql();
+  if (d.modul === 'SBO') {
+    if (patch) {
+      await sql`UPDATE sbo_report SET pic_dispute = ${JSON.stringify(dispute)}::jsonb,
+        nama_pic = ${patch.nama}, nik_pic = ${patch.nik}, perusahaan_pic = ${patch.perusahaan},
+        departemen_pic = ${patch.departemen}, jabatan_pic = ${patch.jabatan}, no_wa_pic = ${patch.wa},
+        batas_waktu = ${patch.batas}, wa_pic_status = ''
+        WHERE id = ${d.id}`;
+    } else {
+      await sql`UPDATE sbo_report SET pic_dispute = ${JSON.stringify(dispute)}::jsonb WHERE id = ${d.id}`;
+    }
+    return;
+  }
+  const obj = { pic_dispute: dispute };
+  if (patch) Object.assign(obj, {
+    nama_pic: patch.nama, nik_pic: patch.nik, perusahaan_pic: patch.perusahaan, departemen_pic: patch.departemen,
+    jabatan_pic: patch.jabatan, no_whattsapp_pic: patch.wa, no_whatsapp_pic: patch.wa, batas_waktu: patch.batas,
+    wa_pic_status: '',
+    // PIC baru mulai dari awal: rencana/closing PIC lama dibatalkan.
+    status_perbaikan: 'OPEN', plan_status: '', rencana_tindakan: '', tanggal_rencana: '',
+    plan_review_comment: '', closing_status: '',
+  });
+  const json = JSON.stringify(obj);
+  if (d.modul === 'INSPECTION') {
+    await sql`UPDATE inspection_report SET data = data || ${json}::jsonb,
+      status_perbaikan = COALESCE(${patch ? 'OPEN' : null}, status_perbaikan) WHERE id = ${d.id}`;
+  } else {
+    await sql`UPDATE hazard_report SET data = data || ${json}::jsonb,
+      status_perbaikan = COALESCE(${patch ? 'OPEN' : null}, status_perbaikan) WHERE id = ${d.id}`;
+  }
+}
+
+function _isDisputePic(d, auth, me) {
+  const nik = String(auth.nik || '').trim();
+  if (d.pic.nik && String(d.pic.nik).trim() === nik) return true;
+  const wa = (s) => String(s || '').replace(/\D/g, '').replace(/^62/, '0');
+  if (d.pic.wa && me && wa(me['NO WHATSAPP']) && wa(d.pic.wa) === wa(me['NO WHATSAPP'])) return true;
+  const nm = String(me?.NAMA || auth.nama || '').trim().toLowerCase();
+  return !!(d.pic.nama && nm && String(d.pic.nama).trim().toLowerCase() === nm);
+}
+
+async function _sendMail(to, subject, text, url) {
+  const t = _getMailer();
+  if (!t || !to) return false;
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  await t.sendMail({
+    from: `ONE-SAP <${process.env.GMAIL_SENDER}>`, to, subject,
+    text: url ? `${text}\n\n${url}` : text,
+    html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto">
+      <h2 style="color:#00205B;margin:0 0 12px">ONE-SAP</h2>
+      <div style="white-space:pre-line;color:#0f172a;font-size:14px;line-height:1.55">${esc(text)}</div>
+      ${url ? `<p style="margin:20px 0"><a href="${url}" style="background:#00205B;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">Buka Laporan</a></p>` : ''}
+    </div>`,
+  });
+  return true;
+}
+
+// Kirim ke satu orang lewat semua kanal yang tersedia (email, WA, push) — best-effort.
+async function _notifyPerson(sheets, person, subject, text, url) {
+  let k = person.nik ? await _rosterByNik(person.nik) : null;
+  if (!k && person.nama) {
+    k = (await getSql()`SELECT data FROM karyawan WHERE upper(data->>'NAMA') = upper(${String(person.nama).trim()}) LIMIT 1`)[0]?.data || null;
+  }
+  const email = String(k?.EMAIL || '').trim();
+  const wa = String(person.wa || k?.['NO WHATSAPP'] || '').replace(/\D/g, '');
+  const nik = person.nik || k?.NIK;
+  await Promise.allSettled([
+    email && _sendMail(email, subject, text, url),
+    wa && sendWaNotification(wa, `${text}\n\n🔗 ${url}`),
+    nik && sendPushToNik(sheets, String(nik), { title: subject, body: text.slice(0, 140), url }),
+  ]);
+}
+
+async function disputePic(sheets, auth, data) {
+  const d = await _disputeLoad(_disputeModul(data.modul, data.id), data.id);
+  if (!d) throw new Error('Laporan tidak ditemukan.');
+  const alasan = String(data.alasan || '').trim();
+  if (alasan.length < 5) throw new Error('Alasan wajib diisi (minimal 5 karakter).');
+  if (['CLOSED', 'FOLLOWUP'].includes(d.status)) throw new Error('Laporan sudah tahap closing — tidak bisa mengajukan PIC salah.');
+  const me = await _rosterByNik(auth.nik);
+  if (!_isDisputePic(d, auth, me)) throw Object.assign(new Error('Hanya PIC laporan ini yang bisa mengajukan.'), { httpStatus: 403 });
+  const cur = d.dispute || {};
+  if (cur.status === 'PENDING') throw new Error('Pengajuan sudah dikirim, menunggu keputusan admin.');
+  const log = Array.isArray(cur.log) ? cur.log : [];
+  const byNik = String(auth.nik || '').trim();
+  if (log.some((x) => x.type === 'AJUAN' && x.by_nik === byNik)) throw new Error('Kamu sudah pernah mengajukan untuk laporan ini.');
+
+  let usulan = null;
+  const u = data.usulan_nik ? await _rosterByNik(data.usulan_nik) : null;
+  if (u) usulan = { nik: String(u.NIK || data.usulan_nik), nama: u.NAMA || '', jabatan: u.JABATAN || '', perusahaan: u.PERUSAHAAN || '' };
+  const byNama = me?.NAMA || auth.nama || d.pic.nama || '';
+  const now = new Date().toISOString();
+  await _disputeSave(d, {
+    status: 'PENDING', by_nik: byNik, by_nama: byNama, alasan, usulan, at: now,
+    log: [...log, { type: 'AJUAN', at: now, by_nik: byNik, by_nama: byNama, alasan, usulan_nama: usulan?.nama || '' }],
+  });
+
+  const text = `PIC laporan ${d.label} ${d.id} menyatakan dirinya BUKAN PIC yang tepat.\n\n` +
+    `Lokasi: ${d.lokasi || '-'}\nPerusahaan pelapor: ${d.perusahaan || '-'}\nPelapor: ${d.pelapor.nama || '-'}\n` +
+    `PIC tercantum: ${d.pic.nama || '-'}\nAlasan: ${alasan}\n` +
+    `Usulan PIC: ${usulan ? `${usulan.nama} (${usulan.nik}) — ${usulan.jabatan}, ${usulan.perusahaan}` : '-'}\n\n` +
+    `Tentukan PIC yang benar lewat tombol di bawah (Super Admin / Admin perusahaan pelapor).`;
+  await _sendMail(PIC_DISPUTE_EMAIL, `[ONE-SAP] PIC salah — ${d.id}`, text, d.url)
+    .catch((e) => console.error('[disputePic] email admin gagal:', e.message));
+  return { status: 'success', message: 'Pengajuan terkirim. Admin akan menentukan PIC yang benar.' };
+}
+
+async function resolvePicDispute(sheets, auth, data) {
+  const role = normalizeRole(auth.role);
+  if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') throw Object.assign(new Error('Hanya admin yang bisa memutuskan.'), { httpStatus: 403 });
+  const d = await _disputeLoad(_disputeModul(data.modul, data.id), data.id);
+  if (!d) throw new Error('Laporan tidak ditemukan.');
+  if (role === 'ADMIN' && String(d.perusahaan || '').trim().toUpperCase() !== String(auth.perusahaan || '').trim().toUpperCase())
+    throw Object.assign(new Error('Hanya admin perusahaan pelapor yang bisa memutuskan.'), { httpStatus: 403 });
+  const cur = d.dispute || {};
+  if (cur.status !== 'PENDING') throw new Error('Tidak ada pengajuan PIC salah yang menunggu.');
+  const catatan = String(data.catatan || '').trim();
+  const admin = (await _rosterByNik(auth.nik))?.NAMA || auth.nama || 'Admin';
+  const now = new Date().toISOString();
+  const log = Array.isArray(cur.log) ? cur.log : [];
+  const oldPic = { nik: d.pic.nik, nama: d.pic.nama, wa: d.pic.wa };
+
+  if (data.keputusan === 'TOLAK') {
+    if (!catatan) throw new Error('Isi alasan penolakan.');
+    await _disputeSave(d, { ...cur, status: 'DITOLAK', resolved_by: admin, resolved_at: now, catatan,
+      log: [...log, { type: 'DITOLAK', at: now, by_nama: admin, catatan }] });
+    await _notifyPerson(sheets, { ...oldPic, nik: cur.by_nik || oldPic.nik },
+      `Pengajuan PIC salah ditolak — ${d.id}`,
+      `Halo ${oldPic.nama || ''}, pengajuan bahwa kamu bukan PIC laporan ${d.label} ${d.id} DITOLAK oleh ${admin}.\n\nAlasan: ${catatan}\n\nKamu tetap PIC laporan ini. Batas waktu: ${d.batas || '-'}.`, d.url);
+    return { status: 'success', message: 'Pengajuan ditolak. PIC tetap.' };
+  }
+
+  if (data.keputusan !== 'GANTI') throw new Error('Keputusan tidak dikenali.');
+  const baru = await _rosterByNik(data.nik_pic_baru);
+  if (!baru) throw new Error('PIC baru tidak ditemukan di data karyawan.');
+  const baruNik = String(baru.NIK || data.nik_pic_baru).trim();
+  if ((oldPic.nik && String(oldPic.nik).trim() === baruNik) ||
+      String(oldPic.nama || '').trim().toLowerCase() === String(baru.NAMA || '').trim().toLowerCase())
+    throw new Error('PIC baru sama dengan PIC sekarang.');
+
+  // Deadline baru = hari ini (WIB) + durasi awal (deadline lama − tanggal laporan), min 1 hari.
+  let batas = /^\d{4}-\d{2}-\d{2}$/.test(String(data.batas_waktu || '')) ? data.batas_waktu : '';
+  if (!batas) {
+    const a = _ymd(d.tanggal), b = _ymd(d.batas);
+    const dur = a && b ? Math.max(1, Math.round((new Date(b) - new Date(a)) / 864e5)) : 7;
+    batas = new Date(new Date(_todayWib()).getTime() + dur * 864e5).toISOString().slice(0, 10);
+  }
+  const patch = {
+    nik: baruNik, nama: baru.NAMA || '', jabatan: baru.JABATAN || '', departemen: baru.DEPARTEMEN || '',
+    perusahaan: baru.PERUSAHAAN || '', wa: String(baru['NO WHATSAPP'] || '').replace(/\D/g, ''), batas,
+  };
+  await _disputeSave(d, { ...cur, status: 'DIGANTI', resolved_by: admin, resolved_at: now, catatan, pic_baru: patch.nama,
+    log: [...log, { type: 'DIGANTI', at: now, by_nama: admin, dari: oldPic.nama || '', ke: patch.nama, batas, catatan }] }, patch);
+
+  const info = `Laporan ${d.label} ${d.id}${d.lokasi ? ` (${d.lokasi})` : ''}`;
+  await Promise.allSettled([
+    _notifyPerson(sheets, { nik: patch.nik, nama: patch.nama, wa: patch.wa }, `Kamu ditunjuk sebagai PIC — ${d.id}`,
+      `Halo ${patch.nama}, kamu ditetapkan sebagai PIC ${info} menggantikan ${oldPic.nama || 'PIC sebelumnya'}.\n\nBatas waktu: ${batas}${catatan ? `\nCatatan admin: ${catatan}` : ''}`, d.url),
+    _notifyPerson(sheets, { ...oldPic, nik: cur.by_nik || oldPic.nik }, `Kamu tidak lagi PIC — ${d.id}`,
+      `Halo ${oldPic.nama || ''}, pengajuan kamu disetujui. PIC ${info} kini ${patch.nama}. Kamu tidak perlu menindaklanjuti laporan ini lagi.`, d.url),
+    _notifyPerson(sheets, d.pelapor, `PIC laporan kamu diganti — ${d.id}`,
+      `Halo ${d.pelapor.nama || ''}, PIC ${info} diganti dari ${oldPic.nama || '-'} menjadi ${patch.nama} oleh ${admin}.\nBatas waktu baru: ${batas}.`, d.url),
+  ]);
+  return { status: 'success', message: `PIC diganti menjadi ${patch.nama}. Batas waktu baru ${batas}.` };
+}
+
+// Antrean admin: pengajuan yang menunggu (Super Admin semua; Admin perusahaannya).
+async function getPicDisputes(auth) {
+  const role = normalizeRole(auth.role);
+  if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') return { status: 'success', data: [] };
+  const sql = getSql();
+  const [h, i, s] = await Promise.all([
+    sql`SELECT id, data FROM hazard_report WHERE data->'pic_dispute'->>'status' = 'PENDING'`,
+    sql`SELECT id, data FROM inspection_report WHERE data->'pic_dispute'->>'status' = 'PENDING'`,
+    sql`SELECT id, lokasi, perusahaan_observer, nama_pic, pic_dispute FROM sbo_report WHERE pic_dispute->>'status' = 'PENDING'`.catch(() => []),
+  ]);
+  const co = String(auth.perusahaan || '').trim().toUpperCase();
+  const rows = [
+    ...h.map((r) => ({ id: r.id, modul: 'HAZARD', lokasi: r.data.lokasi_bahaya || '', perusahaan: r.data.perusahaan, nama_pic: r.data.nama_pic, dispute: r.data.pic_dispute, url: `laporan-detail.html?id=${encodeURIComponent(r.id)}` })),
+    ...i.map((r) => ({ id: r.id, modul: 'INSPECTION', lokasi: r.data.lokasi || '', perusahaan: r.data.perusahaan, nama_pic: r.data.nama_pic, dispute: r.data.pic_dispute, url: `laporan-detail.html?id=${encodeURIComponent(r.id)}` })),
+    ...s.map((r) => ({ id: r.id, modul: 'SBO', lokasi: r.lokasi || '', perusahaan: r.perusahaan_observer, nama_pic: r.nama_pic, dispute: r.pic_dispute, url: `sbo.html?id=${encodeURIComponent(r.id)}` })),
+  ].filter((r) => role === 'SUPER_ADMIN' || String(r.perusahaan || '').trim().toUpperCase() === co);
+  return { status: 'success', data: rows };
+}
+
 async function getSBOReports(sheets, auth, mineOnly) {
   const sql = getSql();
   let rows;
@@ -2481,6 +2722,7 @@ module.exports = async (req, res) => {
         case 'getReport':            result = await getReportById(req.query.id, auth); break;
         case 'getKaryawan':         result = await getKaryawan(sheets, auth); break;
         case 'getPendingChanges':   result = await getPendingChanges(sheets, auth); break;
+        case 'getPicDisputes':      result = await getPicDisputes(auth); break;
         case 'getMyObj': {
           // Query 1 baris langsung (bukan tarik seluruh roster) — beranda ringan.
           const _sqlMy = getSql();
@@ -2845,6 +3087,8 @@ module.exports = async (req, res) => {
           }
           break;
         }
+        case 'disputePic':          result = await disputePic(sheets, authUser, data); break;
+        case 'resolvePicDispute':   result = await resolvePicDispute(sheets, authUser, data); break;
         case 'updateHazardReport': {
           if (data.status_perbaikan === 'CLOSED') {
             await ensureClosingColumns(sheets, 'Hazard_Report');

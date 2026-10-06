@@ -159,6 +159,7 @@ function computeAndRender() {
 
     // Laporan sebagai PIC — all-time untuk "PIC Open", month-filter untuk "%Closing"
     const isPic = r => {
+      if (r.pic_dispute?.status === 'PENDING') return false; // PIC sedang dipersoalkan — jangan bebankan
       const rNikPic  = String(r.nik_pic || '').trim();
       const rNamaPic = String(r.nama_pic || r.pic || '').trim().toLowerCase();
       return (nik && rNikPic === nik) || (nama && rNamaPic === nama);

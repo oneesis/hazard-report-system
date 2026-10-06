@@ -61,6 +61,7 @@ function buildReminders(hazard, inspection, karyawan, now = Date.now()) {
     for (const r of rows) {
       const d = r.data || {};
       if (String(r.status_perbaikan || d.status_perbaikan || '').toUpperCase() === 'CLOSED') continue;
+      if (d.pic_dispute?.status === 'PENDING') continue; // PIC sedang dipersoalkan — reminder dijeda
       const left = daysUntil(d.batas_waktu, now);
       if (left === null || left < 0 || left > WARN_DAYS) continue;
       const id = String(r.id || d.id || '').trim();
@@ -135,6 +136,7 @@ if (require.main === module) {
     { id: 'H3', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-20', no_whattsapp_pic: '0811' } }, // masih jauh
     { id: 'H4', status_perbaikan: 'CLOSED', data: { batas_waktu: '2026-10-07', no_whattsapp_pic: '0811' } },
     { id: 'H5', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-07', nama_pic: 'TANPA WA' } },  // tak ada WA → lewati
+    { id: 'H6', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-07', no_whattsapp_pic: '0811', pic_dispute: { status: 'PENDING' } } }, // PIC dipersoalkan → jeda
   ];
   const ins = [{ id: 'I1', status_perbaikan: 'OPEN', data: { batas_waktu: '2026-10-06', nik_pic: '7', temuan_inspeksi: '15. Guarding lepas', lokasi: 'Workshop' } }];
   const out = buildReminders(hz, ins, kar, now);

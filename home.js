@@ -505,12 +505,19 @@ function computeActionItems(reports, user) {
   const nama = String(user?.nama || '').trim().toLowerCase();
   const wa   = String(user?.no_whatsapp || '').replace(/\D/g, '');
 
-  const rencana = [], review = [], closing = [], rejected = [];
+  const rencana = [], review = [], closing = [], rejected = [], disputed = [];
+  const role = String(user?.role || "").toUpperCase().replace(/s+/g, "_");
+  const myCo = String(user?.perusahaan || "").trim().toUpperCase();
 
   for (const r of (reports || [])) {
     const status     = String(r.status_perbaikan || 'OPEN').toUpperCase();
     const planStatus = String(r.plan_status || '').trim().toLowerCase();
     if (status === 'CLOSED') continue;
+    // PIC dipersoalkan: admin yang berwenang memutuskan; tugas PIC dijeda.
+    if (r.pic_dispute?.status === 'PENDING') {
+      if (role === 'SUPER_ADMIN' || (role === 'ADMIN' && String(r.perusahaan || '').trim().toUpperCase() === myCo)) disputed.push(r);
+      continue;
+    }
 
     const nikPic  = String(r.nik_pic  || '').trim().toLowerCase();
     const namaPic = String(r.nama_pic || '').trim().toLowerCase();
@@ -528,6 +535,7 @@ function computeActionItems(reports, user) {
   }
 
   const items = [];
+  if (disputed.length) items.push({ reports: disputed, label: 'PIC dipersoalkan',         hint: 'PIC menyatakan bukan PIC yang tepat — tentukan PIC yang benar', color: 'red', icon: 'fa-user-xmark' });
   if (rejected.length) items.push({ reports: rejected, label: 'Rencana kamu ditolak',      hint: 'Revisi rencana perbaikan segera',      color: 'red',    icon: 'fa-circle-xmark' });
   if (rencana.length)  items.push({ reports: rencana,  label: 'Perlu rencana tindakan',    hint: 'Kamu PIC — isi rencana perbaikannya',  color: 'orange', icon: 'fa-pen-to-square' });
   if (review.length)   items.push({ reports: review,   label: 'Rencana PIC perlu ditinjau', hint: 'Setujui atau tolak rencana dari PIC',  color: 'blue',   icon: 'fa-magnifying-glass' });

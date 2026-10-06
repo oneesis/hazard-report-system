@@ -11,6 +11,9 @@ async function loadSboReports() {
     _sboData = (json.data || json || []).filter(r => r.id);
     populateSboFilters();
     sboRender();
+    // Link langsung (mis. dari email "PIC salah"): sbo.html?id=SBO-...
+    const qid = new URLSearchParams(location.search).get("id");
+    if (qid && _sboData.some(r => r.id === qid)) openSboModal(qid);
   } catch (e) {
     document.getElementById('sboTbody').innerHTML =
       `<tr><td colspan="7" class="sbo-empty"><i class="fa-solid fa-triangle-exclamation"></i>Gagal memuat data: ${e.message}</td></tr>`;
@@ -216,6 +219,7 @@ function openSboModal(id) {
       ${dl('Departemen PIC', r.departemen_pic)}
       ${dl('Perusahaan PIC', r.perusahaan_pic)}
       ${dl('Batas Waktu', r.batas_waktu)}
+      <div id="picDisputeBox" style="grid-column:1/-1"></div>
       ${r.pernyataan ? `
       <div class="sbo-section-sep">🤝 Komitmen Observee</div>
       <div class="sbo-dl-item" style="grid-column:1/-1">${dl('Pernyataan', r.pernyataan)}</div>` : ''}
@@ -235,7 +239,7 @@ function openSboModal(id) {
         <i class="fa-solid fa-handshake"></i> Kirim Komitmen
       </button>
     </div>` : ''}
-    ${(isPic || isAdmin) && st === 'KOMITMEN' ? `
+    ${(isPic || isAdmin) && st === 'KOMITMEN' && (isAdmin || r.pic_dispute?.status !== 'PENDING') ? `
     <div class="sbo-update-section">
       <h4><i class="fa-solid fa-screwdriver-wrench"></i> Tindak Lanjut PIC</h4>
       <div style="margin-bottom:10px">
@@ -251,6 +255,13 @@ function openSboModal(id) {
       </button>
     </div>` : ''}
   `;
+  if (hasFinding && typeof PicDispute !== 'undefined') {
+    PicDispute.render(document.getElementById('picDisputeBox'), {
+      modul: 'SBO', report: r, isPic, perusahaan: r.perusahaan_observer,
+      tanggal: r.timestamp || r.tgl_observasi, batas: r.batas_waktu, status: st,
+      onDone: () => { closeSboModal(); loadSboReports(); },
+    });
+  }
   document.getElementById('sboModalFooter').innerHTML = '';
   document.getElementById('sboModal').style.display = 'flex';
 }

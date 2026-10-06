@@ -247,6 +247,17 @@ function renderDetail(r) {
     document.getElementById('closingReviewNote').textContent = cNote || '(tidak ada catatan)';
   }
 
+  // "PIC yang dicantumkan salah" — selama menunggu admin, panel kerja PIC disembunyikan.
+  const picDisputed = typeof PicDispute !== "undefined" && (r.pic_dispute?.status === "PENDING");
+  if (typeof PicDispute !== "undefined") {
+    PicDispute.render(document.getElementById("picDisputeBox"), {
+      modul: isInspection ? "INSPECTION" : "HAZARD", report: { ...r, id }, isPic: isPic(r),
+      perusahaan: r.perusahaan, tanggal: getReportValue(r, ["timestamp"], ""), batas: r.batas_waktu, status,
+      onDone: () => setTimeout(() => window.location.reload(), 900),
+    });
+  }
+  if (picDisputed && !isAdmin) ["planForm", "closingForm"].forEach((x) => { const el = document.getElementById(x); if (el) el.style.display = "none"; });
+
   // Timeline
   renderTimeline(r, status, isInspection, planStatus, closingStatus, rencana, tanggalR, rejComment);
 }
