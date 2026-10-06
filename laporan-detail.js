@@ -625,11 +625,19 @@ function renderPrintSheet(r, isInspection, status, planStatus, rencana, tanggalR
   // TTD pelapor ditaruh di kolom tanda tangan (gambar di kartu Pernyataan disembunyikan saat print).
   const sig = getReportValue(r, ['tanda_tangan', 'signature'], '');
   const sigSrc = sig ? (sig.startsWith('data:') ? sig : normalizeImageUrl(sig)) : '';
+  // TTD PIC: tanda tangan terbarunya dari laporan yang pernah ia buat (server: pic_signature),
+  // tampil setelah PIC mengirim closing. SHE: dianggap mengetahui begitu laporan CLOSED.
+  const picSig = ['FOLLOWUP', 'CLOSED'].includes(status) && r.pic_signature
+    ? (r.pic_signature.startsWith('data:') ? r.pic_signature : normalizeImageUrl(r.pic_signature)) : '';
+  const tglClosed = fmt(v(['tanggal_closing', 'closing_date', 'tgl_closing'], ''));
+  const sheCell = status === 'CLOSED'
+    ? `<div class="pt-stamp">DIKETAHUI SHE<span>Laporan CLOSED${tglClosed && tglClosed !== '-' ? ` · ${esc(tglClosed)}` : ''}</span></div>`
+    : '<span class="pf-muted">Menunggu laporan closed</span>';
   document.getElementById('printFooter').innerHTML = `
     <table class="pt-sign">
       <tr><th>Pelapor</th><th>PIC</th><th>Mengetahui (SHE)</th></tr>
-      <tr class="pt-space"><td>${sigSrc ? `<img src="${esc(sigSrc)}" alt="" class="pt-sig">` : ''}</td><td></td><td></td></tr>
-      <tr><td>${esc(v(['nama', 'pelapor'], ''))}</td><td>${esc(v(['nama_pic', 'pic'], ''))}</td><td>&nbsp;</td></tr>
+      <tr class="pt-space"><td>${sigSrc ? `<img src="${esc(sigSrc)}" alt="" class="pt-sig">` : ''}</td><td>${picSig ? `<img src="${esc(picSig)}" alt="" class="pt-sig">` : ['FOLLOWUP', 'CLOSED'].includes(status) ? '<span class="pf-muted">Closing dikirim via ONE-SAP</span>' : ''}</td><td>${sheCell}</td></tr>
+      <tr><td>${esc(v(['nama', 'pelapor'], ''))}</td><td>${esc(v(['nama_pic', 'pic'], ''))}</td><td>Safety Health Environment</td></tr>
     </table>
     <div class="pt-note">Dicetak dari ONE-SAP pada ${esc(now)}${u.nama ? ` oleh ${esc(u.nama)}` : ''} · sap-ebl.vercel.app/laporan-detail.html?id=${esc(id)}</div>`;
 }

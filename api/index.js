@@ -1077,6 +1077,24 @@ async function getMyActivityExtras(sheets, auth) {
 
 // Satu laporan PENUH (termasuk tanda_tangan) by id — dipakai halaman/modal detail
 // supaya daftar bisa ramping tanpa tanda tangan. Cek visibilitas seperti getAllReports.
+// TTD PIC untuk lembar print (2026-10-07): roster tak menyimpan berkas tanda tangan,
+// jadi pakai tanda tangan TERBARU yang pernah ia bubuhkan sebagai pelapor (Hazard/Inspeksi).
+async function _latestSignature(nik, nama) {
+  const n = String(nik || '').trim(), nm = String(nama || '').trim();
+  if (!n && !nm) return '';
+  const rows = await getSql()`
+    SELECT ttd, ts FROM (
+      SELECT data->>'tanda_tangan' ttd, data->>'timestamp' ts, data->>'nik' nik, data->>'nama' nama FROM hazard_report
+      UNION ALL
+      SELECT data->>'tanda_tangan', data->>'timestamp', data->>'nik', data->>'nama' FROM inspection_report
+    ) x
+    WHERE coalesce(ttd, '') <> ''
+      AND ((${n} <> '' AND nik = ${n}) OR (${nm} <> '' AND upper(nama) = upper(${nm})))
+    ORDER BY (ts ~ '^\d{4}-') DESC, ts DESC
+    LIMIT 1`;
+  return rows[0]?.ttd || '';
+}
+
 async function getReportById(id, auth) {
   const sql = getSql();
   const idT = String(id || '').trim();
@@ -1102,6 +1120,7 @@ async function getReportById(id, auth) {
         return { status: 'error', message: 'Akses ditolak.' };
     }
   }
+  report.pic_signature = await _latestSignature(report.nik_pic, report.nama_pic).catch(() => '');
   return { status: 'success', data: report };
 }
 

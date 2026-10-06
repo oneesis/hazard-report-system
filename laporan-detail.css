@@ -431,3 +431,8 @@
   .pt-sig { max-height: 52px; max-width: 90%; object-fit: contain; }
   .pt-space td { vertical-align: middle; }
 }
+@media print {
+  .pt-stamp { display: inline-block; border: 2px solid #15803d; color: #15803d; border-radius: 6px; padding: 4px 10px;
+    font-weight: 800; font-size: 11px; letter-spacing: .06em; transform: rotate(-3deg); }
+  .pt-stamp span { display: block; font-weight: 600; font-size: 9px; letter-spacing: 0; margin-top: 2px; }
+}
