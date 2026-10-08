@@ -68,7 +68,8 @@
     const tglIndo = (t) => { const d = new Date(String(t) + 'T00:00:00'); return isNaN(d) ? (t || '') : d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
     let DATA = null;
 
-    const sel = (t, max) => `<td${String(t || '').length > max ? ' class="kecil"' : ''}>${esc(t)}</td>`;
+    // Huruf dikecilkan HANYA bila teks benar-benar tidak muat di selnya (lihat pasHuruf).
+    const sel = (t) => `<td>${esc(t)}</td>`;
 
     function ttdCell(nik) {
       const img = DATA.ttd[String(nik || '').trim()];
@@ -147,6 +148,10 @@
       });
     }
 
+    function pasHuruf() {
+      document.querySelectorAll('#kertas td').forEach((td) => { if (td.scrollWidth > td.clientWidth + 1) td.classList.add('kecil'); });
+    }
+
     function render() {
       const pisah = document.getElementById('pisah').checked;
       const grup = pisah
@@ -157,6 +162,7 @@
         for (let i = 0; i < Math.max(g.length, 1); i += PER_LEMBAR) potongan.push({ list: g.slice(i, i + PER_LEMBAR), mulai: i + 1 });
       }
       document.getElementById('kertas').innerHTML = potongan.map((c, i) => lembar(c.list, c.mulai, i + 1, potongan.length)).join('');
+      pasHuruf();
     }
 
     (async () => {
