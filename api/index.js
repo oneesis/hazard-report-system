@@ -1,4 +1,8 @@
-const { google } = require('googleapis');
+// googleapis dimuat MALAS (2026-10-08): memuat paket ini makan ±1,2 dtk CPU tiap cold
+// start, padahal kebanyakan request hanya baca/tulis Neon. Sekarang hanya dimuat saat
+// Drive (upload foto) / Sheets (jalur lama) benar-benar dipakai — hemat Fluid Active CPU.
+let _googleLib = null;
+const google = () => (_googleLib ||= require('googleapis').google);
 const https = require('https');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -177,12 +181,18 @@ const _dataCache  = new Map(); // key → { data, expAt }
 function getClients() {
   const now = Date.now();
   if (_cachedClient && now < _clientExpiry) return _cachedClient;
-  const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  const auth = new google.auth.GoogleAuth({
-    credentials: creds,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets']
-  });
-  _cachedClient = { sheets: google.sheets({ version: 'v4', auth }) };
+  // Klien Sheets asli baru dibuat saat properti pertama diakses (mis. sheets.spreadsheets).
+  let real = null;
+  const realSheets = () => {
+    if (real) return real;
+    const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    const auth = new (google().auth.GoogleAuth)({
+      credentials: creds,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    return (real = google().sheets({ version: 'v4', auth }));
+  };
+  _cachedClient = { sheets: new Proxy({}, { get: (_, k) => realSheets()[k] }) };
   _clientExpiry = now + 55 * 60 * 1000; // token bertahan 1 jam, refresh 5 menit sebelum expiry
   return _cachedClient;
 }
@@ -402,12 +412,12 @@ async function assertPicEligible(sheets, nikPic, namaPic) {
 }
 
 function getDriveClient() {
-  const oauth2 = new google.auth.OAuth2(
+  const oauth2 = new (google().auth.OAuth2)(
     process.env.GOOGLE_OAUTH_CLIENT_ID,
     process.env.GOOGLE_OAUTH_CLIENT_SECRET,
   );
   oauth2.setCredentials({ refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN });
-  return google.drive({ version: 'v3', auth: oauth2 });
+  return google().drive({ version: 'v3', auth: oauth2 });
 }
 
 async function saveBase64ImageToDrive(base64Data, folderId, fileName) {
