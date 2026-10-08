@@ -173,6 +173,9 @@
         const j = await res.json();
         if (!res.ok || j.status !== 'success') throw new Error(j.message || 'Gagal memuat data.');
         DATA = j.data;
+        // Nama file PDF / judul cetak = judul halaman.
+        const tglJudul = new Date(String(DATA.jadwal.TANGGAL) + 'T00:00:00');
+        document.title = 'Safety Talk Tanggal ' + (isNaN(tglJudul) ? (DATA.jadwal.TANGGAL || '') : tglJudul.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }));
         await Promise.all(Object.keys(DATA.ttd).map(async (k) => { DATA.ttd[k] = await potongTtd(DATA.ttd[k]); }));
         const tanpaTtd = DATA.peserta.filter((p) => !DATA.ttd[String(p.nik).trim()]).length;
         document.getElementById('info').textContent =
