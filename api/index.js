@@ -296,7 +296,7 @@ async function getCachedSheetFrom(sheets, spreadsheetId, sheetName, ttlMs = 30_0
 async function loadCutiSources(sheets) {
   // Sumber cuti kini di Neon: SISTER MINER sm."Karyawan" + SIMANTRA
   // simantra."akun_karyawan"/"training_records" (sheet-nya sudah beku setelah
-  // migrasi). Cache 30s (dipanggil tiap request via assertNotCuti). Fallback ke
+  // migrasi). Cache 30s (dipakai cek PIC & dropdown). Fallback ke
   // Sheets bila DATABASE_URL belum ada. Fail-open: error → null (cuti nonaktif,
   // TIDAK mematahkan login/request).
   const CK = 'cuti:sources';
@@ -388,23 +388,17 @@ async function annotateStatusKerja(sheets, rows) {
   return rows.map(r => ({ ...r, STATUS_KERJA: resolveStatusKerja(src, r['NIK'], r['NAMA']) }));
 }
 
-/** Lempar 401 kalau NIK ini sedang cuti — dipanggil di kedua choke point auth
- * (GET & POST) biar akses ke-cut total, bukan cuma di action tertentu. */
-async function assertNotCuti(sheets, auth) {
-  const status = await getStatusKerjaByNik(sheets, auth.nik, auth.nama);
-  if (status === 'cuti')
-    throw Object.assign(new Error('Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali.'), { httpStatus: 401 });
-}
+// Cuti TIDAK lagi menutup akses ONE-SAP (keputusan user 2026-10-08): karyawan
+// yang cuti tetap bisa login & melihat/membuat laporan, hanya tidak bisa jadi PIC.
 
-/** PIC yang dipilih tidak boleh sedang cuti/wajib_reinduksi. ponytail: kalau
- * nik_pic tidak terkirim dari form, skip (tidak cukup data buat verifikasi
- * aman) — celah ini sudah ada sebelumnya untuk field lain juga. */
+/** PIC yang dipilih tidak boleh sedang cuti (2026-10-08: hanya cuti; dulu juga
+ * wajib_reinduksi). ponytail: kalau nik_pic tidak terkirim dari form, skip (tidak
+ * cukup data buat verifikasi aman) — celah ini sudah ada sebelumnya. */
 async function assertPicEligible(sheets, nikPic, namaPic) {
   if (!nikPic) return;
   const status = await getStatusKerjaByNik(sheets, nikPic, namaPic);
-  if (status === 'aktif') return;
-  const reason = status === 'cuti' ? 'sedang cuti' : 'wajib menyelesaikan Reinduksi Pasca Cuti dulu';
-  throw Object.assign(new Error(`PIC yang dipilih (${namaPic || nikPic}) ${reason}, tidak bisa ditunjuk sebagai PIC.`), { httpStatus: 400 });
+  if (status !== 'cuti') return;
+  throw Object.assign(new Error(`PIC yang dipilih (${namaPic || nikPic}) sedang cuti, tidak bisa ditunjuk sebagai PIC.`), { httpStatus: 400 });
 }
 
 function getDriveClient() {
@@ -544,9 +538,6 @@ async function checkTokenValid(sheets, auth) {
   if (lastLogout && (auth.iat || 0) * 1000 < lastLogout)
     throw Object.assign(new Error('Sesi tidak valid. Silakan login ulang.'), { httpStatus: 401 });
 
-  // Cuti (2026-08-20) — kalau status berubah jadi cuti SETELAH login (token
-  // masih hidup 12 jam), tendang di request berikutnya, jangan tunggu expiry.
-  await assertNotCuti(sheets, auth);
 }
 
 // Helper: set satu field di baris karyawan (Postgres JSONB). colName = key
@@ -599,11 +590,6 @@ async function login(sheets, nik, password, ip) {
   }
   clearFailedLogins(nik);
   _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', '').catch(() => {}); // clear persistent lock
-
-  // Cuti (2026-08-20) — kredensial benar, tapi sedang cuti = akses ditutup total.
-  const statusKerjaLogin = await getStatusKerjaByNik(sheets, nik, String(user['NAMA'] || '').trim());
-  if (statusKerjaLogin === 'cuti')
-    return { status: 'error', code: 'CUTI_BLOCKED', message: 'Sedang cuti — akses ONE-SAP ditangguhkan sampai tanggal masuk kembali. Kelola cuti kamu lewat SIKAP.' };
 
   const storedPw = String(user['PASSWORD'] || '');
   // Password dianggap lemah jika masih plaintext (belum di-hash) ATAU termasuk daftar password umum
@@ -1985,6 +1971,7 @@ async function resolvePicDispute(sheets, auth, data) {
   const baru = await _rosterByNik(data.nik_pic_baru);
   if (!baru) throw new Error('PIC baru tidak ditemukan di data karyawan.');
   const baruNik = String(baru.NIK || data.nik_pic_baru).trim();
+  await assertPicEligible(sheets, baruNik, baru.NAMA);
   if ((oldPic.nik && String(oldPic.nik).trim() === baruNik) ||
       String(oldPic.nama || '').trim().toLowerCase() === String(baru.NAMA || '').trim().toLowerCase())
     throw new Error('PIC baru sama dengan PIC sekarang.');
@@ -2668,7 +2655,6 @@ module.exports = async (req, res) => {
 
       // Semua action GET lainnya wajib token valid
       const auth = requireAuth(req);
-      await assertNotCuti(sheets, auth); // Cuti (2026-08-20)
 
       let result;
       switch (action) {

@@ -350,8 +350,8 @@ function loadNamaPicOptions() {
     // Cuti (2026-08-20) — tidak eligible jadi PIC; tampil disabled + label
     // status. Ini cuma UX, penolakan sebenarnya tetap di backend saat submit.
     const status = employee?.["STATUS_KERJA"];
-    const cuti = status === "cuti" || status === "wajib_reinduksi";
-    const opt = new Option(cuti ? `${item} (${status === "cuti" ? "Cuti" : "Wajib Reinduksi"})` : item, item);
+    const cuti = status === "cuti"; // 2026-10-08: hanya yang sedang cuti yang tidak bisa jadi PIC
+    const opt = new Option(cuti ? `${item} (Cuti)` : item, item);
     opt.disabled = cuti;
     select.add(opt);
   });

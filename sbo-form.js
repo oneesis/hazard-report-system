@@ -356,8 +356,10 @@ function loadSboNamaPic() {
   );
   const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
 
+  // Yang sedang cuti tampil "(Cuti)" & tidak bisa dipilih jadi PIC (backend juga menolak).
+  const cutiSet = new Set(filtered.filter(k => k['STATUS_KERJA'] === 'cuti').map(k => k['NAMA']));
   sel.innerHTML = '<option value="">Pilih Nama PIC</option>' +
-    names.map(n => `<option value="${n}">${n}</option>`).join('');
+    names.map(n => cutiSet.has(n) ? `<option value="${n}" disabled>${n} (Cuti)</option>` : `<option value="${n}">${n}</option>`).join('');
 
   if (_sboPicChoices) _sboPicChoices.destroy();
   _sboPicChoices = new Choices('#nama_pic', {
