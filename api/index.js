@@ -1689,6 +1689,7 @@ const _stSchedOut = r => ({
   NAMA_PEMATERI: r.nama_pemateri, NIK_PEMATERI: r.nik_pemateri, JABATAN_PEMATERI: r.jabatan_pemateri,
   PERUSAHAAN_TARGET: r.perusahaan_target, STATUS: r.status, CREATED_BY: r.created_by,
   SITE: r.site || '', TEMPAT: r.tempat || '', WAKTU: r.waktu || '', // untuk cetak absensi (2026-10-08)
+  MATERI_TAMBAHAN: r.materi_tambahan || '', // satu materi per baris
 });
 const _stAbsOut = r => ({
   SCHEDULE_ID: r.schedule_id, BULAN: r.bulan, NIK: r.nik, NAMA: r.nama, PERUSAHAAN: r.perusahaan,
@@ -3145,12 +3146,12 @@ module.exports = async (req, res) => {
           await getSql()`
             INSERT INTO safety_talk_schedule
               (id, "timestamp", tanggal, bulan, judul_materi, deskripsi_materi, nama_pemateri, nik_pemateri,
-               jabatan_pemateri, perusahaan_target, status, created_by, site, tempat, waktu)
+               jabatan_pemateri, perusahaan_target, status, created_by, site, tempat, waktu, materi_tambahan)
             VALUES
               (${stId}, ${new Date().toISOString()}, ${data.tanggal}, ${data.tanggal.slice(0, 7)},
                ${data.judul_materi?.trim() || ''}, ${data.deskripsi_materi?.trim() || ''}, ${data.nama_pemateri?.trim() || ''},
                ${data.nik_pemateri?.trim() || ''}, ${data.jabatan_pemateri?.trim() || ''}, ${data.perusahaan_target?.trim() || ''},
-               'AKTIF', ${authUser.nik || ''}, ${data.site?.trim() || ''}, ${data.tempat?.trim() || ''}, ${data.waktu?.trim() || ''})`;
+               'AKTIF', ${authUser.nik || ''}, ${data.site?.trim() || ''}, ${data.tempat?.trim() || ''}, ${data.waktu?.trim() || ''}, ${data.materi_tambahan?.trim() || ''})`;
           result = { status: 'success', id: stId, message: 'Jadwal Safety Talk berhasil dibuat.' };
           break;
         }
@@ -3171,6 +3172,7 @@ module.exports = async (req, res) => {
           if (data.site   !== undefined) await sql`UPDATE safety_talk_schedule SET site = ${data.site} WHERE id = ${_id}`;
           if (data.tempat !== undefined) await sql`UPDATE safety_talk_schedule SET tempat = ${data.tempat} WHERE id = ${_id}`;
           if (data.waktu  !== undefined) await sql`UPDATE safety_talk_schedule SET waktu = ${data.waktu} WHERE id = ${_id}`;
+          if (data.materi_tambahan !== undefined) await sql`UPDATE safety_talk_schedule SET materi_tambahan = ${data.materi_tambahan} WHERE id = ${_id}`;
           result = { status: 'success', message: 'Jadwal berhasil diperbarui.' };
           break;
         }

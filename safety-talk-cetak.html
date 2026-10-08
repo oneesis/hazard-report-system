@@ -63,6 +63,7 @@
   <script>
     requireLogin();
     const PER_LEMBAR = 25;
+    const MATERI_BAKU = 'Pembacaan 7 Nilai Inti Hasnur Group, Ikrar Keselamatan Pertambangan dan Lingkungan Hidup dan 7 PAS';
     const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const tglIndo = (t) => { const d = new Date(String(t) + 'T00:00:00'); return isNaN(d) ? (t || '') : d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
     let DATA = null;
@@ -80,8 +81,10 @@
       const fasRows = [0, 1, 2, 3, 4].map((i) => i === 0 && f.nama
         ? `<tr><td class="no">1</td>${sel(f.nama, 26)}<td>${esc(f.nik)}</td>${sel(f.jabatan, 20)}${sel(f.perusahaan, 14)}${ttdCell(f.nik)}</tr>`
         : '<tr><td class="no"></td><td></td><td></td><td></td><td></td><td></td></tr>').join('');
-      const materi = [j.JUDUL_MATERI, j.DESKRIPSI_MATERI].filter(Boolean);
-      const matRows = [0, 1, 2, 3, 4].map((i) => `<tr><td class="no">${materi[i] ? i + 1 : ''}</td><td>${esc(materi[i] || '')}</td></tr>`).join('');
+      // Materi: judul sesi → bacaan baku (selalu) → materi tambahan (manual, satu per baris).
+      const materi = [j.JUDUL_MATERI, MATERI_BAKU, ...String(j.MATERI_TAMBAHAN || '').split('\n')]
+        .map((x) => String(x || '').trim()).filter(Boolean);
+      const matRows = Array.from({ length: Math.max(5, materi.length) }, (_, i) => `<tr><td class="no">${materi[i] ? i + 1 : ''}</td>${materi[i] ? sel(materi[i], 95) : '<td></td>'}</tr>`).join('');
       const pesRows = Array.from({ length: PER_LEMBAR }, (_, i) => {
         const p = peserta[i];
         return p

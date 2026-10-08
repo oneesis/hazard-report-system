@@ -165,6 +165,7 @@ function openCreateModal() {
   document.getElementById('stTanggal').value = new Date().toISOString().slice(0, 10);
   document.getElementById('stJudul').value = '';
   document.getElementById('stDeskripsi').value = '';
+  document.getElementById('stMateriTambahan').value = '';
   try {
     document.getElementById('stSite').value = localStorage.getItem('st_last_site') || '';
     document.getElementById('stWaktu').value = localStorage.getItem('st_last_waktu') || '';
@@ -186,6 +187,7 @@ function editJadwal(id) {
   document.getElementById('stJudul').value = s['JUDUL_MATERI'] || '';
   document.getElementById('stDeskripsi').value = s['DESKRIPSI_MATERI'] || '';
   document.getElementById('stSite').value = s['SITE'] || '';
+  document.getElementById('stMateriTambahan').value = s['MATERI_TAMBAHAN'] || '';
   document.getElementById('stWaktu').value = s['WAKTU'] || '';
   document.getElementById('stTempat').value = s['TEMPAT'] || '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue(s['NAMA_PEMATERI'] || '');
@@ -223,6 +225,7 @@ async function submitCreate() {
     jabatan_pemateri: karFound?.['JABATAN'] || '',
     perusahaan_target: document.getElementById('stTargetCo').value,
     site:   document.getElementById('stSite').value.trim(),
+    materi_tambahan: document.getElementById('stMateriTambahan').value.split('\n').map((x) => x.trim()).filter(Boolean).join('\n'),
     tempat: document.getElementById('stTempat').value.trim(),
     waktu:  document.getElementById('stWaktu').value.trim(),
   };
