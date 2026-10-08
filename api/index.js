@@ -1116,11 +1116,19 @@ async function getMySignature(auth) {
   if (row) return { status: 'success', data: row.data };
   // Belum punya: ambil sekali dari laporan terakhir yang ia buat sebagai pelapor.
   const me = await _rosterByNik(nik);
-  let last = await _latestSignature(nik, me?.NAMA || auth.nama).catch(() => '');
+  const last = await _seedSignatureDariLaporan(nik, me?.NAMA || auth.nama);
+  return { status: 'success', data: last, from_report: !!last };
+}
+
+/** TTD terakhir dari laporan yang ia buat → disimpan sebagai TTD tersimpan (sekali).
+ * Dipanggil hanya untuk NIK yang BELUM punya baris user_signature (baris kosong =
+ * sengaja dihapus lewat "Tanda Tangan Saya" → tidak diisi ulang). */
+async function _seedSignatureDariLaporan(nik, nama) {
+  let last = await _latestSignature(nik, nama).catch(() => '');
   if (last && !last.startsWith('data:')) last = await _driveImageAsDataUrl(last).catch(() => '');
-  if (!last) return { status: 'success', data: '' };
-  await sql`INSERT INTO user_signature (nik, data) VALUES (${nik}, ${last}) ON CONFLICT (nik) DO NOTHING`;
-  return { status: 'success', data: last, from_report: true };
+  if (!last) return '';
+  await getSql()`INSERT INTO user_signature (nik, data) VALUES (${nik}, ${last}) ON CONFLICT (nik) DO NOTHING`;
+  return last;
 }
 
 async function saveMySignature(auth, data) {
@@ -2790,7 +2798,16 @@ module.exports = async (req, res) => {
             ORDER BY perusahaan, nama`;
           const pem = sch.nik_pemateri ? await _rosterByNik(sch.nik_pemateri) : null;
           const niks = [...new Set([...peserta.map((p) => String(p.nik).trim()), String(sch.nik_pemateri || '').trim()].filter(Boolean))];
-          const ttdRows = niks.length ? await sql`SELECT nik, data FROM user_signature WHERE nik = ANY(${niks}) AND data <> ''` : [];
+          const sigRows = niks.length ? await sql`SELECT nik, data FROM user_signature WHERE nik = ANY(${niks})` : [];
+          const punyaBaris = new Set(sigRows.map((r) => r.nik));
+          const ttdRows = sigRows.filter((r) => r.data);
+          // Belum pernah punya TTD tersimpan → pakai TTD terakhir dari laporannya (lalu disimpan).
+          const namaByNik = new Map([...peserta.map((p) => [String(p.nik).trim(), p.nama]), [String(sch.nik_pemateri || '').trim(), sch.nama_pemateri]]);
+          const belum = niks.filter((n) => !punyaBaris.has(n));
+          for (let i = 0; i < belum.length; i += 5) {
+            const hasil = await Promise.all(belum.slice(i, i + 5).map(async (n) => ({ nik: n, data: await _seedSignatureDariLaporan(n, namaByNik.get(n)).catch(() => '') })));
+            ttdRows.push(...hasil.filter((r) => r.data));
+          }
           result = {
             status: 'success',
             data: {
