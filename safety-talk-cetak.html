@@ -25,7 +25,7 @@
     th { font-weight: 700; text-align: center; background: #d9d9d9; }
     .kop td { border: 0; }
     .kop .logo { padding: 6px 8px; }
-    .kop .logo img { height: 15mm; }
+    .kop .logo img { height: 11mm; width: auto; display: block; }
     .kop .dok { width: 62mm; padding: 0; vertical-align: top; }
     .kop .dok div { border-left: 1px solid #000; border-bottom: 1px solid #000; font-size: 8pt; padding: 0 4px; height: 4.6mm; line-height: 4.6mm; }
     .judul { text-align: center; font-weight: 700; font-size: 11pt; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 1mm 0; }
@@ -45,7 +45,8 @@
     @media print {
       body { background: #fff; }
       .toolbar, #status { display: none !important; }
-      .lembar { margin: 0; box-shadow: none; min-height: auto; page-break-after: always; }
+      /* selebar area cetak & di tengah, apa pun margin yang dipilih di dialog print */
+      .lembar { width: 100%; margin: 0 auto; box-shadow: none; min-height: auto; page-break-after: always; }
       .lembar:last-child { page-break-after: auto; }
     }
   </style>
@@ -95,7 +96,7 @@
       const kolom = '<colgroup><col style="width:9mm"><col style="width:52mm"><col style="width:27mm"><col style="width:40mm"><col style="width:30mm"><col></colgroup>';
       return `<div class="lembar"><div class="bingkai">
         <table class="kop"><tr>
-          <td class="logo"><img src="assets/Logo Hasnur.png" alt="Hasnur Group"></td>
+          <td class="logo"><img src="assets/logo-hasnur-group.png" alt="Hasnur Group"></td>
           <td class="dok"><div>Nomor Dokumen : FRM-EBL-S-SHE-06</div><div>Tanggal Terbit : 1-10-2024</div><div>Tanggal Revisi : -</div><div style="border-bottom:0">Revisi Ke : -</div></td>
         </tr></table>
         <div class="judul">FORMULIR DAFTAR HADIR</div>
