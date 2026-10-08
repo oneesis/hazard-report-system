@@ -1680,6 +1680,7 @@ const _stSchedOut = r => ({
   JUDUL_MATERI: r.judul_materi, DESKRIPSI_MATERI: r.deskripsi_materi,
   NAMA_PEMATERI: r.nama_pemateri, NIK_PEMATERI: r.nik_pemateri, JABATAN_PEMATERI: r.jabatan_pemateri,
   PERUSAHAAN_TARGET: r.perusahaan_target, STATUS: r.status, CREATED_BY: r.created_by,
+  SITE: r.site || '', TEMPAT: r.tempat || '', WAKTU: r.waktu || '', // untuk cetak absensi (2026-10-08)
 });
 const _stAbsOut = r => ({
   SCHEDULE_ID: r.schedule_id, BULAN: r.bulan, NIK: r.nik, NAMA: r.nama, PERUSAHAAN: r.perusahaan,
@@ -2773,6 +2774,34 @@ module.exports = async (req, res) => {
           result = { status: 'success', data: rows };
           break;
         }
+        case 'getCetakAbsensiSt': {
+          // Cetak Daftar Hadir FRM-EBL-S-SHE-06 (2026-10-08): jadwal + peserta HADIR +
+          // fasilitator + TTD tersimpan masing-masing (yang belum menyimpan TTD → kosong).
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const sid = String(req.query.id || '').trim();
+          const sql = getSql();
+          const sch = (await sql`SELECT * FROM safety_talk_schedule WHERE id = ${sid}`)[0];
+          if (!sch) throw Object.assign(new Error('Jadwal tidak ditemukan.'), { httpStatus: 404 });
+          if (!isSuperAdmin(auth.role) && sch.perusahaan_target && sch.perusahaan_target !== String(auth.perusahaan || '').trim())
+            throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const peserta = await sql`
+            SELECT nik, nama, jabatan, perusahaan FROM safety_talk_absensi
+            WHERE schedule_id = ${sid} AND upper(status_kehadiran) = 'HADIR'
+            ORDER BY perusahaan, nama`;
+          const pem = sch.nik_pemateri ? await _rosterByNik(sch.nik_pemateri) : null;
+          const niks = [...new Set([...peserta.map((p) => String(p.nik).trim()), String(sch.nik_pemateri || '').trim()].filter(Boolean))];
+          const ttdRows = niks.length ? await sql`SELECT nik, data FROM user_signature WHERE nik = ANY(${niks}) AND data <> ''` : [];
+          result = {
+            status: 'success',
+            data: {
+              jadwal: _stSchedOut(sch),
+              fasilitator: { nama: sch.nama_pemateri || '', nik: sch.nik_pemateri || '', jabatan: sch.jabatan_pemateri || pem?.JABATAN || '', perusahaan: pem?.PERUSAHAAN || '' },
+              peserta,
+              ttd: Object.fromEntries(ttdRows.map((r) => [r.nik, r.data])),
+            },
+          };
+          break;
+        }
         case 'getMySafetyTalkHistory': {
           // Riwayat ST milik user sendiri + judul/tanggal sesi (untuk beranda).
           const nik = String(auth.nik || '').trim();
@@ -3099,12 +3128,12 @@ module.exports = async (req, res) => {
           await getSql()`
             INSERT INTO safety_talk_schedule
               (id, "timestamp", tanggal, bulan, judul_materi, deskripsi_materi, nama_pemateri, nik_pemateri,
-               jabatan_pemateri, perusahaan_target, status, created_by)
+               jabatan_pemateri, perusahaan_target, status, created_by, site, tempat, waktu)
             VALUES
               (${stId}, ${new Date().toISOString()}, ${data.tanggal}, ${data.tanggal.slice(0, 7)},
                ${data.judul_materi?.trim() || ''}, ${data.deskripsi_materi?.trim() || ''}, ${data.nama_pemateri?.trim() || ''},
                ${data.nik_pemateri?.trim() || ''}, ${data.jabatan_pemateri?.trim() || ''}, ${data.perusahaan_target?.trim() || ''},
-               'AKTIF', ${authUser.nik || ''})`;
+               'AKTIF', ${authUser.nik || ''}, ${data.site?.trim() || ''}, ${data.tempat?.trim() || ''}, ${data.waktu?.trim() || ''})`;
           result = { status: 'success', id: stId, message: 'Jadwal Safety Talk berhasil dibuat.' };
           break;
         }
@@ -3122,6 +3151,9 @@ module.exports = async (req, res) => {
           if (data.nik_pemateri     !== undefined) await sql`UPDATE safety_talk_schedule SET nik_pemateri = ${data.nik_pemateri} WHERE id = ${_id}`;
           if (data.jabatan_pemateri !== undefined) await sql`UPDATE safety_talk_schedule SET jabatan_pemateri = ${data.jabatan_pemateri} WHERE id = ${_id}`;
           if (data.perusahaan_target !== undefined) await sql`UPDATE safety_talk_schedule SET perusahaan_target = ${data.perusahaan_target} WHERE id = ${_id}`;
+          if (data.site   !== undefined) await sql`UPDATE safety_talk_schedule SET site = ${data.site} WHERE id = ${_id}`;
+          if (data.tempat !== undefined) await sql`UPDATE safety_talk_schedule SET tempat = ${data.tempat} WHERE id = ${_id}`;
+          if (data.waktu  !== undefined) await sql`UPDATE safety_talk_schedule SET waktu = ${data.waktu} WHERE id = ${_id}`;
           result = { status: 'success', message: 'Jadwal berhasil diperbarui.' };
           break;
         }

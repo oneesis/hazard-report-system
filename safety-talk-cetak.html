@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cetak Daftar Hadir Safety Talk</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Daftar Hadir FRM-EBL-S-SHE-06 (2026-10-08): data dari jadwal + absensi HADIR +
+       TTD tersimpan masing-masing. 25 peserta per lembar; lebih → lembar berikutnya. -->
+  <style>
+    @page { size: A4 portrait; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e5e7eb; font-family: Calibri, Carlito, Arial, sans-serif; color: #000; }
+    .toolbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
+      padding: 10px 16px; background: #0f172a; color: #fff; font: 14px Inter, system-ui, sans-serif; }
+    .toolbar button { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 700; cursor: pointer; background: #F2A900; color: #00205B; font: inherit; font-weight: 700; }
+    .toolbar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .toolbar .info { color: #cbd5e1; font-size: 12px; }
+    #status { text-align: center; padding: 40px 16px; font: 15px Inter, system-ui, sans-serif; color: #334155; }
+    .lembar { width: 194mm; min-height: 279mm; margin: 12px auto; background: #fff; padding: 0; position: relative; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+    .bingkai { border: 2px solid #000; margin: 0; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    td, th { border: 1px solid #000; padding: 0 4px; font-size: 9.5pt; height: 5.6mm; vertical-align: middle; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    th { font-weight: 700; text-align: center; background: #d9d9d9; }
+    .kop td { border: 0; }
+    .kop .logo { padding: 6px 8px; }
+    .kop .logo img { height: 15mm; }
+    .kop .dok { width: 62mm; padding: 0; vertical-align: top; }
+    .kop .dok div { border-left: 1px solid #000; border-bottom: 1px solid #000; font-size: 8pt; padding: 0 4px; height: 4.6mm; line-height: 4.6mm; }
+    .judul { text-align: center; font-weight: 700; font-size: 11pt; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 1mm 0; }
+    .bar { background: #d9d9d9; font-weight: 700; font-size: 9.5pt; padding: .6mm 4px; border-bottom: 1px solid #000; }
+    .bar.tengah { text-align: center; border-top: 1px solid #000; }
+    .centang td { border: 0; height: 5.2mm; font-size: 9.5pt; }
+    .kotak { display: inline-block; width: 7mm; height: 4.4mm; border: 1px solid #000; vertical-align: middle; margin-right: 2mm; text-align: center; line-height: 4.2mm; font-weight: 700; font-size: 10pt; }
+    .info-tbl { margin: 1mm 0; }
+    .info-tbl td { height: 5mm; }
+    .info-tbl .lbl { width: 22mm; }
+    .no { width: 9mm; text-align: center; }
+    .ttd img { max-height: 5.2mm; max-width: 100%; display: block; margin: 0 auto; }
+    .ttd { text-align: center; padding: 0 2px; }
+    .kecil { font-size: 7.5pt; }
+    .jarak { height: 2.5mm; }
+    .hal { position: absolute; right: 2mm; bottom: -6mm; font-size: 8pt; }
+    @media print {
+      body { background: #fff; }
+      .toolbar, #status { display: none !important; }
+      .lembar { margin: 0; box-shadow: none; min-height: auto; page-break-after: always; }
+      .lembar:last-child { page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()"><i class="fa-solid fa-print"></i> Cetak / Simpan PDF</button>
+    <label><input type="checkbox" id="pisah"> Pisah per perusahaan</label>
+    <span class="info" id="info"></span>
+  </div>
+  <div id="status">Memuat data...</div>
+  <div id="kertas"></div>
+
+  <script src="auth.js"></script>
+  <script>
+    requireLogin();
+    const PER_LEMBAR = 25;
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const tglIndo = (t) => { const d = new Date(String(t) + 'T00:00:00'); return isNaN(d) ? (t || '') : d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
+    let DATA = null;
+
+    const sel = (t, max) => `<td${String(t || '').length > max ? ' class="kecil"' : ''}>${esc(t)}</td>`;
+
+    function ttdCell(nik) {
+      const img = DATA.ttd[String(nik || '').trim()];
+      return `<td class="ttd">${img ? `<img src="${img}" alt="">` : ''}</td>`;
+    }
+
+    function lembar(peserta, mulaiNo, hal, totalHal) {
+      const j = DATA.jadwal, f = DATA.fasilitator;
+      const cek = (on, label) => `<span class="kotak">${on ? '&#10003;' : ''}</span>${label}`;
+      const fasRows = [0, 1, 2, 3, 4].map((i) => i === 0 && f.nama
+        ? `<tr><td class="no">1</td>${sel(f.nama, 26)}<td>${esc(f.nik)}</td>${sel(f.jabatan, 20)}${sel(f.perusahaan, 14)}${ttdCell(f.nik)}</tr>`
+        : '<tr><td class="no"></td><td></td><td></td><td></td><td></td><td></td></tr>').join('');
+      const materi = [j.JUDUL_MATERI, j.DESKRIPSI_MATERI].filter(Boolean);
+      const matRows = [0, 1, 2, 3, 4].map((i) => `<tr><td class="no">${materi[i] ? i + 1 : ''}</td><td>${esc(materi[i] || '')}</td></tr>`).join('');
+      const pesRows = Array.from({ length: PER_LEMBAR }, (_, i) => {
+        const p = peserta[i];
+        return p
+          ? `<tr><td class="no">${mulaiNo + i}</td>${sel(p.nama, 26)}<td>${esc(p.nik)}</td>${sel(p.jabatan, 20)}${sel(p.perusahaan, 14)}${ttdCell(p.nik)}</tr>`
+          : `<tr><td class="no">${mulaiNo + i}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+      }).join('');
+      const kolom = '<colgroup><col style="width:9mm"><col style="width:52mm"><col style="width:27mm"><col style="width:40mm"><col style="width:30mm"><col></colgroup>';
+      return `<div class="lembar"><div class="bingkai">
+        <table class="kop"><tr>
+          <td class="logo"><img src="assets/Logo Hasnur.png" alt="Hasnur Group"></td>
+          <td class="dok"><div>Nomor Dokumen : FRM-EBL-S-SHE-06</div><div>Tanggal Terbit : 1-10-2024</div><div>Tanggal Revisi : -</div><div style="border-bottom:0">Revisi Ke : -</div></td>
+        </tr></table>
+        <div class="judul">FORMULIR DAFTAR HADIR</div>
+        <div class="bar">Beri tanda (&#8730;) pada kolom yang sesuai</div>
+        <table class="centang"><tr>
+          <td>${cek(true, 'Safety Talk')}</td><td>${cek(false, 'Meeting')}</td><td>${cek(false, 'Induksi')}</td><td>${cek(false, 'Investigasi')}</td>
+        </tr><tr>
+          <td>${cek(false, 'Training')}</td><td>${cek(false, 'Briefing / P5M')}</td><td>${cek(false, 'Inspeksi')}</td><td>${cek(false, 'Lain-lain ..........')}</td>
+        </tr></table>
+        <table class="info-tbl">
+          <tr><td class="lbl">Site</td><td>${esc(j.SITE)}</td><td class="lbl">Tempat</td><td>${esc(j.TEMPAT)}</td></tr>
+          <tr><td class="lbl">Tanggal</td><td>${esc(tglIndo(j.TANGGAL))}</td><td class="lbl">Waktu</td><td>${esc(j.WAKTU)}</td></tr>
+        </table>
+        <div class="jarak"></div>
+        <table>${kolom}<tr><th>No</th><th>Nama Fasilitator</th><th>NIK</th><th>Jabatan</th><th>Perusahaan</th><th>Tanda Tangan</th></tr>${fasRows}</table>
+        <div class="jarak"></div>
+        <table><colgroup><col style="width:9mm"><col></colgroup><tr><th>No</th><th>Materi</th></tr>${matRows}</table>
+        <div class="jarak"></div>
+        <div class="bar tengah">Daftar Hadir Peserta</div>
+        <table>${kolom}<tr><th>No</th><th>Nama</th><th>NIK</th><th>Jabatan</th><th>Perusahaan</th><th>Tanda Tangan</th></tr>${pesRows}</table>
+      </div><div class="hal">${hal} of ${totalHal}</div></div>`;
+    }
+
+    // Crop ke kotak goresan (piksel tidak transparan & bukan putih).
+    function potongTtd(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth; c.height = img.naturalHeight;
+            const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+            const d = x.getImageData(0, 0, c.width, c.height).data;
+            let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+            for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) {
+              const i = (y * c.width + xx) * 4;
+              if (d[i + 3] > 40 && (d[i] < 200 || d[i + 1] < 200 || d[i + 2] < 200)) {
+                if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y;
+              }
+            }
+            if (x1 < 0) return resolve(src);
+            const pad = 4, w = x1 - x0 + 1 + pad * 2, h = y1 - y0 + 1 + pad * 2;
+            const o = document.createElement('canvas'); o.width = w; o.height = h;
+            o.getContext('2d').drawImage(c, x0 - pad, y0 - pad, w, h, 0, 0, w, h);
+            resolve(o.toDataURL('image/png'));
+          } catch { resolve(src); }
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+      });
+    }
+
+    function render() {
+      const pisah = document.getElementById('pisah').checked;
+      const grup = pisah
+        ? Object.values(DATA.peserta.reduce((m, p) => ((m[p.perusahaan || '-'] ||= []).push(p), m), {}))
+        : [DATA.peserta];
+      const potongan = [];
+      for (const g of (grup.length ? grup : [[]])) {
+        for (let i = 0; i < Math.max(g.length, 1); i += PER_LEMBAR) potongan.push({ list: g.slice(i, i + PER_LEMBAR), mulai: i + 1 });
+      }
+      document.getElementById('kertas').innerHTML = potongan.map((c, i) => lembar(c.list, c.mulai, i + 1, potongan.length)).join('');
+    }
+
+    (async () => {
+      const id = new URLSearchParams(location.search).get('id') || '';
+      try {
+        const res = await fetch('/api?action=getCetakAbsensiSt&id=' + encodeURIComponent(id));
+        const j = await res.json();
+        if (!res.ok || j.status !== 'success') throw new Error(j.message || 'Gagal memuat data.');
+        DATA = j.data;
+        await Promise.all(Object.keys(DATA.ttd).map(async (k) => { DATA.ttd[k] = await potongTtd(DATA.ttd[k]); }));
+        const tanpaTtd = DATA.peserta.filter((p) => !DATA.ttd[String(p.nik).trim()]).length;
+        document.getElementById('info').textContent =
+          `${DATA.peserta.length} peserta hadir` + (tanpaTtd ? ` · ${tanpaTtd} belum punya TTD tersimpan (kolom TTD kosong)` : '');
+        document.getElementById('status').style.display = 'none';
+        render();
+        document.getElementById('pisah').addEventListener('change', render);
+      } catch (e) {
+        document.getElementById('status').textContent = e.message;
+      }
+    })();
+  </script>
+</body>
+</html>

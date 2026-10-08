@@ -117,7 +117,8 @@ function renderSchedules() {
         <div class="st-card-title">${escapeHTML(s['JUDUL_MATERI'] || '-')}</div>
         <span class="st-badge ${badgeCls}"><i class="fa-solid ${badgeIcon}"></i> ${status}</span>
       </div>
-      <div class="st-card-meta"><i class="fa-regular fa-calendar"></i> ${tgl}</div>
+      <div class="st-card-meta"><i class="fa-regular fa-calendar"></i> ${tgl}${s['WAKTU'] ? ' · ' + escapeHTML(s['WAKTU']) : ''}</div>
+      ${s['TEMPAT'] || s['SITE'] ? `<div class="st-card-meta"><i class="fa-solid fa-location-dot"></i> ${escapeHTML([s['TEMPAT'], s['SITE']].filter(Boolean).join(', '))}</div>` : ''}
       ${s['NAMA_PEMATERI'] ? `<div class="st-card-meta"><i class="fa-solid fa-person-chalkboard"></i> ${escapeHTML(s['NAMA_PEMATERI'])}${s['JABATAN_PEMATERI'] ? ' · ' + escapeHTML(s['JABATAN_PEMATERI']) : ''}</div>` : ''}
       ${s['PERUSAHAAN_TARGET'] ? `<div class="st-card-meta"><i class="fa-solid fa-building"></i> ${escapeHTML(s['PERUSAHAAN_TARGET'])}</div>` : '<div class="st-card-meta"><i class="fa-solid fa-building"></i> Semua Perusahaan</div>'}
       ${s['DESKRIPSI_MATERI'] ? `<div class="st-card-desc">${escapeHTML(s['DESKRIPSI_MATERI'])}</div>` : ''}
@@ -133,6 +134,9 @@ function renderSchedules() {
       <div class="st-card-footer">
         <a href="safety-talk-absensi.html?id=${encodeURIComponent(id)}" class="btn-indigo-soft">
           <i class="fa-solid fa-clipboard-list"></i> Kelola Absensi
+        </a>
+        <a href="safety-talk-cetak.html?id=${encodeURIComponent(id)}" target="_blank" class="btn-indigo-soft" title="Cetak Daftar Hadir (FRM-EBL-S-SHE-06)">
+          <i class="fa-solid fa-print"></i> Cetak Absensi
         </a>
         <button class="btn-indigo-soft" onclick="editJadwal('${id}')" title="Edit jadwal ini">
           <i class="fa-solid fa-pen"></i>
@@ -161,6 +165,11 @@ function openCreateModal() {
   document.getElementById('stTanggal').value = new Date().toISOString().slice(0, 10);
   document.getElementById('stJudul').value = '';
   document.getElementById('stDeskripsi').value = '';
+  try {
+    document.getElementById('stSite').value = localStorage.getItem('st_last_site') || '';
+    document.getElementById('stWaktu').value = localStorage.getItem('st_last_waktu') || '';
+    document.getElementById('stTempat').value = localStorage.getItem('st_last_tempat') || '';
+  } catch {}
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue('');
   document.getElementById('stTargetCo').value = '';
   document.getElementById('createErr').style.display = 'none';
@@ -176,6 +185,9 @@ function editJadwal(id) {
   document.getElementById('stTanggal').value = s['TANGGAL'] || '';
   document.getElementById('stJudul').value = s['JUDUL_MATERI'] || '';
   document.getElementById('stDeskripsi').value = s['DESKRIPSI_MATERI'] || '';
+  document.getElementById('stSite').value = s['SITE'] || '';
+  document.getElementById('stWaktu').value = s['WAKTU'] || '';
+  document.getElementById('stTempat').value = s['TEMPAT'] || '';
   if (_stPemateriChoices) _stPemateriChoices.setChoiceByValue(s['NAMA_PEMATERI'] || '');
   document.getElementById('stTargetCo').value = s['PERUSAHAAN_TARGET'] || '';
   document.getElementById('createErr').style.display = 'none';
@@ -210,7 +222,15 @@ async function submitCreate() {
     nik_pemateri:     karFound?.['NIK']     || '',
     jabatan_pemateri: karFound?.['JABATAN'] || '',
     perusahaan_target: document.getElementById('stTargetCo').value,
+    site:   document.getElementById('stSite').value.trim(),
+    tempat: document.getElementById('stTempat').value.trim(),
+    waktu:  document.getElementById('stWaktu').value.trim(),
   };
+  try {
+    localStorage.setItem('st_last_site', payload.site);
+    localStorage.setItem('st_last_waktu', payload.waktu);
+    localStorage.setItem('st_last_tempat', payload.tempat);
+  } catch {}
   try {
     const isEdit = !!_editingStId;
     const res = await fetch('/api', {
