@@ -1124,6 +1124,30 @@ async function saveMySignature(auth, data) {
   return { status: 'success' };
 }
 
+// TTD PIC dibekukan saat closing dikirim (2026-10-08): cetakan laporan itu tidak
+// berubah walau PIC mengganti tanda tangannya nanti. Tabel terpisah (bukan di data
+// laporan) supaya daftar laporan tetap ringan — gambar ±20 KB per laporan.
+let _closingSigTable = false;
+async function _bekukanTtdPic(id, nikPic, namaPic) {
+  const ttd = await _latestSignature(nikPic, namaPic);
+  if (!ttd) return;
+  const sql = getSql();
+  if (!_closingSigTable) {
+    await sql`CREATE TABLE IF NOT EXISTS closing_signature (id text PRIMARY KEY, data text NOT NULL, created_at timestamptz DEFAULT now())`;
+    _closingSigTable = true;
+  }
+  await sql`INSERT INTO closing_signature (id, data) VALUES (${String(id).trim()}, ${ttd})
+    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, created_at = now()`;
+}
+
+async function hapusMySignature(auth) {
+  const nik = String(auth.nik || '').trim();
+  if (!nik) throw new Error('Akun tanpa NIK.');
+  await getSql()`INSERT INTO user_signature (nik, data, updated_at) VALUES (${nik}, '', now())
+    ON CONFLICT (nik) DO UPDATE SET data = '', updated_at = now()`;
+  return { status: 'success' };
+}
+
 async function getReportById(id, auth) {
   const sql = getSql();
   const idT = String(id || '').trim();
@@ -1149,7 +1173,9 @@ async function getReportById(id, auth) {
         return { status: 'error', message: 'Akses ditolak.' };
     }
   }
-  report.pic_signature = await _latestSignature(report.nik_pic, report.nama_pic).catch(() => '');
+  // TTD saat closing (dibekukan); laporan lama tanpa itu → TTD tersimpan terbaru PIC.
+  const beku = (await getSql()`SELECT data FROM closing_signature WHERE id = ${idT}`.catch(() => []))[0];
+  report.pic_signature = beku?.data || await _latestSignature(report.nik_pic, report.nama_pic).catch(() => '');
   return { status: 'success', data: report };
 }
 
@@ -2179,6 +2205,9 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
   if (data.status_perbaikan === 'CLOSED') fields['TANGGAL CLOSING'] = new Date().toISOString();
   if (data.closing_status) fields['CLOSING_STATUS'] = data.closing_status;
   await _reportSet(sheetName, data.id, fields);
+  if (data.status_perbaikan === 'FOLLOWUP' && sheetName !== 'SBO_Report') {
+    await _bekukanTtdPic(data.id, rowObj['nik_pic'], rowObj['nama_pic']).catch((e) => console.error('[ttd closing]', e.message));
+  }
 
   // [PUSH-START] — push/WA ke pelapor saat laporan FOLLOWUP atau CLOSED
   if (data.status_perbaikan === 'CLOSED' || data.status_perbaikan === 'FOLLOWUP') {
@@ -3212,6 +3241,7 @@ module.exports = async (req, res) => {
         }
         case 'disputePic':          result = await disputePic(sheets, authUser, data); break;
         case 'saveMySignature':     result = await saveMySignature(authUser, data); break;
+        case 'hapusMySignature':    result = await hapusMySignature(authUser); break;
         case 'resolvePicDispute':   result = await resolvePicDispute(sheets, authUser, data); break;
         case 'updateHazardReport': {
           if (data.status_perbaikan === 'CLOSED') {

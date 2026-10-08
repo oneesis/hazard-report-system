@@ -662,3 +662,106 @@ const FormDefaults = {
     group.appendChild(wrap);
   },
 };
+
+// ── Tanda Tangan Saya (2026-10-08) ───────────────────────────────────────────
+// Lihat / gambar ulang / hapus tanda tangan tersimpan. TTD ini dipakai otomatis di
+// form Hazard & Inspeksi, dan sebagai TTD PIC saat laporan dicetak (dibekukan saat
+// PIC mengirim closing). Backend: getMySignature / saveMySignature / hapusMySignature.
+function openMySignatureModal() {
+  if (typeof closeUserMenu === 'function') closeUserMenu();
+  let modal = document.getElementById('mySignatureModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'mySignatureModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:999999;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65);box-sizing:border-box;font-family:Inter,system-ui,sans-serif;';
+    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+    const btn = 'display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;font-size:.85rem;font-family:inherit;';
+    modal.innerHTML = `
+      <div style="position:relative;background:#fff;border-radius:20px;width:min(480px,100%);box-shadow:0 32px 80px rgba(0,0,0,.35);overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:14px;padding:20px 22px 16px;border-bottom:1px solid #e8edf5;">
+          <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;"><i class="fa-solid fa-signature"></i></div>
+          <div style="flex:1;min-width:0;">
+            <h3 style="margin:0;font-size:1.05rem;font-weight:700;color:#0f172a;">Tanda Tangan Saya</h3>
+            <p style="margin:3px 0 0;font-size:.78rem;color:#64748b;">Dipakai otomatis di form laporan dan sebagai TTD PIC saat laporan dicetak.</p>
+          </div>
+          <button type="button" data-act="tutup" aria-label="Tutup" style="background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;padding:6px 8px;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="padding:20px 22px;">
+          <div id="msgPreview" style="height:190px;border:1.5px dashed #cbd5e1;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#64748b;font-size:.85rem;text-align:center;padding:8px;box-sizing:border-box;"></div>
+          <canvas id="msgCanvas" style="display:none;width:100%;height:190px;border:1.5px solid #3b82f6;border-radius:12px;background:#fff;touch-action:none;cursor:crosshair;"></canvas>
+          <p id="msgInfo" style="font-size:.8rem;color:#64748b;min-height:18px;margin:10px 0 14px;"></p>
+          <div id="msgActsLihat" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+            <button type="button" data-act="hapus" style="${btn}border:1.5px solid #fecaca;background:#fff;color:#b91c1c;"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button type="button" data-act="gambar" style="${btn}border:none;background:#F2A900;color:#00205B;"><i class="fa-solid fa-pen"></i> <span id="msgGambarLbl">Gambar ulang</span></button>
+          </div>
+          <div id="msgActsGambar" style="display:none;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+            <button type="button" data-act="bersih" style="${btn}border:1.5px solid #e2e8f0;background:#fff;color:#475569;"><i class="fa-solid fa-eraser"></i> Bersihkan</button>
+            <button type="button" data-act="batal" style="${btn}border:1.5px solid #e2e8f0;background:#fff;color:#475569;">Batal</button>
+            <button type="button" data-act="simpan" style="${btn}border:none;background:#F2A900;color:#00205B;"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const cv = modal.querySelector('#msgCanvas');
+    const ctx = cv.getContext('2d');
+    let drawing = false, drew = false, last = null;
+    const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    cv.addEventListener('pointerdown', (e) => { drawing = true; drew = true; last = pos(e); cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x, last.y, 1.2, 0, Math.PI * 2); ctx.fill(); });
+    cv.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; });
+    ['pointerup', 'pointercancel'].forEach((ev) => cv.addEventListener(ev, () => { drawing = false; }));
+
+    const $ = (id) => modal.querySelector('#' + id);
+    const info = (t, err) => { $('msgInfo').textContent = t || ''; $('msgInfo').style.color = err ? '#b91c1c' : '#64748b'; };
+    const api = async (action, body) => {
+      const opt = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, data: body }) };
+      const res = await fetch(body === undefined ? '/api?action=' + action : '/api', opt);
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.status === 'error') throw new Error(j.message || 'Gagal.');
+      return j;
+    };
+    const modeLihat = (img) => {
+      cv.style.display = 'none'; $('msgPreview').style.display = 'flex';
+      $('msgActsGambar').style.display = 'none'; $('msgActsLihat').style.display = 'flex';
+      $('msgPreview').innerHTML = img
+        ? `<img src="${img}" alt="Tanda tangan" style="max-width:100%;max-height:100%;object-fit:contain;">`
+        : 'Belum ada tanda tangan tersimpan.<br>Tekan "Buat tanda tangan" untuk membuatnya.';
+      modal.querySelector('[data-act="hapus"]').style.display = img ? '' : 'none';
+      $('msgGambarLbl').textContent = img ? 'Gambar ulang' : 'Buat tanda tangan';
+    };
+    const modeGambar = () => {
+      $('msgPreview').style.display = 'none'; cv.style.display = 'block';
+      $('msgActsLihat').style.display = 'none'; $('msgActsGambar').style.display = 'flex';
+      const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0f172a'; ctx.fillStyle = '#0f172a';
+      drew = false; info('Tanda tangan di kotak di atas.');
+    };
+    modal._load = async () => {
+      modeLihat(''); $('msgPreview').textContent = 'Memuat...'; info('');
+      try { modeLihat((await api('getMySignature')).data || ''); } catch (e) { info(e.message, true); }
+    };
+    modal.addEventListener('click', async (e) => {
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (!act) return;
+      if (act === 'tutup') modal.style.display = 'none';
+      if (act === 'gambar') modeGambar();
+      if (act === 'bersih') modeGambar();
+      if (act === 'batal') modal._load();
+      if (act === 'simpan') {
+        if (!drew) return info('Tanda tangan masih kosong.', true);
+        info('Menyimpan...');
+        try { await api('saveMySignature', { tanda_tangan: cv.toDataURL('image/png') }); await modal._load(); info('Tanda tangan tersimpan.'); }
+        catch (err) { info(err.message, true); }
+      }
+      if (act === 'hapus') {
+        if (!confirm('Hapus tanda tangan tersimpan? Form berikutnya akan meminta tanda tangan baru.')) return;
+        try { await api('hapusMySignature', {}); await modal._load(); info('Tanda tangan dihapus.'); }
+        catch (err) { info(err.message, true); }
+      }
+    });
+  }
+  modal.style.display = 'flex';
+  modal._load();
+}

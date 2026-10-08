@@ -108,6 +108,9 @@
           <button class="sidebar-logout-btn push-notif-btn" onclick="togglePushNotification()" title="Aktifkan push notification">
             <i class="fa-solid fa-bell-slash"></i>
           </button>
+          <button class="sidebar-logout-btn" onclick="openMySignatureModal()" title="Tanda Tangan Saya">
+            <i class="fa-solid fa-signature"></i>
+          </button>
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password" style="position:relative">
             <i class="fa-solid fa-key"></i>
             ${window.__onesapForcePw ? '<span class="pw-force-dot"></span>' : ''}
@@ -192,6 +195,9 @@
           <div class="profile-sheet-name">${safe(user?.nama || 'User')}</div>
           <div class="profile-sheet-role">${safe(role || 'USER')}</div>
           <div class="profile-sheet-actions">
+            <button class="btn-secondary" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; openMySignatureModal()">
+              <i class="fa-solid fa-signature"></i> Tanda Tangan Saya
+            </button>
             <button class="btn-secondary" onclick="document.getElementById('__mobileProfileSheet').style.display='none'; openChangePasswordModal()" style="position:relative">
               <i class="fa-solid fa-key"></i> Ganti Password
               ${window.__onesapForcePw ? '<span class="pw-force-dot" style="top:6px;right:6px"></span>' : ''}
