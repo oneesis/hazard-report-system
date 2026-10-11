@@ -32,12 +32,14 @@ function renderWaBadge(r, isInspection) {
   const map = {
     'TERKIRIM':    { label: '✓ Terkirim', cls: 'terkirim' },
     'GAGAL':       { label: '✗ Gagal',    cls: 'gagal' },
-    'TIDAK ADA WA':{ label: 'Tidak ada nomor WA', cls: 'tidak-ada' },
   };
-  const info = map[raw] || { label: raw || '-', cls: 'tidak-ada' };
+  const info = map[raw] || { label: '-', cls: 'tidak-ada' };
   badge.textContent = info.label;
   badge.className   = `detail-wa-badge ${info.cls}`;
-  if (btn) btn.style.display = (raw !== 'TIDAK ADA WA') ? '' : 'none';
+  // Tombol pengingat (email + PWA) untuk admin, selama laporan belum ditutup.
+  const role = String(getDetailUser()?.role || '').toUpperCase().replace(/\s+/g, '_');
+  const tutup = String(r.status_perbaikan || '').toUpperCase() === 'CLOSED';
+  if (btn) btn.style.display = (['ADMIN', 'SUPER_ADMIN'].includes(role) && !tutup) ? '' : 'none';
 }
 
 async function resendWaPic() {
@@ -55,18 +57,18 @@ async function resendWaPic() {
   try {
     const res = await fetch('/api', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'resendWaPic', data: { report_id: id, sheet_name: sheet } })
+      body: JSON.stringify({ action: 'ingatkanPic', data: { report_id: id, sheet_name: sheet } })
     });
     const result = await res.json();
     if (result.wa_pic_status) {
       r['WA_PIC_STATUS'] = result.wa_pic_status;
       renderWaBadge(r, isInspection);
     }
-    const msg = result.message || (result.status === 'success' ? 'WA berhasil dikirim.' : 'Gagal mengirim WA.');
+    const msg = result.message || (result.status === 'success' ? 'Pengingat terkirim.' : 'Gagal mengirim pengingat.');
     showToast(msg, result.status === 'success' ? 'success' : 'error');
   } catch (e) { showToast(e.message, 'error'); }
   finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Kirim Ulang'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-bell"></i> Ingatkan PIC'; }
   }
 }
 

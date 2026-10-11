@@ -183,7 +183,15 @@ function _reportsLsWrite(data) {
   try { const key = _reportsLsKey(); if (key) localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
 }
 
-function invalidateReportsCache() { _fetchAllReportsCache = null; }
+// Kosongkan cache memori + localStorage (dipanggil otomatis oleh auth.js setiap
+// kali ada perubahan dikirim ke /api, mis. kirim laporan / closing).
+function invalidateReportsCache() {
+  _fetchAllReportsCache = null;
+  try { const key = _reportsLsKey(); if (key) localStorage.removeItem(key); } catch {}
+}
+// U10 (2026-10-12): pindah halaman tidak lagi selalu mengambil ulang SEMUA laporan
+// di latar belakang — hanya bila salinan localStorage lebih tua dari 1 menit.
+const _REPORTS_BG_REFRESH = 60_000;
 
 async function fetchAllReports() {
   if (_fetchAllReportsCache && Date.now() - _fetchAllReportsCache.ts < _REPORTS_TTL) {
@@ -194,9 +202,11 @@ async function fetchAllReports() {
   const ls = _reportsLsRead();
   if (ls && !_fetchAllReportsInFlight) {
     _fetchAllReportsCache = ls; // set in-memory dari ls agar call berikutnya dalam TTL juga instan
-    _doFetchReports().then(data => {
-      document.dispatchEvent(new CustomEvent('reportsRefreshed', { detail: data }));
-    }).catch(() => {});
+    if (Date.now() - ls.ts > _REPORTS_BG_REFRESH) {
+      _doFetchReports().then(data => {
+        document.dispatchEvent(new CustomEvent('reportsRefreshed', { detail: data }));
+      }).catch(() => {});
+    }
     return ls.data;
   }
 

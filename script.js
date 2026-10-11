@@ -1309,7 +1309,7 @@ async function submitForm() {
     const btnSubmit = document.getElementById("btnSubmit");
     if (btnSubmit) {
       btnSubmit.disabled = false;
-      btnSubmit.textContent = "Submit Report";
+      btnSubmit.textContent = "Kirim Laporan";
     }
   }
 }

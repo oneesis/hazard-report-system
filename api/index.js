@@ -3166,19 +3166,24 @@ module.exports = async (req, res) => {
         case 'reviewChange':
           result = await reviewChange(sheets, authUser, data?.change_id, data?.decision, data?.reason);
           break;
-        case 'resendWaPic': {
-          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Hanya admin yang bisa kirim ulang WA PIC.'), { httpStatus: 403 });
-          const sheetTarget = data?.sheet_name || 'Hazard_Report';
-          const reportRow = (await getSheetData(sheets, sheetTarget)).find(r => r['ID'] === data?.report_id || r['id'] === data?.report_id);
-          if (!reportRow) throw new Error('Laporan tidak ditemukan.');
-          const waTarget = reportRow['NO WHATSAPP PIC'] || reportRow['NO WHATTSAPP PIC'] || reportRow['no_whatsapp_pic'] || '';
-          const namaPic  = reportRow['NAMA PIC'] || reportRow['nama_pic'] || '';
-          if (!waTarget) throw new Error('Nomor WA PIC tidak ada di laporan ini.');
-          const msg = `Halo ${namaPic}, pengingat: kamu adalah PIC untuk laporan *${data.report_id}*.\n\n🔗 Detail laporan: https://sap-ebl.vercel.app/laporan-detail.html?id=${data.report_id}`;
-          const sent = await sendWaNotification(waTarget, msg).catch(() => false);
-          const newStatus = sent ? 'TERKIRIM' : 'GAGAL';
-          await writeWaStatusToSheet(sheets, sheetTarget, data.report_id, newStatus);
-          result = { status: 'success', wa_pic_status: newStatus, message: sent ? 'WA berhasil dikirim ulang.' : 'Gagal mengirim WA.' };
+        // Ingatkan PIC (2026-10-12): email + notifikasi PWA ke PIC (dulu WhatsApp & baca
+        // Google Sheets lama). Dipakai tombol di detail laporan & halaman Eskalasi.
+        case 'resendWaPic':
+        case 'ingatkanPic': {
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Hanya admin yang bisa mengingatkan PIC.'), { httpStatus: 403 });
+          const rid = String(data?.report_id || '').trim();
+          const sheetTarget = rid.startsWith('INSP-') ? 'INSPECTION' : 'Hazard_Report';
+          const rep = await _reportFind(sheetTarget, rid);
+          if (!rep) throw new Error('Laporan tidak ditemukan.');
+          const namaPic = rep.nama_pic || '';
+          if (!namaPic && !rep.nik_pic) throw new Error('PIC belum ditentukan di laporan ini.');
+          const batas = rep.batas_waktu ? new Date(rep.batas_waktu).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+          const url = `https://sap-ebl.vercel.app/laporan-detail.html?id=${encodeURIComponent(rid)}`;
+          await _notifyPerson(sheets, { nik: rep.nik_pic, nama: namaPic, wa: rep.no_whatsapp_pic || rep.no_whattsapp_pic },
+            `Pengingat PIC: laporan ${rid}`,
+            `Halo ${namaPic}, kamu PIC untuk laporan ${rid}${batas ? ` (batas waktu ${batas})` : ''}. Mohon segera ditindaklanjuti.\n\nDikirim oleh ${authUser.nama || 'Admin ONE-SAP'}.`, url);
+          await writeWaStatusToSheet(sheets, rep.report_type === 'INSPECTION' ? rep.inspection_sheet : 'Hazard_Report', rid, 'TERKIRIM');
+          result = { status: 'success', wa_pic_status: 'TERKIRIM', message: `Pengingat dikirim ke ${namaPic || 'PIC'} (email & notifikasi).` };
           break;
         }
         case 'deleteSafetyTalkSchedule': {

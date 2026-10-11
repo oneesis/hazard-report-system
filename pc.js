@@ -87,11 +87,12 @@ function renderPcList() {
   });
 
   const list = document.getElementById('pcList');
+  list.classList.remove('pc-loading'); // U6: gaya 'memuat' (rata tengah) jangan menempel di daftar
 
   if (!data.length) {
     list.innerHTML = `
       <div class="pc-empty">
-        <span class="pc-empty-icon">💬</span>
+        <span class="pc-empty-icon"><i class="fa-regular fa-comments"></i></span>
         <div class="pc-empty-title">Belum ada Personal Contact</div>
         <div class="pc-empty-sub">PC yang kamu buat atau terima akan muncul di sini.</div>
       </div>`;
@@ -101,8 +102,8 @@ function renderPcList() {
   list.innerHTML = data.map(r => {
     const st = (v(r,'status') || 'OPEN').toUpperCase();
     const stClass = st === 'CLOSED' ? 'closed' : 'open';
-    const stLabel = st === 'CLOSED' ? '✅ Closed' : '⏳ Open';
-    const topikEmoji = v(r,'topik_coaching') === 'Pribadi' ? '👤' : '🏗️';
+    const stLabel = st === 'CLOSED' ? '<i class="fa-solid fa-circle-check"></i> Closed' : '<i class="fa-solid fa-hourglass-half"></i> Open';
+    const topikEmoji = v(r,'topik_coaching') === 'Pribadi' ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-helmet-safety"></i>';
 
     const coacheeNik  = v(r,'nik_coachee').toLowerCase();
     const coacheeNama = v(r,'nama_coachee').toLowerCase();

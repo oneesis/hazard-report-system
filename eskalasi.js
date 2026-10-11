@@ -1,3 +1,29 @@
+// Paging + pencarian (2026-10-12, evaluasi UX U5): dulu SEMUA kartu (400+) dirender
+// sekaligus → halaman ±80.000px di HP. Sekarang 12 per kelompok + "Tampilkan lagi".
+const ESK_PER = 12;
+const _eskData = { overdue: [], warning: [], ok: [] };
+const _eskShown = { overdue: ESK_PER, warning: ESK_PER, ok: ESK_PER };
+let _eskQuery = '';
+const ESK_TARGET = { overdue: ['cardsOverdue', 'countOverdue'], warning: ['cardsWarning', 'countWarning'], ok: ['cardsOk', 'countOk'] };
+
+function eskCocok(r) {
+  if (!_eskQuery) return true;
+  const teks = [getReportId(r), r.nama_pic, r.nama, r.perusahaan, r.company, getDashboardLocation(r), r.deskripsi_bahaya, r.temuan]
+    .map((x) => String(x || '').toLowerCase()).join(' ');
+  return _eskQuery.split(/\s+/).every((q) => teks.includes(q));
+}
+
+function eskCari(v) {
+  _eskQuery = String(v || '').trim().toLowerCase();
+  for (const t of Object.keys(_eskShown)) _eskShown[t] = ESK_PER;
+  for (const t of Object.keys(ESK_TARGET)) renderGroup(...ESK_TARGET[t], _eskData[t], t);
+}
+
+function eskLagi(type) {
+  _eskShown[type] += ESK_PER;
+  renderGroup(...ESK_TARGET[type], _eskData[type], type);
+}
+
 async function loadEskalasi() {
   const btn = document.getElementById('btnRefresh');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...'; }
@@ -46,6 +72,7 @@ async function loadEskalasi() {
     set('sumOk',      ok.length);
     set('sumNoDue',   nodue.length);
 
+    Object.assign(_eskData, { overdue, warning, ok });
     renderGroup('cardsOverdue', 'countOverdue', overdue, 'overdue');
     renderGroup('cardsWarning', 'countWarning', warning, 'warning');
     renderGroup('cardsOk',      'countOk',      ok,      'ok');
@@ -61,19 +88,23 @@ async function loadEskalasi() {
   }
 }
 
-function renderGroup(cardsId, countId, reports, type) {
+function renderGroup(cardsId, countId, allReports, type) {
   const count = document.getElementById(countId);
   const cards = document.getElementById(cardsId);
-  if (count) count.textContent = reports.length;
+  const reports = allReports.filter(eskCocok);
+  if (count) count.textContent = _eskQuery ? `${reports.length} / ${allReports.length}` : reports.length;
   if (!cards) return;
 
   if (!reports.length) {
     const labels = { overdue: 'Tidak ada laporan overdue.', warning: 'Tidak ada laporan dalam warning.', ok: 'Semua laporan aktif on track.' };
-    cards.innerHTML = `<p class="esk-empty">${labels[type]}</p>`;
+    cards.innerHTML = `<p class="esk-empty">${_eskQuery ? 'Tidak ada yang cocok dengan pencarian.' : labels[type]}</p>`;
     return;
   }
 
-  cards.innerHTML = reports.map(r => eskCard(r, type)).join('');
+  const shown = reports.slice(0, _eskShown[type] || ESK_PER);
+  const sisa = reports.length - shown.length;
+  cards.innerHTML = shown.map(r => eskCard(r, type)).join('')
+    + (sisa > 0 ? `<div class="esk-more"><button type="button" onclick="eskLagi('${type}')">Tampilkan ${Math.min(ESK_PER, sisa)} lagi</button><small>Menampilkan ${shown.length} dari ${reports.length}</small></div>` : '');
 }
 
 function eskCard(r, type) {
@@ -103,12 +134,13 @@ function eskCard(r, type) {
 
   const badgeCls = status === 'OPEN' ? 'status-open' : 'status-progress';
 
-  const waBtn = picWa
-    ? `<button class="btn-wa-reminder" onclick="sendWaReminder('${escapeHTML(picWa)}','${escapeHTML(id)}','${escapeHTML(pic)}')">
-        <i class="fa-brands fa-whatsapp"></i> Ingatkan PIC
+  const adaPic = (r.nama_pic || r.nik_pic) && pic !== '-';
+  const waBtn = adaPic
+    ? `<button class="btn-wa-reminder" onclick="ingatkanPic(this,'${id}')" title="Kirim pengingat ke PIC lewat email & notifikasi">
+        <i class="fa-solid fa-bell"></i> Ingatkan PIC
        </button>`
-    : `<button class="btn-wa-reminder" disabled title="No. WA PIC tidak tersedia">
-        <i class="fa-brands fa-whatsapp"></i> Ingatkan PIC
+    : `<button class="btn-wa-reminder" disabled title="PIC belum ditentukan">
+        <i class="fa-solid fa-bell"></i> Ingatkan PIC
        </button>`;
 
   return `<div class="esk-card esk-card--${type}">
@@ -133,6 +165,25 @@ function eskCard(r, type) {
   </div>`;
 }
 
+// Pengingat PIC lewat server — email + notifikasi PWA (2026-10-12, dulu buka WhatsApp).
+async function ingatkanPic(btn, reportId) {
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+  try {
+    const res = await fetch('/api', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'ingatkanPic', data: { report_id: reportId } }) });
+    const j = await res.json();
+    if (!res.ok || j.status !== 'success') throw new Error(j.message || 'Gagal mengirim pengingat.');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Terkirim';
+    if (typeof showToast === 'function') showToast(j.message, 'success');
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bell"></i> Ingatkan PIC';
+    if (typeof showToast === 'function') showToast(e.message, 'error'); else alert(e.message);
+  }
+}
+
+// (lama, tidak dipakai lagi) buka WhatsApp manual
 function sendWaReminder(waNumber, reportId, picName) {
   const user = getCurrentUser();
   const sender = user?.nama || 'Tim ONE-SAP';

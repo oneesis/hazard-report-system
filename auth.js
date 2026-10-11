@@ -173,6 +173,12 @@ function confirmLogout() {
     if (isApiCall && !isLoginCall && response.status === 401) {
       logout();
     }
+    // Ada perubahan dikirim (POST) → cache daftar laporan dikosongkan supaya data baru
+    // langsung tampil (U10: cache kini tidak di-refresh tiap pindah halaman).
+    if (isApiCall && !isLoginCall && response.ok && String(init.method || 'GET').toUpperCase() === 'POST'
+        && typeof invalidateReportsCache === 'function') {
+      try { invalidateReportsCache(); } catch {}
+    }
     return response;
   };
 })();

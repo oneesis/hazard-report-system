@@ -213,6 +213,22 @@
     sheet.style.display = 'flex';
   };
 
+  // Tabel → kartu di HP (U7): beri data-label pada tiap sel dari teks header kolom.
+  function labelTabelKartu() {
+    document.querySelectorAll('table.tbl-kartu').forEach((t) => {
+      const head = t.querySelector('thead tr');
+      if (!head) return;
+      // buang ikon sortir/filter (⇅ ▲ ▼ dsb.) dari teks header
+      const labels = [...head.children].map((th) => th.textContent.replace(/[^\p{L}\p{N}%&()./\s-]/gu, '').replace(/\s+/g, ' ').trim());
+      t.querySelectorAll('tbody tr').forEach((tr) => {
+        [...tr.children].forEach((td, i) => { if (td.dataset.label === undefined) td.dataset.label = td.colSpan > 1 ? '' : (labels[i] || ''); });
+      });
+    });
+  }
+  let _ltkJadwal = 0;
+  new MutationObserver(() => { cancelAnimationFrame(_ltkJadwal); _ltkJadwal = requestAnimationFrame(labelTabelKartu); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+
   function closeSidebar() {
     document.getElementById('appSidebar')?.classList.remove('open');
     document.getElementById('sidebarOverlay')?.classList.remove('active');

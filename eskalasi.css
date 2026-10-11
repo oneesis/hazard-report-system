@@ -112,6 +112,20 @@
   font-size: .72rem;
 }
 
+.esk-search { position: relative; margin: 0 0 16px; }
+.esk-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+.esk-search input {
+  width: 100%; box-sizing: border-box; padding: 12px 14px 12px 40px; min-height: 44px;
+  border: 1.5px solid #e2e8f0; border-radius: 12px; font: inherit; font-size: .9rem; background: #fff;
+}
+.esk-search input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+.esk-more { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0 4px; }
+.esk-more button {
+  background: #fff; border: 1.5px solid #cbd5e1; color: #1e293b; border-radius: 10px;
+  padding: 10px 18px; min-height: 42px; font-weight: 700; font-size: .85rem; cursor: pointer; font-family: inherit;
+}
+.esk-more small { color: #64748b; font-size: .78rem; }
+
 .esk-empty {
   font-size: .82rem;
   color: #94a3b8;
@@ -224,7 +238,7 @@
   align-items: center;
   gap: 5px;
   padding: 6px 12px;
-  background: #25d366;
+  background: #00205B;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -235,7 +249,7 @@
   white-space: nowrap;
 }
 
-.btn-wa-reminder:hover { background: #1ebe5d; }
+.btn-wa-reminder:hover { background: #0b2f73; }
 .btn-wa-reminder:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── Responsive ── */

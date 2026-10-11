@@ -66,6 +66,7 @@ async function initHomePage() {
   const stPromise = renderPenggantiST(); // resolve = jumlah kuis pengganti yg belum
   initNotificationBell();
   maybeShowStQuizPopup(); // popup kuis pengganti ST bila capaian belum 100% & bukan mangkir
+  renderPushBanner();     // ajakan aktifkan notifikasi PWA (U3)
 
   try {
     const [reports, obj, extras, stCounts] = await Promise.all([refreshNotifications(), fetchMyObj(), fetchMyActivityExtras(),
@@ -474,6 +475,45 @@ async function maybeShowStQuizPopup() {
     </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
+}
+
+// Ajakan aktifkan notifikasi PWA (2026-10-12, evaluasi UX U3). Pengingat PIC, kuis
+// pengganti Safety Talk, dll. dikirim lewat push — tombolnya selama ini hanya ikon
+// lonceng tanpa label di sidebar. Muncul bila didukung & belum berlangganan; "Nanti"
+// menyembunyikan 7 hari. Izin diblokir → petunjuk membuka pengaturan browser.
+async function renderPushBanner() {
+  const el = document.getElementById('pushBanner');
+  if (!el || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+  try { if (Number(localStorage.getItem('push_banner_nanti') || 0) > Date.now()) return; } catch {}
+  let aktif = false;
+  try { aktif = !!(await (await navigator.serviceWorker.ready).pushManager.getSubscription()); } catch {}
+  if (aktif) { el.style.display = 'none'; return; }
+  const diblokir = Notification.permission === 'denied';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:14px;padding:12px 14px;margin:0 0 14px">
+      <div style="width:38px;height:38px;border-radius:10px;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-bell"></i></div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-weight:700;color:#1e293b;font-size:.92rem">${diblokir ? 'Notifikasi diblokir' : 'Aktifkan notifikasi ONE-SAP'}</div>
+        <div style="color:#475569;font-size:.8rem;line-height:1.45">${diblokir
+          ? 'Buka pengaturan browser / aplikasi, izinkan notifikasi untuk ONE-SAP, lalu muat ulang halaman.'
+          : 'Supaya langsung tahu saat ditunjuk jadi PIC, laporan perlu ditinjau, atau ada kuis pengganti Safety Talk.'}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${diblokir ? '' : '<button type="button" id="pushBannerOn" style="background:#4f46e5;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;font-size:.85rem;cursor:pointer;min-height:40px">Aktifkan</button>'}
+        <button type="button" id="pushBannerNanti" style="background:none;border:none;color:#64748b;font-size:.85rem;cursor:pointer;padding:10px 8px;min-height:40px">Nanti</button>
+      </div>
+    </div>`;
+  el.style.display = '';
+  document.getElementById('pushBannerNanti').onclick = () => {
+    try { localStorage.setItem('push_banner_nanti', String(Date.now() + 7 * 864e5)); } catch {}
+    el.style.display = 'none';
+  };
+  const on = document.getElementById('pushBannerOn');
+  if (on) on.onclick = async () => {
+    on.disabled = true; on.textContent = 'Mengaktifkan...';
+    if (typeof window.togglePushNotification === 'function') await window.togglePushNotification();
+    renderPushBanner();
+  };
 }
 
 function deleteHazardDraft() {

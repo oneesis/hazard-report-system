@@ -59,13 +59,13 @@ body { font-family: var(--font-sans); }
 .btn-wa-resend {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 10px;
-  background: #25d366; color: #fff;
+  background: #00205B; color: #fff;
   border: none; border-radius: var(--radius-control);
   cursor: pointer; font-size: .75rem; font-weight: 700;
   font-family: var(--font-sans); transition: background .15s;
   white-space: nowrap;
 }
-.btn-wa-resend:hover { background: #1da851; }
+.btn-wa-resend:hover { background: #0b2f73; }
 
 /* ── Shared confirm/alert modal (logout, reject, etc.) ── */
 .cm-overlay {
@@ -1029,3 +1029,37 @@ body:has(.app-layout) {
   .ios-install-banner { display: none; }
 }
 .profile-sheet-actions > * { width: 100%; justify-content: center; }
+
+
+/* ── Tabel → kartu di HP (2026-10-12, evaluasi UX U7) ─────────────────────────
+   Tabel bertanda .tbl-kartu: di layar <=640px tiap baris jadi kartu, tiap sel jadi
+   baris "LABEL ... nilai". Label diisi otomatis dari header kolom oleh layout.js
+   (atribut data-label). Capaian SAP sengaja TIDAK memakai ini (tabel ringkas +
+   kolom Nama dibekukan, permintaan user). */
+@media (max-width: 640px) {
+  table.tbl-kartu, table.tbl-kartu tbody, table.tbl-kartu tr, table.tbl-kartu td { display: block !important; width: auto !important; min-width: 0 !important; }
+  table.tbl-kartu { border: none !important; background: transparent !important; }
+  table.tbl-kartu thead { display: none !important; }
+  table.tbl-kartu tr {
+    background: #fff !important; border: 1.5px solid #e2e8f0 !important; border-radius: 12px;
+    margin: 0 0 10px; padding: 4px 14px; box-shadow: 0 1px 3px rgba(15,23,42,.04);
+  }
+  table.tbl-kartu tr.row-overdue { border-left: 4px solid #f97316 !important; }
+  table.tbl-kartu td {
+    display: flex !important; justify-content: space-between; align-items: flex-start; gap: 14px;
+    padding: 8px 0 !important; border: none !important; border-bottom: 1px solid #f1f5f9 !important;
+    text-align: right !important; white-space: normal !important; max-width: none !important;
+    font-size: .86rem !important; background: transparent !important; overflow-wrap: anywhere;
+  }
+  table.tbl-kartu td:last-child { border-bottom: none !important; }
+  table.tbl-kartu td::before {
+    content: attr(data-label); flex-shrink: 0; max-width: 45%; text-align: left;
+    font-size: .7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px;
+  }
+  table.tbl-kartu td[colspan] { justify-content: center; text-align: center !important; }
+  table.tbl-kartu td[colspan]::before, table.tbl-kartu td[data-label=""]::before { display: none; }
+  table.tbl-kartu td:first-child { font-weight: 700; }
+  table.tbl-kartu td > * { max-width: 100%; }
+  /* pembungkus tabel tak perlu scroll samping lagi */
+  .tbl-kartu-wrap, .sbo-table-wrap, .table-wrap, .table-container { overflow-x: visible !important; border: none !important; }
+}

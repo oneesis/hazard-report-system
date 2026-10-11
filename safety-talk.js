@@ -454,6 +454,10 @@ function renderStDashboard() {
   const depts = Object.entries(byDept)
     .sort((a, b) => _stPct(a[1].ok, a[1].ok + a[1].no) - _stPct(b[1].ok, b[1].ok + b[1].no))
     .slice(0, 12);
+  // U11 (2026-10-12): tinggi kotak ikut jumlah departemen & semua label ditampilkan
+  // (dulu Chart.js melewati sebagian label otomatis bila ruang sempit).
+  const boxDept = document.getElementById('stChartDept')?.parentElement;
+  if (boxDept) boxDept.style.height = Math.max(220, depts.length * 30 + 70) + 'px';
   _stChart('stChartDept', {
     type: 'bar',
     data: {
@@ -469,7 +473,7 @@ function renderStDashboard() {
           const v = depts[items[0].dataIndex] && depts[items[0].dataIndex][1];
           return v ? `Kepatuhan ${_stPct(v.ok, v.ok + v.no)}%` : ''; } } } },
       scales: { x: { stacked: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,.05)' } },
-                y: { stacked: true, ticks: { font: { size: 11 } }, grid: { display: false } } } },
+                y: { stacked: true, ticks: { font: { size: 11 }, autoSkip: false }, grid: { display: false } } } },
   });
 
   // ── Chart 3: tren kepatuhan 6 bulan (dari bulan terpilih mundur, atau bulan ini) ──

@@ -1062,7 +1062,8 @@
 .sap-ring-txt small i { font-size: .62rem; color: #307FE2; }
 
 /* topbar beranda: ganti judul "Beranda" (dobel dgn salam) dengan brand ONE-SAP */
-.app-topbar-title { display: none; }
+/* U6 (2026-10-12): hanya di beranda (ada .topbar-brand) — home.css juga dimuat halaman lain */
+.app-topbar:has(.topbar-brand) .app-topbar-title { display: none; }
 .topbar-brand {
   flex: 1; min-width: 0;
   display: flex; align-items: center; gap: 8px;
