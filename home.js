@@ -415,43 +415,61 @@ async function renderPenggantiST() {
   return pending;
 }
 
-// Popup kuis pengganti Safety Talk saat buka app. Muncul HANYA bila user punya
-// baris absensi ST bulan ini yang butuh kuis (status bukan HADIR/MANGKIR) & kuis
-// belum dikerjakan → artinya capaian ST belum 100% & bukan mangkir. Mangkir/hadir
-// tidak memicu. Sekali per sesi.
+// Popup kuis pengganti Safety Talk saat buka app (diperbarui 2026-10-11).
+// Muncul bila ada sesi ST bulan ini dgn status wajib-kuis (Cuti/Dinas/Shift Malam/
+// Libur/Jaga) yang kuisnya belum lulus DAN kuisnya sudah terbit di quiz-she.
+// Sekali per buka aplikasi (bisa ditunda "Nanti saja"); dari notifikasi PWA
+// (?kuis=1) selalu muncul. Tidak mengunci aplikasi — lapor bahaya tetap bisa.
 async function maybeShowStQuizPopup() {
-  try { if (sessionStorage.getItem('st_quiz_popup_shown')) return; } catch {}
+  const dariNotif = new URLSearchParams(location.search).get('kuis') === '1';
+  try { if (!dariNotif && sessionStorage.getItem('st_quiz_popup_shown')) return; } catch {}
   const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   const nik = String(u?.nik || '').trim();
   if (!nik) return;
-  let rows;
-  try {
-    const res = await fetch('/api?action=getSafetyTalkAbsensi');
-    if (!res.ok) return;
-    const json = await res.json();
-    rows = Array.isArray(json.data) ? json.data : [];
-  } catch { return; }
+  const WAJIB = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA'];
+  const LABEL = { CUTI: 'Cuti', DINAS_LUAR: 'Dinas luar', SHIFT_MALAM: 'Shift malam', LIBUR: 'Libur', SECURITY_JAGA: 'Jaga' };
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const pending = rows.some(r => {
-    if (String(r.NIK || '').trim() !== nik) return false;
-    if (String(r.BULAN || '').slice(0, 7) !== ym) return false;
-    const st = String(r.STATUS_KEHADIRAN || 'HADIR').toUpperCase();
-    if (st === 'HADIR' || st === 'MANGKIR') return false; // hadir=selesai, mangkir=tak bisa diganti kuis
-    return String(r.QUIZ_DONE || '').toUpperCase() !== 'YA';
-  });
-  if (!pending) return;
+  let pending = [];
+  try {
+    const json = await (await fetch('/api?action=getMySafetyTalkHistory')).json();
+    pending = (Array.isArray(json.data) ? json.data : []).filter(r =>
+      String(r.bulan || '').slice(0, 7) === ym
+      && WAJIB.includes(String(r.status_kehadiran || '').toUpperCase())
+      && String(r.quiz_done || '').toUpperCase() !== 'YA');
+  } catch { return; }
+  if (!pending.length) return;
+  // Hanya sesi yang kuisnya sudah terbit (jangan arahkan ke kuis yang belum ada).
+  try {
+    const j = await (await fetch('https://quiz-she.vercel.app/api/data?action=sessions')).json();
+    const list = Array.isArray(j) ? j : (j.value || j.sessions || []);
+    const terbit = new Set(list.filter(x => x.status === 'published').map(x => String(x.topicCode || '').trim()));
+    pending = pending.filter(r => terbit.has(String(r.schedule_id || '').trim()));
+  } catch { return; }
+  if (!pending.length) return;
   try { sessionStorage.setItem('st_quiz_popup_shown', '1'); } catch {}
+  if (dariNotif) history.replaceState(null, '', location.pathname);
+
   const url = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
+  const akhir = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+  const fmt = v => { const d = new Date(String(v) + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); };
+  const daftar = pending.map(r => `
+      <div style="display:flex;gap:10px;align-items:flex-start;text-align:left;padding:10px 12px;background:#f5f3ff;border-radius:10px;margin-bottom:6px">
+        <i class="fa-solid fa-clipboard-question" style="color:#6366f1;margin-top:3px"></i>
+        <div style="min-width:0"><div style="font-weight:700;color:#1e293b;font-size:.9rem">${escapeHTML(r.judul_materi || 'Safety Talk')}</div>
+        <div style="color:#64748b;font-size:.78rem">${fmt(r.tanggal)} · ${LABEL[String(r.status_kehadiran).toUpperCase()] || ''}</div></div>
+      </div>`).join('');
+  document.getElementById('stQuizPopup')?.remove();
   const ov = document.createElement('div');
   ov.id = 'stQuizPopup';
   ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px';
   ov.innerHTML = `
-    <div style="background:#fff;border-radius:18px;max-width:380px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center">
+    <div style="background:#fff;border-radius:18px;max-width:390px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;max-height:90vh;overflow:auto">
       <div style="width:60px;height:60px;border-radius:16px;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 14px"><i class="fa-solid fa-graduation-cap"></i></div>
-      <h3 style="margin:0 0 8px;font-size:1.15rem;color:#1e293b">Kuis Pengganti Safety Talk</h3>
-      <p style="margin:0 0 20px;color:#64748b;font-size:.9rem;line-height:1.5">Capaian Safety Talk kamu bulan ini belum 100%. Kerjakan kuis pengganti sekarang agar capaian ST-mu terpenuhi.</p>
-      <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;background:#6366f1;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;font-size:.95rem;margin-bottom:10px">Kerjakan Kuis Sekarang</a>
+      <h3 style="margin:0 0 6px;font-size:1.15rem;color:#1e293b">Kerjakan Kuis Pengganti Dulu</h3>
+      <p style="margin:0 0 14px;color:#64748b;font-size:.88rem;line-height:1.5">Kamu tidak mengikuti Safety Talk berikut. Kerjakan kuis penggantinya sebelum <b>${akhir}</b> agar capaian Safety Talk-mu terpenuhi.</p>
+      ${daftar}
+      <a href="${url}" target="_blank" rel="noopener noreferrer" onclick="document.getElementById('stQuizPopup')?.remove()" style="display:block;background:#6366f1;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;font-size:.95rem;margin:14px 0 10px">Kerjakan Kuis Sekarang</a>
       <button type="button" onclick="document.getElementById('stQuizPopup')?.remove()" style="background:none;border:none;color:#94a3b8;font-size:.9rem;cursor:pointer;padding:6px">Nanti saja</button>
     </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });

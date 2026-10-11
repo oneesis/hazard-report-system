@@ -1,6 +1,9 @@
 // Cron harian 08:00 WIB: reminder EMAIL H-3 sebelum akhir bulan ke karyawan
 // PT EBL yang capaian SAP-nya belum 100%.
-// - Modul: HR (pelapor), INS (pelapor), SBO (observer), PC (coach) — ST tidak.
+// - Modul: HR (pelapor), INS (pelapor), SBO (observer), PC (coach).
+// - Kuis pengganti Safety Talk (2026-10-11): peserta wajib-kuis (Cuti/Dinas/
+//   Shift Malam/Libur/Jaga) yang belum lulus kuis bulan ini, kuisnya sudah terbit
+//   di quiz-she, dan tidak sedang cuti → ikut di email yang sama (semua perusahaan).
 //   Definisi sama dgn capaian-sap.js & SISTER MINER lib/sap-capaian.ts.
 // - Kriteria PER MODUL: dikirim bila ada modul < target; email hanya berisi
 //   modul yang belum tercapai (bukan gabungan — HR berlebih tak menutupi SBO 0).
@@ -74,6 +77,24 @@ function computeUnmet(kar, hz, ins, sbo, pc, bulan) {
   return out;
 }
 
+const ST_WAJIB_KUIS = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA'];
+const ST_LABEL = { CUTI: 'Cuti', DINAS_LUAR: 'Dinas luar', SHIFT_MALAM: 'Shift malam', LIBUR: 'Libur', SECURITY_JAGA: 'Jaga' };
+const QUIZ_URL = 'https://quiz-she.vercel.app';
+
+// Murni: kuis pengganti ST yang belum dikerjakan per NIK (kuis sudah terbit, tidak sedang cuti).
+function computeKuis(absRows, terbit, sedangCuti) {
+  const out = new Map();
+  for (const r of absRows) {
+    const nik = String(r.nik ?? '').trim();
+    if (!nik || sedangCuti.has(nik) || !terbit.has(String(r.schedule_id).trim())) continue;
+    if (!ST_WAJIB_KUIS.includes(String(r.status_kehadiran).toUpperCase())) continue;
+    if (String(r.quiz_done ?? '').toUpperCase() === 'YA') continue;
+    if (!out.has(nik)) out.set(nik, []);
+    out.get(nik).push({ judul: r.judul_materi || 'Safety Talk', tanggal: r.tanggal || '', status: ST_LABEL[String(r.status_kehadiran).toUpperCase()] || '' });
+  }
+  return out;
+}
+
 function buildEmail(p, bulanNama, deadlineStr) {
   const first = (p.nama.split(/\s+/)[0] || '').toLowerCase().replace(/^./, c => c.toUpperCase());
   const rows = p.unmet.map(u => `<tr>
@@ -81,23 +102,35 @@ function buildEmail(p, bulanNama, deadlineStr) {
       <td style="padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:center">${u.got} / ${u.target}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:center;color:#b91c1c;font-weight:700">kurang ${u.target - u.got}</td>
     </tr>`).join('');
-  const text = `Halo ${first},\n\nCapaian SAP kamu bulan ${bulanNama} belum 100% dan tersisa ${REMIND_DAYS} hari (s/d ${deadlineStr}).\n\n`
-    + p.unmet.map(u => `- ${u.label}: ${u.got}/${u.target} (kurang ${u.target - u.got})`).join('\n')
-    + `\n\nYuk lengkapi sebelum akhir bulan: ${APP_URL}\n\nEmail otomatis ONE-SAP — tidak perlu dibalas.`;
+  const kuis = p.kuis || [];
+  const quizLink = `${QUIZ_URL}/?nik=${encodeURIComponent(p.nik)}`;
+  const tglPendek = t => { const d = new Date(String(t) + 'T00:00:00'); return isNaN(d) ? String(t || '') : `${d.getDate()} ${MONTHS_ID[d.getMonth()].slice(0, 3)}`; };
+  const text = `Halo ${first},\n\n`
+    + (p.unmet.length ? `Capaian SAP kamu bulan ${bulanNama} belum 100% dan tersisa ${REMIND_DAYS} hari (s/d ${deadlineStr}).\n\n`
+      + p.unmet.map(u => `- ${u.label}: ${u.got}/${u.target} (kurang ${u.target - u.got})`).join('\n') + '\n\n' : '')
+    + (kuis.length ? `Kuis pengganti Safety Talk yang belum kamu kerjakan (batas ${deadlineStr}):\n`
+      + kuis.map(k => `- ${k.judul} (${tglPendek(k.tanggal)}, ${k.status})`).join('\n') + `\nKerjakan: ${quizLink}\n\n` : '')
+    + `Lengkapi sebelum akhir bulan: ${APP_URL}\n\nEmail otomatis ONE-SAP — tidak perlu dibalas.`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#1e293b">
     <h2 style="color:#00205B;margin:0 0 4px">ONE-SAP</h2>
     <p style="margin:0 0 16px;color:#64748b;font-size:13px">Pengingat Capaian SAP</p>
     <p>Halo ${esc(first)},</p>
-    <p>Capaian SAP kamu bulan <b>${esc(bulanNama)}</b> belum 100%. Tersisa <b>${REMIND_DAYS} hari</b> (s/d ${esc(deadlineStr)}).</p>
+    ${p.unmet.length ? `<p>Capaian SAP kamu bulan <b>${esc(bulanNama)}</b> belum 100%. Tersisa <b>${REMIND_DAYS} hari</b> (s/d ${esc(deadlineStr)}).</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0">
       <tr style="background:#f8fafc;color:#64748b;font-size:12px">
         <th style="padding:8px 10px;text-align:left">Modul</th><th style="padding:8px 10px">Capaian</th><th style="padding:8px 10px">Sisa</th>
       </tr>${rows}
     </table>
-    <p style="margin:20px 0"><a href="${APP_URL}" style="background:#00205B;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700;display:inline-block">Lengkapi di ONE-SAP</a></p>
+    <p style="margin:20px 0"><a href="${APP_URL}" style="background:#00205B;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700;display:inline-block">Lengkapi di ONE-SAP</a></p>` : ''}
+    ${kuis.length ? `<p style="margin-top:${p.unmet.length ? 24 : 0}px">Kuis pengganti <b>Safety Talk</b> yang belum kamu kerjakan — batas <b>${esc(deadlineStr)}</b>:</p>
+    <ul style="padding-left:20px;margin:8px 0 16px;font-size:14px">${kuis.map(k => `<li style="margin:4px 0">${esc(k.judul)} <span style="color:#64748b">(${esc(tglPendek(k.tanggal))}, ${esc(k.status)})</span></li>`).join('')}</ul>
+    <p style="margin:16px 0 20px"><a href="${quizLink}" style="background:#6366f1;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700;display:inline-block">Kerjakan Kuis Sekarang</a></p>` : ''}
     <p style="color:#94a3b8;font-size:12px">Email otomatis ONE-SAP — tidak perlu dibalas.</p>
   </div>`;
-  return { subject: `Capaian SAP ${bulanNama} kamu belum 100% — sisa ${REMIND_DAYS} hari`, text, html };
+  const subject = p.unmet.length
+    ? `Capaian SAP ${bulanNama} kamu belum 100% — sisa ${REMIND_DAYS} hari`
+    : `Kuis pengganti Safety Talk belum dikerjakan — sisa ${REMIND_DAYS} hari`;
+  return { subject, text, html };
 }
 
 module.exports = async (req, res) => {
@@ -128,12 +161,36 @@ module.exports = async (req, res) => {
   ]);
 
   let list = computeUnmet(kar, hz, ins, sbo, pc, bulan);
+
+  // Kuis pengganti Safety Talk (best-effort: quiz-she/SISTER MINER tak terjangkau → bagian kuis dilewati)
+  try {
+    const todayStr = `${today.y}-${String(today.m + 1).padStart(2, '0')}-${String(today.d).padStart(2, '0')}`;
+    const [absRows, cutiRows, sesJ] = await Promise.all([
+      sql`SELECT a.schedule_id, a.nik, a.status_kehadiran, a.quiz_done, s.judul_materi, s.tanggal
+           FROM safety_talk_absensi a JOIN safety_talk_schedule s ON s.id = a.schedule_id
+           WHERE a.bulan = ${bulan} AND a.status_kehadiran = ANY(${ST_WAJIB_KUIS})`,
+      sql`SELECT data->>'nrp' AS nrp FROM sm."Karyawan"
+           WHERE coalesce(data->>'cutiMulai', '') <> '' AND data->>'cutiMulai' <= ${todayStr} AND data->>'cutiSelesai' >= ${todayStr}`.catch(() => []),
+      fetch(`${QUIZ_URL}/api/data?action=sessions`).then(r => r.json()),
+    ]);
+    const sesi = Array.isArray(sesJ) ? sesJ : (sesJ.value || sesJ.sessions || []);
+    const terbit = new Set(sesi.filter(x => x.status === 'published').map(x => String(x.topicCode || '').trim()).filter(Boolean));
+    const kuisMap = computeKuis(absRows, terbit, new Set(cutiRows.map(r => String(r.nrp || '').trim())));
+    const byNik = new Map(list.map(p => [p.nik, p]));
+    for (const [nik, kuis] of kuisMap) {
+      if (byNik.has(nik)) { byNik.get(nik).kuis = kuis; continue; }
+      const k = kar.find(r => String(r.data?.NIK ?? '').trim() === nik);
+      if (!k || String(k.data?.ROLE ?? '').toUpperCase() === 'DELETED') continue;
+      list.push({ nik, nama: String(k.data?.NAMA ?? '').trim(), email: String(k.email || k.data?.EMAIL || '').trim(), unmet: [], kuis });
+    }
+  } catch (e) { console.error('[cron-sap-reminder] kuis ST dilewati:', e.message); }
   if (only) list = list.filter(p => p.nik === only);
   const withEmail = list.filter(p => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email));
   const noEmail = list.length - withEmail.length;
 
   if (dry) return res.json({ status: 'dry', bulan, belum100: list.length, akanDikirim: withEmail.length, tanpaEmail: noEmail,
-    daftar: withEmail.map(p => ({ nik: p.nik, nama: p.nama, unmet: p.unmet.map(u => `${u.label} ${u.got}/${u.target}`).join(', ') })) });
+    daftar: withEmail.map(p => ({ nik: p.nik, nama: p.nama, unmet: p.unmet.map(u => `${u.label} ${u.got}/${u.target}`).join(', '),
+      kuis: (p.kuis || []).map(k => k.judul).join(', ') })) });
 
   const user = process.env.GMAIL_SENDER, pass = process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) return res.status(503).json({ error: 'GMAIL_SENDER/GMAIL_APP_PASSWORD belum diset' });
@@ -168,5 +225,17 @@ if (require.main === module) {
   const out = computeUnmet(kar, hz, [], [], [], '2026-10');
   assert.deepStrictEqual(out.map(p => p.nik), ['1']);                       // BUDI 1/1 tercapai; CICI & DODI dilewati
   assert.deepStrictEqual(out[0].unmet, [{ label: 'Safe Behavior Observation', got: 0, target: 1 }]); // HR berlebih tak menutupi SBO
+  const abs = [
+    { schedule_id: 'ST-1', nik: '1', status_kehadiran: 'CUTI', quiz_done: '', judul_materi: 'APD', tanggal: '2026-10-07' },
+    { schedule_id: 'ST-1', nik: '2', status_kehadiran: 'LIBUR', quiz_done: 'YA', judul_materi: 'APD' },     // sudah lulus
+    { schedule_id: 'ST-2', nik: '3', status_kehadiran: 'DINAS_LUAR', quiz_done: '', judul_materi: 'LOTO' },  // kuis belum terbit
+    { schedule_id: 'ST-1', nik: '4', status_kehadiran: 'SHIFT_MALAM', quiz_done: '', judul_materi: 'APD' },  // sedang cuti
+    { schedule_id: 'ST-1', nik: '5', status_kehadiran: 'MANGKIR', quiz_done: '', judul_materi: 'APD' },      // mangkir: tak bisa kuis
+  ];
+  const km = computeKuis(abs, new Set(['ST-1']), new Set(['4']));
+  assert.deepStrictEqual([...km.keys()], ['1']);
+  assert.strictEqual(km.get('1')[0].status, 'Cuti');
+  const em = buildEmail({ nik: '9', nama: 'EKA PUTRA', unmet: [], kuis: km.get('1') }, 'Oktober 2026', '31 Oktober 2026');
+  assert.ok(em.subject.startsWith('Kuis pengganti') && em.html.includes('quiz-she.vercel.app/?nik=9') && !em.html.includes('<th'));
   console.log('cron-sap-reminder self-check OK');
 }

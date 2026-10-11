@@ -770,6 +770,63 @@ async function sendPushToNik(sheets, nik, payload) {
   } catch (err) { console.error('[push] sendPushToNik error:', err.message); }
 }
 
+// ── Notifikasi PWA kuis pengganti Safety Talk (2026-10-11) ─────────────────
+// Untuk peserta berstatus wajib-kuis (Cuti/Dinas Luar/Shift Malam/Libur/Security
+// Jaga) yang belum lulus kuis, bulan berjalan. Syarat kirim: kuis sesi itu SUDAH
+// terbit di quiz-she, dan orangnya TIDAK sedang cuti (dikirim saat kembali onsite).
+// Sekali per orang per sesi (kolom notif_kuis_at). Dipanggil saat absensi disimpan
+// + cron harian (api/cron-kuis-st.js) untuk kuis yang terbit belakangan / pulang cuti.
+const ST_WAJIB_KUIS = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA'];
+const ST_LABEL = { CUTI: 'cuti', DINAS_LUAR: 'dinas luar', SHIFT_MALAM: 'shift malam', LIBUR: 'libur', SECURITY_JAGA: 'jaga' };
+
+async function _kuisStTerbit() {
+  const j = await (await fetch('https://quiz-she.vercel.app/api/data?action=sessions')).json();
+  const list = Array.isArray(j) ? j : (j.value || j.sessions || []);
+  return new Set(list.filter((s) => s.status === 'published').map((s) => String(s.topicCode || '').trim()).filter(Boolean));
+}
+
+async function kirimNotifKuisST(sheets, scheduleId = '') {
+  if (!ensureVapid()) return { status: 'skip', reason: 'VAPID belum diset' };
+  const sql = getSql();
+  const bulan = todayJakarta().slice(0, 7);
+  const sid = String(scheduleId || '').trim();
+  const rows = await sql`
+    SELECT a.schedule_id, a.nik, a.nama, a.status_kehadiran, s.judul_materi, s.tanggal
+    FROM safety_talk_absensi a JOIN safety_talk_schedule s ON s.id = a.schedule_id
+    WHERE a.status_kehadiran = ANY(${ST_WAJIB_KUIS}) AND coalesce(upper(a.quiz_done), '') <> 'YA'
+      AND a.notif_kuis_at IS NULL AND a.bulan = ${bulan}
+      AND (${sid} = '' OR a.schedule_id = ${sid})`;
+  if (!rows.length) return { status: 'ok', terkirim: 0 };
+  const terbit = await _kuisStTerbit();
+  const siap = rows.filter((r) => terbit.has(String(r.schedule_id).trim()));
+  if (!siap.length) return { status: 'ok', terkirim: 0, menungguKuis: rows.length };
+
+  const src = await loadCutiSources(sheets);
+  const subs = await getSheetData(sheets, 'Push_Subscriptions').catch(() => []);
+  const now = new Date().toISOString();
+  let terkirim = 0, cuti = 0;
+  for (const r of siap) {
+    if (resolveStatusKerja(src, r.nik, r.nama) === 'cuti') { cuti++; continue; } // tunggu kembali onsite
+    const tgl = r.tanggal ? new Date(r.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '';
+    const payload = JSON.stringify({
+      title: 'Kuis pengganti Safety Talk',
+      body: `Kamu ${ST_LABEL[r.status_kehadiran] || 'tidak hadir'} saat Safety Talk "${r.judul_materi || ''}"${tgl ? ' (' + tgl + ')' : ''}. Kerjakan kuis penggantinya sebelum akhir bulan.`,
+      url: 'https://sap-ebl.vercel.app/index-home.html?kuis=1',
+    });
+    for (const sub of subs.filter((x) => String(x['NIK'] || '').trim() === String(r.nik).trim() && x['ENDPOINT'])) {
+      try {
+        await webPush.sendNotification({ endpoint: sub['ENDPOINT'], keys: { p256dh: sub['P256DH'], auth: sub['AUTH'] } }, payload);
+        terkirim++;
+      } catch (err) {
+        if (err.statusCode === 410) await removePushSubscriptionByEndpoint(sheets, sub['ENDPOINT']).catch(() => {});
+      }
+    }
+    // Ditandai walau tak punya langganan push — popup beranda tetap mengarahkan.
+    await sql`UPDATE safety_talk_absensi SET notif_kuis_at = ${now} WHERE schedule_id = ${r.schedule_id} AND nik = ${r.nik}`;
+  }
+  return { status: 'ok', diproses: siap.length - cuti, pushTerkirim: terkirim, tundaCuti: cuti, menungguKuis: rows.length - siap.length };
+}
+
 // Resolve NIK dari nomor WA — untuk hazard report yang tidak menyimpan nik_pic
 async function resolveNikFromWa(sheets, wa) {
   if (!wa) return '';
@@ -2333,6 +2390,9 @@ async function reviewClosing(sheets, data, sheetName, auth) {
 
 // ===== HANDLER =====
 
+// Dipakai api/cron-kuis-st.js (cron harian).
+const cronKuisST = () => kirimNotifKuisST(getClients().sheets);
+
 module.exports = async (req, res) => {
   try {
     // CORS preflight — kiosk quiz-she (origin lain) memanggil endpoint email OTP
@@ -2826,7 +2886,7 @@ module.exports = async (req, res) => {
           let rows = [];
           try {
             rows = await getSql()`
-              SELECT a.status_kehadiran, a.quiz_done, a.bulan, s.tanggal, s.judul_materi
+              SELECT a.schedule_id, a.status_kehadiran, a.quiz_done, a.bulan, s.tanggal, s.judul_materi
               FROM safety_talk_absensi a
               LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id
               WHERE a.nik = ${nik}
@@ -3197,14 +3257,16 @@ module.exports = async (req, res) => {
             return { nik: k.nik || '', nama: k.nama || '', perusahaan: k.perusahaan || '',
               departemen: k.departemen || '', jabatan: k.jabatan || '', status, quizDone };
           });
+          // notif_kuis_at dipertahankan saat absensi ditulis ulang (supaya notifikasi tidak terkirim lagi)
+          const notifLama = new Map((await sql`SELECT nik, notif_kuis_at FROM safety_talk_absensi WHERE schedule_id = ${schedule_id}`).map((r) => [r.nik, r.notif_kuis_at]));
           // Ganti absensi jadwal ini: hapus lalu insert (transaksi ringan via 2 statement)
           await sql`DELETE FROM safety_talk_absensi WHERE schedule_id = ${schedule_id}`;
           for (const k of norm) {
             await sql`
               INSERT INTO safety_talk_absensi
-                (schedule_id, bulan, nik, nama, perusahaan, departemen, jabatan, status_kehadiran, quiz_done, checked_by, checked_at)
+                (schedule_id, bulan, nik, nama, perusahaan, departemen, jabatan, status_kehadiran, quiz_done, checked_by, checked_at, notif_kuis_at)
               VALUES (${schedule_id}, ${bulan}, ${k.nik}, ${k.nama}, ${k.perusahaan}, ${k.departemen}, ${k.jabatan},
-                      ${k.status}, ${k.quizDone}, ${authUser.nik || ''}, ${now})
+                      ${k.status}, ${k.quizDone}, ${authUser.nik || ''}, ${now}, ${notifLama.get(k.nik) || null})
               ON CONFLICT (schedule_id, nik) DO UPDATE SET
                 bulan=EXCLUDED.bulan, nama=EXCLUDED.nama, perusahaan=EXCLUDED.perusahaan, departemen=EXCLUDED.departemen,
                 jabatan=EXCLUDED.jabatan, status_kehadiran=EXCLUDED.status_kehadiran, quiz_done=EXCLUDED.quiz_done,
@@ -3213,7 +3275,9 @@ module.exports = async (req, res) => {
           const hadirCount   = norm.filter(r => r.status === 'HADIR').length;
           const quizCount    = norm.filter(r => r.quizDone === 'YA').length;
           const mangkirCount = norm.filter(r => r.status === 'MANGKIR').length;
-          result = { status: 'success', count: norm.length,
+          // Notifikasi PWA kuis pengganti (best-effort; yang kuisnya belum terbit/sedang cuti menyusul via cron)
+          const notif = await kirimNotifKuisST(sheets, schedule_id).catch((e) => ({ status: 'error', reason: e.message }));
+          result = { status: 'success', count: norm.length, notif_kuis: notif,
             message: `Hadir: ${hadirCount}, Quiz: ${quizCount}, Mangkir: ${mangkirCount}.` };
           break;
         }
@@ -3390,3 +3454,4 @@ module.exports = async (req, res) => {
     return res.status(error.httpStatus || 500).json({ status: 'error', message: error.message });
   }
 };
+module.exports.cronKuisST = cronKuisST;
