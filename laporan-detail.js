@@ -258,6 +258,13 @@ function renderDetail(r) {
       onDone: () => setTimeout(() => window.location.reload(), 900),
     });
   }
+  // Perpanjangan batas waktu (A6) — PIC mengajukan, pelapor/admin memutuskan.
+  if (typeof Perpanjangan !== "undefined" && !picDisputed) {
+    Perpanjangan.render(document.getElementById("perpanjanganBox"), {
+      report: { ...r, id }, status, batas: r.batas_waktu, isPic: isPic(r), bolehPutus: isAdmin || isPelapor(r),
+      onDone: () => setTimeout(() => window.location.reload(), 900),
+    });
+  }
   if (picDisputed && !isAdmin) ["planForm", "closingForm"].forEach((x) => { const el = document.getElementById(x); if (el) el.style.display = "none"; });
 
   renderPrintSheet(r, isInspection, status, planStatus, rencana, tanggalR);

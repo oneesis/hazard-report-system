@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const webPush = require('web-push');
 const { parseRosterCsv } = require('../lib/roster');
+const { rencanakanAlur } = require('../lib/alur-laporan');
 
 // [PUSH-START] VAPID setup — lazy init agar tidak crash jika env belum diset
 let _vapidSet = false;
@@ -1430,6 +1431,10 @@ async function submitHazardReport(sheets, data) {
       data.no_whatsapp_pic = await resolveWaByIdentity(sheets, data.perusahaan_pic, data.subcont2, data.nama_pic).catch(() => '');
   }
 
+  // NIK PIC wajib tersimpan (dulu hilang: kolom sheet lama tak punya NIK PIC) — dipakai
+  // notifikasi & cek hak PIC (assertReportRole).
+  data.nik_pic = await _resolveNikPic(sheets, { nik: data.nik_pic, nama: data.nama_pic, perusahaan: data.perusahaan_pic, wa: data.no_whatsapp_pic });
+
   // Tanda tangan disimpan sebagai URL Drive (bukan base64) agar DB & daftar ramping.
   if (data.tanda_tangan && String(data.tanda_tangan).startsWith('data:'))
     data.tanda_tangan = await saveBase64ImageToDrive(data.tanda_tangan, process.env.FOLDER_HAZARD_ID, id + '-TTD.png').catch(() => data.tanda_tangan);
@@ -1449,31 +1454,17 @@ async function submitHazardReport(sheets, data) {
   const _hzData = {};
   _hzHeaders.forEach((h, i) => { _hzData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _hzData.client_ref = String(data.client_ref);
+  _hzData.nik_pic = data.nik_pic || '';
   const _hzDup = await _insertOnce('hazard_report', data.client_ref, () => getSql()`
     INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
     VALUES (${id}, ${_hzData.nik || ''}, ${_hzData.perusahaan || ''}, ${_hzData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_hzData)}::jsonb)`, 'Hazard Report');
   if (_hzDup) return _hzDup;
 
-  let waStatus = 'TIDAK ADA WA';
-  if (data.no_whatsapp_pic && data.nama_pic) {
-    const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan hazard baru.\n\n` +
-      `📋 *${id}*\n` +
-      `📍 Lokasi: ${data.lokasi_bahaya}${data.detail_lokasi_bahaya ? ' - ' + data.detail_lokasi_bahaya : ''}\n` +
-      `⚠️ Temuan: ${data.jenis_bahaya}\n` +
-      `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
-      `🔗 Detail laporan: https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`;
-    const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
-    waStatus = sent ? 'TERKIRIM' : 'GAGAL';
-  }
+  const waStatus = await _notifPicBaru(sheets, {
+    nik: data.nik_pic, nama: data.nama_pic, wa: data.no_whatsapp_pic, label: 'laporan hazard', id, batas: data.batas_waktu,
+    baris: [`Lokasi: ${data.lokasi_bahaya}${data.detail_lokasi_bahaya ? ' - ' + data.detail_lokasi_bahaya : ''}`, `Temuan: ${data.jenis_bahaya}`],
+  });
   await writeWaStatusToSheet(sheets, 'Hazard_Report', id, waStatus);
-  // [PUSH-START] — nik_pic tidak ada di form hazard, resolve via WA
-  const picNikHazard = data.nik_pic || await resolveNikFromWa(sheets, data.no_whatsapp_pic).catch(() => '');
-  if (picNikHazard) await sendPushToNik(sheets, picNikHazard, {
-    title: 'Kamu Ditunjuk sebagai PIC 📋',
-    body: `Laporan baru ${id} membutuhkan tindakan kamu. Batas: ${data.batas_waktu || '-'}`,
-    url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`
-  }).catch(() => {});
-  // [PUSH-END]
   return { status: 'success', message: 'Hazard Report berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
@@ -1537,6 +1528,7 @@ async function submitInspectionReport(sheets, data) {
     data.tanda_tangan = await saveBase64ImageToDrive(data.tanda_tangan, process.env.FOLDER_HAZARD_ID, id + '-TTD.png').catch(() => data.tanda_tangan);
 
   const headers = await getSheetHeaders(sheets, sheetName);
+  data.nik_pic = await _resolveNikPic(sheets, { nik: data.nik_pic, nama: data.nama_pic, perusahaan: data.perusahaan_pic, wa: data.no_whatsapp_pic });
   const rowData = { ...data, id, timestamp: new Date().toISOString(), upload_foto_inspeksi: fotoInspeksiUrl, status_perbaikan: 'OPEN' };
   const row = headers.map(h => mapInspectionValue(h, rowData));
 
@@ -1544,31 +1536,17 @@ async function submitInspectionReport(sheets, data) {
   const _insData = {};
   headers.forEach((h, i) => { _insData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _insData.client_ref = String(data.client_ref);
+  _insData.nik_pic = data.nik_pic || '';
   const _insDup = await _insertOnce('inspection_report', data.client_ref, () => getSql()`
     INSERT INTO inspection_report (id, jenis, nik, perusahaan, status_perbaikan, data)
     VALUES (${id}, ${sheetName}, ${_insData.nik || ''}, ${_insData.perusahaan || ''}, ${_insData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_insData)}::jsonb)`, 'Inspeksi');
   if (_insDup) return _insDup;
 
-  let waStatus = 'TIDAK ADA WA';
-  if (data.no_whatsapp_pic && data.nama_pic) {
-    const namaInspeksi = INSPECTION_NAMES[sheetName] || sheetName;
-    const msg = `Halo ${data.nama_pic}, kamu ditunjuk sebagai PIC untuk laporan inspeksi baru.\n\n` +
-      `📋 *${id}*\n` +
-      `🔍 Jenis: ${namaInspeksi}\n` +
-      `📍 Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}\n` +
-      `⏰ Batas waktu: ${data.batas_waktu || '-'}\n\n` +
-      `🔗 Detail laporan: https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`;
-    const sent = await sendWaNotification(data.no_whatsapp_pic, msg).catch(() => false);
-    waStatus = sent ? 'TERKIRIM' : 'GAGAL';
-  }
+  const waStatus = await _notifPicBaru(sheets, {
+    nik: data.nik_pic, nama: data.nama_pic, wa: data.no_whatsapp_pic, label: 'laporan inspeksi', id, batas: data.batas_waktu,
+    baris: [`Jenis: ${INSPECTION_NAMES[sheetName] || sheetName}`, `Lokasi: ${data.lokasi_inspeksi}${data.detail_lokasi_inspeksi ? ' - ' + data.detail_lokasi_inspeksi : ''}`],
+  });
   await writeWaStatusToSheet(sheets, sheetName, id, waStatus);
-  // [PUSH-START]
-  if (data.nik_pic) await sendPushToNik(sheets, data.nik_pic, {
-    title: 'Kamu Ditunjuk sebagai PIC 📋',
-    body: `Laporan inspeksi baru ${id} membutuhkan tindakan kamu. Batas: ${data.batas_waktu || '-'}`,
-    url: `https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`
-  }).catch(() => {});
-  // [PUSH-END]
   return { status: 'success', message: 'Inspeksi berhasil disimpan.', id, wa_pic_status: waStatus };
 }
 
@@ -2007,7 +1985,7 @@ async function _sendMail(to, subject, text, url) {
 }
 
 // Kirim ke satu orang lewat semua kanal yang tersedia (email, WA, push) — best-effort.
-async function _notifyPerson(sheets, person, subject, text, url) {
+async function _notifyPerson(sheets, person, subject, text, url, { push = true } = {}) {
   let k = person.nik ? await _rosterByNik(person.nik) : null;
   if (!k && person.nama) {
     k = (await getSql()`SELECT data FROM karyawan WHERE upper(data->>'NAMA') = upper(${String(person.nama).trim()}) LIMIT 1`)[0]?.data || null;
@@ -2015,11 +1993,39 @@ async function _notifyPerson(sheets, person, subject, text, url) {
   const email = String(k?.EMAIL || '').trim();
   const wa = String(person.wa || k?.['NO WHATSAPP'] || '').replace(/\D/g, '');
   const nik = person.nik || k?.NIK;
-  await Promise.allSettled([
-    email && _sendMail(email, subject, text, url),
+  // Teks pesan lama berformat WA (*tebal*, baris 🔗 link) → dibersihkan untuk email.
+  const teksEmail = String(text).replace(/\*/g, '').replace(/\n?🔗[^\n]*/g, '').trim();
+  const [rEmail] = await Promise.allSettled([
+    email && _sendMail(email, subject, teksEmail, url),
     wa && process.env.WA_ENABLED === '1' && sendWaNotification(wa, `${text}\n\n🔗 ${url}`),
-    nik && sendPushToNik(sheets, String(nik), { title: subject, body: text.slice(0, 140), url }),
+    push && nik && sendPushToNik(sheets, String(nik), { title: subject, body: teksEmail.slice(0, 140), url }),
   ]);
+  return { email: rEmail.status === 'fulfilled' && rEmail.value === true };
+}
+
+// NIK PIC dari roster bila form tidak mengirimnya (laporan lama / form versi lama):
+// cocokkan nama + perusahaan, lalu nomor WA (2026-10-12, alur pelaporan A1).
+async function _resolveNikPic(sheets, { nik, nama, perusahaan, wa }) {
+  if (String(nik || '').trim()) return String(nik).trim();
+  const rows = await _karyawanRows(sheets).catch(() => []);
+  const norm = (v) => String(v || '').trim().toUpperCase();
+  const samaNama = nama ? rows.filter((r) => norm(r['NAMA']) === norm(nama)) : [];
+  const pas = samaNama.find((r) => norm(r['PERUSAHAAN']) === norm(perusahaan)) || (samaNama.length === 1 ? samaNama[0] : null);
+  if (pas?.NIK) return String(pas.NIK).trim();
+  const w = _normWa(wa);
+  const lewatWa = w ? rows.find((r) => _normWa(r['NO WHATSAPP']) === w) : null;
+  return String(lewatWa?.NIK || '').trim();
+}
+
+// Notifikasi "kamu ditunjuk sebagai PIC" lewat NIK (email + push). Status = TERKIRIM bila email
+// benar-benar terkirim; GAGAL bila PIC tak punya email (perlu dilengkapi / diingatkan manual).
+async function _notifPicBaru(sheets, { nik, nama, wa, label, id, batas, baris }) {
+  if (!nik && !nama) return 'TIDAK ADA PIC';
+  const url = `https://sap-ebl.vercel.app/laporan-detail.html?id=${id}`;
+  const text = `Halo ${nama || ''}, kamu ditunjuk sebagai PIC untuk ${label} baru ${id}.\n\n` +
+    `${baris.filter(Boolean).join('\n')}\nBatas waktu: ${batas || '-'}\n\nSilakan kirim rencana tindakan di ONE-SAP.`;
+  const r = await _notifyPerson(sheets, { nik, nama, wa }, `[ONE-SAP] ${id} — Kamu ditunjuk sebagai PIC`, text, url).catch(() => ({ email: false }));
+  return r.email ? 'TERKIRIM' : 'GAGAL';
 }
 
 async function disputePic(sheets, auth, data) {
@@ -2195,7 +2201,12 @@ function assertReportRole(reportRow, auth, requiredRole) {
   if (!authNik) return; // token tanpa NIK = tidak bisa verifikasi
   if (requiredRole === 'pic') {
     const picNik = String(reportRow['nik_pic'] || reportRow['nip_pic'] || '').trim();
-    if (picNik && picNik !== authNik)
+    // NIK PIC kosong (laporan lama): cocokkan nama PIC dengan nama akun (2026-10-12; dulu dilewati
+    // sehingga siapa pun bisa kirim rencana/closing).
+    const sama = picNik
+      ? picNik === authNik
+      : String(reportRow['nama_pic'] || '').trim().toUpperCase() === String(auth.nama || '').trim().toUpperCase();
+    if (!sama)
       throw Object.assign(new Error('Akses ditolak: kamu bukan PIC laporan ini.'), { httpStatus: 403 });
   } else {
     const repNik = String(reportRow['nik'] || reportRow['nik_pelapor'] || '').trim();
@@ -2218,11 +2229,11 @@ async function submitActionPlan(sheets, data, sheetName, auth) {
   });
   const noWa = reportRow['no_whatsapp'] || '';
   const nama  = reportRow['nama'] || '';
-  if (noWa) {
+  {
     const msg = `Halo ${nama}, PIC telah menyampaikan rencana tindakan untuk laporan *${data.id}*.\n\n` +
       `📋 Rencana: ${data.rencana_tindakan.trim()}\n📅 Tanggal rencana: ${data.tanggal_rencana || '-'}\n\n` +
       `Silakan berikan persetujuan:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
-    await sendWaNotification(noWa, msg).catch(() => {});
+    await _notifyPerson(sheets, { nik: reportRow['nik'] || reportRow['nik_pelapor'], nama, wa: noWa }, `[ONE-SAP] ${data.id} — Rencana tindakan menunggu persetujuanmu`, msg, `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`, { push: false }).catch(() => {});
   }
   // [PUSH-START]
   const reporterNik = reportRow['nik'] || reportRow['nik_pelapor'] ||
@@ -2254,11 +2265,11 @@ async function reviewActionPlan(sheets, data, sheetName, auth) {
   const reportRow = await updateWorkflowFields(sheets, sheetName, data.id, fields);
   const noWaPic = reportRow['no_whatsapp_pic'] || '';
   const namaPic = reportRow['nama_pic'] || '';
-  if (noWaPic) {
+  {
     const msg = decision === 'approved'
-      ? `Halo ${namaPic}, rencana tindakan untuk laporan *${data.id}* telah ✅ *DISETUJUI* oleh pelapor.\n\nSilakan lanjutkan perbaikan:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+      ? `Halo ${namaPic}, rencana tindakan untuk laporan *${data.id}* telah ✅ *DISETUJUI* ${data.otomatis ? 'otomatis (pelapor tidak merespons 2 hari)' : 'oleh pelapor'}.\n\nSilakan lanjutkan perbaikan:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
       : `Halo ${namaPic}, rencana tindakan untuk laporan *${data.id}* ❌ *DITOLAK* oleh pelapor.\n\n💬 Komentar: ${data.comment}\n\nSilakan revisi rencana:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
-    await sendWaNotification(noWaPic, msg).catch(() => {});
+    await _notifyPerson(sheets, { nik: reportRow['nik_pic'], nama: namaPic, wa: noWaPic }, `[ONE-SAP] ${data.id} — Rencana tindakan ${decision === 'approved' ? 'disetujui' : 'ditolak'}`, msg, `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`, { push: false }).catch(() => {});
   }
   // [PUSH-START]
   const picWaReview = reportRow['no_whatsapp_pic'] || reportRow['no_whattsapp_pic'] || '';
@@ -2292,6 +2303,7 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
   if (fotoPerbaikanUrl) fields['UPLOAD FOTO PERBAIKAN PIC'] = fotoPerbaikanUrl;
   if (data.status_perbaikan === 'CLOSED') fields['TANGGAL CLOSING'] = new Date().toISOString();
   if (data.closing_status) fields['CLOSING_STATUS'] = data.closing_status;
+  if (data.closing_status === 'pending_review') fields['CLOSING_SUBMITTED_AT'] = new Date().toISOString();
   await _reportSet(sheetName, data.id, fields);
   if (data.status_perbaikan === 'FOLLOWUP' && sheetName !== 'SBO_Report') {
     await _bekukanTtdPic(data.id, rowObj['nik_pic'], rowObj['nama_pic']).catch((e) => console.error('[ttd closing]', e.message));
@@ -2309,9 +2321,9 @@ async function updateReport(sheets, data, sheetName, folderSuffix, auth) {
     } else {
       const noWa = rowObj['no_whatsapp'] || '';
       const nama = rowObj['nama'] || rowObj['nama_observer'] || '';
-      if (noWa && !isSBO) {
+      if (!isSBO) {
         const msg = `Halo ${nama}, PIC laporan *${data.id}* telah menyelesaikan perbaikan dan meminta konfirmasimu.\n\nSilakan konfirmasi apakah perbaikan sudah sesuai:\n🔗 ${detailUrl}`;
-        await sendWaNotification(noWa, msg).catch(() => {});
+        await _notifyPerson(sheets, { nik: reporterNik, nama, wa: noWa }, `[ONE-SAP] ${data.id} — Closing menunggu konfirmasimu`, msg, detailUrl, { push: false }).catch(() => {});
       }
       if (reporterNik) await sendPushToNik(sheets, reporterNik, {
         title: isSBO ? 'PIC SBO Telah Submit Perbaikan 📸' : 'Perlu Konfirmasi Closing 🔔',
@@ -2383,11 +2395,11 @@ async function reviewClosing(sheets, data, sheetName, auth) {
 
   const noWaPic = reportRow['no_whatsapp_pic'] || '';
   const namaPic = reportRow['nama_pic'] || '';
-  if (noWaPic) {
+  {
     const msg = decision === 'confirmed'
-      ? `Halo ${namaPic}, closing laporan *${data.id}* telah ✅ *DIKONFIRMASI* oleh pelapor. Laporan dinyatakan selesai.\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
+      ? `Halo ${namaPic}, closing laporan *${data.id}* telah ✅ *DIKONFIRMASI* ${data.otomatis ? 'otomatis (pelapor tidak merespons 3 hari)' : 'oleh pelapor'}. Laporan dinyatakan selesai.\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`
       : `Halo ${namaPic}, closing laporan *${data.id}* ❌ *DITOLAK* oleh pelapor.\n\n💬 Catatan: ${data.comment}\n\nSilakan revisi dan submit ulang:\n🔗 https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`;
-    await sendWaNotification(noWaPic, msg).catch(() => {});
+    await _notifyPerson(sheets, { nik: reportRow['nik_pic'], nama: namaPic, wa: noWaPic }, `[ONE-SAP] ${data.id} — Closing ${decision === 'confirmed' ? 'dikonfirmasi' : 'ditolak'}`, msg, `https://sap-ebl.vercel.app/laporan-detail.html?id=${data.id}`, { push: false }).catch(() => {});
   }
   const picWa  = reportRow['no_whatsapp_pic'] || reportRow['no_whattsapp_pic'] || '';
   const picNik = reportRow['nik_pic'] || await resolveNikFromWa(sheets, picWa).catch(() => '');
@@ -2400,6 +2412,166 @@ async function reviewClosing(sheets, data, sheetName, auth) {
 }
 
 // ===== HANDLER =====
+
+// ── Perpanjangan batas waktu (A6, 2026-10-12) ─────────────────────────────────
+// PIC mengajukan tanggal batas waktu baru + alasan; pelapor (atau admin/SHE) menyetujui/menolak.
+// Disimpan di data.perpanjangan; disetujui → batas_waktu diganti & eskalasi SHE di-reset.
+async function _perpanjanganMuat(id) {
+  const idT = String(id || '').trim();
+  const tabel = /^INSP/i.test(idT) ? 'inspection_report' : 'hazard_report';
+  const d = await _disputeLoad(tabel === 'inspection_report' ? 'INSPECTION' : 'HAZARD', idT);
+  return d ? { ...d, tabel } : null;
+}
+async function _perpanjanganSimpan(tabel, id, patch) {
+  await getSql()(`UPDATE ${tabel} SET data = (data - 'eskalasi_she_at') || $1::jsonb WHERE id = $2`, [JSON.stringify(patch), id]);
+}
+async function ajukanPerpanjangan(sheets, auth, data) {
+  const d = await _perpanjanganMuat(data.id);
+  if (!d) throw new Error('Laporan tidak ditemukan.');
+  const row = (await getSql()(`SELECT data FROM ${d.tabel} WHERE id = $1`, [d.id]))[0]?.data || {};
+  assertReportRole(row, auth, 'pic');
+  if (['CLOSED', 'FOLLOWUP'].includes(d.status)) throw new Error('Laporan sudah tahap closing — perpanjangan tidak diperlukan.');
+  if (row.perpanjangan?.status === 'PENDING') throw new Error('Masih ada pengajuan perpanjangan yang menunggu keputusan.');
+  const tgl = String(data.tanggal_baru || '').slice(0, 10);
+  const alasan = String(data.alasan || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) throw new Error('Tanggal batas waktu baru wajib diisi.');
+  if (tgl <= todayJakarta()) throw new Error('Tanggal baru harus setelah hari ini.');
+  if (alasan.length < 5) throw new Error('Alasan wajib diisi (minimal 5 karakter).');
+  const me = (await _rosterByNik(auth.nik)) || {};
+  const now = new Date().toISOString();
+  const log = Array.isArray(row.perpanjangan?.log) ? row.perpanjangan.log : [];
+  await getSql()(`UPDATE ${d.tabel} SET data = data || $1::jsonb WHERE id = $2`, [JSON.stringify({ perpanjangan: {
+    status: 'PENDING', tanggal_baru: tgl, alasan, batas_lama: String(d.batas || '').slice(0, 10),
+    by_nik: auth.nik || '', by_nama: me.NAMA || auth.nama || '', at: now,
+    log: [...log, { type: 'AJUAN', at: now, by_nama: me.NAMA || auth.nama || '', tanggal_baru: tgl, alasan }],
+  } }), d.id]);
+  await _notifyPerson(sheets, d.pelapor, `[ONE-SAP] ${d.id} — PIC mengajukan perpanjangan batas waktu`,
+    `PIC ${d.pic.nama || ''} mengajukan perpanjangan batas waktu laporan ${d.id}.\n\nBatas waktu sekarang: ${String(d.batas || '-').slice(0, 10)}\nUsulan baru: ${tgl}\nAlasan: ${alasan}\n\nSilakan setujui atau tolak di ONE-SAP.`,
+    d.url).catch(() => {});
+  return { status: 'success', message: 'Pengajuan perpanjangan terkirim ke pelapor.' };
+}
+async function putuskanPerpanjangan(sheets, auth, data) {
+  const d = await _perpanjanganMuat(data.id);
+  if (!d) throw new Error('Laporan tidak ditemukan.');
+  const row = (await getSql()(`SELECT data FROM ${d.tabel} WHERE id = $1`, [d.id]))[0]?.data || {};
+  assertReportRole(row, auth, 'reporter');
+  const p0 = row.perpanjangan;
+  if (p0?.status !== 'PENDING') throw new Error('Tidak ada pengajuan perpanjangan yang menunggu.');
+  const setuju = data.keputusan === 'setuju';
+  const catatan = String(data.catatan || '').trim();
+  if (!setuju && catatan.length < 3) throw new Error('Catatan wajib diisi bila menolak.');
+  const me = (await _rosterByNik(auth.nik)) || {};
+  const now = new Date().toISOString();
+  const pp = { ...p0, status: setuju ? 'DISETUJUI' : 'DITOLAK', keputusan_by: me.NAMA || auth.nama || '', keputusan_at: now, catatan,
+    log: [...(p0.log || []), { type: setuju ? 'SETUJU' : 'TOLAK', at: now, by_nama: me.NAMA || auth.nama || '', catatan }] };
+  if (setuju) await _perpanjanganSimpan(d.tabel, d.id, { perpanjangan: pp, batas_waktu: p0.tanggal_baru });
+  else await getSql()(`UPDATE ${d.tabel} SET data = data || $1::jsonb WHERE id = $2`, [JSON.stringify({ perpanjangan: pp }), d.id]);
+  await _notifyPerson(sheets, d.pic, `[ONE-SAP] ${d.id} — Perpanjangan ${setuju ? 'disetujui' : 'ditolak'}`,
+    setuju ? `Perpanjangan batas waktu laporan ${d.id} DISETUJUI. Batas waktu baru: ${p0.tanggal_baru}.`
+           : `Perpanjangan batas waktu laporan ${d.id} DITOLAK.\nCatatan: ${catatan}\n\nBatas waktu tetap ${String(d.batas || '-').slice(0, 10)}.`,
+    d.url).catch(() => {});
+  return { status: 'success', message: setuju ? `Disetujui. Batas waktu baru ${p0.tanggal_baru}.` : 'Perpanjangan ditolak.' };
+}
+
+// ── Alur pelaporan otomatis (A3–A5, keputusan user 2026-10-12) ──────────────────
+// Harian (dipanggil api/cron-deadline.js): setujui rencana > 2 hari, konfirmasi closing > 3 hari
+// (memakai reviewActionPlan/reviewClosing yang sama → efek & notifikasi identik), lalu eskalasi
+// bertingkat PIC → Section Head departemen PIC → SHE. Eskalasi dikirim 1 email ringkas per
+// penerima; tiap tingkat ditandai di data (eskalasi_*_at) supaya tidak berulang.
+const SISTEM = { role: 'SUPER_ADMIN', nik: '', nama: 'Sistem ONE-SAP' };
+async function cronAlurLaporan({ dry = false, batasMs = 45000 } = {}) {
+  const sql = getSql();
+  const { sheets } = getClients();
+  const mulai = Date.now();
+  const [hz, ins, roster] = await Promise.all([
+    sql`SELECT id, status_perbaikan, data FROM hazard_report WHERE upper(coalesce(status_perbaikan,'')) <> 'CLOSED'`,
+    sql`SELECT id, jenis, status_perbaikan, data FROM inspection_report WHERE upper(coalesce(status_perbaikan,'')) <> 'CLOSED'`,
+    _karyawanRows(sheets),
+  ]);
+  const laporan = [
+    ...hz.map((r) => ({ tabel: 'hazard_report', sheet: 'Hazard_Report', id: r.id, status: r.status_perbaikan, data: r.data || {} })),
+    ...ins.map((r) => ({ tabel: 'inspection_report', sheet: r.jenis, id: r.id, status: r.status_perbaikan, data: r.data || {} })),
+  ];
+  const sheetOf = new Map(laporan.map((l) => [l.id, l.sheet]));
+  const aksi = rencanakanAlur(laporan);
+  const hitung = aksi.reduce((a, x) => ((a[x.aksi] = (a[x.aksi] || 0) + 1), a), {});
+  if (dry) return { dry: true, ...hitung };
+
+  const hasil = { setujuiRencana: 0, konfirmasiClosing: 0, ingatkanPic: 0, eskalasiSect: 0, eskalasiShe: 0, gagal: 0, terpotong: false };
+  const waktuHabis = () => Date.now() - mulai > batasMs;
+
+  // A3 & A5 — lewat fungsi review yang sama dengan tombol pelapor
+  for (const a of aksi.filter((x) => x.aksi === 'setujuiRencana' || x.aksi === 'konfirmasiClosing')) {
+    if (waktuHabis()) { hasil.terpotong = true; break; }
+    const sheet = sheetOf.get(a.id);
+    const payload = { id: a.id, otomatis: true, ...(sheet !== 'Hazard_Report' ? { inspection_sheet: sheet } : {}) };
+    try {
+      if (a.aksi === 'setujuiRencana') await reviewActionPlan(sheets, { ...payload, decision: 'approved', comment: 'Disetujui otomatis: pelapor tidak merespons 2 hari.' }, sheet, SISTEM);
+      else await reviewClosing(sheets, { ...payload, decision: 'confirmed', comment: 'Dikonfirmasi otomatis: pelapor tidak merespons 3 hari.' }, sheet, SISTEM);
+      hasil[a.aksi]++;
+    } catch (e) { hasil.gagal++; console.error('[alur]', a.aksi, a.id, e.message); }
+  }
+
+  // A4 — eskalasi, dikelompokkan per penerima
+  const norm = (v) => String(v || '').trim().toUpperCase();
+  const byNik = new Map(roster.map((r) => [String(r.NIK || '').trim(), r]));
+  const baris = (a) => `- ${a.id} · ${a.data.lokasi_bahaya || a.data.lokasi_inspeksi || a.data.lokasi || '-'} · PIC ${a.data.nama_pic || '-'} · batas ${String(a.data.batas_waktu || '-').slice(0, 10)}`;
+  const daftar = (arr, maks = 40) => arr.slice(0, maks).map(baris).join('\n') + (arr.length > maks ? `\n... dan ${arr.length - maks} laporan lainnya` : '');
+  const kelompok = (nama, kunci) => {
+    const m = new Map();
+    for (const a of aksi.filter((x) => x.aksi === nama)) { const k = kunci(a); if (!m.has(k)) m.set(k, []); m.get(k).push(a); }
+    return m;
+  };
+  const tandai = async (arr, kolom) => {
+    for (const tabel of ['hazard_report', 'inspection_report']) {
+      const ids = arr.filter((a) => a.tabel === tabel).map((a) => a.id);
+      if (ids.length) await sql(`UPDATE ${tabel} SET data = data || jsonb_build_object($1::text, $2::text) WHERE id = ANY($3::text[])`, [kolom, new Date().toISOString(), ids]);
+    }
+  };
+  const URL_ESK = 'https://sap-ebl.vercel.app/eskalasi.html';
+
+  for (const [nik, arr] of kelompok('ingatkanPic', (a) => String(a.data.nik_pic || a.data.nama_pic || ''))) {
+    if (waktuHabis()) { hasil.terpotong = true; break; }
+    const k = byNik.get(nik);
+    await _notifyPerson(sheets, { nik: k ? nik : '', nama: k?.NAMA || arr[0].data.nama_pic }, `[ONE-SAP] ${arr.length} laporan menunggu rencana tindakanmu`,
+      `Halo ${k?.NAMA || arr[0].data.nama_pic || ''}, laporan berikut sudah lebih dari 3 hari tanpa rencana tindakan darimu sebagai PIC:\n\n${daftar(arr)}\n\nSilakan buka ONE-SAP dan kirim rencana tindakan. Bila kamu bukan PIC yang tepat, gunakan tombol "Bukan PIC saya" di laporan.`,
+      'https://sap-ebl.vercel.app/index-home.html').catch(() => {});
+    await tandai(arr, 'eskalasi_pic_at');
+    hasil.ingatkanPic += arr.length;
+  }
+
+  // Section Head = karyawan roster ber-jabatan "SECTION HEAD" di departemen & perusahaan PIC
+  const sectHeadOf = (a) => {
+    const pic = byNik.get(String(a.data.nik_pic || '').trim());
+    const dept = norm(pic?.DEPARTEMEN || a.data.departemen_pic), pt = norm(pic?.PERUSAHAAN || a.data.perusahaan_pic);
+    const sh = roster.find((r) => norm(r.DEPARTEMEN) === dept && norm(r.PERUSAHAAN) === pt && /SECTION HEAD|SECT\.? HEAD/.test(norm(r.JABATAN)));
+    return sh && String(sh.NIK) !== String(a.data.nik_pic) ? String(sh.NIK) : '';
+  };
+  for (const [shNik, arr] of kelompok('eskalasiSect', sectHeadOf)) {
+    if (waktuHabis()) { hasil.terpotong = true; break; }
+    if (shNik) {
+      const sh = byNik.get(shNik);
+      await _notifyPerson(sheets, { nik: shNik, nama: sh?.NAMA }, `[ONE-SAP] ${arr.length} laporan di departemenmu belum ditindaklanjuti`,
+        `Halo ${sh?.NAMA || ''}, laporan berikut sudah lebih dari 7 hari tanpa rencana tindakan dari PIC di departemenmu:\n\n${daftar(arr)}\n\nMohon bantu tindak lanjuti bersama PIC terkait.`, URL_ESK).catch(() => {});
+      hasil.eskalasiSect += arr.length;
+    }
+    await tandai(arr, 'eskalasi_sect_at'); // tanpa Section Head → tetap ditandai; SHE menerima saat lewat batas waktu
+  }
+
+  const she = aksi.filter((x) => x.aksi === 'eskalasiShe');
+  if (she.length && !waktuHabis()) {
+    const sheHead = roster.find((r) => norm(r.DEPARTEMEN) === 'SHE' && /SECTION HEAD/.test(norm(r.JABATAN)));
+    const teks = `Laporan berikut sudah lewat batas waktu dan belum selesai (${she.length} laporan):\n\n${daftar(she, 60)}\n\nDaftar lengkap & tombol ingatkan PIC ada di menu Eskalasi.`;
+    const subjek = `[ONE-SAP] ${she.length} laporan lewat batas waktu`;
+    await _sendMail(PIC_DISPUTE_EMAIL, subjek, teks, URL_ESK).catch(() => {});
+    if (sheHead?.NIK) await _notifyPerson(sheets, { nik: String(sheHead.NIK), nama: sheHead.NAMA }, subjek, teks, URL_ESK).catch(() => {});
+    await tandai(she, 'eskalasi_she_at');
+    hasil.eskalasiShe = she.length;
+  } else if (she.length) hasil.terpotong = true;
+
+  console.log('[alur]', JSON.stringify(hasil));
+  return hasil;
+}
 
 // Dipakai api/cron-kuis-st.js (cron harian).
 const cronKuisST = () => kirimNotifKuisST(getClients().sheets);
@@ -3437,6 +3609,8 @@ module.exports = async (req, res) => {
           break;
         }
         case 'disputePic':          result = await disputePic(sheets, authUser, data); break;
+        case 'ajukanPerpanjangan':  result = await ajukanPerpanjangan(sheets, authUser, data); break;
+        case 'putuskanPerpanjangan': result = await putuskanPerpanjangan(sheets, authUser, data); break;
         case 'saveMySignature':     result = await saveMySignature(authUser, data); break;
         case 'hapusMySignature':    result = await hapusMySignature(authUser); break;
         case 'resolvePicDispute':   result = await resolvePicDispute(sheets, authUser, data); break;
@@ -3527,3 +3701,4 @@ module.exports = async (req, res) => {
   }
 };
 module.exports.cronKuisST = cronKuisST;
+module.exports.cronAlurLaporan = cronAlurLaporan;

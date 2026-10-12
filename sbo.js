@@ -131,7 +131,7 @@ function renderChecklistVal(jsonStr, catKey) {
     return items.map((label, i) => {
       const v = obj[String(i + 1)] || obj[label] || 'NA';
       const cls = v === 'AMAN' ? 'val-aman' : v === 'TIDAK_AMAN' ? 'val-tidak' : 'val-na';
-      const txt = v === 'AMAN' ? '✅ Aman' : v === 'TIDAK_AMAN' ? '❌ Tidak Aman' : '— N.A.';
+      const txt = v === 'AMAN' ? 'Aman' : v === 'TIDAK_AMAN' ? 'Tidak Aman' : '— N.A.';
       return `<div class="item"><span>${label}</span><span class="${cls}">${txt}</span></div>`;
     }).join('');
   } catch { return '<em>-</em>'; }
