@@ -105,6 +105,7 @@ async function initAbsensi() {
       if (nik) _abStatus[nik] = String(r['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase();
     });
 
+    await _loadRoster();
     renderTable();
 
     // Auto-cek quiz (background, setelah tabel tampil)
@@ -217,7 +218,7 @@ function renderTable() {
 
     const rowCls = status ? `ab-row-${status.toLowerCase()}` : '';
     return `<tr class="${rowCls}" id="row-${escapeHTML(nik)}">
-      <td><b>${escapeHTML(k['NAMA'] || '-')}</b><br><span style="font-size:.72rem;color:#94a3b8">${escapeHTML(nik)}</span></td>
+      <td><b>${escapeHTML(k['NAMA'] || '-')}</b><br><span style="font-size:.72rem;color:#94a3b8">${escapeHTML(nik)}</span>${_rosterHintHtml(nik, status)}</td>
       <td style="font-size:.8rem">${escapeHTML(k['DEPARTEMEN'] || '')}</td>
       <td style="font-size:.8rem">${escapeHTML(k['JABATAN'] || '')}</td>
       <td class="ab-radio-group">${radioButtons}</td>
@@ -300,6 +301,120 @@ function isiSemua(status) {
   _abFiltered.forEach(k => { _abStatus[String(k['NIK'] || '').trim()] = status; });
   renderTable();
   if (_quizSessionIds.length && QUIZ_REQUIRED.has(status)) _fetchQuizStatuses();
+}
+
+// ── Referensi roster (2026-10-12) ───────────────────────────────────────────
+// Keterangan per karyawan pada tanggal sesi: roster harian (CSV per bulan, diupload
+// Super Admin, lib/roster.js) + Jadwal Cuti SISTER MINER. Hanya saran — admin tetap memilih.
+const ROSTER_KODE = {
+  D: { status: 'HADIR', label: 'Shift Pagi' },
+  N: { status: 'SHIFT_MALAM', label: 'Shift Malam' },
+  OFF: { status: 'LIBUR', label: 'Off' },
+  DL: { status: 'DINAS_LUAR', label: 'Dinas Luar' },
+  SJ: { status: 'SECURITY_JAGA', label: 'Security Jaga' },
+};
+let _abRoster = { roster: {}, cuti: {} };
+
+function _tglSesi() {
+  const t = String(_abSchedule?.['TANGGAL'] || '');
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+  const d = new Date(t);
+  return isNaN(d) ? '' : new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(d);
+}
+
+async function _loadRoster() {
+  const tgl = _tglSesi();
+  if (!tgl) return;
+  try {
+    const j = await (await fetch(`/api?action=getRosterTanggal&tanggal=${tgl}`)).json();
+    if (j.status === 'success') _abRoster = j.data;
+  } catch {}
+  _renderRosterBar();
+}
+
+function _saranRoster(nik) {
+  const c = _abRoster.cuti?.[nik];
+  if (c) {
+    const akhir = new Date(c.akhir + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    return { status: 'CUTI', label: `Cuti s/d ${akhir}` };
+  }
+  const k = ROSTER_KODE[_abRoster.roster?.[nik]];
+  return k ? { status: k.status, label: k.label } : null;
+}
+
+function _rosterHintHtml(nik, status) {
+  const s = _saranRoster(nik);
+  if (!s) return '';
+  const beda = status && status !== s.status;
+  return `<div style="margin-top:3px;font-size:.72rem;font-weight:600;color:${beda ? '#b45309' : '#0f766e'}" title="${beda ? 'Berbeda dengan roster' : 'Sesuai roster'}">
+    <i class="fa-regular fa-calendar-check"></i> Roster: ${escapeHTML(s.label)}${beda ? ' <i class="fa-solid fa-triangle-exclamation"></i>' : ''}</div>`;
+}
+
+function _renderRosterBar() {
+  const bar = document.getElementById('abRosterBar');
+  if (!bar) return;
+  const ada = _abKaryawan.filter(k => _saranRoster(String(k['NIK'] || '').trim())).length;
+  const isSuper = String(getCurrentUser()?.role || '').toUpperCase().replace(/\s+/g, '_') === 'SUPER_ADMIN';
+  bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin:8px 0;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;font-size:.8rem;color:#134e4a';
+  bar.innerHTML = `
+    <span><i class="fa-regular fa-calendar-check"></i> Roster tanggal ini: <b>${ada}</b> dari ${_abKaryawan.length} karyawan punya keterangan${ada ? '' : ' (belum ada roster diupload untuk tanggal ini)'}.</span>
+    ${ada ? '<button type="button" class="qf-btn" style="background:#0f766e;color:#fff;border-color:#0f766e" onclick="isiSesuaiRoster()">Isi sesuai roster (yang belum diisi)</button>' : ''}
+    <button type="button" class="qf-btn" onclick="unduhTemplateRoster()"><i class="fa-solid fa-download"></i> Template roster bulan ini</button>
+    ${isSuper ? '<button type="button" class="qf-btn" onclick="document.getElementById(\'abRosterFile\').click()"><i class="fa-solid fa-upload"></i> Upload roster (CSV)</button>' : ''}
+    <span style="flex-basis:100%;font-size:.72rem;color:#5f7d7a">Kode: D = Shift Pagi (Hadir) · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga. Cuti diambil otomatis dari Jadwal Cuti SISTER MINER.</span>`;
+}
+
+function isiSesuaiRoster() {
+  let n = 0;
+  _abFiltered.forEach(k => {
+    const nik = String(k['NIK'] || '').trim();
+    const s = _saranRoster(nik);
+    if (s && !_abStatus[nik]) { _abStatus[nik] = s.status; n++; }
+  });
+  renderTable();
+  if (typeof showToast === 'function') showToast(n ? `${n} karyawan diisi sesuai roster. Periksa lalu Simpan.` : 'Tidak ada yang perlu diisi (sudah terisi semua / tanpa roster).');
+  if (n && _quizSessionIds.length) _fetchQuizStatuses();
+}
+
+// Template CSV: daftar karyawan jadwal ini × semua tanggal di bulan sesi (format lib/roster.js).
+function unduhTemplateRoster() {
+  const tgl = _tglSesi() || new Date().toISOString().slice(0, 10);
+  const [y, m] = tgl.split('-').map(Number);
+  const hari = new Date(y, m, 0).getDate();
+  const tanggal = Array.from({ length: hari }, (_, i) => `${y}-${String(m).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`);
+  const q = v => /[",;\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const baris = [['NIK', 'NAMA', ...tanggal].join(','),
+    ..._abKaryawan.map(k => [q(String(k['NIK'] || '')), q(String(k['NAMA'] || '')), ...tanggal.map(() => '')].join(','))];
+  const blob = new Blob(['﻿' + baris.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Roster ${new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function uploadRoster(input) {
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const csv = await file.text();
+    const res = await fetch('/api', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'importRoster', data: { csv } }),
+    });
+    const j = await res.json();
+    if (!res.ok || j.status === 'error') {
+      const det = (j.errors || []).slice(0, 5).join('\n');
+      alert(`${j.message || 'Gagal upload roster.'}${det ? '\n\n' + det : ''}`);
+      return;
+    }
+    if (typeof showToast === 'function') showToast(j.message);
+    await _loadRoster();
+    renderTable();
+  } catch (e) {
+    alert('Gagal upload roster: ' + e.message);
+  }
 }
 
 // ── Save ────────────────────────────────────────────────────────────────────

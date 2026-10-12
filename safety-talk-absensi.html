@@ -149,6 +149,10 @@
           <button class="qf-btn qf-mangkir"       onclick="isiSemua('MANGKIR')">Mangkir</button>
         </div>
 
+        <!-- Referensi roster (2026-10-12): keterangan per karyawan dari roster harian + Jadwal Cuti -->
+        <div id="abRosterBar" class="ab-roster-bar" style="display:none"></div>
+        <input type="file" id="abRosterFile" accept=".csv,text/csv" style="display:none" onchange="uploadRoster(this)">
+
         <!-- Legend -->
         <div class="ab-legend">
           <span class="ab-legend-item"><span class="ab-dot" style="background:#16a34a"></span> Hadir = capaian penuh</span>

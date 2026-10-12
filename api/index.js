@@ -7,6 +7,7 @@ const https = require('https');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const webPush = require('web-push');
+const { parseRosterCsv } = require('../lib/roster');
 
 // [PUSH-START] VAPID setup — lazy init agar tidak crash jika env belum diset
 let _vapidSet = false;
@@ -354,6 +355,16 @@ async function loadCutiSources(sheets) {
 // Bug (2026-08-21): bandingin Date lengkap (dgn jam) ke new Date(tanggal)
 // (selalu jam 00:00 UTC) bikin cutiSelesai cuma "cuti" di milidetik pertama
 // harinya. Fix: banding string tanggal kalender (YYYY-MM-DD) di zona WIB.
+// Tabel roster harian (lib/roster.js) — dibuat otomatis saat import pertama.
+let _rosterTableOk = false;
+async function ensureRosterTable(sql) {
+  if (_rosterTableOk) return;
+  await sql`CREATE TABLE IF NOT EXISTS roster_harian (
+    nik TEXT NOT NULL, tanggal DATE NOT NULL, kode TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (nik, tanggal))`;
+  _rosterTableOk = true;
+}
+
 function todayJakarta() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 }
@@ -2915,6 +2926,22 @@ module.exports = async (req, res) => {
           result = { status: 'success', data: rows[0] || null };
           break;
         }
+        case 'getRosterTanggal': {
+          // Referensi absensi manual: kode roster + cuti (Jadwal Cuti SISTER MINER) per NIK
+          // pada tanggal sesi. Fail-open: tabel/sumber belum ada → objek kosong.
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const tgl = String(req.query.tanggal || '').slice(0, 10);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) throw new Error('tanggal wajib (YYYY-MM-DD).');
+          const sql = getSql();
+          const roster = {}, cuti = {};
+          try { for (const r of await sql`SELECT nik, kode FROM roster_harian WHERE tanggal = ${tgl}::date`) roster[r.nik] = r.kode; } catch {}
+          try {
+            for (const r of await sql`SELECT nik, data->>'awal' AS awal, data->>'akhir' AS akhir FROM sm."JadwalCuti"
+              WHERE (data->>'awal')::date <= ${tgl}::date AND (data->>'akhir')::date >= ${tgl}::date`) cuti[r.nik] = { awal: r.awal, akhir: r.akhir };
+          } catch {}
+          result = { status: 'success', data: { tanggal: tgl, roster, cuti } };
+          break;
+        }
         case 'getSafetyTalkAbsensi': {
           // Admin/Super Admin: semua (atau per schedule). USER: absensi
           // se-DEPARTEMEN-nya (perusahaan+departemen sama) supaya angka ST
@@ -3303,6 +3330,27 @@ module.exports = async (req, res) => {
           const notif = await kirimNotifKuisST(sheets, schedule_id).catch((e) => ({ status: 'error', reason: e.message }));
           result = { status: 'success', count: norm.length, notif_kuis: notif,
             message: `Hadir: ${hadirCount}, Quiz: ${quizCount}, Mangkir: ${mangkirCount}.` };
+          break;
+        }
+        case 'importRoster': {
+          // Roster harian (CSV per bulan, lib/roster.js) → referensi keterangan kehadiran
+          // di absensi manual Safety Talk. Upsert per (NIK, tanggal); sel kosong = hapus.
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN yang bisa import roster.'), { httpStatus: 403 });
+          const { rows, tanggal, errors } = parseRosterCsv((data || {}).csv);
+          if (errors.length) { result = { status: 'error', message: 'File roster belum sesuai format.', errors }; break; }
+          const sql = getSql();
+          await ensureRosterTable(sql);
+          const isi = rows.filter((r) => r.kode), kosong = rows.filter((r) => !r.kode);
+          if (isi.length) await sql`
+            INSERT INTO roster_harian (nik, tanggal, kode, updated_at)
+            SELECT n, t::date, k, now() FROM unnest(${isi.map((r) => r.nik)}::text[], ${isi.map((r) => r.tanggal)}::text[], ${isi.map((r) => r.kode)}::text[]) AS x(n, t, k)
+            ON CONFLICT (nik, tanggal) DO UPDATE SET kode = EXCLUDED.kode, updated_at = now()`;
+          if (kosong.length) await sql`
+            DELETE FROM roster_harian r USING unnest(${kosong.map((x) => x.nik)}::text[], ${kosong.map((x) => x.tanggal)}::text[]) AS x(n, t)
+            WHERE r.nik = x.n AND r.tanggal = x.t::date`;
+          const niks = new Set(rows.map((r) => r.nik)).size;
+          const sorted = [...tanggal].sort();
+          result = { status: 'success', message: `Roster tersimpan: ${niks} karyawan, ${sorted[0]} s/d ${sorted[sorted.length - 1]} (${isi.length} sel terisi).` };
           break;
         }
         case 'submitHazardReport':
