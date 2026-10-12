@@ -304,6 +304,12 @@ body:has(.app-layout) {
 .sb-act-bell { border-radius: 6px; }
 .sb-act-lbl { font-size: .75rem; font-weight: 600; line-height: 1.15; text-align: center; color: inherit; }
 .sb-act-bell .sb-act-lbl { color: rgba(255,255,255,.6); }
+/* lonceng di sidebar: ikon sewarna tombol lain (dulu abu gelap, tak terlihat di navy) & setinggi ikon agar label sejajar */
+.sb-act-bell .sidebar-notif-bell .notification-button { width: auto; height: auto; min-height: 0; padding: 0; color: inherit; font-size: .9rem; background: none; line-height: 1; }
+.sb-act-bell .sidebar-notif-bell, .sb-act-bell .notification-menu { display: flex; line-height: 1; }
+.sidebar-notif-bell .notification-badge { top: -9px; right: -12px; }
+.sb-act-bell { color: rgba(255,255,255,.6); }
+.sb-act-lbl { white-space: nowrap; }
 
 .pw-force-dot {
   position: absolute;

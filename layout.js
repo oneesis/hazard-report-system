@@ -113,7 +113,7 @@
             <i class="fa-solid fa-bell-slash"></i><span class="sb-act-lbl">Notif HP</span>
           </button>
           <button class="sidebar-logout-btn" onclick="openMySignatureModal()" title="Tanda Tangan Saya">
-            <i class="fa-solid fa-signature"></i><span class="sb-act-lbl">Tanda Tangan</span>
+            <i class="fa-solid fa-signature"></i><span class="sb-act-lbl">TTD Saya</span>
           </button>
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password" style="position:relative">
             <i class="fa-solid fa-key"></i><span class="sb-act-lbl">Password</span>
