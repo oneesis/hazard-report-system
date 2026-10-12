@@ -16,11 +16,11 @@ let _quizTopicLabel = '';
 
 const STATUS_OPTIONS = [
   { value: 'HADIR',       label: 'Hadir',       color: '#16a34a', bg: '#dcfce7' },
-  { value: 'CUTI',        label: 'Cuti',         color: '#d97706', bg: '#fef3c7' },
-  { value: 'DINAS_LUAR',  label: 'Dinas Luar',   color: '#0284c7', bg: '#e0f2fe' },
-  { value: 'SHIFT_MALAM', label: 'Shift Malam',  color: '#7c3aed', bg: '#ede9fe' },
-  { value: 'LIBUR',       label: 'Off',          color: '#0f766e', bg: '#ccfbf1' },
-  { value: 'SECURITY_JAGA',label:'Security Jaga', color: '#db2777', bg: '#fce7f3' },
+  { value: 'CUTI',        label: 'Cuti',         color: '#003087', bg: '#e8eef8' },
+  { value: 'DINAS_LUAR',  label: 'Dinas Luar',   color: '#003087', bg: '#e8eef8' },
+  { value: 'SHIFT_MALAM', label: 'Shift Malam',  color: '#003087', bg: '#e8eef8' },
+  { value: 'LIBUR',       label: 'Off',          color: '#003087', bg: '#e8eef8' },
+  { value: 'SECURITY_JAGA',label:'Security Jaga', color: '#003087', bg: '#e8eef8' },
   { value: 'MANGKIR',     label: 'Mangkir',      color: '#dc2626', bg: '#fee2e2' },
 ];
 // Status yang wajib quiz (bukan Hadir, bukan Mangkir)
@@ -63,7 +63,7 @@ async function initAbsensi() {
           <span><i class="fa-regular fa-calendar"></i> ${tgl}</span>
           ${_abSchedule['NAMA_PEMATERI'] ? `<span><i class="fa-solid fa-person-chalkboard"></i> ${escapeHTML(_abSchedule['NAMA_PEMATERI'])}</span>` : ''}
           ${_abSchedule['PERUSAHAAN_TARGET'] ? `<span><i class="fa-solid fa-building"></i> ${escapeHTML(_abSchedule['PERUSAHAAN_TARGET'])}</span>` : '<span><i class="fa-solid fa-building"></i> Semua Perusahaan</span>'}
-          ${_quizSessionIds.length ? `<span style="color:#c7d2fe;font-size:.78rem"><i class="fa-solid fa-clipboard-check"></i> Quiz tertaut${_quizTopicLabel ? ': ' + escapeHTML(_quizTopicLabel) : ''}</span>` : ''}
+          ${_quizSessionIds.length ? `<span style="color:rgba(255,255,255,.75);font-size:.78rem"><i class="fa-solid fa-clipboard-check"></i> Quiz tertaut${_quizTopicLabel ? ': ' + escapeHTML(_quizTopicLabel) : ''}</span>` : ''}
         </div>`;
     }
 
@@ -291,7 +291,7 @@ function updateSummary() {
     `<span class="ab-chip" style="background:${bg};color:${color}">${icon ? `<i class="fa-solid ${icon}"></i> ` : ''}${label}: <b>${val}</b></span>`;
   let html = STATUS_OPTIONS.map(s => chip(s.label, cnt[s.value], s.color, s.bg)).join('');
   html += chip('Belum Teridentifikasi', belumId, '#475569', '#e2e8f0', 'fa-circle-question');
-  html += chip('Quiz Lulus', quizLulus, '#4338ca', '#e0e7ff', 'fa-clipboard-check');
+  html += chip('Quiz Lulus', quizLulus, '#003087', '#e8eef8', 'fa-clipboard-check');
   html += chip('Belum Quiz', quizBelum, '#b45309', '#fef3c7', 'fa-clock');
   html += `<span style="font-size:.78rem;color:#94a3b8;margin-left:4px;align-self:center">dari <b>${_abKaryawan.length}</b></span>`;
   el.innerHTML = html;
@@ -349,7 +349,7 @@ function _rosterHintHtml(nik, status) {
   const s = _saranRoster(nik);
   if (!s) return '';
   const beda = status && status !== s.status;
-  return `<div style="margin-top:3px;font-size:.72rem;font-weight:600;color:${beda ? '#b45309' : '#0f766e'}" title="${beda ? 'Berbeda dengan roster' : 'Sesuai roster'}">
+  return `<div style="margin-top:3px;font-size:.72rem;font-weight:600;color:${beda ? '#b45309' : '#475569'}" title="${beda ? 'Berbeda dengan roster' : 'Sesuai roster'}">
     <i class="fa-regular fa-calendar-check"></i> Roster: ${escapeHTML(s.label)}${beda ? ' <i class="fa-solid fa-triangle-exclamation"></i>' : ''}</div>`;
 }
 
@@ -358,12 +358,12 @@ function _renderRosterBar() {
   if (!bar) return;
   const ada = _abKaryawan.filter(k => _saranRoster(String(k['NIK'] || '').trim())).length;
   const isSuper = String(getCurrentUser()?.role || '').toUpperCase().replace(/\s+/g, '_') === 'SUPER_ADMIN';
-  bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin:8px 0;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;font-size:.8rem;color:#134e4a';
+  bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:.8rem;color:#334155';
   bar.innerHTML = `
     <span><i class="fa-regular fa-calendar-check"></i> Roster tanggal ini: <b>${ada}</b> dari ${_abKaryawan.length} karyawan punya keterangan${ada ? '' : ' (belum ada roster diupload untuk tanggal ini)'}.</span>
     <button type="button" class="qf-btn" onclick="unduhTemplateRoster()"><i class="fa-solid fa-download"></i> Template roster bulan ini</button>
     ${isSuper ? '<button type="button" class="qf-btn" onclick="document.getElementById(\'abRosterFile\').click()"><i class="fa-solid fa-upload"></i> Upload roster (CSV)</button>' : ''}
-    <span style="flex-basis:100%;font-size:.72rem;color:#5f7d7a">Hanya referensi, status tetap dipilih manual. Kode: D = Shift Pagi · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga · FB = Cuti. Bila roster kosong, cuti diambil dari Jadwal Cuti SISTER MINER.</span>`;
+    <span style="flex-basis:100%;font-size:.75rem;color:#64748b">Hanya referensi, status tetap dipilih manual. Kode: D = Shift Pagi · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga · FB = Cuti. Bila roster kosong, cuti diambil dari Jadwal Cuti SISTER MINER.</span>`;
 }
 
 // Template CSV: daftar karyawan jadwal ini × semua tanggal di bulan sesi (format lib/roster.js).

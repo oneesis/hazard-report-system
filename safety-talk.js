@@ -123,12 +123,12 @@ function renderSchedules() {
       ${s['PERUSAHAAN_TARGET'] ? `<div class="st-card-meta"><i class="fa-solid fa-building"></i> ${escapeHTML(s['PERUSAHAAN_TARGET'])}</div>` : '<div class="st-card-meta"><i class="fa-solid fa-building"></i> Semua Perusahaan</div>'}
       ${s['DESKRIPSI_MATERI'] ? `<div class="st-card-desc">${escapeHTML(s['DESKRIPSI_MATERI'])}</div>` : ''}
       ${_quizLinked.has(id)
-        ? '<div class="st-card-meta" style="color:#7c3aed"><i class="fa-solid fa-clipboard-check"></i> Quiz tertaut</div>'
+        ? '<div class="st-card-meta" style="color:#003087"><i class="fa-solid fa-clipboard-check"></i> Quiz tertaut</div>'
         : '<div class="st-card-meta" style="color:#cbd5e1"><i class="fa-solid fa-clipboard-question"></i> Belum ada quiz</div>'}
       <div class="st-absensi-count">
-        <i class="fa-solid fa-users-line" style="color:#6366f1"></i>
+        <i class="fa-solid fa-users-line" style="color:#64748b"></i>
         <span style="color:#16a34a;font-weight:700">${ab.hadir} Hadir</span>
-        ${ab.quiz    ? `<span style="color:#7c3aed;font-weight:700;margin-left:6px">${ab.quiz} Quiz</span>` : ''}
+        ${ab.quiz    ? `<span style="color:#003087;font-weight:700;margin-left:6px">${ab.quiz} Quiz</span>` : ''}
         ${ab.mangkir ? `<span style="color:#dc2626;font-weight:700;margin-left:6px">${ab.mangkir} Mangkir</span>` : ''}
       </div>
       <div class="st-card-footer">
@@ -361,11 +361,11 @@ Demikian undangan ini kami sampaikan. Atas perhatian dan kehadiran Bapak/Ibu tep
 // MANGKIR = tidak; status lain terpenuhi hanya bila QUIZ_DONE = YA.
 const _ST_STATUS_META = {
   HADIR:       { label: 'Hadir',       color: '#16a34a' },
-  CUTI:        { label: 'Cuti',        color: '#d97706' },
-  DINAS_LUAR:  { label: 'Dinas Luar',  color: '#0284c7' },
-  SHIFT_MALAM: { label: 'Shift Malam', color: '#7c3aed' },
-  LIBUR:       { label: 'Off',         color: '#0f766e' },
-  SECURITY_JAGA:{ label: 'Security Jaga', color: '#db2777' },
+  CUTI:        { label: 'Cuti',        color: '#003087' },
+  DINAS_LUAR:  { label: 'Dinas Luar',  color: '#307FE2' },
+  SHIFT_MALAM: { label: 'Shift Malam', color: '#00205B' },
+  LIBUR:       { label: 'Off',         color: '#7FA9EC' },
+  SECURITY_JAGA:{ label: 'Security Jaga', color: '#A9C4F0' },
   MANGKIR:     { label: 'Mangkir',     color: '#dc2626' },
 };
 function _stStatusOf(row) { return String(row['STATUS_KEHADIRAN'] || 'HADIR').toUpperCase(); }
@@ -422,12 +422,12 @@ function renderStDashboard() {
     <div class="st-kpi-val" style="color:${color}">${val}</div>
     <div class="st-kpi-lbl">${lbl}</div>${sub ? `<div class="st-kpi-sub">${sub}</div>` : ''}</div>`;
   document.getElementById('stDashKpis').innerHTML =
-    kpi(jadwalCount, 'Jadwal', '#6366f1', monthF ? 'bulan terpilih' : 'semua bulan') +
-    kpi(total, 'Diabsen', '#0f172a', 'total baris absensi') +
+    kpi(jadwalCount, 'Jadwal', '#00205B', monthF ? 'bulan terpilih' : 'semua bulan') +
+    kpi(total, 'Diabsen', '#00205B', 'total baris absensi') +
     kpi(hadir, 'Hadir', '#16a34a', `${_stPct(hadir, total)}% dari diabsen`) +
-    kpi(quizLulus, 'Quiz Lulus', '#7c3aed', `dari ${wajibQuiz.length} wajib quiz`) +
-    kpi(quizBelum, 'Belum Quiz', '#d97706', 'capaian belum terpenuhi') +
-    kpi(mangkir, 'Mangkir', '#dc2626', 'tidak bisa diganti quiz') +
+    kpi(quizLulus, 'Quiz Lulus', '#00205B', `dari ${wajibQuiz.length} wajib quiz`) +
+    kpi(quizBelum, 'Belum Quiz', quizBelum ? '#b45309' : '#00205B', 'capaian belum terpenuhi') +
+    kpi(mangkir, 'Mangkir', mangkir ? '#dc2626' : '#00205B', 'tidak bisa diganti quiz') +
     kpi(pctPatuh + '%', 'Kepatuhan', patuhColor, `${patuh} / ${total} terpenuhi`);
 
   // ── Chart 1: distribusi status (doughnut) ──
@@ -491,8 +491,8 @@ function renderStDashboard() {
     type: 'line',
     data: {
       labels: months.map(m => new Date(m + '-01').toLocaleDateString('id-ID', { month: 'short', year: '2-digit' })),
-      datasets: [{ label: 'Kepatuhan %', data: trend, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)',
-                   fill: true, tension: .35, spanGaps: true, pointRadius: 4, pointBackgroundColor: '#6366f1' }],
+      datasets: [{ label: 'Kepatuhan %', data: trend, borderColor: '#003087', backgroundColor: 'rgba(0,48,135,.08)',
+                   fill: true, tension: .35, spanGaps: true, pointRadius: 4, pointBackgroundColor: '#003087' }],
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false },

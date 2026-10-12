@@ -18,8 +18,8 @@
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
   <style>
     /* Info card */
-    .st-info-card { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border-radius:14px; padding:20px 24px; margin-bottom:18px; }
-    .st-info-card h2 { font-size:1.05rem; font-weight:700; margin:0 0 8px; }
+    .st-info-card { background:#003087; color:#fff; border-radius:14px; padding:20px 24px; margin-bottom:18px; }
+    .st-info-card h2 { font-size:1.05rem; font-weight:700; margin:0 0 8px; color:#fff; }
     .st-info-meta { font-size:.82rem; opacity:.85; display:flex; gap:16px; flex-wrap:wrap; }
 
     /* Peringatan quiz belum ada */
@@ -34,7 +34,7 @@
     .ab-summary { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
     .ab-chip { display:inline-flex; align-items:center; gap:5px; font-size:.78rem; font-weight:700; border-radius:20px; padding:4px 12px; }
     .ab-chip-hadir   { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
-    .ab-chip-quiz    { background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd; }
+    .ab-chip-quiz    { background:#e8eef8; color:#003087; border:1px solid #bfd3f5; }
     .ab-chip-mangkir { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
     .ab-chip-belum   { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
 
@@ -43,11 +43,11 @@
     .quick-fill { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
     .qf-btn { border:none; border-radius:8px; padding:5px 12px; font-size:.75rem; font-weight:700; cursor:pointer; }
     .qf-hadir       { background:#dcfce7; color:#15803d; }
-    .qf-cuti        { background:#fef3c7; color:#92400e; }
-    .qf-dinas-luar  { background:#e0f2fe; color:#0369a1; }
-    .qf-shift-malam { background:#ede9fe; color:#6d28d9; }
-    .qf-libur       { background:#ccfbf1; color:#0f766e; }
-    .qf-security-jaga { background:#fce7f3; color:#be185d; }
+    .qf-cuti        { background:#e8eef8; color:#003087; }
+    .qf-dinas-luar  { background:#e8eef8; color:#003087; }
+    .qf-shift-malam { background:#e8eef8; color:#003087; }
+    .qf-libur       { background:#e8eef8; color:#003087; }
+    .qf-security-jaga { background:#e8eef8; color:#003087; }
     .qf-mangkir     { background:#fee2e2; color:#b91c1c; }
 
     /* Radio sebagai checkbox pill */
@@ -64,13 +64,10 @@
     .ab-radio-label input[type=radio] { display:none; }
 
     /* Row tints */
-    tr.ab-row-hadir       td { background:#f0fdf4; }
-    tr.ab-row-cuti        td { background:#fefce8; }
-    tr.ab-row-dinas_luar  td { background:#f0f9ff; }
-    tr.ab-row-shift_malam td { background:#f5f3ff; }
-    tr.ab-row-libur       td { background:#f0fdfa; }
-    tr.ab-row-security_jaga td { background:#fdf2f8; }
-    tr.ab-row-mangkir     td { background:#fff1f2; }
+    tr.ab-row-hadir td:first-child { box-shadow: inset 3px 0 0 #16a34a; }
+    tr.ab-row-cuti td:first-child, tr.ab-row-dinas_luar td:first-child, tr.ab-row-shift_malam td:first-child,
+    tr.ab-row-libur td:first-child, tr.ab-row-security_jaga td:first-child { box-shadow: inset 3px 0 0 #7FA9EC; }
+    tr.ab-row-mangkir td:first-child { box-shadow: inset 3px 0 0 #dc2626; }
 
     /* Quiz cell */
     .ab-quiz-cell { white-space:nowrap; text-align:center; }
@@ -86,13 +83,13 @@
     .ab-dot { width:9px; height:9px; border-radius:50%; }
 
     /* Sticky bar */
-    .btn-save { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border:none; border-radius:10px; padding:11px 24px; font-size:.9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .btn-save { background:#003087; color:#fff; border:none; border-radius:10px; padding:11px 24px; font-size:.9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
     .btn-save:hover { opacity:.9; }
     .btn-save:disabled { opacity:.6; cursor:default; }
     .btn-wa { background:#25d366; color:#fff; border:none; border-radius:10px; padding:11px 20px; font-size:.9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
     .btn-wa:hover { opacity:.9; }
     .sticky-bar { position:sticky; bottom:0; background:#fff; border-top:1.5px solid #e2e8f0; padding:14px 0; z-index:10; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-    .back-link { display:inline-flex; align-items:center; gap:6px; color:#6366f1; font-size:.85rem; font-weight:600; text-decoration:none; margin-bottom:4px; }
+    .back-link { display:inline-flex; align-items:center; gap:6px; color:#003087; font-size:.85rem; font-weight:600; text-decoration:none; margin-bottom:4px; }
     .back-link:hover { text-decoration:underline; }
   </style>
 </head>
@@ -156,7 +153,7 @@
         <!-- Legend -->
         <div class="ab-legend">
           <span class="ab-legend-item"><span class="ab-dot" style="background:#16a34a"></span> Hadir = capaian penuh</span>
-          <span class="ab-legend-item"><span class="ab-dot" style="background:#7c3aed"></span> Cuti/Dinas/Shift/Off + lulus quiz = capaian penuh</span>
+          <span class="ab-legend-item"><span class="ab-dot" style="background:#7FA9EC"></span> Cuti/Dinas/Shift/Off + lulus quiz = capaian penuh</span>
           <span class="ab-legend-item"><span class="ab-dot" style="background:#dc2626"></span> Mangkir = 0 capaian (boleh kuis, tidak dihitung)</span>
         </div>
 
