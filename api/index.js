@@ -2896,6 +2896,25 @@ module.exports = async (req, res) => {
           result = { status: 'success', data: rows };
           break;
         }
+        case 'getCutiOnsite': {
+          // Popup "sudah onsite?" pasca cuti: periode JadwalCuti (SISTER MINER) milik user
+          // yang sudah berakhir ≤15 hari lalu & belum dikonfirmasi onsite. Tombol popup
+          // membuka `tautan` (halaman konfirmasi bertoken SISTER MINER, sama dgn email).
+          const nik = String(auth.nik || '').trim();
+          const today = todayJakarta();
+          let rows = [];
+          try {
+            rows = await getSql()`
+              SELECT data->>'akhir' AS akhir, data->>'tautan' AS tautan
+              FROM sm."JadwalCuti"
+              WHERE nik = ${nik} AND coalesce(data->>'onsite', '') <> 'ya' AND coalesce(data->>'tautan', '') <> ''
+                AND (data->>'akhir')::date < ${today}::date
+                AND (data->>'akhir')::date >= ${today}::date - 15
+              ORDER BY data->>'akhir' DESC LIMIT 1`;
+          } catch {}
+          result = { status: 'success', data: rows[0] || null };
+          break;
+        }
         case 'getSafetyTalkAbsensi': {
           // Admin/Super Admin: semua (atau per schedule). USER: absensi
           // se-DEPARTEMEN-nya (perusahaan+departemen sama) supaya angka ST

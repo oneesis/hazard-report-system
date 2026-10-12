@@ -65,7 +65,8 @@ async function initHomePage() {
   renderHazardDraft();
   const stPromise = renderPenggantiST(); // resolve = jumlah kuis pengganti yg belum
   initNotificationBell();
-  maybeShowStQuizPopup(); // popup kuis pengganti ST bila capaian belum 100% & bukan mangkir
+  // popup konfirmasi onsite pasca cuti dulu; kuis ST menunggu buka berikutnya (tak menumpuk)
+  maybeShowOnsitePopup().then(shown => { if (!shown) maybeShowStQuizPopup(); }); // kuis: capaian ST belum 100% & bukan mangkir
   renderPushBanner();     // ajakan aktifkan notifikasi PWA (U3)
 
   try {
@@ -414,6 +415,35 @@ async function renderPenggantiST() {
   el.innerHTML = `<div class="st-list">${items}</div>`;
   setModBadge('st', pending);
   return pending;
+}
+
+// Popup "sudah onsite?" pasca cuti (2026-10-12). Data JadwalCuti SISTER MINER; tombol
+// membuka halaman konfirmasi bertoken yang sama dengan email (tanpa login). Muncul
+// sekali per buka aplikasi sampai dikonfirmasi. Resolve true bila popup tampil.
+async function maybeShowOnsitePopup() {
+  try { if (sessionStorage.getItem('onsite_popup_shown')) return false; } catch {}
+  let d = null;
+  try { d = (await (await fetch('/api?action=getCutiOnsite')).json()).data; } catch { return false; }
+  if (!d || !/^https:\/\//.test(d.tautan || '')) return false;
+  try { sessionStorage.setItem('onsite_popup_shown', '1'); } catch {}
+  const tgl = v => { const x = new Date(String(v) + 'T00:00:00'); return isNaN(x) ? v : x.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }); };
+  const tutup = "document.getElementById('onsitePopup')?.remove()";
+  const ov = document.createElement('div');
+  ov.id = 'onsitePopup';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;max-width:390px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center">
+      <div style="width:60px;height:60px;border-radius:16px;background:#15803d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 14px"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
+      <h3 style="margin:0 0 6px;font-size:1.15rem;color:#1e293b">Selamat Datang Kembali</h3>
+      <p style="margin:0 0 14px;color:#64748b;font-size:.88rem;line-height:1.5">Menurut jadwal, cuti kamu berakhir <b>${escapeHTML(tgl(d.akhir))}</b>. Apakah kamu sudah kembali onsite?</p>
+      <a href="${escapeHTML(d.tautan)}/aksi?jenis=onsite" target="_blank" rel="noopener noreferrer" onclick="${tutup}" style="display:block;background:#15803d;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;font-size:.95rem;margin-bottom:8px">Ya, saya sudah onsite</a>
+      <a href="${escapeHTML(d.tautan)}?perpanjang=1" target="_blank" rel="noopener noreferrer" onclick="${tutup}" style="display:block;background:#f1f5f9;color:#1e293b;text-decoration:none;padding:12px;border-radius:12px;font-weight:700;font-size:.9rem;margin-bottom:10px">Cuti saya diperpanjang</a>
+      <p style="margin:0 0 8px;color:#64748b;font-size:.8rem;line-height:1.45">Setelah onsite, wajib mengerjakan <b>Reinduksi Pasca Cuti</b> di SIMANTRA K3.</p>
+      <button type="button" onclick="${tutup}" style="background:none;border:none;color:#94a3b8;font-size:.9rem;cursor:pointer;padding:6px">Nanti saja</button>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  return true;
 }
 
 // Popup kuis pengganti Safety Talk saat buka app (diperbarui 2026-10-11).
