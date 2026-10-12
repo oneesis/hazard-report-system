@@ -313,7 +313,7 @@ const ROSTER_KODE = {
   OFF: { status: 'LIBUR', label: 'Off' },
   DL: { status: 'DINAS_LUAR', label: 'Dinas Luar' },
   SJ: { status: 'SECURITY_JAGA', label: 'Security Jaga' },
-  C: { status: 'CUTI', label: 'Cuti' },
+  FB: { status: 'CUTI', label: 'Cuti (FB)' },
 };
 let _abRoster = { roster: {}, cuti: {} };
 
@@ -363,7 +363,7 @@ function _renderRosterBar() {
     <span><i class="fa-regular fa-calendar-check"></i> Roster tanggal ini: <b>${ada}</b> dari ${_abKaryawan.length} karyawan punya keterangan${ada ? '' : ' (belum ada roster diupload untuk tanggal ini)'}.</span>
     <button type="button" class="qf-btn" onclick="unduhTemplateRoster()"><i class="fa-solid fa-download"></i> Template roster bulan ini</button>
     ${isSuper ? '<button type="button" class="qf-btn" onclick="document.getElementById(\'abRosterFile\').click()"><i class="fa-solid fa-upload"></i> Upload roster (CSV)</button>' : ''}
-    <span style="flex-basis:100%;font-size:.72rem;color:#5f7d7a">Hanya referensi, status tetap dipilih manual. Kode: D = Shift Pagi · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga · C = Cuti. Bila roster kosong, cuti diambil dari Jadwal Cuti SISTER MINER.</span>`;
+    <span style="flex-basis:100%;font-size:.72rem;color:#5f7d7a">Hanya referensi, status tetap dipilih manual. Kode: D = Shift Pagi · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga · FB = Cuti. Bila roster kosong, cuti diambil dari Jadwal Cuti SISTER MINER.</span>`;
 }
 
 // Template CSV: daftar karyawan jadwal ini × semua tanggal di bulan sesi (format lib/roster.js).
