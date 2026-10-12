@@ -336,3 +336,8 @@
 .admin-subnav { overflow-x: auto; scrollbar-width: none; padding-left: 16px; padding-right: 16px; }
 .admin-subnav::-webkit-scrollbar { display: none; }
 .admin-subnav-btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* Manajemen User di HP: tetap tabel, digeser ke samping di dalam .admin-card (bukan kartu) */
+@media (max-width: 640px) {
+  #umTable td { white-space: nowrap; }
+}
