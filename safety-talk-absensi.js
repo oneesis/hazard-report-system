@@ -305,13 +305,15 @@ function isiSemua(status) {
 
 // ── Referensi roster (2026-10-12) ───────────────────────────────────────────
 // Keterangan per karyawan pada tanggal sesi: roster harian (CSV per bulan, diupload
-// Super Admin, lib/roster.js) + Jadwal Cuti SISTER MINER. Hanya saran — admin tetap memilih.
+// Super Admin, lib/roster.js) + Jadwal Cuti SISTER MINER. HANYA REFERENSI — tidak pernah
+// mengubah status kehadiran; admin tetap memilih sendiri (permintaan user 2026-10-12).
 const ROSTER_KODE = {
   D: { status: 'HADIR', label: 'Shift Pagi' },
   N: { status: 'SHIFT_MALAM', label: 'Shift Malam' },
   OFF: { status: 'LIBUR', label: 'Off' },
   DL: { status: 'DINAS_LUAR', label: 'Dinas Luar' },
   SJ: { status: 'SECURITY_JAGA', label: 'Security Jaga' },
+  C: { status: 'CUTI', label: 'Cuti' },
 };
 let _abRoster = { roster: {}, cuti: {} };
 
@@ -332,14 +334,15 @@ async function _loadRoster() {
   _renderRosterBar();
 }
 
+// Roster harian lebih detail (D/N/OFF/DL/SJ/C) → diutamakan; Jadwal Cuti SISTER MINER
+// hanya cadangan bila roster tanggal itu kosong. Murni referensi — tidak mengisi status.
 function _saranRoster(nik) {
-  const c = _abRoster.cuti?.[nik];
-  if (c) {
-    const akhir = new Date(c.akhir + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-    return { status: 'CUTI', label: `Cuti s/d ${akhir}` };
-  }
   const k = ROSTER_KODE[_abRoster.roster?.[nik]];
-  return k ? { status: k.status, label: k.label } : null;
+  if (k) return { status: k.status, label: k.label };
+  const c = _abRoster.cuti?.[nik];
+  if (!c) return null;
+  const akhir = new Date(c.akhir + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  return { status: 'CUTI', label: `Cuti s/d ${akhir} (Jadwal Cuti)` };
 }
 
 function _rosterHintHtml(nik, status) {
@@ -358,22 +361,9 @@ function _renderRosterBar() {
   bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin:8px 0;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;font-size:.8rem;color:#134e4a';
   bar.innerHTML = `
     <span><i class="fa-regular fa-calendar-check"></i> Roster tanggal ini: <b>${ada}</b> dari ${_abKaryawan.length} karyawan punya keterangan${ada ? '' : ' (belum ada roster diupload untuk tanggal ini)'}.</span>
-    ${ada ? '<button type="button" class="qf-btn" style="background:#0f766e;color:#fff;border-color:#0f766e" onclick="isiSesuaiRoster()">Isi sesuai roster (yang belum diisi)</button>' : ''}
     <button type="button" class="qf-btn" onclick="unduhTemplateRoster()"><i class="fa-solid fa-download"></i> Template roster bulan ini</button>
     ${isSuper ? '<button type="button" class="qf-btn" onclick="document.getElementById(\'abRosterFile\').click()"><i class="fa-solid fa-upload"></i> Upload roster (CSV)</button>' : ''}
-    <span style="flex-basis:100%;font-size:.72rem;color:#5f7d7a">Kode: D = Shift Pagi (Hadir) · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga. Cuti diambil otomatis dari Jadwal Cuti SISTER MINER.</span>`;
-}
-
-function isiSesuaiRoster() {
-  let n = 0;
-  _abFiltered.forEach(k => {
-    const nik = String(k['NIK'] || '').trim();
-    const s = _saranRoster(nik);
-    if (s && !_abStatus[nik]) { _abStatus[nik] = s.status; n++; }
-  });
-  renderTable();
-  if (typeof showToast === 'function') showToast(n ? `${n} karyawan diisi sesuai roster. Periksa lalu Simpan.` : 'Tidak ada yang perlu diisi (sudah terisi semua / tanpa roster).');
-  if (n && _quizSessionIds.length) _fetchQuizStatuses();
+    <span style="flex-basis:100%;font-size:.72rem;color:#5f7d7a">Hanya referensi, status tetap dipilih manual. Kode: D = Shift Pagi · N = Shift Malam · OFF = Off · DL = Dinas Luar · SJ = Security Jaga · C = Cuti. Bila roster kosong, cuti diambil dari Jadwal Cuti SISTER MINER.</span>`;
 }
 
 // Template CSV: daftar karyawan jadwal ini × semua tanggal di bulan sesi (format lib/roster.js).
