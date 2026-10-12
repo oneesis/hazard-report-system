@@ -105,10 +105,13 @@
           <a href="manual/one-sap.pdf" target="_blank" rel="noopener noreferrer" class="sidebar-logout-btn" title="Manual Book (Panduan Penggunaan)">
             <i class="fa-solid fa-circle-question"></i><span class="sb-act-lbl">Panduan</span>
           </a>
-          <div class="sb-act-bell">
-            <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>
+          ${window.innerWidth > 768 ? `<div class="sb-act-bell">
+            <div id="notificationBell" class="sidebar-notif-bell"></div>
             <span class="sb-act-lbl">Notifikasi</span>
-          </div>
+          </div>` : `<!-- HP: lonceng ada di topbar; tombol ini menutup sidebar lalu membuka daftar notifikasinya -->
+          <button class="sidebar-logout-btn" title="Notifikasi" onclick="event.stopPropagation();document.getElementById('appSidebar')?.classList.remove('open');document.getElementById('sidebarOverlay')?.classList.remove('active');document.getElementById('notificationButton')?.click()">
+            <i class="fa-solid fa-bell"></i><span class="sb-act-lbl">Notifikasi</span>
+          </button>`}
           <button class="sidebar-logout-btn push-notif-btn" onclick="togglePushNotification()" title="Aktifkan push notification">
             <i class="fa-solid fa-bell-slash"></i><span class="sb-act-lbl">Notif HP</span>
           </button>
