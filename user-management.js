@@ -241,7 +241,7 @@ function renderPendingChanges(list) {
   if (!pending.length) { section.innerHTML = '<p class="um-empty">Tidak ada permohonan pending.</p>'; return; }
 
   section.innerHTML = `<table class="um-pending-table">
-    <thead><tr><th>Waktu</th><th>Oleh</th><th>Perusahaan</th><th>Action</th><th>Data</th><th>Keputusan</th></tr></thead>
+    <thead><tr><th>Waktu</th><th>Oleh</th><th>Perusahaan</th><th>Aksi</th><th>Data</th><th>Keputusan</th></tr></thead>
     <tbody>${pending.map(p => {
       const data = safeParseJson(p['DATA']);
       return `<tr>
@@ -618,7 +618,7 @@ function renderMyHistory(list) {
   const statusBadge = s =>
     `<span class="um-action-badge um-status-${(s||'unknown').toLowerCase()}">${escapeHTML(s||'-')}</span>`;
   section.innerHTML = `<table class="um-pending-table">
-    <thead><tr><th>Waktu</th><th>Action</th><th>Data</th><th>Status</th><th>Catatan</th></tr></thead>
+    <thead><tr><th>Waktu</th><th>Aksi</th><th>Data</th><th>Status</th><th>Catatan</th></tr></thead>
     <tbody>${list.map(p => {
       const data = safeParseJson(p['DATA']);
       return `<tr>

@@ -305,7 +305,7 @@ function renderLmCards() {
 
       <div class="lm-card-right">
         <div>
-          <div class="lm-meta-label">DUE DATE</div>
+          <div class="lm-meta-label">BATAS WAKTU</div>
           <div class="lm-card-due-date">${escapeHTML(dueFmt)}</div>
         </div>
         ${slaBadge(r)}
@@ -351,7 +351,7 @@ function lmGoPage(p) {
 
 function exportCsv() {
   if (!lmFiltered.length) return;
-  const headers = ['ID','Jenis','Tanggal','Pelapor','Dept','Lokasi','Deskripsi','PIC','Due Date','Status','SLA Hari'];
+  const headers = ['ID','Jenis','Tanggal','Pelapor','Dept','Lokasi','Deskripsi','PIC','Batas Waktu','Status','SLA Hari'];
   const rows = lmFiltered.map(r => [
     r.id || '',
     getReportTypeLabel(r),

@@ -100,23 +100,27 @@
             <div class="sidebar-user-role">${safe(role || 'USER')}</div>
           </div>
         </div>
+        <!-- U12 (2026-10-12): tiap ikon kini berlabel (dulu ikon saja) -->
         <div class="sidebar-user-actions">
           <a href="manual/one-sap.pdf" target="_blank" rel="noopener noreferrer" class="sidebar-logout-btn" title="Manual Book (Panduan Penggunaan)">
-            <i class="fa-solid fa-circle-question"></i>
+            <i class="fa-solid fa-circle-question"></i><span class="sb-act-lbl">Panduan</span>
           </a>
-          <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>
+          <div class="sb-act-bell">
+            <div id="${window.innerWidth > 768 ? 'notificationBell' : 'notificationBellSidebar'}" class="sidebar-notif-bell"></div>
+            <span class="sb-act-lbl">Notifikasi</span>
+          </div>
           <button class="sidebar-logout-btn push-notif-btn" onclick="togglePushNotification()" title="Aktifkan push notification">
-            <i class="fa-solid fa-bell-slash"></i>
+            <i class="fa-solid fa-bell-slash"></i><span class="sb-act-lbl">Notif HP</span>
           </button>
           <button class="sidebar-logout-btn" onclick="openMySignatureModal()" title="Tanda Tangan Saya">
-            <i class="fa-solid fa-signature"></i>
+            <i class="fa-solid fa-signature"></i><span class="sb-act-lbl">Tanda Tangan</span>
           </button>
           <button class="sidebar-logout-btn" onclick="openChangePasswordModal()" title="Ganti Password" style="position:relative">
-            <i class="fa-solid fa-key"></i>
+            <i class="fa-solid fa-key"></i><span class="sb-act-lbl">Password</span>
             ${window.__onesapForcePw ? '<span class="pw-force-dot"></span>' : ''}
           </button>
           <button class="sidebar-logout-btn" onclick="confirmLogout()" title="Logout">
-            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <i class="fa-solid fa-arrow-right-from-bracket"></i><span class="sb-act-lbl">Keluar</span>
           </button>
         </div>
       </div>`;

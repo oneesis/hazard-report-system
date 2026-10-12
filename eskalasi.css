@@ -173,7 +173,7 @@
 }
 
 .esk-sla-pill {
-  font-size: .68rem;
+  font-size: .7rem;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 20px;
@@ -208,7 +208,7 @@
   gap: 4px;
 }
 
-.esk-meta-item i { font-size: .7rem; color: #94a3b8; }
+.esk-meta-item i { font-size: .75rem; color: #94a3b8; }
 
 .esk-card-footer {
   display: flex;
@@ -220,7 +220,7 @@
 }
 
 .esk-due-label {
-  font-size: .7rem;
+  font-size: .75rem;
   color: #94a3b8;
 }
 

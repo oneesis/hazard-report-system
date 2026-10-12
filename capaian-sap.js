@@ -376,7 +376,7 @@ function renderKpi() {
     ${withTotal.length ? `<div class="ach-kpi-cell">
       <i class="fa-solid fa-circle-check" style="color:${achColor};font-size:1.1rem"></i>
       <div class="ach-kpi-num" style="color:${achColor}">${achieved}/${withTotal.length}</div>
-      <div class="ach-kpi-label">Achieved 100%</div>
+      <div class="ach-kpi-label">Capai 100%</div>
     </div>` : ''}
     ${kpiItem('Rata-rata HR',    avg('pctHR'),    'fa-triangle-exclamation')}
     ${kpiItem('Rata-rata INS',   avg('pctINS'),   'fa-clipboard-check')}

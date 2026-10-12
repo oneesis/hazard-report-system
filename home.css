@@ -92,7 +92,7 @@
 }
 .sap-ach-title i { color: #F2A900; }
 .sap-ach-month {
-  font-size: .72rem;
+  font-size: .75rem;
   color: #94a3b8;
   font-weight: 600;
 }
@@ -112,7 +112,7 @@
   align-items: center;
   gap: 6px;
 }
-.sap-obj-label i { color: #94a3b8; font-size: .7rem; }
+.sap-obj-label i { color: #94a3b8; font-size: .75rem; }
 .sap-obj-bar-wrap {
   flex: 1;
   height: 7px;
@@ -136,7 +136,7 @@
 .sap-obj-sep { font-weight: 400; color: #cbd5e1; margin: 0 1px; }
 .sap-obj-done { color: #22c55e; font-size: .8rem; flex-shrink: 0; }
 .sap-obj-pct {
-  font-size: .68rem;
+  font-size: .75rem;
   color: #94a3b8;
   width: 30px;
   text-align: right;
@@ -144,7 +144,7 @@
 }
 
 @media (max-width: 480px) {
-  .sap-obj-label { width: 110px; font-size: .7rem; }
+  .sap-obj-label { width: 110px; font-size: .75rem; }
   .sap-obj-pct { display: none; }
 }
 
@@ -158,7 +158,7 @@
   box-shadow: 0 2px 12px rgba(245,158,11,.10);
 }
 .action-banner-title {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 700;
   letter-spacing: .07em;
   text-transform: uppercase;
@@ -198,7 +198,7 @@
 }
 .action-banner-label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ab-title { font-size: .86rem; font-weight: 700; }
-.ab-hint  { font-size: .72rem; font-weight: 500; opacity: .8; }
+.ab-hint  { font-size: .75rem; font-weight: 500; opacity: .8; }
 .ab-hint b { font-weight: 800; }
 
 /* baris laporan perlu tindakan (2 baris: deskripsi + meta) */
@@ -220,21 +220,21 @@
 .ab-chip {
   display: inline-block; vertical-align: 1px; margin-right: 6px;
   padding: 1px 6px; border-radius: 5px;
-  font-size: .58rem; font-weight: 800; color: #fff; letter-spacing: .03em;
+  font-size: .7rem; font-weight: 800; color: #fff; letter-spacing: .03em;
 }
 .ab-row-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.ab-row-where { flex: 1; min-width: 0; font-size: .68rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ab-row-where i { font-size: .62rem; }
-.ab-row-go { font-size: .62rem; color: #cbd5e1; flex-shrink: 0; }
-.ab-due { flex-shrink: 0; font-size: .66rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: #f1f5f9; color: #64748b; white-space: nowrap; }
+.ab-row-where { flex: 1; min-width: 0; font-size: .75rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-row-where i { font-size: .75rem; }
+.ab-row-go { font-size: .75rem; color: #cbd5e1; flex-shrink: 0; }
+.ab-due { flex-shrink: 0; font-size: .75rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: #f1f5f9; color: #64748b; white-space: nowrap; }
 .ab-due--over { background: #fee2e2; color: #b91c1c; }
 .ab-due--soon { background: #fef3c7; color: #b45309; }
 .ab-more {
   display: block; padding: 9px 12px; text-align: center;
-  font-size: .74rem; font-weight: 700; color: inherit; text-decoration: none;
+  font-size: .75rem; font-weight: 700; color: inherit; text-decoration: none;
 }
 .ab-more:hover { text-decoration: underline; }
-.ab-chevron { font-size: .7rem; opacity: .6; transition: transform .2s; flex-shrink: 0; }
+.ab-chevron { font-size: .75rem; opacity: .6; transition: transform .2s; flex-shrink: 0; }
 .ab-list {
   border-top: 1px solid rgba(0,0,0,.07);
   padding: 4px 0;
@@ -255,7 +255,7 @@
 .ab-report-row:hover { background: rgba(0,0,0,.04); }
 .ab-report-id { font-weight: 700; font-size: .75rem; min-width: 120px; flex-shrink: 0; }
 .ab-report-desc { flex: 1; color: inherit; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ab-report-row .fa-arrow-right { font-size: .65rem; opacity: .45; flex-shrink: 0; }
+.ab-report-row .fa-arrow-right { font-size: .75rem; opacity: .45; flex-shrink: 0; }
 
 /* ── Two-column grid ── */
 .home-grid {
@@ -468,7 +468,7 @@
 
 /* Draft section */
 .hazard-draft-label {
-  font-size: .7rem;
+  font-size: .75rem;
   font-weight: 700;
   color: #92400e;
   text-transform: uppercase;
@@ -521,7 +521,7 @@
 }
 
 .hazard-draft-card-meta {
-  font-size: .7rem;
+  font-size: .75rem;
   color: #94a3b8;
   display: flex;
   flex-wrap: wrap;
@@ -529,7 +529,7 @@
 }
 
 .hazard-draft-card-cta {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 700;
   color: #d97706;
   white-space: nowrap;
@@ -628,12 +628,12 @@
 }
 
 .ins-card-sub {
-  font-size: .7rem;
+  font-size: .75rem;
   color: #94a3b8;
 }
 
 .ins-card-go {
-  font-size: .68rem;
+  font-size: .75rem;
   font-weight: 600;
   color: #307FE2;
   display: flex;
@@ -652,7 +652,7 @@
 }
 
 .daily-summary-label {
-  font-size: .68rem;
+  font-size: .75rem;
   font-weight: 700;
   color: #94a3b8;
   letter-spacing: .1em;
@@ -763,7 +763,7 @@
 .report-item-body { flex: 1; min-width: 0; }
 
 .report-item-id {
-  font-size: .7rem;
+  font-size: .75rem;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
@@ -779,13 +779,13 @@
 }
 
 .report-item-meta {
-  font-size: .68rem;
+  font-size: .75rem;
   color: #94a3b8;
   margin-top: 2px;
 }
 
 .report-item-badge {
-  font-size: .65rem;
+  font-size: .7rem;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 20px;
@@ -818,7 +818,7 @@
 
 /* ── Quick Stats ── */
 .quick-stats-label {
-  font-size: .68rem;
+  font-size: .75rem;
   font-weight: 700;
   color: #94a3b8;
   letter-spacing: .1em;
@@ -853,7 +853,7 @@
 .qs-overdue { color: #ef4444; }
 
 .quick-stat-desc {
-  font-size: .68rem;
+  font-size: .75rem;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -966,8 +966,8 @@
 .ic-sbo { background: rgba(79,70,229,.12);  color: #4f46e5; }
 .ic-pc  { background: rgba(13,148,136,.12); color: #0d9488; }
 .ic-st  { background: rgba(124,58,237,.12); color: #7c3aed; }
-.mod-lbl { font-size: .74rem; font-weight: 700; color: #334155; text-align: center; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
-.mod-chev { font-size: .6rem; color: #cbd5e1; transition: transform .25s; }
+.mod-lbl { font-size: .75rem; font-weight: 700; color: #334155; text-align: center; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
+.mod-chev { font-size: .75rem; color: #cbd5e1; transition: transform .25s; }
 .mod-btn.active { border-color: #307FE2; box-shadow: 0 4px 16px rgba(0,48,135,.1); }
 .mod-btn.active .mod-chev { transform: rotate(180deg); color: #307FE2; }
 
@@ -1017,9 +1017,9 @@
 .st-row-link:hover, .st-row-link:active { background: #fef3c7; }
 .st-main { flex: 1; min-width: 0; }
 .st-topic { font-size: .84rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-date { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+.st-date { font-size: .75rem; color: #94a3b8; margin-top: 2px; }
 .st-why { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: 600; }
-.st-b { flex-shrink: 0; font-size: .68rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+.st-b { flex-shrink: 0; font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
 .st-ok   { background: #f0fdf4; color: #15803d; }
 .st-warn { background: #fffbeb; color: #b45309; }
 .st-bad  { background: #fef2f2; color: #b91c1c; }
@@ -1030,13 +1030,13 @@
   min-width: 19px; height: 19px; padding: 0 5px;
   border-radius: 10px; border: 2px solid #fff;
   background: #ef4444; color: #fff;
-  font-size: .64rem; font-weight: 800; line-height: 15px; text-align: center;
+  font-size: .7rem; font-weight: 800; line-height: 15px; text-align: center;
   box-sizing: border-box;
 }
 .mod-badge[hidden] { display: none; }
 
 /* info terakhir diinspeksi per area */
-.ins-card-meta { font-size: .66rem; font-weight: 600; color: #16a34a; }
+.ins-card-meta { font-size: .75rem; font-weight: 600; color: #16a34a; }
 .ins-card-meta:empty { display: none; }
 .ins-meta-old  { color: #b45309; }
 .ins-meta-none { color: #94a3b8; }
@@ -1058,8 +1058,8 @@
 .sap-ring span { position: relative; font-size: .95rem; font-weight: 800; color: #00205B; }
 .sap-ring-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .sap-ring-txt b { font-size: .9rem; color: #0f172a; }
-.sap-ring-txt small { font-size: .74rem; color: #64748b; }
-.sap-ring-txt small i { font-size: .62rem; color: #307FE2; }
+.sap-ring-txt small { font-size: .75rem; color: #64748b; }
+.sap-ring-txt small i { font-size: .75rem; color: #307FE2; }
 
 /* topbar beranda: ganti judul "Beranda" (dobel dgn salam) dengan brand ONE-SAP */
 /* U6 (2026-10-12): hanya di beranda (ada .topbar-brand) — home.css juga dimuat halaman lain */
@@ -1079,7 +1079,7 @@
   display: inline-flex; align-items: center; gap: 4px;
   margin-left: 8px; padding: 2px 8px; border-radius: 20px;
   background: #00205B; color: #fff;
-  font-size: .62rem; font-weight: 800; letter-spacing: .06em; vertical-align: middle;
+  font-size: .7rem; font-weight: 800; letter-spacing: .06em; vertical-align: middle;
 }
 
 /* ringkasan card */
@@ -1096,7 +1096,7 @@
 @media (max-width: 600px) {
   .mod-bar { gap: 8px; }
   .mod-ic { width: 42px; height: 42px; font-size: 1.1rem; border-radius: 12px; }
-  .mod-lbl { font-size: .64rem; }
+  .mod-lbl { font-size: .75rem; }
   .mod-chev { display: none; }
   .mod-btn { padding: 11px 4px 9px; }
 }
@@ -1153,7 +1153,7 @@
 .report-item--overdue { border-left: 3px solid #ef4444; padding-left: 11px; }
 .overdue-tag {
   display: inline-block;
-  font-size: .58rem;
+  font-size: .7rem;
   font-weight: 700;
   color: #ef4444;
   background: #fee2e2;
@@ -1164,7 +1164,7 @@
   margin-left: 4px;
 }
 .ab-report-due {
-  font-size: .7rem;
+  font-size: .75rem;
   color: #94a3b8;
   white-space: nowrap;
   flex-shrink: 0;

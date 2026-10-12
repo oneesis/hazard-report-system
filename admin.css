@@ -172,7 +172,7 @@
 .um-modal-grid .cp-field { margin-bottom:10px; }
 .um-modal-body { overflow-y:auto; max-height:calc(90vh - 140px); padding:20px; }
 .um-section-label {
-  font-size:.7rem; font-weight:700; text-transform:uppercase;
+  font-size: .75rem; font-weight:700; text-transform:uppercase;
   letter-spacing:.07em; color:#94a3b8; margin:18px 0 10px;
 }
 .um-section-label:first-child { margin-top:0; }
@@ -325,9 +325,9 @@
 #capTable th.cap-nama { background: #f8fafc; z-index: 2; }
 #capTable tr:hover td.cap-nama { background: #f8fafc; }
 @media (max-width: 600px) {
-  #capTable { font-size: .72rem; }
+  #capTable { font-size: .75rem; }
   #capTable th, #capTable td { padding: 6px 8px; }
-  #capTable th { font-size: .66rem; }
+  #capTable th { font-size: .75rem; }
   #capTable .cap-nama { min-width: 100px; max-width: 135px; }
   #capTable .cap-clip { max-width: 120px; }
 }

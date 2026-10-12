@@ -157,7 +157,7 @@ function eskCard(r, type) {
     </div>
     <div class="esk-card-footer">
       <div>
-        <div class="esk-due-label">Due Date</div>
+        <div class="esk-due-label">Batas Waktu</div>
         <div class="esk-due-date ${dueCls}">${escapeHTML(dueFmt)}</div>
       </div>
       ${waBtn}

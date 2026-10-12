@@ -47,7 +47,7 @@
   white-space: nowrap; padding: 9px 14px;
   font-size: .83rem; flex-shrink: 0;
 }
-.lm-chevron { font-size: .65rem; margin-left: 2px; }
+.lm-chevron { font-size: .75rem; margin-left: 2px; }
 
 /* "Lainnya" dropdown */
 .lm-more-wrap { position: relative; flex-shrink: 0; }
@@ -80,9 +80,9 @@
   padding: 16px 18px;
 }
 .lm-kpi-inner { display: flex; justify-content: space-between; align-items: flex-start; }
-.lm-kpi-label { font-size: .65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.lm-kpi-label { font-size: .75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
 .lm-kpi-num   { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; color: #00205B; }
-.lm-kpi-sub   { font-size: .72rem; color: #94a3b8; }
+.lm-kpi-sub   { font-size: .75rem; color: #94a3b8; }
 .lm-kpi-icon  { font-size: 1.6rem; opacity: .15; padding-top: 2px; }
 
 .lm-kpi--total   .lm-kpi-icon { color: #307FE2; }
@@ -99,8 +99,8 @@
   text-align: center; gap: 2px; min-width: 100px;
 }
 .lm-kpi--closed .lm-kpi-num { font-size: 2rem; color: #16a34a; }
-.lm-kpi-closed-tag { font-size: .65rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: .07em; }
-.lm-kpi--closed .lm-kpi-sub  { font-size: .72rem; color: #94a3b8; }
+.lm-kpi-closed-tag { font-size: .7rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: .07em; }
+.lm-kpi--closed .lm-kpi-sub  { font-size: .75rem; color: #94a3b8; }
 
 /* ── Filter Tabs ── */
 .lm-tabs-row {
@@ -237,7 +237,7 @@
 .lm-risk-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 20px;
-  font-size: .68rem; font-weight: 700;
+  font-size: .7rem; font-weight: 700;
 }
 .lm-risk--high { background: #fef2f2; color: #b91c1c; }
 .lm-risk--med  { background: #fffbeb; color: #92400e; }
@@ -247,7 +247,7 @@
   font-size: .82rem; font-weight: 700; color: #1e293b;
   margin-bottom: 5px; display: flex; align-items: center; gap: 5px;
 }
-.lm-card-location i { color: #307FE2; font-size: .72rem; }
+.lm-card-location i { color: #307FE2; font-size: .75rem; }
 .lm-card-desc {
   font-size: .78rem; color: #64748b;
   display: -webkit-box; -webkit-line-clamp: 2;
@@ -263,7 +263,7 @@
 .lm-photo-more {
   position: absolute; bottom: 4px; right: 4px;
   background: rgba(0,0,0,.6); color: #fff;
-  font-size: .65rem; font-weight: 700; padding: 2px 5px; border-radius: 4px;
+  font-size: .75rem; font-weight: 700; padding: 2px 5px; border-radius: 4px;
 }
 
 /* Middle column */
@@ -273,7 +273,7 @@
 }
 .lm-meta-row:last-child { margin-bottom: 0; }
 .lm-meta-icon { color: #307FE2; font-size: .8rem; margin-top: 2px; width: 14px; flex-shrink: 0; }
-.lm-meta-label { font-size: .65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
+.lm-meta-label { font-size: .75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
 .lm-meta-val   { font-size: .82rem; color: #1e293b; font-weight: 500; }
 
 /* Right column */
@@ -301,7 +301,7 @@
   height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;
 }
 .lm-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
-.lm-bar-pct  { font-size: .7rem; color: #64748b; font-weight: 600; margin-left: 4px; }
+.lm-bar-pct  { font-size: .75rem; color: #64748b; font-weight: 600; margin-left: 4px; }
 
 /* Detail button */
 .lm-detail-btn {
@@ -312,7 +312,7 @@
   transition: background .15s; white-space: nowrap; margin-top: auto;
 }
 .lm-detail-btn:hover { background: #00205B; }
-.lm-detail-btn i { font-size: .7rem; }
+.lm-detail-btn i { font-size: .75rem; }
 
 /* ── Pagination ── */
 .lm-pagination {
@@ -398,11 +398,11 @@
   .lm-card-location { font-size: .8rem; margin-bottom: 4px; }
   .lm-card-desc { font-size: .82rem; margin-bottom: 6px; -webkit-line-clamp: 2; }
   .lm-card-photo-wrap { display: none; } /* hemat ruang di HP */
-  .lm-meta-label { font-size: .68rem; }
+  .lm-meta-label { font-size: .75rem; }
   .lm-meta-val   { font-size: .82rem; word-break: break-word; }
   .lm-card-due-date { font-size: .9rem; }
   .lm-card .sla-badge { font-size: .72rem; padding: 4px 8px; white-space: normal; }
-  .lm-bar-pct { font-size: .7rem; }
+  .lm-bar-pct { font-size: .75rem; }
   .lm-detail-btn { font-size: .82rem; padding: 9px 14px; min-height: 40px; }
 
   .lm-card-list { overflow-x: hidden; }

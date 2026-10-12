@@ -274,7 +274,7 @@ tr.row-overdue:last-child td:first-child  { border-bottom-left-radius: 4px; }
   margin-left: 6px;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: .7rem;
   font-weight: 700;
   background: rgba(234, 88, 12, 0.12);
   color: #ea580c;
@@ -1069,7 +1069,7 @@ tbody tr:hover {
   justify-content: center;
   padding: 6px 12px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: .7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1205,7 +1205,7 @@ tbody tr:hover {
 }
 
 .user-profile-company {
-  font-size: 11px;
+  font-size: .75rem;
   color: #94a3b8;
 }
 
@@ -1496,7 +1496,7 @@ tbody tr:hover {
 .user-title,
 .user-company,
 .user-role {
-  font-size: 11px;
+  font-size: .75rem;
   font-weight: 500;
   color: #64748b;
   line-height: 1.55;
@@ -1519,7 +1519,7 @@ tbody tr:hover {
   color: #ffffff;
   padding: 10px 12px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: .75rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -1555,11 +1555,11 @@ tbody tr:hover {
   .user-title,
   .user-company,
   .user-role {
-    font-size: 10px;
+    font-size: .75rem;
   }
 
   .btn-logout {
-    font-size: 10px;
+    font-size: .75rem;
     padding: 8px 10px;
   }
 }
@@ -1873,7 +1873,7 @@ tbody td:first-child {
   border-radius: 10px;
   background: linear-gradient(135deg, #003087, #0ea5e9);
   color: #ffffff;
-  font-size: 11px;
+  font-size: .75rem;
   font-weight: 900;
   box-shadow: 0 8px 18px rgba(0, 48, 135, 0.22);
 }
@@ -1887,7 +1887,7 @@ tbody td:first-child {
   border-radius: 999px;
   background: #eff6ff;
   color: #003087;
-  font-size: 10px;
+  font-size: .7rem;
   font-weight: 900;
 }
 
@@ -1908,7 +1908,7 @@ tbody td:first-child {
   min-width: 74px;
   padding: 6px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: .7rem;
   font-weight: 800;
 }
 
@@ -2149,7 +2149,7 @@ tbody td:first-child {
   border-radius: 50%;
   background: #f1f5f9;
   color: #64748b;
-  font-size: .7rem;
+  font-size: .75rem;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -2187,7 +2187,7 @@ tbody td:first-child {
 }
 
 .leader-dept {
-  font-size: .7rem;
+  font-size: .75rem;
   color: #94a3b8;
 }
 
@@ -2363,7 +2363,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 .akpi-overdue-card .akpi-label { color: var(--color-status-overdue); font-weight: 700; }
 
 .akpi-label {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -2378,7 +2378,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 }
 
 .akpi-delta {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 600;
   margin-top: 2px;
 }
@@ -2433,7 +2433,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 }
 
 .pareto-hint {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 600;
   color: var(--color-text-muted);
   font-style: italic;
@@ -2530,7 +2530,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 }
 
 .drilldown-row-pct {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 600;
   color: var(--color-text-muted);
   background: #f1f5f9;
@@ -2578,7 +2578,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 600;
   color: var(--color-text-muted);
 }
@@ -2631,7 +2631,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 }
 
 .aging-sub {
-  font-size: .68rem;
+  font-size: .75rem;
   color: var(--color-text-muted);
   margin-top: 2px;
 }
@@ -2693,7 +2693,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 .hotspot-table th {
   text-align: left;
   padding: 8px 10px;
-  font-size: .68rem;
+  font-size: .75rem;
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -2799,7 +2799,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 .kpi-card.avgclose { border-left-color: #003087 !important; }
 
 .kpi-title {
-  font-size: 11px !important;
+  font-size: .75rem !important;
   margin-bottom: 8px !important;
 }
 
@@ -2924,7 +2924,7 @@ body.dark-mode .dept-bar-wrap     { background: #334155; }
 
 th {
   padding: 14px 16px !important;
-  font-size: 11px !important;
+  font-size: .75rem !important;
 }
 
 td {
@@ -3141,7 +3141,7 @@ th[data-sort] {
 .ms-green  .ms-val { color: #16a34a; }
 .ms-warn   .ms-val { color: #d97706; }
 .ms-lbl {
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 600;
   color: #94a3b8;
   text-transform: uppercase;
@@ -3260,4 +3260,15 @@ th[data-sort] {
   .filter-bar .search-wrap { flex: 1 1 240px; width: auto; }
   .filter-bar select { flex: 0 1 170px; width: auto; min-width: 140px; }
   .filter-bar .btn-primary, .filter-bar .btn-secondary, .filter-bar a { flex: 0 0 auto; }
+}
+
+/* U13 (2026-10-12): label statistik modul kini 12px — di HP 5 kolom terlalu sempit
+   (halaman melebar 417px). Kolom boleh menyusut & pindah ke 3 kolom di layar kecil. */
+.module-stat { min-width: 0; }
+.ms-lbl { overflow-wrap: anywhere; text-align: center; }
+@media (max-width: 430px) {
+  .module-stats-grid,
+  .module-ins .module-stats-grid,
+  .module-sbo .module-stats-grid { grid-template-columns: repeat(3, 1fr); }
+  .module-stat.ms-wide { grid-column: span 3; }
 }

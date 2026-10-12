@@ -159,7 +159,7 @@ body:has(.app-layout) {
 }
 
 .sidebar-brand-sub {
-  font-size: .68rem;
+  font-size: .75rem;
   font-weight: 500;
   color: rgba(255,255,255,.5);
   letter-spacing: .08em;
@@ -224,7 +224,7 @@ body:has(.app-layout) {
 
 /* Section label */
 .sidebar-section-label {
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -281,7 +281,7 @@ body:has(.app-layout) {
 }
 
 .sidebar-user-role {
-  font-size: .68rem;
+  font-size: .75rem;
   color: rgba(255,255,255,.45);
   font-weight: 500;
   text-transform: uppercase;
@@ -290,10 +290,20 @@ body:has(.app-layout) {
 }
 
 .sidebar-user-actions {
-  display: flex;
-  gap: 2px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 10px;
 }
+/* U12: tombol berlabel (ikon di atas, teks di bawah) */
+.sidebar-user-actions .sidebar-logout-btn,
+.sidebar-user-actions .sb-act-bell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  width: 100%; min-height: 48px; padding: 7px 2px; text-decoration: none; color: rgba(255,255,255,.6);
+}
+.sb-act-bell { border-radius: 6px; }
+.sb-act-lbl { font-size: .75rem; font-weight: 600; line-height: 1.15; text-align: center; color: inherit; }
+.sb-act-bell .sb-act-lbl { color: rgba(255,255,255,.6); }
 
 .pw-force-dot {
   position: absolute;
@@ -367,7 +377,7 @@ body:has(.app-layout) {
 .app-admin-strip {
   background: var(--color-primary-dark);
   color: rgba(255,255,255,.8);
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -480,7 +490,7 @@ body:has(.app-layout) {
   padding: 10px 4px;
   color: #94a3b8;
   text-decoration: none;
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 600;
   letter-spacing: .02em;
   transition: color .15s;
@@ -507,7 +517,7 @@ body:has(.app-layout) {
   gap: 3px;
   padding: 8px 4px;
   text-decoration: none;
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 600;
   color: var(--color-primary-dark);
 }
@@ -548,7 +558,7 @@ body:has(.app-layout) {
   padding: 10px 4px 8px;
   color: #94a3b8;
   text-decoration: none;
-  font-size: .62rem;
+  font-size: .75rem;
   font-weight: 600;
   letter-spacing: .01em;
   transition: color .15s;
@@ -723,7 +733,7 @@ body:has(.app-layout) {
   padding: 0 4px;
   background: var(--color-status-overdue);
   color: #fff;
-  font-size: .62rem;
+  font-size: .7rem;
   font-weight: 700;
   border-radius: 999px;
   display: flex;
@@ -764,7 +774,7 @@ body:has(.app-layout) {
   margin: 0;
 }
 .notification-summary {
-  font-size: .72rem;
+  font-size: .75rem;
   color: #94a3b8;
   font-weight: 500;
 }
@@ -814,7 +824,7 @@ body:has(.app-layout) {
   flex-shrink: 0;
 }
 .notification-role {
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 20px;
@@ -823,7 +833,7 @@ body:has(.app-layout) {
   white-space: nowrap;
 }
 .notification-message {
-  font-size: .74rem;
+  font-size: .75rem;
   color: #475569;
   line-height: 1.4;
   display: -webkit-box;
@@ -835,7 +845,7 @@ body:has(.app-layout) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: .65rem;
+  font-size: .75rem;
   color: #94a3b8;
   margin-top: 1px;
 }
@@ -844,7 +854,7 @@ body:has(.app-layout) {
   border-radius: 20px;
   background: #f1f5f9;
   color: #475569;
-  font-size: .62rem;
+  font-size: .7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .04em;
@@ -947,7 +957,7 @@ body:has(.app-layout) {
   margin-bottom: 4px;
 }
 .profile-sheet-role {
-  font-size: .7rem;
+  font-size: .75rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -1062,4 +1072,19 @@ body:has(.app-layout) {
   table.tbl-kartu td > * { max-width: 100%; }
   /* pembungkus tabel tak perlu scroll samping lagi */
   .tbl-kartu-wrap, .sbo-table-wrap, .table-wrap, .table-container { overflow-x: visible !important; border: none !important; }
+}
+
+/* ── Target sentuh minimal di layar sentuh (2026-10-12, evaluasi UX U14) ──────
+   Hanya perangkat sentuh (pointer: coarse); tampilan desktop tidak berubah. */
+@media (pointer: coarse) {
+  button:not(.step-circle):not([class*="choices"]),
+  .btn-primary, .btn-secondary, .btn-danger,
+  select, input[type="text"], input[type="search"], input[type="date"], input[type="month"],
+  input[type="number"], input[type="email"], input[type="password"], input[type="tel"] {
+    min-height: 40px;
+  }
+  .um-page-btn, .pagination-btn, .pagination-page, .sbo-page-btn, .lm-pag-btn {
+    min-width: 40px; min-height: 40px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
 }

@@ -561,7 +561,7 @@ function renderTablePage() {
             <td>${jobDesc}</td>
             <td>-</td>
             <td><span class="status-badge ${obsClass}">${statusObs}</span>${overdue ? '<span class="badge-overdue">Overdue</span>' : ''}</td>
-            <td><a href="sbo.html" class="btn-view" style="text-decoration:none">Detail</a></td>
+            <td><a href="sbo.html" class="btn-view" style="text-decoration:none">Lihat</a></td>
           </tr>
         `;
       }
@@ -579,7 +579,7 @@ function renderTablePage() {
           <td>
             <button class="btn-view" data-report-index="${globalIndex}" aria-label="Lihat detail laporan">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7 0-10 6.3-10 7s3 7 10 7 10-6.3 10-7-3-7-10-7zm0 12c-3.9 0-6.7-2.7-8-5 1.3-2.3 4.1-5 8-5s6.7 2.7 8 5c-1.3 2.3-4.1 5-8 5zm0-9a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
-              View
+              Lihat
             </button>
           </td>
         </tr>
