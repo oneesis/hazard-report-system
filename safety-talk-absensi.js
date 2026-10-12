@@ -297,12 +297,6 @@ function updateSummary() {
   el.innerHTML = html;
 }
 
-function isiSemua(status) {
-  _abFiltered.forEach(k => { _abStatus[String(k['NIK'] || '').trim()] = status; });
-  renderTable();
-  if (_quizSessionIds.length && QUIZ_REQUIRED.has(status)) _fetchQuizStatuses();
-}
-
 // ── Referensi roster (2026-10-12) ───────────────────────────────────────────
 // Keterangan per karyawan pada tanggal sesi: roster harian (CSV per bulan, diupload
 // Super Admin, lib/roster.js) + Jadwal Cuti SISTER MINER. HANYA REFERENSI — tidak pernah

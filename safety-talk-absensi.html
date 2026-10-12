@@ -40,15 +40,7 @@
 
     /* Toolbar & quick fill */
     .st-ab-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-    .quick-fill { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
     .qf-btn { border:none; border-radius:8px; padding:5px 12px; font-size:.75rem; font-weight:700; cursor:pointer; }
-    .qf-hadir       { background:#dcfce7; color:#15803d; }
-    .qf-cuti        { background:#e8eef8; color:#003087; }
-    .qf-dinas-luar  { background:#e8eef8; color:#003087; }
-    .qf-shift-malam { background:#e8eef8; color:#003087; }
-    .qf-libur       { background:#e8eef8; color:#003087; }
-    .qf-security-jaga { background:#e8eef8; color:#003087; }
-    .qf-mangkir     { background:#fee2e2; color:#b91c1c; }
 
     /* Radio sebagai checkbox pill */
     .ab-radio-group { display:flex; gap:5px; flex-wrap:wrap; min-width:420px; }
@@ -134,17 +126,6 @@
           </select>
         </div>
 
-        <!-- Quick fill -->
-        <div class="quick-fill">
-          <span style="font-size:.75rem;color:#94a3b8">Isi semua:</span>
-          <button class="qf-btn qf-hadir"       onclick="isiSemua('HADIR')">✓ Hadir</button>
-          <button class="qf-btn qf-cuti"         onclick="isiSemua('CUTI')">Cuti</button>
-          <button class="qf-btn qf-dinas-luar"   onclick="isiSemua('DINAS_LUAR')">Dinas Luar</button>
-          <button class="qf-btn qf-shift-malam"  onclick="isiSemua('SHIFT_MALAM')">Shift Malam</button>
-          <button class="qf-btn qf-libur"         onclick="isiSemua('LIBUR')">Off</button>
-          <button class="qf-btn qf-security-jaga" onclick="isiSemua('SECURITY_JAGA')">Security Jaga</button>
-          <button class="qf-btn qf-mangkir"       onclick="isiSemua('MANGKIR')">Mangkir</button>
-        </div>
 
         <!-- Referensi roster (2026-10-12): keterangan per karyawan dari roster harian + Jadwal Cuti -->
         <div id="abRosterBar" class="ab-roster-bar" style="display:none"></div>
