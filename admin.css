@@ -340,4 +340,8 @@
 /* Manajemen User di HP: tetap tabel, digeser ke samping di dalam .admin-card (bukan kartu) */
 @media (max-width: 640px) {
   #umTable td { white-space: nowrap; }
+  /* huruf & jarak dirapatkan agar lebih banyak kolom terlihat sekaligus (permintaan user) */
+  #umTable th { padding: 6px 8px; font-size: .62rem; }
+  #umTable td { padding: 5px 8px; font-size: .68rem; }
+  #umTable .um-actions button { min-height: 28px; padding: 3px 8px; font-size: .66rem; }
 }
