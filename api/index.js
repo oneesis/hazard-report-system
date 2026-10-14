@@ -2886,7 +2886,7 @@ async function cronAlurLaporan({ dry = false, batasMs = 45000 } = {}) {
     ...ins.map((r) => ({ tabel: 'inspection_report', sheet: r.jenis, id: r.id, status: r.status_perbaikan, data: r.data || {} })),
   ];
   const sheetOf = new Map(laporan.map((l) => [l.id, l.sheet]));
-  const aksi = rencanakanAlur(laporan);
+  const aksi = rencanakanAlur(laporan, Date.now(), todayJakarta()); // tanggal lokal: cron kini 06:00 WITA (= kemarin dalam UTC)
   const hitung = aksi.reduce((a, x) => ((a[x.aksi] = (a[x.aksi] || 0) + 1), a), {});
   if (dry) return { dry: true, ...hitung };
 

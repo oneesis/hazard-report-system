@@ -19,7 +19,7 @@
     "api/cron-kuis-st.js":    { "maxDuration": 60 }
   },
   "crons": [
-    { "path": "/api/cron-deadline", "schedule": "0 1 * * *" },
+    { "path": "/api/cron-deadline", "schedule": "0 22 * * *" },
     { "path": "/api/cron-sap-reminder", "schedule": "0 1 * * *" },
     { "path": "/api/cron-kuis-st", "schedule": "30 23 * * *" }
   ]

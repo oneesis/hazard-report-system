@@ -1,4 +1,4 @@
-// #5 — Cron harian 08:00 WIB: reminder WA ke PIC laporan HR/INS yang belum
+// #5 — Cron harian 06:00 WITA (22:00 UTC; dulu 09:00 WITA — dimajukan 2026-10-15 agar sebelum Shift 1): reminder ke PIC laporan HR/INS yang belum
 // CLOSED dan jatuh tempo dalam ≤ 3 hari (hari ini … H-3).
 // [6 Okt 2026] Dulu baca Google Sheets (basi sejak migrasi Neon) DAN mencari
 // kolom 'no_whatsapp_pic' — padahal header aslinya salah ketik 'no_whattsapp_pic'
