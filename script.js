@@ -369,20 +369,16 @@ function autoFillRisiko() {
   if (hidden) hidden.value = r.tingkat;
 
   const N = Taksonomi.NAMA_KEPARAHAN, K = Taksonomi.NAMA_KEMUNGKINAN;
+  // Ringkas (2026-10-15): satu baris lencana + skor; rincian keparahan/kemungkinan di tooltip.
   panel.innerHTML = `
-    <div class="pr-atas">
+    <div class="pr-atas" title="Keparahan ${r.keparahan} (${N[r.keparahan]}) × kemungkinan ${r.kemungkinan} (${K[r.kemungkinan]})">
       <span class="pr-tingkat ${r.tingkat.toLowerCase()}">${r.tingkat}</span>
       <span class="pr-lencana ${r.kelas.toLowerCase()}">${r.kelas.toUpperCase()}</span>
-      ${item.KRITIS ? '<span class="pr-lencana kritis">RISIKO KRITIS</span>' : ""}
+      ${item.KRITIS ? '<span class="pr-lencana kritis">KRITIS</span>' : ""}
+      <span class="pr-skor">Skor ${r.skor} · perbaikan ${r.batasHari} hari</span>
     </div>
-    <div class="pr-rinci">
-      <div><b>Keparahan</b>${r.keparahan} — ${N[r.keparahan]}</div>
-      <div><b>Kemungkinan</b>${r.kemungkinan} — ${K[r.kemungkinan]}</div>
-      <div><b>Skor</b>${r.kemungkinan} × ${r.keparahan} = ${r.skor}</div>
-      <div><b>Batas perbaikan</b>${r.batasHari} hari</div>
-    </div>
-    ${r.tingkat === "Ekstrem" ? '<div class="pr-catatan stop">Risiko EKSTREM: hentikan pekerjaan di area ini dan segera lapor pengawas.</div>' : ""}
-    <div class="pr-catatan">Dihitung otomatis dari jenis temuan dan lokasi; SHE dapat mengoreksi saat meninjau laporan.</div>`;
+    ${r.tingkat === "Ekstrem" ? '<div class="pr-catatan stop">Hentikan pekerjaan di area ini & segera lapor pengawas.</div>' : ""}
+    <div class="pr-catatan">Otomatis dari jenis temuan & lokasi.</div>`;
   autoFillBatasWaktu(r.tingkat);
 }
 

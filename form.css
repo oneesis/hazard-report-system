@@ -708,10 +708,10 @@ body.inspection-form-page .header-actions .user-menu { width: auto !important; }
   font-size: .78rem; color: #0f172a; cursor: pointer; font-family: inherit;
 }
 .titik-cepat button.on { background: #e0f2fe; border-color: #38bdf8; color: #075985; }
-.panel-risiko { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; background: #f8fafc; }
+.panel-risiko { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; background: #f8fafc; }
 .panel-risiko .pr-kosong { font-size: .85rem; color: #64748b; }
 .pr-atas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.pr-tingkat { font-weight: 800; font-size: 1rem; padding: 4px 12px; border-radius: 999px; }
+.pr-tingkat { font-weight: 800; font-size: .86rem; padding: 3px 10px; border-radius: 999px; }
 .pr-tingkat.rendah  { background: #dcfce7; color: #166534; }
 .pr-tingkat.sedang  { background: #fef9c3; color: #854d0e; }
 .pr-tingkat.tinggi  { background: #fed7aa; color: #9a3412; }
@@ -725,3 +725,6 @@ body.inspection-form-page .header-actions .user-menu { width: auto !important; }
 .pr-rinci select { width: 100%; padding: 6px 8px; font-size: .82rem; border-radius: 8px; }
 .pr-catatan { margin-top: 8px; font-size: .78rem; color: #64748b; }
 .pr-catatan.stop { color: #991b1b; font-weight: 700; }
+
+.pr-skor { font-size: .78rem; color: #475569; margin-left: auto; white-space: nowrap; }
+.panel-risiko .pr-catatan { margin-top: 4px; font-size: .72rem; }

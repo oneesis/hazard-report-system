@@ -774,3 +774,18 @@ function openMySignatureModal() {
   modal.style.display = 'flex';
   modal._load();
 }
+
+// 2026-10-15: dropdown bisa-dicari (Choices.js) di HP — saat dibuka, kolom cari difokus otomatis
+// sehingga keyboard muncul & menutupi daftar. Kini kolom cari "baca saja" saat dropdown dibuka;
+// keyboard baru muncul bila pengguna mengetuk kolom cari itu. Berlaku untuk semua form.
+(function () {
+  if (!window.matchMedia || !matchMedia('(pointer: coarse)').matches) return;
+  document.addEventListener('pointerdown', (e) => {
+    const box = e.target.closest && e.target.closest('.choices');
+    if (!box) return;
+    const cari = box.querySelector('.choices__input--cloned');
+    if (!cari) return;
+    if (e.target === cari) cari.readOnly = false;   // ketuk kolom cari → boleh mengetik
+    else if (!box.classList.contains('is-open')) cari.readOnly = true; // buka dropdown → tanpa keyboard
+  }, true);
+})();
