@@ -68,6 +68,7 @@ async function initHomePage() {
   // popup konfirmasi onsite pasca cuti dulu; kuis ST menunggu buka berikutnya (tak menumpuk)
   maybeShowOnsitePopup().then(shown => { if (!shown) maybeShowStQuizPopup(); }); // kuis: capaian ST belum 100% & bukan mangkir
   renderPushBanner();     // ajakan aktifkan notifikasi PWA (U3)
+  renderBerandaDD();      // cuaca & fokus minggu ini (deteksi dini) — tidak menunggu
 
   try {
     const [reports, obj, extras, stCounts] = await Promise.all([refreshNotifications(), fetchMyObj(), fetchMyActivityExtras(),
@@ -820,3 +821,29 @@ window.toggleActionItem = function(idx) {
   list.style.display    = open ? '' : 'none';
   chevron.style.transform = open ? 'rotate(180deg)' : '';
 };
+
+// ── Deteksi dini di Beranda (2026-10-15): cuaca kemarin/hari ini/besok & fokus minggu ini ──
+async function renderBerandaDD() {
+  const el = document.getElementById('berandaDD');
+  if (!el) return;
+  try {
+    const j = await fetch('/api?action=beranda').then((r) => r.json());
+    if (j.status !== 'success') return;
+    const hariIni = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+    const label = (t) => (t === hariIni ? 'Hari ini' : t < hariIni ? 'Kemarin' : 'Besok');
+    const cuaca = (j.cuaca || []).map((c) => `<div class="bdd-hari${c.tanggal === hariIni ? ' kini' : ''}">
+        <span class="bdd-lbl">${label(c.tanggal)}</span><i class="fa-solid ${escapeHTML(c.ikon)}"></i>
+        <b>${c.hujan_mm >= 0.1 ? `${(+c.hujan_mm).toFixed(1)} mm` : 'Kering'}</b><small>${Math.round(c.suhu_maks)}°C · angin ${Math.round(c.angin_maks)} km/j</small></div>`).join('');
+    const lebat = (j.cuaca || []).some((c) => c.hujan_mm >= 20);
+    const f = j.fokus;
+    const fokus = f ? `<div class="bdd-kartu bdd-fokus ${escapeHTML(f.status)}">
+        <div class="bdd-judul"><i class="fa-solid fa-bullseye"></i> Fokus minggu ini</div>
+        <div class="bdd-area"><i class="fa-solid fa-location-dot"></i> ${escapeHTML(f.lokasi)}</div>
+        ${f.penyebab?.length ? `<div class="bdd-teks">Saat di area ini, cari & laporkan:</div><ul>${f.penyebab.map((p) => `<li>${escapeHTML(p.nama)}</li>`).join('')}</ul>` : ''}
+        <a class="bdd-aksi" href="index.html"><i class="fa-solid fa-plus"></i> Laporkan temuan</a></div>` : '';
+    el.innerHTML = `<div class="bdd-kartu bdd-cuaca"><div class="bdd-judul"><i class="fa-solid fa-cloud-sun-rain"></i> Cuaca area tambang</div>
+        <div class="bdd-hari-row">${cuaca || '<span class="bdd-teks">Data cuaca belum tersedia.</span>'}</div>
+        ${lebat ? '<div class="bdd-awas"><i class="fa-solid fa-triangle-exclamation"></i> Hujan lebat: jalan berpotensi licin & lereng rawan — laporkan temuan jalan.</div>' : ''}</div>${fokus}`;
+    el.hidden = false;
+  } catch { /* opsional — Beranda tetap jalan tanpa kartu ini */ }
+}

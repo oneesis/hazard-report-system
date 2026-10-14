@@ -601,8 +601,143 @@ async function dataDeteksiDini(auth) {
     hasil.capaianBobot = [...cap.values()].map((x) => ({ departemen: x.departemen, laporan: x.laporan.size, skor: x.skor,
       pctOperasional: Math.round((x.operasional / x.laporan.size) * 100) })).sort((a, b) => b.skor - a.skor);
   }
+  // Penyebab insiden per lokasi (untuk "Fokus minggu ini") & peringatan aktif 14 hari (umpan balik SHE).
+  hasil.insidenPerLokasi = {};
+  for (const i of ins2) if (i.lokasi && i.kode_penyebab) {
+    const x = (hasil.insidenPerLokasi[i.lokasi] ||= {}); x[i.kode_penyebab] = (x[i.kode_penyebab] || 0) + 1;
+  }
+  for (const [l, x] of Object.entries(hasil.insidenPerLokasi)) hasil.insidenPerLokasi[l] = top(x, 3).map(([k, n]) => ({ kode: k, nama: nama(k), jumlah: n }));
+  await ensureDeteksiDiniTables(sql);
+  const pp = await sql`SELECT id, to_char(dibuat AT TIME ZONE 'Asia/Makassar', 'YYYY-MM-DD HH24:MI') AS dibuat, jenis, dimensi, nama, status, alasan,
+      tanggapan, ditanggapi_oleh FROM peringatan_dd WHERE dibuat > now() - interval '14 days' ORDER BY dibuat DESC LIMIT 60`;
+  hasil.peringatan = superAdmin ? pp : pp.filter((p) => p.dimensi !== 'departemen' || up(p.nama).startsWith(co + ' '));
   _ddCache.set(kunciCache, { at: Date.now(), data: hasil });
   return hasil;
+}
+
+// ── Tahap 5: peringatan dini otomatis, cuaca harian, fokus Beranda (2026-10-15) ──
+// ponytail: koordinat acuan curah hujan (user 14 Okt) tetap di kode; IUP ±94% di 1 sel grid
+// Open-Meteo (±7 km) → hujan areal ≈ titik ini. Pindah ke pengaturan Super Admin bila sering berubah.
+const KOORDINAT_HUJAN = { lat: -2.9778554, lon: 115.2017546 };
+const AMBANG_HUJAN_MM = 20;
+let _ddTabelOk = false;
+async function ensureDeteksiDiniTables(sql) {
+  if (_ddTabelOk) return;
+  await sql`CREATE TABLE IF NOT EXISTS cuaca_harian (
+    tanggal DATE PRIMARY KEY, hujan_mm NUMERIC, jam_hujan NUMERIC, angin_maks NUMERIC, suhu_maks NUMERIC, kode_cuaca INT,
+    updated_at TIMESTAMPTZ DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS peringatan_dd (
+    id SERIAL PRIMARY KEY, dibuat TIMESTAMPTZ DEFAULT now(), jenis TEXT NOT NULL, dimensi TEXT, nama TEXT, status TEXT,
+    alasan JSONB NOT NULL DEFAULT '[]', penerima JSONB NOT NULL DEFAULT '[]', tanggapan TEXT, ditanggapi_oleh TEXT, ditanggapi_at TIMESTAMPTZ)`;
+  _ddTabelOk = true;
+}
+
+/** Ambil cuaca harian Open-Meteo (gratis, tanpa kunci) & simpan. Pertama kali mundur 92 hari. */
+async function perbaruiCuaca(sql) {
+  await ensureDeteksiDiniTables(sql);
+  const kosong = !(await sql`SELECT 1 FROM cuaca_harian LIMIT 1`).length;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${KOORDINAT_HUJAN.lat}&longitude=${KOORDINAT_HUJAN.lon}`
+    + `&daily=precipitation_sum,precipitation_hours,wind_gusts_10m_max,temperature_2m_max,weather_code&timezone=Asia%2FMakassar`
+    + `&past_days=${kosong ? 92 : 3}&forecast_days=2`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error('Open-Meteo HTTP ' + res.status);
+  const d = (await res.json()).daily;
+  const rows = d.time.map((t, i) => ({ tanggal: t, hujan_mm: d.precipitation_sum[i], jam_hujan: d.precipitation_hours[i],
+    angin_maks: d.wind_gusts_10m_max[i], suhu_maks: d.temperature_2m_max[i], kode_cuaca: d.weather_code[i] }));
+  await sql`INSERT INTO cuaca_harian (tanggal, hujan_mm, jam_hujan, angin_maks, suhu_maks, kode_cuaca, updated_at)
+    SELECT x.tanggal::date, x.hujan_mm, x.jam_hujan, x.angin_maks, x.suhu_maks, x.kode_cuaca, now()
+    FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) AS x(tanggal text, hujan_mm numeric, jam_hujan numeric, angin_maks numeric, suhu_maks numeric, kode_cuaca int)
+    ON CONFLICT (tanggal) DO UPDATE SET hujan_mm = EXCLUDED.hujan_mm, jam_hujan = EXCLUDED.jam_hujan, angin_maks = EXCLUDED.angin_maks,
+      suhu_maks = EXCLUDED.suhu_maks, kode_cuaca = EXCLUDED.kode_cuaca, updated_at = now()`;
+  return rows.length;
+}
+
+/** Cron harian: perbarui cuaca, kirim peringatan saat area/departemen BERUBAH jadi merah (sekali per 7 hari)
+ *  & pengingat inspeksi jalan bila hujan kemarin ≥ ambang. dry = hitung tanpa kirim/simpan peringatan. */
+async function cronDeteksiDini({ dry = false } = {}) {
+  const sql = getSql();
+  const { sheets } = getClients();
+  const hasil = { cuaca: 0, peringatan: [], hujan: null };
+  try { hasil.cuaca = await perbaruiCuaca(sql); } catch (e) { hasil.cuacaGalat = e.message; }
+  _ddCache.clear();
+  const d = await dataDeteksiDini({ role: 'SUPER_ADMIN', perusahaan: '' });
+  const roster = await _karyawanRows(sheets);
+  const norm = (s) => String(s || '').trim().toUpperCase();
+  const sheHead = roster.filter((r) => /^(SHE|OSHE)$/.test(norm(r.DEPARTEMEN)) && /SECTION HEAD|SECT\.? HEAD|DEPT\.? HEAD/.test(norm(r.JABATAN)));
+  const sectHead = (pt, dept) => roster.filter((r) => norm(r.PERUSAHAAN) === norm(pt) && norm(r.DEPARTEMEN) === norm(dept) && /SECTION HEAD|SECT\.? HEAD/.test(norm(r.JABATAN)));
+  const URL_DD = 'https://sap-ebl.vercel.app/deteksi-dini.html';
+  const unikNik = (arr) => [...new Map(arr.filter((p) => p && p.NIK).map((p) => [String(p.NIK), p])).values()];
+  const kirim = async (penerima, subjek, teks, url) => {
+    if (dry) return;
+    await _sendMail(PIC_DISPUTE_EMAIL, subjek, teks, url).catch(() => {});
+    for (const p of unikNik(penerima)) await _notifyPerson(sheets, { nik: String(p.NIK), nama: p.NAMA }, subjek, teks, url).catch(() => {});
+  };
+  const terakhir = new Map((await sql`SELECT DISTINCT ON (dimensi, nama) dimensi, nama, status FROM peringatan_dd
+    WHERE jenis = 'indeks' AND dibuat > now() - interval '7 days' ORDER BY dimensi, nama, dibuat DESC`).map((r) => [`${r.dimensi}|${r.nama}`, r.status]));
+
+  // Satu email ringkasan per orang per hari (bukan satu email per area).
+  const perOrang = new Map(); // nik → { p, baris[] }
+  const semua = [];
+  for (const [dimensi, daftar] of [['lokasi', d.lokasi], ['departemen', d.departemen]]) {
+    for (const x of daftar.filter((v) => v.status === 'merah')) {
+      if (terakhir.get(`${dimensi}|${x.nama}`) === 'merah') continue; // sudah diperingatkan ≤ 7 hari
+      const [pt, dept] = dimensi === 'departemen' ? x.nama.split(' — ') : [];
+      const penerima = unikNik([...sheHead, ...(dimensi === 'departemen' ? sectHead(pt, dept) : [])]);
+      const baris = `${dimensi === 'lokasi' ? 'Area' : 'Departemen'} ${x.nama}: ${x.alasan.join('; ')} (skor ${x.skor}, ${x.mayorTerbuka} Mayor terbuka)`;
+      semua.push(baris);
+      for (const p of penerima) { const k = String(p.NIK); if (!perOrang.has(k)) perOrang.set(k, { p, baris: [] }); perOrang.get(k).baris.push(baris); }
+      hasil.peringatan.push({ dimensi, nama: x.nama, penerima: penerima.map((p) => p.NAMA) });
+      if (!dry) await sql`INSERT INTO peringatan_dd (jenis, dimensi, nama, status, alasan, penerima)
+        VALUES ('indeks', ${dimensi}, ${x.nama}, 'merah', ${JSON.stringify(x.alasan)}::jsonb, ${JSON.stringify(penerima.map((p) => p.NAMA))}::jsonb)`;
+    }
+  }
+  const penutup = '\n\nIni indikator dini, bukan ramalan pasti. Mohon cek lapangan & tindak lanjuti, lalu tandai "Ditindaklanjuti" / "Tidak relevan" di menu Deteksi Dini.';
+  const daftarBaris = (arr) => arr.map((b) => '- ' + b).join('\n');
+  if (semua.length && !dry) {
+    const subjek = `[ONE-SAP] Peringatan dini: ${semua.length} area/departemen MERAH`;
+    await _sendMail(PIC_DISPUTE_EMAIL, subjek, `Status MERAH baru:\n\n${daftarBaris(semua)}${penutup}`, URL_DD).catch(() => {});
+    for (const { p, baris } of perOrang.values())
+      await _notifyPerson(sheets, { nik: String(p.NIK), nama: p.NAMA }, `[ONE-SAP] Peringatan dini: ${baris.length} area/departemen MERAH`,
+        `Halo ${p.NAMA || ''}, status MERAH baru yang terkait denganmu:\n\n${daftarBaris(baris)}${penutup}`, URL_DD).catch(() => {});
+  }
+  hasil.email = dry ? 0 : (semua.length ? perOrang.size + 1 : 0);
+
+  // Hujan kemarin ≥ ambang → ingatkan inspeksi jalan angkut & cek lereng (sekali per hari).
+  const [cu] = await sql`SELECT to_char(tanggal, 'YYYY-MM-DD') AS tanggal, hujan_mm FROM cuaca_harian WHERE tanggal = (now() AT TIME ZONE 'Asia/Makassar')::date - 1`;
+  if (cu && Number(cu.hujan_mm) >= AMBANG_HUJAN_MM) {
+    const sudah = (await sql`SELECT 1 FROM peringatan_dd WHERE jenis = 'hujan' AND nama = ${cu.tanggal}`).length;
+    hasil.hujan = { tanggal: cu.tanggal, mm: Number(cu.hujan_mm), sudah: !!sudah };
+    if (!sudah) {
+      const ops = roster.filter((r) => /OPERATION|PRODUCTION|PRODUKSI/.test(norm(r.DEPARTEMEN)) && /SECTION HEAD|SECT\.? HEAD/.test(norm(r.JABATAN)));
+      const penerima = [...sheHead, ...ops];
+      const subjek = `[ONE-SAP] Hujan ${Number(cu.hujan_mm).toFixed(0)} mm kemarin — lakukan Inspeksi Jalan Angkut`;
+      const teks = `Curah hujan ${cu.tanggal} sekitar ${Number(cu.hujan_mm).toFixed(1)} mm (≥ ${AMBANG_HUJAN_MM} mm). Riwayat insiden menunjukkan jalan licin `
+        + `& longsor sering terjadi setelah hujan.\n\nMohon lakukan Inspeksi Jalan Angkut (INS_JA), cek tanggul jalan, drainase, dan lereng sebelum operasi penuh.`;
+      if (!dry) await sql`INSERT INTO peringatan_dd (jenis, dimensi, nama, status, alasan, penerima)
+        VALUES ('hujan', 'cuaca', ${cu.tanggal}, 'kuning', ${JSON.stringify([`hujan ${Number(cu.hujan_mm).toFixed(1)} mm`])}::jsonb, ${JSON.stringify(penerima.map((p) => p.NAMA))}::jsonb)`;
+      await kirim(penerima, subjek, teks, 'https://sap-ebl.vercel.app/inspection-form.html?type=INS_JA');
+    }
+  }
+  console.log('[deteksi-dini]', JSON.stringify({ ...hasil, peringatan: hasil.peringatan.length }));
+  return hasil;
+}
+
+const IKON_CUACA = (k, mm) => (k >= 95 ? 'fa-cloud-bolt' : mm >= 20 ? 'fa-cloud-showers-heavy' : mm >= 1 || (k >= 51 && k <= 82) ? 'fa-cloud-rain' : k >= 3 ? 'fa-cloud' : k >= 1 ? 'fa-cloud-sun' : 'fa-sun');
+/** Ringkasan untuk semua pengguna: fokus minggu ini (area paling berisiko + penyebab insidennya) & cuaca. */
+async function dataBeranda() {
+  const sql = getSql();
+  const d = await dataDeteksiDini({ role: 'SUPER_ADMIN', perusahaan: '' });
+  const area = d.lokasi.find((l) => l.status !== 'hijau') || d.lokasi[0];
+  const penyebab = (area && d.insidenPerLokasi[area.nama]) || d.penyebabInsiden.slice(0, 3);
+  await ensureDeteksiDiniTables(sql);
+  const cuaca = await sql`SELECT to_char(tanggal, 'YYYY-MM-DD') AS tanggal, hujan_mm::float AS hujan_mm, jam_hujan::float AS jam_hujan,
+      angin_maks::float AS angin_maks, suhu_maks::float AS suhu_maks, kode_cuaca FROM cuaca_harian
+    WHERE tanggal BETWEEN (now() AT TIME ZONE 'Asia/Makassar')::date - 1 AND (now() AT TIME ZONE 'Asia/Makassar')::date + 1 ORDER BY tanggal`;
+  return {
+    status: 'success',
+    fokus: area ? { lokasi: area.nama, status: area.status, alasan: area.alasan, penyebab: penyebab.slice(0, 3) } : null,
+    cuaca: cuaca.map((c) => ({ ...c, ikon: IKON_CUACA(c.kode_cuaca, c.hujan_mm) })),
+  };
 }
 
 function todayJakarta() {
@@ -3287,6 +3422,16 @@ module.exports = async (req, res) => {
           result = await dataDeteksiDini(auth);
           break;
         }
+        case 'beranda': result = await dataBeranda(); break; // fokus minggu ini & cuaca (semua pengguna)
+        case 'cuacaTanggal': {
+          // Cuaca hari laporan (detail laporan).
+          const sql = getSql(); await ensureDeteksiDiniTables(sql);
+          const tgl = String(req.query.tanggal || '').slice(0, 10);
+          const [c] = /^\d{4}-\d{2}-\d{2}$/.test(tgl) ? await sql`SELECT hujan_mm::float AS hujan_mm, jam_hujan::float AS jam_hujan,
+              angin_maks::float AS angin_maks, suhu_maks::float AS suhu_maks, kode_cuaca FROM cuaca_harian WHERE tanggal = ${tgl}::date` : [];
+          result = { status: 'success', data: c ? { ...c, ikon: IKON_CUACA(c.kode_cuaca, c.hujan_mm) } : null };
+          break;
+        }
         case 'getInsiden': {
           // Register insiden SHE (tahap 3) — Super Admin. Kronologi dipotong agar ringan.
           if (!isSuperAdmin(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
@@ -3887,6 +4032,17 @@ module.exports = async (req, res) => {
           result = { status: 'success', message: `Risiko dikoreksi: ${t} (${k} × ${p} = ${skor}).`, tingkat: t };
           break;
         }
+        case 'tanggapiPeringatan': {
+          // Umpan balik peringatan dini (bahan kalibrasi bobot).
+          if (!isAdminOrAbove(authUser.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const d = data || {};
+          if (!['Ditindaklanjuti', 'Tidak relevan'].includes(d.tanggapan)) throw new Error('Tanggapan tidak valid.');
+          await getSql()`UPDATE peringatan_dd SET tanggapan = ${d.tanggapan}, ditanggapi_oleh = ${authUser.nama || authUser.nik}, ditanggapi_at = now()
+            WHERE id = ${Number(d.id) || 0}`;
+          _ddCache.clear();
+          result = { status: 'success', message: `Ditandai "${d.tanggapan}".` };
+          break;
+        }
         case 'imporInsiden': {
           // Unggah Excel register insiden (template SHE). Upsert per No. Register; baris bergalat dilewati.
           if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN.'), { httpStatus: 403 });
@@ -4130,4 +4286,5 @@ module.exports = async (req, res) => {
 };
 module.exports.cronKuisST = cronKuisST;
 module.exports.cronAlurLaporan = cronAlurLaporan;
+module.exports.cronDeteksiDini = cronDeteksiDini; // tahap 5: cuaca + peringatan dini (cron-deadline)
 module.exports._risikoHazard = _risikoHazard; // dipakai uji lokal (baca saja)

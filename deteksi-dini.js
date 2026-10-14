@@ -15,6 +15,15 @@ async function ddMuat(segar = false) {
     DD = j;
     document.getElementById('ddLingkup').textContent = `${j.lingkup} · dihitung ${new Date(j.dihitung).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}`;
     isi.innerHTML = render(j);
+    isi.querySelectorAll('.dd-pw-btn button').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        const r = await fetch('/api', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'tanggapiPeringatan', data: { id: b.closest('.dd-pw').dataset.id, tanggapan: b.dataset.t } }) }).then((x) => x.json());
+        if (r.status === 'error') throw new Error(r.message);
+        showToast(r.message); ddMuat(true);
+      } catch (e) { showToast(e.message, 'error'); b.disabled = false; }
+    }));
     isi.querySelectorAll('.dd-tab').forEach((b) => b.addEventListener('click', () => {
       isi.querySelectorAll('.dd-tab').forEach((x) => x.classList.toggle('active', x === b));
       isi.querySelectorAll('.dd-tabel').forEach((t) => { t.hidden = t.dataset.dim !== b.dataset.dim; });
@@ -90,6 +99,14 @@ function render(d) {
       <div><b>${d.jumlah.temuan}</b><span>Temuan (${d.jumlah.hazard} HR · ${d.jumlah.inspeksi} INS · ${d.jumlah.sbo} SBO)</span></div>
       <div><b>${d.jumlah.insiden}</b><span>Insiden tercatat</span></div>
     </div>
+
+    ${(d.peringatan || []).length ? `<h2 class="dd-h2"><i class="fa-solid fa-bell"></i> Peringatan terkirim (14 hari)</h2>
+    <div class="dd-kartu">${d.peringatan.map((w) => `<div class="dd-pw" data-id="${w.id}">
+      <div><b>${esc(w.jenis === 'hujan' ? 'Hujan lebat ' + w.nama : (w.dimensi === 'lokasi' ? 'Area ' : 'Departemen ') + w.nama)}</b>
+        <small>${esc(w.dibuat)} · ${esc((w.alasan || []).join('; '))}</small></div>
+      ${w.tanggapan ? `<span class="dd-pw-t">${esc(w.tanggapan)} · ${esc(w.ditanggapi_oleh || '')}</span>`
+        : '<span class="dd-pw-btn"><button class="btn-secondary" data-t="Ditindaklanjuti">Ditindaklanjuti</button><button class="btn-secondary" data-t="Tidak relevan">Tidak relevan</button></span>'}
+    </div>`).join('')}<p class="dd-ket">Tanggapanmu dipakai untuk menyetel bobot indeks agar peringatan makin tepat.</p></div>` : ''}
 
     ${perhatian.length ? `<h2 class="dd-h2"><i class="fa-solid fa-triangle-exclamation"></i> Area perlu perhatian</h2>
     <div class="dd-perhatian">${perhatian.map((x) => `<div class="dd-alert dd-alert--${x.status}">

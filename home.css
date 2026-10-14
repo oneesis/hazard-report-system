@@ -1173,3 +1173,27 @@
 .ab-report-due--over { color: #ef4444; font-weight: 700; }
 .ab-report-row--overdue { background: #fff5f5; }
 .ab-report-row--overdue:hover { background: #fee2e2; }
+
+/* Deteksi dini di Beranda (2026-10-15) */
+.beranda-dd { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; margin: 0 0 16px; }
+.bdd-kartu { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.bdd-judul { font-size: .78rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: .04em; display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
+.bdd-judul i { color: #1e3a8a; }
+.bdd-hari-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bdd-hari { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 12px; background: #f8fafc; text-align: center; }
+.bdd-hari.kini { background: #eff6ff; outline: 1px solid #bfdbfe; }
+.bdd-hari i { font-size: 1.6rem; color: #f59e0b; }
+.bdd-hari i.fa-cloud, .bdd-hari i.fa-cloud-rain, .bdd-hari i.fa-cloud-showers-heavy { color: #3b82f6; }
+.bdd-hari i.fa-cloud-bolt { color: #7c3aed; }
+.bdd-lbl { font-size: .72rem; font-weight: 700; color: #64748b; }
+.bdd-hari b { font-size: .86rem; color: #0f172a; }
+.bdd-hari small { font-size: .66rem; color: #94a3b8; }
+.bdd-awas { margin-top: 10px; font-size: .78rem; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 7px 10px; }
+.bdd-fokus.merah { border-color: #fca5a5; background: #fef2f2; }
+.bdd-fokus.kuning { border-color: #fcd34d; background: #fffbeb; }
+.bdd-area { font-size: 1.02rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+.bdd-area i { color: #dc2626; }
+.bdd-teks { font-size: .78rem; color: #475569; }
+.bdd-fokus ul { margin: 4px 0 10px; padding-left: 18px; font-size: .82rem; color: #0f172a; }
+.bdd-aksi { display: inline-flex; gap: 6px; align-items: center; font-size: .8rem; font-weight: 700; color: #1e3a8a; text-decoration: none; }
+@media (max-width: 720px) { .beranda-dd { grid-template-columns: 1fr; } }

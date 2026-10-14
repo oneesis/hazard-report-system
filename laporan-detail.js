@@ -42,6 +42,23 @@ function renderWaBadge(r, isInspection) {
   if (btn) btn.style.display = (['ADMIN', 'SUPER_ADMIN'].includes(role) && !tutup) ? '' : 'none';
 }
 
+// Cuaca hari kejadian (Open-Meteo harian, deteksi dini 2026-10-15) — opsional, gagal = tidak tampil.
+async function tampilCuaca(r) {
+  const row = document.getElementById('dfRiskRow');
+  const tgl = String(r.tanggal_kejadian || r.tanggal_inspeksi || '').slice(0, 10);
+  if (!row || !/^\d{4}-\d{2}-\d{2}$/.test(tgl)) return;
+  try {
+    const j = await fetch('/api?action=cuacaTanggal&tanggal=' + tgl).then((x) => x.json());
+    const c = j.data;
+    if (!c) return;
+    row.parentElement.querySelector('.cuaca-hari')?.remove();
+    const el = document.createElement('div');
+    el.className = 'detail-field-row cuaca-hari';
+    el.innerHTML = `<span>Cuaca hari itu</span><strong><i class="fa-solid ${escapeHTML(c.ikon)}"></i> ${c.hujan_mm >= 0.1 ? `hujan ${(+c.hujan_mm).toFixed(1)} mm (${Math.round(c.jam_hujan)} jam)` : 'kering'} · angin ${Math.round(c.angin_maks)} km/j</strong>`;
+    row.insertAdjacentElement('afterend', el);
+  } catch {}
+}
+
 // Koreksi risiko 5×5 oleh SHE (Super Admin, 2026-10-14) — batas waktu tidak diubah.
 function pasangKoreksiRisiko(r, isInspection) {
   const row = document.getElementById('dfRiskRow');
@@ -196,6 +213,7 @@ function renderDetail(r) {
   if (!isInspection && r.kode_temuan) set('dfCategory', `${catVal} · ${r.kode_temuan} ${getReportValue(r, ['sub_ketidaksesuaian'], '')}`);
   if (isInspection && r.kode_temuan) set('dfCategory', `${document.getElementById('dfCategory').textContent} · Kode temuan: ${String(r.kode_temuan).replace(/,/g, ', ')}`);
   pasangKoreksiRisiko(r, isInspection);
+  tampilCuaca(r);
 
   // Description & recommendation
   document.getElementById('dfDescTitle').textContent = isInspection ? 'Temuan Inspeksi' : 'Deskripsi Temuan';

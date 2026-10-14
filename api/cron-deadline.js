@@ -113,6 +113,8 @@ module.exports = async (req, res) => {
   // Alur pelaporan otomatis (A3–A5, 2026-10-12): setujui rencana > 2 hr, konfirmasi closing > 3 hr,
   // eskalasi PIC → Section Head → SHE. Gagal di sini tidak menghentikan pengingat batas waktu.
   const alur = await require('./index').cronAlurLaporan({ dry }).catch((e) => ({ error: e.message }));
+  // Deteksi dini (2026-10-15): cuaca harian + peringatan area/departemen merah + pengingat inspeksi pasca hujan.
+  const deteksiDini = await require('./index').cronDeteksiDini({ dry }).catch((e) => ({ error: e.message }));
   // WA Fonnte DINONAKTIFKAN (2026-10-06, akun sering kena banned) → kirim EMAIL.
   // Nyalakan WA lagi: env WA_ENABLED=1 lalu redeploy.
   const viaWa = process.env.WA_ENABLED === '1';
@@ -129,7 +131,7 @@ module.exports = async (req, res) => {
   const list = buildReminders(hazard, inspection, karyawan);
 
   const targets = list.filter(r => (viaWa ? r.wa : r.email));
-  if (dry) return res.json({ status: 'dry', alur, kanal: viaWa ? 'WA' : 'EMAIL', open: hazard.length + inspection.length,
+  if (dry) return res.json({ status: 'dry', alur, deteksiDini, kanal: viaWa ? 'WA' : 'EMAIL', open: hazard.length + inspection.length,
     akanDikirim: targets.length, tanpaKontak: list.length - targets.length,
     daftar: list.map(r => ({ id: r.id, pic: r.namaPic, sisaHari: r.left, email: r.email ? 'ada' : '-', desc: r.desc.slice(0, 50) })) });
 
@@ -154,7 +156,7 @@ module.exports = async (req, res) => {
     }
   }
   console.log(`[cron-deadline] open=${hazard.length + inspection.length} target=${list.length} terkirim=${sent}`);
-  return res.json({ status: 'ok', alur, kanal: viaWa ? 'WA' : 'EMAIL', sent, target: targets.length, tanpaKontak: list.length - targets.length, checked: hazard.length + inspection.length, ts: new Date().toISOString() });
+  return res.json({ status: 'ok', alur, deteksiDini, kanal: viaWa ? 'WA' : 'EMAIL', sent, target: targets.length, tanpaKontak: list.length - targets.length, checked: hazard.length + inspection.length, ts: new Date().toISOString() });
 };
 
 // Self-check (node api/cron-deadline.js)

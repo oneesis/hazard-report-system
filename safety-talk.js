@@ -175,6 +175,7 @@ function openCreateModal() {
   document.getElementById('stTargetCo').value = '';
   document.getElementById('createErr').style.display = 'none';
   document.getElementById('createModal').classList.add('open');
+  isiUsulanTopik();
 }
 
 function editJadwal(id) {
@@ -522,4 +523,30 @@ function renderStDashboard() {
 function escapeHTML(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c]));
+}
+
+// Usulan topik dari Deteksi Dini (2026-10-15): penyebab insiden di area paling berisiko + penyebab insiden
+// terbanyak. Klik → isi judul & deskripsi (tetap bisa diubah). Gagal/kosong = tidak tampil.
+async function isiUsulanTopik() {
+  const box = document.getElementById('stUsulanTopik');
+  if (!box || box.dataset.ok) return;
+  try {
+    const d = await fetch('/api?action=deteksiDini').then((r) => r.json());
+    if (d.status !== 'success') return;
+    const area = d.lokasi.find((l) => l.status !== 'hijau');
+    const usul = [...((area && d.insidenPerLokasi[area.nama]) || []).map((p) => ({ ...p, alasan: `penyebab insiden di ${area.nama} (area ${area.status})` })),
+      ...d.penyebabInsiden.slice(0, 4).map((p) => ({ ...p, alasan: `penyebab insiden terbanyak (${p.jumlah} kejadian)` }))]
+      .filter((p, i, a) => a.findIndex((x) => x.kode === p.kode) === i).slice(0, 5);
+    if (!usul.length) return;
+    box.innerHTML = '<div style="font-size:.72rem;color:#64748b;margin-bottom:4px">Usulan topik dari Deteksi Dini:</div>'
+      + usul.map((p, i) => `<button type="button" data-i="${i}" style="border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:4px 10px;font-size:.76rem;margin:0 4px 4px 0;cursor:pointer">${escapeHTML(p.nama)}</button>`).join('');
+    box.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+      const p = usul[+b.dataset.i];
+      document.getElementById('stJudul').value = `K3: ${p.nama}`;
+      const desk = document.getElementById('stDeskripsi');
+      if (!desk.value.trim()) desk.value = `Usulan Deteksi Dini — ${p.alasan}. Bahas bahaya, contoh kejadian, dan cara pencegahannya.`;
+    }));
+    box.style.display = '';
+    box.dataset.ok = '1';
+  } catch {}
 }
