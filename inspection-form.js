@@ -1215,7 +1215,7 @@ function saveInspectionDraft() {
   data._savedAt = new Date().toISOString();
   data._ts = Date.now();
 
-  localStorage.setItem(key, JSON.stringify(data));
+  if (DraftStore.set(key, data, ["upload_foto_inspeksi_base64"]) === 'gagal') return;
   window.DraftStatus?.mark();
   showInspectionAutoSaveIndicator();
   // Sync ke server (cross-device)

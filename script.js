@@ -600,7 +600,7 @@ function saveDraft() {
   data._currentStep = currentStep;
   data._savedAt = new Date().toISOString();
   data._ts = Date.now();
-  localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+  if (DraftStore.set(AUTOSAVE_KEY, data, ["upload_foto_bahaya"]) === 'gagal') return;
   window.DraftStatus?.mark();
   showAutoSaveIndicator();
   // Sync ke server (cross-device)
@@ -737,13 +737,14 @@ function loadDraft() {
       img.src = data.tanda_tangan;
     }
 
-    // Restore step
-    if (data._currentStep && data._currentStep > 1) {
-      showStep(data._currentStep);
-    }
   } catch (e) {
     console.error("Failed to load draft:", e);
   }
+  // Langkah terakhir selalu dipulihkan, walau sebagian isian gagal dimuat (2026-10-15).
+  try {
+    const d = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || "{}");
+    if (d._currentStep > 1) showStep(d._currentStep);
+  } catch {}
 }
 
 function clearDraft() {

@@ -568,6 +568,29 @@ window.SubmitResult = (() => {
 
 // ── Tanda "Draft tersimpan HH:MM" di bar tombol form (Hazard/Inspeksi/SBO/PC).
 // Dipanggil fungsi auto-save draft tiap form setelah menulis localStorage.
+// 2026-10-15: simpan draf form tanpa gagal diam-diam. Kuota localStorage (±5 MB) bisa penuh oleh
+// foto base64 + cache laporan → dulu draf gagal tersimpan & "Lanjutkan draft" mulai dari langkah 1.
+// Urutan: simpan penuh → bila penuh, buang cache laporan (bisa diambil ulang) → bila masih penuh,
+// simpan tanpa foto (langkah & isian tetap aman). Mengembalikan 'penuh' | 'tanpa-foto' | 'gagal'.
+window.DraftStore = {
+  set(key, data, fotoKeys = []) {
+    const tulis = (d) => { try { localStorage.setItem(key, JSON.stringify(d)); return true; } catch { return false; } };
+    if (tulis(data)) return 'penuh';
+    try { Object.keys(localStorage).filter((k) => k.startsWith('_rpts_v1_')).forEach((k) => localStorage.removeItem(k)); } catch {}
+    if (tulis(data)) return 'penuh';
+    const ringan = { ...data, _fotoTidakTersimpan: true };
+    fotoKeys.forEach((k) => { ringan[k] = ''; });
+    if (tulis(ringan)) {
+      if (!window.__drafFotoDiberitahu && typeof showToast === 'function') {
+        window.__drafFotoDiberitahu = true;
+        showToast('Memori HP penuh: draf disimpan tanpa foto. Isian & langkah aman — pilih ulang foto sebelum mengirim.', 'error');
+      }
+      return 'tanpa-foto';
+    }
+    return 'gagal';
+  },
+};
+
 window.DraftStatus = {
   mark() {
     const t = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
