@@ -467,6 +467,7 @@ async function _risikoHazard(data) {
 
 // ── Deteksi dini tahap 4: indeks risiko & dasbor (2026-10-14) ──────────────
 const Indeks = require('../lib/indeks-risiko');
+const LaporanBulanan = require('../lib/laporan-bulanan');
 // Inspeksi & SBO belum memakai master lokasi (lokasi teks bebas) → perkiraan lokasi.
 // ponytail: tebakan kata kunci; ganti dengan pilihan lokasi di form Inspeksi/SBO bila perlu presisi.
 const LOKASI_INSPEKSI = { INS_CB: 'CCP', INS_JA: 'Mine Road', INS_KG: 'Office', INS_MD: 'Mess/ Camp', INS_SP: 'Settling Pond', INS_T: 'Front Loading', INS_TB: 'Maintank', INS_WS: 'Workshop' };
@@ -611,6 +612,8 @@ async function dataDeteksiDini(auth) {
   const pp = await sql`SELECT id, to_char(dibuat AT TIME ZONE 'Asia/Makassar', 'YYYY-MM-DD HH24:MI') AS dibuat, jenis, dimensi, nama, status, alasan,
       tanggapan, ditanggapi_oleh FROM peringatan_dd WHERE dibuat > now() - interval '14 days' ORDER BY dibuat DESC LIMIT 60`;
   hasil.peringatan = superAdmin ? pp : pp.filter((p) => p.dimensi !== 'departemen' || up(p.nama).startsWith(co + ' '));
+  // Bahan laporan bulanan (tahap 6) — tidak ikut JSON respons (non-enumerable).
+  if (superAdmin) Object.defineProperty(hasil, '_bahan', { value: { siap, insiden, penyebabInsiden, area, nama } });
   _ddCache.set(kunciCache, { at: Date.now(), data: hasil });
   return hasil;
 }
@@ -718,8 +721,38 @@ async function cronDeteksiDini({ dry = false } = {}) {
       await kirim(penerima, subjek, teks, 'https://sap-ebl.vercel.app/inspection-form.html?type=INS_JA');
     }
   }
+  if (!dry) try { hasil.laporanBulanan = await simpanLaporanBulanan(sql, d); } catch (e) { hasil.laporanBulananGalat = e.message; }
   console.log('[deteksi-dini]', JSON.stringify({ ...hasil, peringatan: hasil.peringatan.length }));
   return hasil;
+}
+
+// ── Tahap 6: laporan bulanan → Laporan Eksekutif SIKAP (tanpa email manajemen, keputusan user 14 Okt) ──
+// Disimpan per bulan; SIKAP hanya membaca tabel ini. Bulan berjalan diperbarui tiap hari, bulan lalu
+// difinalkan s/d tanggal 3; tabel kosong / semua=true → isi semua bulan sejak data pertama.
+async function simpanLaporanBulanan(sql, d, { semua = false } = {}) {
+  const b = d._bahan;
+  if (!b) throw new Error('bahan laporan bulanan tidak ada (bukan lingkup Super Admin)');
+  await sql`CREATE TABLE IF NOT EXISTS laporan_dd_bulanan (bulan TEXT PRIMARY KEY, data JSONB NOT NULL, diperbarui TIMESTAMPTZ DEFAULT now())`;
+  const hariIni = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' }).format(new Date());
+  const geser = (bln, n) => { const [y, m] = bln.split('-').map(Number); return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7); };
+  const ini = hariIni.slice(0, 7);
+  let bulan = [ini];
+  if (Number(hariIni.slice(8)) <= 3) bulan.unshift(geser(ini, -1));
+  if (semua || !(await sql`SELECT 1 FROM laporan_dd_bulanan LIMIT 1`).length) {
+    bulan = [];
+    for (let x = String(b.siap[0]?.tanggal || hariIni).slice(0, 7); x <= ini; x = geser(x, 1)) bulan.push(x);
+  }
+  const [peringatan, cuaca] = await Promise.all([
+    sql`SELECT to_char(dibuat AT TIME ZONE 'Asia/Makassar', 'YYYY-MM-DD') AS tanggal, jenis, tanggapan FROM peringatan_dd`,
+    sql`SELECT to_char(tanggal, 'YYYY-MM-DD') AS tanggal, hujan_mm::float AS hujan_mm FROM cuaca_harian`,
+  ]);
+  for (const bln of bulan) {
+    const h = LaporanBulanan.ringkasanBulan({ bulan: bln, hariIni, siap: b.siap, insiden: b.insiden, peringatan, cuaca,
+      nama: b.nama, jenisArea: (l) => b.area.get(l), penyebabInsiden: b.penyebabInsiden });
+    await sql`INSERT INTO laporan_dd_bulanan (bulan, data, diperbarui) VALUES (${bln}, ${JSON.stringify(h)}::jsonb, now())
+      ON CONFLICT (bulan) DO UPDATE SET data = EXCLUDED.data, diperbarui = now()`;
+  }
+  return bulan;
 }
 
 // Kategori hujan harian standar BMKG (mm/hari): ringan 0,5–20, sedang 20–50, lebat 50–100,
@@ -4303,4 +4336,6 @@ module.exports = async (req, res) => {
 module.exports.cronKuisST = cronKuisST;
 module.exports.cronAlurLaporan = cronAlurLaporan;
 module.exports.cronDeteksiDini = cronDeteksiDini; // tahap 5: cuaca + peringatan dini (cron-deadline)
+module.exports.simpanLaporanBulanan = simpanLaporanBulanan; // tahap 6 (cron; isi ulang manual)
+module.exports._dataDeteksiDini = dataDeteksiDini;
 module.exports._risikoHazard = _risikoHazard; // dipakai uji lokal (baca saja)
