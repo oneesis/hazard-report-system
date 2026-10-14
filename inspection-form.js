@@ -1116,6 +1116,7 @@ function loadNamaPicOptions() {
       row["SUBCONT"] === subcont &&
       row["NAMA"] === item
     );
+    if (isMagang(employee)) return; // magang tidak bisa jadi PIC (backend juga menolak)
     // Cuti (2026-08-20) — tidak eligible jadi PIC; tampil disabled + label
     // status. Ini cuma UX, penolakan sebenarnya tetap di backend saat submit.
     const status = employee?.["STATUS_KERJA"];

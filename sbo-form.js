@@ -352,7 +352,8 @@ function loadSboNamaPic() {
 
   const filtered = _sboMasterKaryawan.filter(k =>
     (!perusahaan || k['PERUSAHAAN'] === perusahaan) &&
-    (!subcont    || k['SUBCONT']    === subcont)
+    (!subcont    || k['SUBCONT']    === subcont) &&
+    !isMagang(k) // magang tidak bisa jadi PIC (backend juga menolak)
   );
   const names = [...new Set(filtered.map(k => k['NAMA']).filter(Boolean))].sort();
 

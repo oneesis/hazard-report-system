@@ -23,7 +23,7 @@ const PicDispute = (() => {
     if (!list || list.childElementCount) return;
     const ks = await roster();
     // Yang sedang cuti tidak ditawarkan sebagai PIC pengganti.
-    list.innerHTML = ks.filter((k) => k.STATUS_KERJA !== 'cuti').map((k) => `<option value="${esc(k.NAMA)} — ${esc(k.NIK)}">${esc(k.JABATAN || '')} · ${esc(k.PERUSAHAAN || '')}</option>`).join('');
+    list.innerHTML = ks.filter((k) => k.STATUS_KERJA !== 'cuti' && !/MAGANG/i.test(k.JABATAN || '')).map((k) => `<option value="${esc(k.NAMA)} — ${esc(k.NIK)}">${esc(k.JABATAN || '')} · ${esc(k.PERUSAHAAN || '')}</option>`).join('');
   }
 
   // Deadline usulan = hari ini + (deadline lama − tanggal laporan); sama rumus server.

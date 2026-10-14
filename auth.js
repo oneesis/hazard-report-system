@@ -620,6 +620,9 @@ const SubmitRef = {
 // Fitur 2.4 (2026-10-07): saran isian awal form — tanggal hari ini (jam HP, bukan UTC),
 // shift sesuai jam, dan tombol "lokasi terakhir". Semua tetap bisa diganti pelapor.
 // ponytail: jam pergantian shift tetap di sini — nanti dipindah ke pengaturan Super Admin.
+// 2026-10-15: karyawan magang (jabatan MAGANG) tidak bisa jadi PIC — tidak ditampilkan di daftar PIC.
+const isMagang = (k) => /MAGANG/i.test(String(k?.JABATAN || ''));
+
 const FormDefaults = {
   SHIFT1_MULAI: 7,  // 07.00–18.59 = Shift 1
   SHIFT2_MULAI: 19, // 19.00–06.59 = Shift 2

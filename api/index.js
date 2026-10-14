@@ -447,7 +447,7 @@ async function _risikoHazard(data) {
     WHERE data->>'kode_temuan' = ${t.kode} AND data->>'lokasi_bahaya' = ${lok} AND data->>'sub_lokasi_bahaya' = ${sub}
       AND left(data->>'tanggal_kejadian', 10) BETWEEN to_char(${tgl}::date - 30, 'YYYY-MM-DD') AND ${tgl}` : [];
   const r = Taksonomi.hitung({
-    keparahan: Math.max(t.keparahan, Number(data.keparahan_pelapor) || 0), // pelapor boleh menaikkan
+    keparahan: t.keparahan, // otomatis dari master (2026-10-15); koreksi hanya oleh SHE (koreksiRisiko)
     kemungkinan: t.kemungkinan, jenisArea: area, berulang: lain.length > 0,
   });
   Object.assign(data, {
@@ -655,7 +655,13 @@ async function annotateStatusKerja(sheets, rows) {
 /** PIC yang dipilih tidak boleh sedang cuti (2026-10-08: hanya cuti; dulu juga
  * wajib_reinduksi). ponytail: kalau nik_pic tidak terkirim dari form, skip (tidak
  * cukup data buat verifikasi aman) — celah ini sudah ada sebelumnya. */
+const isMagang = (k) => /MAGANG/i.test(String((k && k.JABATAN) || '')); // 2026-10-15: magang tidak bisa jadi PIC
 async function assertPicEligible(sheets, nikPic, namaPic) {
+  if (!nikPic && !namaPic) return;
+  const rows = await _karyawanRows(sheets);
+  const nik = String(nikPic || '').trim(), nama = String(namaPic || '').trim().toUpperCase();
+  const k = rows.find((r) => nik && String(r.NIK || '').trim() === nik) || (!nik && rows.find((r) => String(r.NAMA || '').trim().toUpperCase() === nama));
+  if (isMagang(k)) throw Object.assign(new Error(`PIC yang dipilih (${namaPic || nikPic}) berstatus magang, tidak bisa ditunjuk sebagai PIC.`), { httpStatus: 400 });
   if (!nikPic) return;
   const status = await getStatusKerjaByNik(sheets, nikPic, namaPic);
   if (status !== 'cuti') return;
@@ -1697,7 +1703,7 @@ async function submitHazardReport(sheets, data) {
   _hzHeaders.forEach((h, i) => { _hzData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _hzData.client_ref = String(data.client_ref);
   _hzData.nik_pic = data.nik_pic || '';
-  for (const k of ['sub_lokasi_bahaya', 'sub_lokasi_lainnya', 'kode_temuan', 'keparahan', 'keparahan_pelapor', 'kemungkinan',
+  for (const k of ['sub_lokasi_bahaya', 'sub_lokasi_lainnya', 'kode_temuan', 'keparahan', 'kemungkinan',
     'skor_risiko', 'kelas_temuan', 'risiko_kritis', 'jenis_area', 'temuan_berulang']) {
     if (data[k] !== undefined && data[k] !== '') _hzData[k] = data[k];
   }

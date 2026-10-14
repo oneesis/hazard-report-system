@@ -280,7 +280,6 @@ function onLokasiChange() {
 // ========================================
 // Kategori: "Khusus lokasi ini" → "Umum" → "Kategori lain". Sub bisa dicari lintas kategori (kategori kosong → semua sub per grup);
 // memilih sub mengisi kategori & jenis bahaya otomatis.
-let keparahanPelapor = 0;
 let _syncTaksonomi = false;
 const _temuanCocok = () => masterTemuan; // jenis bahaya tidak lagi memfilter: diturunkan dari sub (2026-10-14)
 const _setPilihan = (choices, id, v) => {
@@ -365,13 +364,11 @@ function autoFillRisiko() {
   document.getElementById("jenis_bahaya").value = item.TIPE === "Tindakan" ? "Tindakan Tidak Aman" : "Kondisi Tidak Aman";
 
   const minP = Number(item.KEPARAHAN) || 1;
-  const p = Math.max(minP, keparahanPelapor || 0);
+  const p = minP;
   const r = Taksonomi.hitung({ keparahan: p, kemungkinan: item.KEMUNGKINAN, jenisArea: jenisAreaLokasi(_val("lokasi_bahaya")) });
   if (hidden) hidden.value = r.tingkat;
 
   const N = Taksonomi.NAMA_KEPARAHAN, K = Taksonomi.NAMA_KEMUNGKINAN;
-  const opsi = [];
-  for (let i = minP; i <= 5; i++) opsi.push(`<option value="${i}"${i === p ? " selected" : ""}>${i} — ${N[i]}</option>`);
   panel.innerHTML = `
     <div class="pr-atas">
       <span class="pr-tingkat ${r.tingkat.toLowerCase()}">${r.tingkat}</span>
@@ -379,17 +376,13 @@ function autoFillRisiko() {
       ${item.KRITIS ? '<span class="pr-lencana kritis">RISIKO KRITIS</span>' : ""}
     </div>
     <div class="pr-rinci">
-      <div><b>Keparahan</b><select id="keparahan_pelapor" aria-label="Keparahan">${opsi.join("")}</select></div>
+      <div><b>Keparahan</b>${r.keparahan} — ${N[r.keparahan]}</div>
       <div><b>Kemungkinan</b>${r.kemungkinan} — ${K[r.kemungkinan]}</div>
       <div><b>Skor</b>${r.kemungkinan} × ${r.keparahan} = ${r.skor}</div>
       <div><b>Batas perbaikan</b>${r.batasHari} hari</div>
     </div>
     ${r.tingkat === "Ekstrem" ? '<div class="pr-catatan stop">Risiko EKSTREM: hentikan pekerjaan di area ini dan segera lapor pengawas.</div>' : ""}
-    <div class="pr-catatan">Kemungkinan dihitung otomatis dari jenis temuan dan lokasi. Keparahan boleh dinaikkan bila kondisinya lebih parah.</div>`;
-  panel.querySelector("#keparahan_pelapor").addEventListener("change", (e) => {
-    keparahanPelapor = Number(e.target.value) > minP ? Number(e.target.value) : 0;
-    autoFillRisiko();
-  });
+    <div class="pr-catatan">Dihitung otomatis dari jenis temuan dan lokasi; SHE dapat mengoreksi saat meninjau laporan.</div>`;
   autoFillBatasWaktu(r.tingkat);
 }
 
@@ -469,6 +462,7 @@ function loadNamaPicOptions() {
     const employee = masterKaryawan.find(row =>
       row["PERUSAHAAN"] === perusahaan && _subEq(row["SUBCONT"], subcont) && row["NAMA"] === item
     );
+    if (isMagang(employee)) return; // magang tidak bisa jadi PIC (backend juga menolak)
     // Cuti (2026-08-20) — tidak eligible jadi PIC; tampil disabled + label
     // status. Ini cuma UX, penolakan sebenarnya tetap di backend saat submit.
     const status = employee?.["STATUS_KERJA"];
@@ -684,7 +678,6 @@ function loadDraft() {
       if (lainEl) lainEl.value = data.sub_lokasi_lainnya || "";
       loadKetidaksesuaianOptions();
     }
-    keparahanPelapor = Number(data.keparahan_pelapor) || 0;
     if (data.jenis_bahaya) {
       const jEl = document.getElementById("jenis_bahaya");
       if (jEl) jEl.value = data.jenis_bahaya;
@@ -1335,7 +1328,6 @@ function getFormData() {
     deskripsi_bahaya: document.getElementById("deskripsi_bahaya")?.value || "",
     tingkat_risiko: document.getElementById("tingkat_risiko")?.value || "",
     kode_temuan: (masterTemuan.find(i => i["SUB KETIDAKSESUAIAN"] === _val("sub_ketidaksesuaian")) || {}).KODE || "",
-    keparahan_pelapor: keparahanPelapor || "",
     upload_foto_bahaya: document.getElementById("upload_foto_bahaya")?.dataset?.base64 || "",
 
     tindakan_langsung: document.getElementById("tindakan_langsung")?.value || "",
@@ -1521,7 +1513,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("lokasi_bahaya")?.addEventListener("change", onLokasiChange);
     document.getElementById("sub_lokasi_bahaya")?.addEventListener("change", toggleSubLainnya);
     document.getElementById("ketidaksesuaian_bahaya")?.addEventListener("change", () => { if (!_syncTaksonomi) loadSubKetidaksesuaianOptions(""); });
-    document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", () => { if (!_syncTaksonomi) { keparahanPelapor = 0; autoFillRisiko(); } });
+    document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", () => { if (!_syncTaksonomi) autoFillRisiko(); });
 
     document.getElementById("perusahaan_pic")?.addEventListener("change", loadSubcontPicOptions);
     document.getElementById("subcont2")?.addEventListener("change", loadNamaPicOptions);
