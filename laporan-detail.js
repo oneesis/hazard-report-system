@@ -194,6 +194,7 @@ function renderDetail(r) {
   const skor = !isInspection && getReportValue(r, ['skor_risiko'], '');
   set('dfRisk', skor ? `${riskVal} · skor ${skor} (K${r.kemungkinan} × P${r.keparahan}) · ${r.kelas_temuan || ''}${r.risiko_kritis === 'Ya' ? ' · Risiko kritis' : ''}` : riskVal);
   if (!isInspection && r.kode_temuan) set('dfCategory', `${catVal} · ${r.kode_temuan} ${getReportValue(r, ['sub_ketidaksesuaian'], '')}`);
+  if (isInspection && r.kode_temuan) set('dfCategory', `${document.getElementById('dfCategory').textContent} · Kode temuan: ${String(r.kode_temuan).replace(/,/g, ', ')}`);
   pasangKoreksiRisiko(r, isInspection);
 
   // Description & recommendation

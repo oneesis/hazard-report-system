@@ -369,6 +369,13 @@ async function ensureRosterTable(sql) {
 // ── Deteksi dini: master temuan & lokasi di Neon (2026-10-14) ───────────────
 // Seed dari lib/master-*.json saat tabel masih kosong; setelah itu dikelola Super Admin.
 const Taksonomi = require('../lib/taksonomi');
+const PETA_CHECKLIST = require('../lib/peta-checklist.json');
+let _sboKodeOk = false;
+async function ensureSboKodeKolom(sql) {
+  if (_sboKodeOk) return;
+  await sql`ALTER TABLE sbo_report ADD COLUMN IF NOT EXISTS kode_temuan TEXT NOT NULL DEFAULT ''`;
+  _sboKodeOk = true;
+}
 let _masterDD = null, _masterDDAt = 0;
 const MASTER_DD_TTL = 5 * 60e3;
 async function ensureMasterDeteksiDini(sql) {
@@ -1626,6 +1633,7 @@ async function submitInspectionReport(sheets, data) {
   headers.forEach((h, i) => { _insData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _insData.client_ref = String(data.client_ref);
   _insData.nik_pic = data.nik_pic || '';
+  _insData.kode_temuan = Taksonomi.kodeInspeksi(sheetName, _insData, PETA_CHECKLIST).join(','); // deteksi dini tahap 2
   const _insDup = await _insertOnce('inspection_report', data.client_ref, () => getSql()`
     INSERT INTO inspection_report (id, jenis, nik, perusahaan, status_perbaikan, data)
     VALUES (${id}, ${sheetName}, ${_insData.nik || ''}, ${_insData.perusahaan || ''}, ${_insData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_insData)}::jsonb)`, 'Inspeksi');
@@ -1935,6 +1943,11 @@ async function submitSBOReport(sheets, data) {
        ${F(data.departemen_pic)}, ${F(data.jabatan_pic)}, ${F(data.no_wa_pic)}, ${F(data.batas_waktu)},
        ${''}, ${hasFinding ? 'OPEN' : 'AMAN'}, ${data.pernyataan || ''}, ${''}, ${ref})`, 'Laporan SBO');
   if (sboDup) return sboDup;
+  // Deteksi dini tahap 2: item Tidak Aman → kode taksonomi. Gagal tidak membatalkan laporan.
+  if (hasFinding) {
+    try { await ensureSboKodeKolom(sql); await sql`UPDATE sbo_report SET kode_temuan = ${Taksonomi.kodeSbo(data, PETA_CHECKLIST).join(',')} WHERE id = ${id}`; }
+    catch (e) { console.error('[kodeSbo]', e.message); }
+  }
 
   let waStatus = 'TIDAK ADA WA';
   if (hasFinding && data.no_wa_pic && data.nama_pic) {
