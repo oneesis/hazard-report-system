@@ -465,6 +465,146 @@ async function _risikoHazard(data) {
   return r;
 }
 
+// ── Deteksi dini tahap 4: indeks risiko & dasbor (2026-10-14) ──────────────
+const Indeks = require('../lib/indeks-risiko');
+// Inspeksi & SBO belum memakai master lokasi (lokasi teks bebas) → perkiraan lokasi.
+// ponytail: tebakan kata kunci; ganti dengan pilihan lokasi di form Inspeksi/SBO bila perlu presisi.
+const LOKASI_INSPEKSI = { INS_CB: 'CCP', INS_JA: 'Mine Road', INS_KG: 'Office', INS_MD: 'Mess/ Camp', INS_SP: 'Settling Pond', INS_T: 'Front Loading', INS_TB: 'Maintank', INS_WS: 'Workshop' };
+const LOKASI_KATA = [[/handak/, 'Gudang Handak'], [/disposal/, 'Disposal'], [/khdtk|hutan/, 'KHDTK / Kawasan Hutan'], [/sp\b|sparing|settling|setpond|pintu air/, 'Settling Pond'],
+  [/nursery/, 'Nursery'], [/fasum/, 'Fasum Project'], [/jalan kab|jln kab/, 'Jalan Kabupaten'], [/hauling/, 'Hauling Road'], [/mess|mes\b/, 'Mess/ Camp'],
+  [/kantor|office/, 'Office'], [/workshop|ws\b|iglo/, 'Workshop'], [/sump/, 'Sump'], [/rehab|das\b/, 'Area Rehab DAS'], [/tambang|pit|blok|front/, 'Front Loading']];
+const tebakLokasi = (s) => (LOKASI_KATA.find(([re]) => re.test(String(s || '').toLowerCase())) || [, 'Lain-lain'])[1];
+const BOBOT_AREA = { Operasional: 2, Kritis: 2, Lingkungan: 1.5, Kendaraan: 1.5 };
+let _ddCache = new Map();
+
+async function dataDeteksiDini(auth) {
+  const superAdmin = isSuperAdmin(auth.role);
+  const co = String(auth.perusahaan || '').trim().toUpperCase();
+  const kunciCache = superAdmin ? '*' : co;
+  const c = _ddCache.get(kunciCache);
+  if (c && Date.now() - c.at < 10 * 60e3) return c.data;
+
+  const sql = getSql();
+  const m = await masterDeteksiDini();
+  await ensureInsidenTable(sql);
+  const M = new Map(m.temuan.map((t) => [t.kode, t]));
+  const area = new Map(m.lokasi.map((l) => [l.lokasi, l.jenis_area]));
+  const [hz, ins, sbo, insiden] = await Promise.all([
+    sql`SELECT id, status_perbaikan, data FROM hazard_report WHERE coalesce(data->>'kode_temuan', '') <> ''`,
+    sql`SELECT id, jenis, status_perbaikan, data FROM inspection_report WHERE coalesce(data->>'kode_temuan', '') <> ''`,
+    sql`SELECT id, tgl_observasi, lokasi, perusahaan_pic, departemen_pic, perusahaan_observer, departemen_observer, nik_observer,
+        status_perbaikan, batas_waktu, tanggal_closing, kode_temuan FROM sbo_report WHERE coalesce(kode_temuan, '') <> ''`.catch(() => []),
+    sql`SELECT id, to_char(tanggal, 'YYYY-MM-DD') AS tanggal, perusahaan, lokasi, klasifikasi, kode_penyebab, data->>'kode_tambahan' AS kode2 FROM insiden`,
+  ]);
+  const up = (s) => String(s || '').trim().toUpperCase();
+  const dept = (p, d) => `${String(p || '').trim() || '-'} — ${String(d || '').trim().toUpperCase() || '-'}`;
+  const item = (o, kode) => {
+    const t = M.get(kode);
+    return t ? { ...o, kode, keparahan: Number(o.keparahan) || t.keparahan, tipe: t.tipe, kritis: t.kritis } : null;
+  };
+  let temuan = [];
+  for (const r of hz) {
+    const d = r.data;
+    temuan.push(item({ sumber: 'Hazard', id: r.id, tanggal: d.tanggal_kejadian, perusahaan: d.perusahaan_pic || d.perusahaan,
+      departemen: dept(d.perusahaan_pic || d.perusahaan, d.departemen_pic || d.departemen), lokasi: d.lokasi_bahaya, sub: d.sub_lokasi_bahaya || '',
+      pelapor: d.nik, status: r.status_perbaikan, batasWaktu: d.batas_waktu, tanggalClosing: d.tanggal_closing, keparahan: d.keparahan,
+      pelaporDept: dept(d.perusahaan, d.departemen) }, d.kode_temuan));
+  }
+  for (const r of ins) {
+    const d = r.data;
+    for (const k of String(d.kode_temuan).split(',').filter(Boolean)) temuan.push(item({ sumber: 'Inspeksi', id: r.id, tanggal: d.tanggal_kejadian,
+      perusahaan: d.perusahaan_pic || d.perusahaan, departemen: dept(d.perusahaan_pic || d.perusahaan, d.departemen_pic || d.departemen),
+      lokasi: LOKASI_INSPEKSI[r.jenis] || 'Lain-lain', sub: '', pelapor: d.nik, status: r.status_perbaikan, batasWaktu: d.batas_waktu,
+      tanggalClosing: d.tanggal_closing, pelaporDept: dept(d.perusahaan, d.departemen) }, k));
+  }
+  for (const r of sbo) {
+    for (const k of String(r.kode_temuan).split(',').filter(Boolean)) temuan.push(item({ sumber: 'SBO', id: r.id, tanggal: r.tgl_observasi,
+      perusahaan: r.perusahaan_pic || r.perusahaan_observer, departemen: dept(r.perusahaan_pic || r.perusahaan_observer, r.departemen_pic),
+      lokasi: tebakLokasi(r.lokasi), sub: '', pelapor: r.nik_observer, status: r.status_perbaikan, batasWaktu: r.batas_waktu,
+      tanggalClosing: r.tanggal_closing, pelaporDept: dept(r.perusahaan_observer, r.departemen_observer) }, k));
+  }
+  temuan = temuan.filter(Boolean);
+  let ins2 = insiden;
+  if (!superAdmin) { temuan = temuan.filter((t) => up(t.perusahaan) === co); ins2 = insiden.filter((i) => up(i.perusahaan) === co); }
+
+  const now = Date.now();
+  const siap = Indeks.siapkan(temuan);
+  const penyebabInsiden = new Set(insiden.flatMap((i) => [i.kode_penyebab, i.kode2]).filter(Boolean));
+  const mulai = siap.length ? Date.parse(String(siap[0].tanggal).slice(0, 10) + 'T00:00:00Z') : null; // siap terurut tanggal
+  const opsi = (kunci) => ({ now, kunci, penyebabInsiden, mulai });
+  const nama = (k) => M.get(k)?.sub || k;
+  const umur = (s) => Math.floor((now - Date.parse(String(s).slice(0, 10) + 'T00:00:00Z')) / 864e5);
+  const minggu = Array.from({ length: Indeks.MINGGU }, (_, i) => new Date(now - (Indeks.MINGGU - 1 - i) * 7 * 864e5).toISOString().slice(0, 10));
+
+  const lokasi = Indeks.hitungIndeks(siap, opsi((t) => t.lokasi));
+  const hitung = (arr, f) => arr.reduce((a, x) => { const k = f(x); if (k) a[k] = (a[k] || 0) + 1; return a; }, {});
+  const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n);
+  const t30 = siap.filter((t) => umur(t.tanggal) <= 30);
+  const t365 = siap.filter((t) => umur(t.tanggal) <= 365);
+  const i365 = ins2.filter((i) => umur(i.tanggal) <= 365);
+
+  const hasil = {
+    status: 'success', dihitung: new Date(now).toISOString(), lingkup: superAdmin ? 'Semua perusahaan' : auth.perusahaan, minggu,
+    jumlah: { temuan: siap.length, hazard: siap.filter((t) => t.sumber === 'Hazard').length, inspeksi: siap.filter((t) => t.sumber === 'Inspeksi').length,
+      sbo: siap.filter((t) => t.sumber === 'SBO').length, insiden: ins2.length },
+    lokasi,
+    departemen: Indeks.hitungIndeks(siap, opsi((t) => t.departemen)),
+    perusahaan: superAdmin ? Indeks.hitungIndeks(siap, opsi((t) => t.perusahaan && up(t.perusahaan))) : [],
+    seriTotal: minggu.map((_, i) => lokasi.reduce((a, l) => a + l.seri[i], 0)),
+    mayorTerbuka: siap.filter((t) => t.keparahan >= 4 && String(t.status).toUpperCase() !== 'CLOSED')
+      .map((t) => ({ id: t.id, sumber: t.sumber, tanggal: String(t.tanggal).slice(0, 10), lokasi: t.lokasi, sub: t.sub, kode: t.kode, nama: nama(t.kode),
+        keparahan: t.keparahan, kritis: t.kritis, batas: t.batasWaktu || '', lewatHari: t.batasWaktu ? umur(t.batasWaktu) : null }))
+      .sort((a, b) => (b.lewatHari ?? -999) - (a.lewatHari ?? -999)).slice(0, 60),
+    berulang: Indeks.berulangAktif(siap, now).slice(0, 20).map((x) => ({ ...x, nama: nama(x.kode) })),
+    penyebab30: top(hitung(t30, (t) => t.kode), 10).map(([k, n]) => ({ kode: k, nama: nama(k), jumlah: n, pernahInsiden: penyebabInsiden.has(k) })),
+    penyebabInsiden: top(hitung(ins2, (i) => i.kode_penyebab), 10).map(([k, n]) => ({ kode: k, nama: nama(k), jumlah: n })),
+    piramida: {
+      berat: i365.filter((i) => ['FAT', 'LTI'].includes(i.klasifikasi)).length,
+      ringan: i365.filter((i) => ['MTI', 'FAI'].includes(i.klasifikasi)).length,
+      kerugian: i365.filter((i) => ['PD', 'FC', 'EC'].includes(i.klasifikasi)).length,
+      nearMiss: i365.filter((i) => i.klasifikasi === 'NM').length,
+      temuanMayor: t365.filter((t) => t.keparahan >= 4).length,
+      temuan: t365.length,
+    },
+  };
+
+  if (superAdmin) {
+    // KPI program (hanya Super Admin) — 30 hari terakhir & seluruh data.
+    const kpi = (arr) => {
+      const hz2 = arr.filter((t) => t.sumber === 'Hazard');
+      const mayorJatuhTempo = arr.filter((t) => t.keparahan >= 4 && t.batasWaktu && umur(t.batasWaktu) > 0);
+      const tepat = mayorJatuhTempo.filter((t) => String(t.status).toUpperCase() === 'CLOSED' && t.tanggalClosing
+        && String(t.tanggalClosing).slice(0, 10) <= String(t.batasWaktu).slice(0, 10)).length;
+      const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
+      return {
+        areaOperasional: pct(hz2.filter((t) => ['Operasional', 'Kritis'].includes(area.get(t.lokasi))).length, hz2.length),
+        tindakan: pct(arr.filter((t) => t.tipe === 'Tindakan').length, arr.length),
+        mayorTepatWaktu: pct(tepat, mayorJatuhTempo.length), mayorJatuhTempo: mayorJatuhTempo.length,
+      };
+    };
+    const tPer = hitung(siap, (t) => t.lokasi), iPer = hitung(insiden, (i) => i.lokasi);
+    hasil.kpi = { hari30: kpi(t30), semua: kpi(siap),
+      rasio: [...new Set([...Object.keys(tPer), ...Object.keys(iPer)])].map((l) => ({ lokasi: l, temuan: tPer[l] || 0, insiden: iPer[l] || 0 }))
+        .filter((x) => x.insiden).sort((a, b) => b.insiden - a.insiden) };
+    // Capaian berbobot area (terpisah dari capaian SAP resmi): laporan 30 hari per departemen pelapor.
+    const cap = new Map();
+    for (const t of t30) {
+      const k = t.pelaporDept || '-';
+      if (!cap.has(k)) cap.set(k, { departemen: k, laporan: new Set(), skor: 0, operasional: 0 });
+      const x = cap.get(k);
+      const kunci = `${t.sumber}|${t.id}`;
+      if (x.laporan.has(kunci)) continue;
+      x.laporan.add(kunci);
+      const b = BOBOT_AREA[area.get(t.lokasi)] || 1;
+      x.skor += b; if (b >= 2) x.operasional++;
+    }
+    hasil.capaianBobot = [...cap.values()].map((x) => ({ departemen: x.departemen, laporan: x.laporan.size, skor: x.skor,
+      pctOperasional: Math.round((x.operasional / x.laporan.size) * 100) })).sort((a, b) => b.skor - a.skor);
+  }
+  _ddCache.set(kunciCache, { at: Date.now(), data: hasil });
+  return hasil;
+}
+
 function todayJakarta() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 }
@@ -3132,6 +3272,13 @@ module.exports = async (req, res) => {
             FROM hazard_report WHERE coalesce(data->>'lokasi_bahaya', '') <> '' AND coalesce(data->>'sub_lokasi_bahaya', '') = ''
             ORDER BY id DESC`;
           result = { status: 'success', ...m, antrean };
+          break;
+        }
+        case 'deteksiDini': {
+          // Dasbor Deteksi Dini — Admin: perusahaannya; Super Admin: semua + KPI & capaian berbobot.
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          if (req.query.segar === '1') _ddCache.clear();
+          result = await dataDeteksiDini(auth);
           break;
         }
         case 'getInsiden': {

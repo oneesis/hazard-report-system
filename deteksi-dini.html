@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Deteksi Dini - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="deteksi-dini.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+</head>
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Deteksi Dini</span>
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <div class="dd-content">
+      <div class="dd-header">
+        <div>
+          <h1 class="dd-title"><i class="fa-solid fa-satellite-dish"></i> Deteksi Dini</h1>
+          <p class="dd-sub" id="ddLingkup">Memuat…</p>
+        </div>
+        <button class="btn-secondary dd-refresh" id="btnSegarkan"><i class="fa-solid fa-arrows-rotate"></i> Hitung ulang</button>
+      </div>
+      <div class="dd-catatan"><i class="fa-solid fa-circle-info"></i> Indikator dini, <b>bukan ramalan pasti</b>. Dihitung dari temuan Hazard, Inspeksi &amp; SBO
+        (keparahan, tindakan tidak aman, berulang, lewat batas waktu) dan riwayat insiden. <b>Merah</b> = ada temuan berpotensi fatal belum ditutup
+        atau lonjakan temuan Mayor; <b>kuning</b> = temuan Mayor lewat batas waktu atau temuan baru naik.</div>
+
+      <div id="ddIsi"><div class="dd-loading"><i class="fa-solid fa-spinner fa-spin"></i> Menghitung indeks risiko…</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="push-notif.js"></script>
+<script src="notifications.js"></script>
+<script src="deteksi-dini.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    if (!isAdminOrAbove(user?.role)) { window.location.href = 'index-home.html'; return; }
+    renderUserProfile();
+    ddMuat();
+  });
+</script>
+</body>
+</html>
