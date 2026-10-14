@@ -370,6 +370,16 @@ async function ensureRosterTable(sql) {
 // Seed dari lib/master-*.json saat tabel masih kosong; setelah itu dikelola Super Admin.
 const Taksonomi = require('../lib/taksonomi');
 const PETA_CHECKLIST = require('../lib/peta-checklist.json');
+const LibInsiden = require('../lib/insiden');
+let _insidenOk = false;
+async function ensureInsidenTable(sql) {
+  if (_insidenOk) return;
+  await sql`CREATE TABLE IF NOT EXISTS insiden (
+    id TEXT PRIMARY KEY, tanggal DATE NOT NULL, jam TEXT, shift TEXT, perusahaan TEXT, departemen TEXT,
+    lokasi TEXT, sub_lokasi TEXT, klasifikasi TEXT NOT NULL, kode_penyebab TEXT, keparahan_aktual INT, potensi_keparahan INT,
+    data JSONB NOT NULL DEFAULT '{}', sumber TEXT, updated_at TIMESTAMPTZ DEFAULT now())`;
+  _insidenOk = true;
+}
 let _sboKodeOk = false;
 async function ensureSboKodeKolom(sql) {
   if (_sboKodeOk) return;
@@ -3124,6 +3134,16 @@ module.exports = async (req, res) => {
           result = { status: 'success', ...m, antrean };
           break;
         }
+        case 'getInsiden': {
+          // Register insiden SHE (tahap 3) — Super Admin. Kronologi dipotong agar ringan.
+          if (!isSuperAdmin(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const sql = getSql(); await ensureInsidenTable(sql);
+          const rows = await sql`SELECT id, to_char(tanggal, 'YYYY-MM-DD') AS tanggal, jam, shift, perusahaan, lokasi, sub_lokasi,
+              klasifikasi, kode_penyebab, keparahan_aktual, potensi_keparahan, data->>'jenis' AS jenis,
+              left(data->>'kronologi', 160) AS kronologi, sumber FROM insiden ORDER BY tanggal DESC, jam DESC NULLS LAST`;
+          result = { status: 'success', data: rows };
+          break;
+        }
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         case 'getSBOReports':       result = await getSBOReports(sheets, auth, req.query.mine === '1'); break;
@@ -3712,6 +3732,51 @@ module.exports = async (req, res) => {
             koreksi_risiko: { oleh: authUser.nama || authUser.nik, at: new Date().toISOString(), sebelum, alasan: String(d.alasan || '').slice(0, 300) },
           })}::jsonb WHERE id = ${String(d.id)}`;
           result = { status: 'success', message: `Risiko dikoreksi: ${t} (${k} × ${p} = ${skor}).`, tingkat: t };
+          break;
+        }
+        case 'imporInsiden': {
+          // Unggah Excel register insiden (template SHE). Upsert per No. Register; baris bergalat dilewati.
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN.'), { httpStatus: 403 });
+          const d = data || {}, sql = getSql();
+          const baris = Array.isArray(d.rows) ? d.rows.slice(0, 5000) : [];
+          if (!baris.length) throw new Error('File tidak berisi baris insiden.');
+          await ensureInsidenTable(sql);
+          const m = await masterDeteksiDini();
+          const ctx = { kodeAda: new Set(m.temuan.map((t) => t.kode)), lokasiAda: new Map() };
+          for (const l of m.lokasi) ctx.lokasiAda.set(l.lokasi, [...(ctx.lokasiAda.get(l.lokasi) || []), l.sub]);
+          const ok = [], gagal = [], peringatan = [], dilihat = new Set();
+          baris.forEach((b, i) => {
+            const { rec, galat, peringatan: pr } = LibInsiden.normalisasi(b, ctx);
+            if (!rec) return;
+            const no = i + 2; // baris Excel (judul di baris 1)
+            if (rec.id && dilihat.has(rec.id)) galat.push(`No. Register ${rec.id} dipakai lebih dari sekali di file`);
+            if (galat.length) return gagal.push({ baris: no, register: rec.id || '', galat });
+            dilihat.add(rec.id);
+            if (pr.length) peringatan.push({ baris: no, register: rec.id, peringatan: pr });
+            ok.push(rec);
+          });
+          let baru = 0;
+          if (ok.length) {
+            const ada = new Set((await sql`SELECT id FROM insiden WHERE id = ANY(${ok.map((r) => r.id)}::text[])`).map((r) => r.id));
+            baru = ok.filter((r) => !ada.has(r.id)).length;
+            const sumber = `${String(d.nama_file || 'Excel').slice(0, 80)} · ${authUser.nama || authUser.nik} · ${new Date().toISOString()}`;
+            await sql`INSERT INTO insiden (id, tanggal, jam, shift, perusahaan, departemen, lokasi, sub_lokasi, klasifikasi,
+                kode_penyebab, keparahan_aktual, potensi_keparahan, data, sumber, updated_at)
+              SELECT x.id, x.tanggal::date, x.jam, x.shift, x.perusahaan, x.departemen, x.lokasi, x.sub_lokasi, x.klasifikasi,
+                x.kode_penyebab, x.keparahan_aktual, x.potensi_keparahan, x.r - ARRAY['id','tanggal','jam','shift','perusahaan',
+                'departemen','lokasi','sub_lokasi','klasifikasi','kode_penyebab','keparahan_aktual','potensi_keparahan'], ${sumber}, now()
+              FROM (SELECT e AS r, e->>'id' AS id, e->>'tanggal' AS tanggal, e->>'jam' AS jam, e->>'shift' AS shift,
+                  e->>'perusahaan' AS perusahaan, e->>'departemen' AS departemen, e->>'lokasi' AS lokasi, e->>'sub_lokasi' AS sub_lokasi,
+                  e->>'klasifikasi' AS klasifikasi, e->>'kode_penyebab' AS kode_penyebab, (e->>'keparahan_aktual')::int AS keparahan_aktual,
+                  (e->>'potensi_keparahan')::int AS potensi_keparahan
+                FROM jsonb_array_elements(${JSON.stringify(ok)}::jsonb) e) x
+              ON CONFLICT (id) DO UPDATE SET tanggal = EXCLUDED.tanggal, jam = EXCLUDED.jam, shift = EXCLUDED.shift,
+                perusahaan = EXCLUDED.perusahaan, departemen = EXCLUDED.departemen, lokasi = EXCLUDED.lokasi, sub_lokasi = EXCLUDED.sub_lokasi,
+                klasifikasi = EXCLUDED.klasifikasi, kode_penyebab = EXCLUDED.kode_penyebab, keparahan_aktual = EXCLUDED.keparahan_aktual,
+                potensi_keparahan = EXCLUDED.potensi_keparahan, data = EXCLUDED.data, sumber = EXCLUDED.sumber, updated_at = now()`;
+          }
+          result = { status: 'success', message: `${ok.length} insiden tersimpan (${baru} baru, ${ok.length - baru} diperbarui), ${gagal.length} baris dilewati.`,
+            baru, diperbarui: ok.length - baru, gagal, peringatan };
           break;
         }
         case 'importRoster': {

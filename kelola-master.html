@@ -43,6 +43,7 @@
         <button class="km-tab active" data-tab="antrean" role="tab"><i class="fa-solid fa-inbox"></i> Antrean Sub-Lokasi <span id="cntAntrean" class="km-badge">-</span></button>
         <button class="km-tab" data-tab="temuan" role="tab"><i class="fa-solid fa-list"></i> Temuan</button>
         <button class="km-tab" data-tab="lokasi" role="tab"><i class="fa-solid fa-location-dot"></i> Lokasi</button>
+        <button class="km-tab" data-tab="insiden" role="tab"><i class="fa-solid fa-car-burst"></i> Insiden <span id="cntInsiden" class="km-badge">-</span></button>
       </div>
 
       <section id="tab-antrean" class="km-panel">
@@ -83,6 +84,18 @@
           </div>
         </details>
         <div id="lokasiList" class="km-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>
+      </section>
+
+      <section id="tab-insiden" class="km-panel" hidden>
+        <p class="km-help">Register insiden dari SHE. Isi Excel dari template, lalu unggah di sini. Unggah ulang dengan No. Register yang sama akan <b>memperbarui</b> data, bukan menggandakan. Nama personel &amp; pengawas tidak diimpor.</p>
+        <div class="km-toolbar">
+          <a class="btn-secondary" href="assets/template-register-insiden.xlsx" download><i class="fa-solid fa-download"></i> Unduh template</a>
+          <label class="btn-primary km-unggah"><i class="fa-solid fa-upload"></i> Unggah Excel<input type="file" id="fileInsiden" accept=".xlsx,.xls" hidden></label>
+          <input id="cariInsiden" type="search" placeholder="Cari register / lokasi / kode…" />
+        </div>
+        <div id="hasilImpor"></div>
+        <div id="ringkasInsiden" class="km-ringkas"></div>
+        <div id="insidenList" class="km-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>
       </section>
     </div>
   </div>

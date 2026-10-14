@@ -73,3 +73,17 @@
 .km-content .km-item > input { width: 100%; }
 .km-toolbar input[type=search] { width: auto; }
 .km-content .btn-primary:disabled { opacity: .4; cursor: default; }
+
+/* Tab Insiden */
+.km-unggah { cursor: pointer; }
+.km-ringkas { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }
+.km-chip { display: inline-flex; gap: 5px; align-items: center; font-size: .76rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #e2e8f0; color: #334155; margin: 0 4px 4px 0; }
+.km-chip.k-fat, .km-chip.k-lti { background: #fecaca; color: #991b1b; } .km-chip.k-mti, .km-chip.k-fai { background: #fed7aa; color: #9a3412; }
+.km-chip.k-fc { background: #fde68a; color: #92400e; } .km-chip.k-pd { background: #e0e7ff; color: #3730a3; }
+.km-chip.k-ec { background: #dcfce7; color: #166534; } .km-chip.k-nm { background: #e0f2fe; color: #075985; }
+.km-ins { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 10px 14px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.km-ins-top { font-size: .82rem; color: #475569; } .km-ins-mid { font-size: .82rem; color: #0f172a; }
+.km-lagi { width: 100%; justify-content: center; }
+.km-hasil { border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: .86rem; }
+.km-hasil--galat { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.km-hasil ul { margin: 6px 0 0 18px; padding: 0; font-size: .8rem; } .km-hasil summary { cursor: pointer; font-weight: 700; margin-top: 8px; }

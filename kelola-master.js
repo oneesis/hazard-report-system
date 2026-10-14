@@ -20,6 +20,7 @@ async function kmMuat() {
     if (!res.ok || j.status === 'error') throw new Error(j.message || 'Gagal memuat.');
     KM = j;
     renderAntrean(); renderTemuan(); renderLokasi(); isiFormTambah();
+    if (!INS.length) muatInsiden();
   } catch (e) {
     for (const id of ['antreanList', 'temuanList', 'lokasiList']) document.getElementById(id).innerHTML = `<div class="km-kosong">${esc(e.message)}</div>`;
   }
@@ -198,4 +199,78 @@ document.getElementById('btnTambahLokasi').addEventListener('click', async (e) =
     showToast(j.message); f('sub').value = ''; await kmMuat();
   } catch (err) { showToast(err.message, 'error'); }
   e.currentTarget.disabled = false;
+});
+
+// ── Insiden (register SHE, tahap 3) ──
+let INS = [], insTampil = 30;
+const KLAS_NAMA = { FAT: 'Fatality', LTI: 'Lost Time Injury', MTI: 'Medical Treatment', FAI: 'First Aid', PD: 'Property Damage', FC: 'Fire Case', EC: 'Enviro Case', NM: 'Near Miss' };
+
+async function muatInsiden() {
+  try {
+    const res = await fetch('/api?action=getInsiden');
+    const j = await res.json();
+    if (!res.ok || j.status === 'error') throw new Error(j.message || 'Gagal memuat insiden.');
+    INS = j.data || [];
+    renderInsiden();
+  } catch (e) { document.getElementById('insidenList').innerHTML = `<div class="km-kosong">${esc(e.message)}</div>`; }
+}
+
+function renderInsiden() {
+  document.getElementById('cntInsiden').textContent = INS.length;
+  const per = (f) => INS.reduce((a, r) => ((a[f(r)] = (a[f(r)] || 0) + 1), a), {});
+  const klas = per((r) => r.klasifikasi), th = per((r) => String(r.tanggal).slice(0, 4));
+  document.getElementById('ringkasInsiden').innerHTML = INS.length ? `
+    <div>${Object.keys(KLAS_NAMA).filter((k) => klas[k]).map((k) => `<span class="km-chip k-${k.toLowerCase()}" title="${KLAS_NAMA[k]}">${k} <b>${klas[k]}</b></span>`).join('')}</div>
+    <div>${Object.entries(th).sort().map(([t, n]) => `<span class="km-chip">${esc(t)} <b>${n}</b></span>`).join('')}</div>` : '';
+  const q = document.getElementById('cariInsiden').value.trim().toLowerCase();
+  const rows = INS.filter((r) => !q || `${r.id} ${r.lokasi} ${r.sub_lokasi} ${r.kode_penyebab} ${r.perusahaan} ${r.jenis}`.toLowerCase().includes(q));
+  const el = document.getElementById('insidenList');
+  el.className = '';
+  el.innerHTML = rows.length ? rows.slice(0, insTampil).map((r) => `
+    <div class="km-ins">
+      <div class="km-ins-top"><span class="km-chip k-${esc(String(r.klasifikasi).toLowerCase())}">${esc(r.klasifikasi)}</span>
+        <b>${esc(r.tanggal)}${r.jam ? ' ' + esc(r.jam) : ''}</b> · ${esc(r.id)} · ${esc(r.perusahaan || '')}</div>
+      <div class="km-ins-mid"><i class="fa-solid fa-location-dot"></i> ${esc(r.lokasi || '-')}${r.sub_lokasi ? ' — ' + esc(r.sub_lokasi) : ''}
+        · <b>${esc(r.kode_penyebab || '-')}</b> · ${esc(r.jenis || '')} · potensi ${esc(r.potensi_keparahan || '-')}</div>
+      <div class="km-row-desk">${esc(r.kronologi || '')}…</div>
+    </div>`).join('') + (rows.length > insTampil ? `<button class="btn-secondary km-lagi" onclick="insTampil += 30; renderInsiden()">Tampilkan lagi (${rows.length - insTampil})</button>` : '')
+    : `<div class="km-kosong">${INS.length ? 'Tidak ada yang cocok.' : 'Belum ada data insiden. Unggah Excel dari template.'}</div>`;
+}
+document.getElementById('cariInsiden').addEventListener('input', () => { insTampil = 30; renderInsiden(); });
+
+function muatSheetJS() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, gagal) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = ok; s.onerror = () => gagal(new Error('Gagal memuat pembaca Excel. Cek koneksi.'));
+    document.head.appendChild(s);
+  });
+}
+
+document.getElementById('fileInsiden').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const box = document.getElementById('hasilImpor');
+  box.innerHTML = '<div class="km-loading"><i class="fa-solid fa-spinner fa-spin"></i> Membaca & mengunggah…</div>';
+  try {
+    await muatSheetJS();
+    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+    const nama = wb.SheetNames.find((n) => n === 'Isi Insiden') || wb.SheetNames.find((n) => {
+      const r = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, range: 0 })[0] || [];
+      return r.some((h) => String(h).startsWith('No. Register'));
+    });
+    if (!nama) throw new Error('Sheet "Isi Insiden" tidak ditemukan. Pakai file dari template.');
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[nama], { raw: false, defval: '' });
+    const j = await kmApi('imporInsiden', { rows, nama_file: f.name });
+    const daftar = (arr, k) => arr.slice(0, 50).map((x) => `<li>Baris ${x.baris}${x.register ? ` (${esc(x.register)})` : ''}: ${esc(x[k].join('; '))}</li>`).join('');
+    const nol = !(j.baru + j.diperbarui);
+    box.innerHTML = `<div class="km-hasil${nol ? ' km-hasil--galat' : ''}">
+      <div><i class="fa-solid ${nol ? 'fa-circle-xmark' : 'fa-circle-check'}" style="color:${nol ? '#dc2626' : '#16a34a'}"></i> ${esc(j.message)}</div>
+      ${j.gagal.length ? `<details open><summary>${j.gagal.length} baris dilewati — perbaiki lalu unggah ulang</summary><ul>${daftar(j.gagal, 'galat')}</ul></details>` : ''}
+      ${j.peringatan.length ? `<details><summary>${j.peringatan.length} peringatan (tetap tersimpan)</summary><ul>${daftar(j.peringatan, 'peringatan')}</ul></details>` : ''}
+    </div>`;
+    await muatInsiden();
+  } catch (err) { box.innerHTML = `<div class="km-hasil km-hasil--galat">${esc(err.message)}</div>`; }
 });
