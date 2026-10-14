@@ -278,13 +278,11 @@ function onLokasiChange() {
 // ========================================
 // STEP 3 - IDENTIFIKASI BAHAYA
 // ========================================
-// Kategori: "Khusus lokasi ini" → "Umum" → "Kategori lain"; difilter jenis bahaya (Kondisi/
-// Tindakan). Sub bisa dicari lintas kategori (kategori kosong → semua sub per grup);
+// Kategori: "Khusus lokasi ini" → "Umum" → "Kategori lain". Sub bisa dicari lintas kategori (kategori kosong → semua sub per grup);
 // memilih sub mengisi kategori & jenis bahaya otomatis.
 let keparahanPelapor = 0;
 let _syncTaksonomi = false;
-const _tipeJenis = () => ({ "Kondisi Tidak Aman": "Kondisi", "Tindakan Tidak Aman": "Tindakan" })[_val("jenis_bahaya")] || "";
-const _temuanCocok = () => { const t = _tipeJenis(); return masterTemuan.filter(i => !t || i.TIPE === t); };
+const _temuanCocok = () => masterTemuan; // jenis bahaya tidak lagi memfilter: diturunkan dari sub (2026-10-14)
 const _setPilihan = (choices, id, v) => {
   const el = document.getElementById(id);
   if (choices) { try { choices.setChoiceByValue(v); } catch {} }
@@ -344,12 +342,6 @@ function loadSubKetidaksesuaianOptions(pilih) {
   if (!_syncTaksonomi) autoFillRisiko();
 }
 
-function onJenisBahayaChange() {
-  const item = masterTemuan.find(i => i["SUB KETIDAKSESUAIAN"] === _val("sub_ketidaksesuaian"));
-  if (item && _tipeJenis() && item.TIPE !== _tipeJenis()) _setPilihan(subKetidaksesuaianChoices, "sub_ketidaksesuaian", "");
-  loadKetidaksesuaianOptions();
-}
-
 function autoFillRisiko() {
   const panel = document.getElementById("panelRisiko");
   const hidden = document.getElementById("tingkat_risiko");
@@ -361,7 +353,7 @@ function autoFillRisiko() {
   }
 
   // Sub dipilih lewat pencarian lintas kategori → lengkapi kategori & jenis bahaya.
-  if (_val("ketidaksesuaian_bahaya") !== item.KETIDAKSESUAIAN || (_tipeJenis() && _tipeJenis() !== item.TIPE)) {
+  if (_val("ketidaksesuaian_bahaya") !== item.KETIDAKSESUAIAN) {
     _syncTaksonomi = true;
     const jenis = document.getElementById("jenis_bahaya");
     if (jenis) jenis.value = item.TIPE === "Tindakan" ? "Tindakan Tidak Aman" : "Kondisi Tidak Aman";
@@ -369,9 +361,8 @@ function autoFillRisiko() {
     _setPilihan(ketidaksesuaianChoices, "ketidaksesuaian_bahaya", item.KETIDAKSESUAIAN);
     loadSubKetidaksesuaianOptions(item["SUB KETIDAKSESUAIAN"]);
     _syncTaksonomi = false;
-  } else if (!_val("jenis_bahaya")) {
-    document.getElementById("jenis_bahaya").value = item.TIPE === "Tindakan" ? "Tindakan Tidak Aman" : "Kondisi Tidak Aman";
   }
+  document.getElementById("jenis_bahaya").value = item.TIPE === "Tindakan" ? "Tindakan Tidak Aman" : "Kondisi Tidak Aman";
 
   const minP = Number(item.KEPARAHAN) || 1;
   const p = Math.max(minP, keparahanPelapor || 0);
@@ -1155,7 +1146,7 @@ function validateSection2() {
 }
 
 function validateSection3() {
-  const textValid = validateRequiredFields(["jenis_bahaya", "ketidaksesuaian_bahaya", "sub_ketidaksesuaian", "deskripsi_bahaya"]);
+  const textValid = validateRequiredFields(["ketidaksesuaian_bahaya", "sub_ketidaksesuaian", "deskripsi_bahaya"]);
 
   if (selectedBahayaPhotos.length === 0) {
     const fileInput = document.getElementById("upload_foto_bahaya");
@@ -1529,7 +1520,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("lokasi_bahaya")?.addEventListener("change", onLokasiChange);
     document.getElementById("sub_lokasi_bahaya")?.addEventListener("change", toggleSubLainnya);
-    document.getElementById("jenis_bahaya")?.addEventListener("change", onJenisBahayaChange);
     document.getElementById("ketidaksesuaian_bahaya")?.addEventListener("change", () => { if (!_syncTaksonomi) loadSubKetidaksesuaianOptions(""); });
     document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", () => { if (!_syncTaksonomi) { keparahanPelapor = 0; autoFillRisiko(); } });
 
