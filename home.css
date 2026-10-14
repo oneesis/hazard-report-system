@@ -1175,24 +1175,35 @@
 .ab-report-row--overdue:hover { background: #fee2e2; }
 
 /* Deteksi dini di Beranda (2026-10-15) — satu kartu ringkas */
+.home-greeting:has(+ .beranda-dd:not([hidden])) { margin-bottom: 12px; }
 .beranda-dd { margin: 0 0 14px; }
 .bdd-kartu { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.bdd-judul { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .72rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: .04em; }
+.bdd-judul i { color: #1e3a8a; margin-right: 3px; }
+.bdd-judul small { font-size: .64rem; font-weight: 600; color: #94a3b8; text-transform: none; letter-spacing: 0; }
 .bdd-hari-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .bdd-hari { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 10px; background: #f8fafc; min-width: 0; }
 .bdd-hari.kini { background: #eff6ff; }
-.bdd-lbl { font-size: .66rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+.bdd-lbl { font-size: .64rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
 .bdd-kat { display: flex; align-items: flex-start; gap: 5px; font-size: .74rem; font-weight: 700; color: #0f172a; line-height: 1.2; }
-.bdd-kat i { font-size: .9rem; color: #f59e0b; flex-shrink: 0; margin-top: 1px; }
-.bdd-kat i.fa-cloud, .bdd-kat i.fa-smog, .bdd-kat i.fa-cloud-rain, .bdd-kat i.fa-cloud-showers-heavy, .bdd-kat i.fa-cloud-showers-water { color: #3b82f6; }
-.bdd-kat i.fa-cloud-bolt { color: #7c3aed; }
-.bdd-hari small { font-size: .68rem; color: #94a3b8; }
+.bdd-kat i { font-size: .9rem; flex-shrink: 0; margin-top: 1px; color: #64748b; }
+/* warna ikon per kategori: cerah kuning, berawan abu, hujan makin pekat makin deras, badai ungu */
+.k-cerah i { color: #f59e0b; } .k-cerah-berawan i { color: #fbbf24; }
+.k-berawan i, .k-berkabut i { color: #94a3b8; }
+.k-gerimis i { color: #7dd3fc; } .k-hujan-ringan i { color: #38bdf8; } .k-hujan-sedang i { color: #2563eb; }
+.k-hujan-lebat i { color: #1e40af; } .k-hujan-sangat-lebat i, .k-hujan-ekstrem i { color: #b91c1c; } .k-badai-petir i { color: #7c3aed; }
+.bdd-hari small { font-size: .66rem; color: #94a3b8; }
 .bdd-awas { font-size: .74rem; color: #92400e; background: #fffbeb; border-radius: 8px; padding: 5px 8px; }
-.bdd-fokus { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; border-top: 1px solid #f1f5f9; padding-top: 8px; }
-.bdd-fokus > i { color: #94a3b8; font-size: .8rem; flex-shrink: 0; }
-.bdd-fokus-isi { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
-.bdd-fokus-lbl { font-size: .8rem; color: #334155; }
-.bdd-fokus-lbl i { color: #1e3a8a; }
-.bdd-fokus.merah .bdd-fokus-lbl i, .bdd-fokus.merah b { color: #b91c1c; }
-.bdd-fokus.kuning .bdd-fokus-lbl i, .bdd-fokus.kuning b { color: #b45309; }
-.bdd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.bdd-chips span { font-size: .7rem; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 2px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bdd-fokus { border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.bdd-st { font-weight: 800 !important; }
+.bdd-fokus.merah .bdd-st { color: #b91c1c; } .bdd-fokus.kuning .bdd-st { color: #b45309; } .bdd-fokus.hijau .bdd-st { color: #15803d; }
+.bdd-area { font-size: .95rem; font-weight: 800; color: #0f172a; }
+.bdd-area i { color: #dc2626; margin-right: 2px; }
+.bdd-fokus.kuning .bdd-area i { color: #d97706; } .bdd-fokus.hijau .bdd-area i { color: #16a34a; }
+.bdd-alasan { font-size: .74rem; color: #64748b; }
+.bdd-sub { font-size: .74rem; color: #334155; margin-top: 2px; }
+.bdd-daftar { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
+.bdd-daftar li { font-size: .78rem; color: #0f172a; }
+.bdd-daftar li span { margin-right: 6px; }
+.bdd-daftar li em { font-style: normal; font-size: .68rem; color: #94a3b8; white-space: nowrap; }
+.bdd-aksi { align-self: flex-start; display: inline-flex; gap: 6px; align-items: center; font-size: .78rem; font-weight: 700; color: #1e3a8a; text-decoration: none; margin-top: 2px; }

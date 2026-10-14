@@ -822,7 +822,7 @@ window.toggleActionItem = function(idx) {
   chevron.style.transform = open ? 'rotate(180deg)' : '';
 };
 
-// ── Deteksi dini di Beranda (2026-10-15): satu kartu ringkas — cuaca (kategori BMKG) & fokus minggu ini ──
+// ── Deteksi dini di Beranda (2026-10-15): satu kartu ringkas — prakiraan cuaca (kategori BMKG) & fokus minggu ini ──
 async function renderBerandaDD() {
   const el = document.getElementById('berandaDD');
   if (!el) return;
@@ -831,20 +831,27 @@ async function renderBerandaDD() {
     if (j.status !== 'success') return;
     const hariIni = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
     const label = (t) => (t === hariIni ? 'Hari ini' : t < hariIni ? 'Kemarin' : 'Besok');
-    const mm = (v) => (v >= 0.1 ? `${(+v).toFixed(1).replace('.', ',')} mm` : '');
-    const cuaca = (j.cuaca || []).map((c) => `<div class="bdd-hari${c.tanggal === hariIni ? ' kini' : ''}" title="${escapeHTML(c.kategori)} ${mm(c.hujan_mm)}">
+    const mm = (v) => (v >= 0.1 ? `${(+v).toFixed(1).replace('.', ',')} mm` : 'tanpa hujan');
+    const kelas = (k) => 'k-' + String(k || '').toLowerCase().replace(/\s+/g, '-'); // warna ikon per kategori
+    const cuaca = (j.cuaca || []).map((c) => `<div class="bdd-hari${c.tanggal === hariIni ? ' kini' : ''}">
         <span class="bdd-lbl">${label(c.tanggal)}</span>
-        <span class="bdd-kat"><i class="fa-solid ${escapeHTML(c.ikon)}"></i>${escapeHTML(c.kategori)}</span>
-        <small>${mm(c.hujan_mm) || '&nbsp;'}</small></div>`).join('');
+        <span class="bdd-kat ${kelas(c.kategori)}"><i class="fa-solid ${escapeHTML(c.ikon)}"></i>${escapeHTML(c.kategori)}</span>
+        <small>${mm(c.hujan_mm)}</small></div>`).join('');
     const lebat = (j.cuaca || []).some((c) => c.hujan_mm >= 20);
     const f = j.fokus;
+    const STATUS = { merah: 'Waspada tinggi', kuning: 'Perlu perhatian', hijau: 'Normal' };
     el.innerHTML = `<div class="bdd-kartu">
-        ${cuaca ? `<div class="bdd-hari-row">${cuaca}</div>` : ''}
-        ${lebat ? '<div class="bdd-awas"><i class="fa-solid fa-triangle-exclamation"></i> Hujan sedang/lebat — jalan licin & lereng rawan.</div>' : ''}
-        ${f ? `<a class="bdd-fokus ${escapeHTML(f.status)}" href="index.html" title="Laporkan temuan">
-          <span class="bdd-fokus-isi"><span class="bdd-fokus-lbl"><i class="fa-solid fa-bullseye"></i> Fokus minggu ini: <b>${escapeHTML(f.lokasi)}</b></span>
-          ${f.penyebab?.length ? `<span class="bdd-chips">${f.penyebab.map((p) => `<span>${escapeHTML(p.nama)}</span>`).join('')}</span>` : ''}</span>
-          <i class="fa-solid fa-chevron-right"></i></a>` : ''}
+        ${cuaca ? `<div class="bdd-judul"><span><i class="fa-solid fa-cloud-sun-rain"></i> Prakiraan cuaca</span><small>area tambang · kategori BMKG</small></div>
+        <div class="bdd-hari-row">${cuaca}</div>` : ''}
+        ${lebat ? '<div class="bdd-awas"><i class="fa-solid fa-triangle-exclamation"></i> Hujan sedang/lebat — jalan licin & lereng rawan, lakukan inspeksi jalan.</div>' : ''}
+        ${f ? `<div class="bdd-fokus ${escapeHTML(f.status)}">
+          <div class="bdd-judul"><span><i class="fa-solid fa-bullseye"></i> Fokus minggu ini</span><small class="bdd-st">${STATUS[f.status] || ''}</small></div>
+          <div class="bdd-area"><i class="fa-solid fa-location-dot"></i> ${escapeHTML(f.lokasi)}</div>
+          ${f.alasan?.length ? `<div class="bdd-alasan">${escapeHTML(f.alasan[0])}</div>` : ''}
+          ${f.penyebab?.length ? `<div class="bdd-sub">Penyebab insiden terbanyak di sini — laporkan bila menemukannya:</div>
+          <ol class="bdd-daftar">${f.penyebab.map((p) => `<li><span>${escapeHTML(p.nama)}</span><em>${p.jumlah} insiden</em></li>`).join('')}</ol>` : ''}
+          <a class="bdd-aksi" href="index.html"><i class="fa-solid fa-plus"></i> Laporkan temuan</a>
+        </div>` : ''}
       </div>`;
     el.hidden = false;
   } catch { /* opsional — Beranda tetap jalan tanpa kartu ini */ }
