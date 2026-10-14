@@ -88,6 +88,24 @@ function render(d) {
         ${d.capaianBobot.slice(0, 15).map((c) => `<div class="dd-rasio"><span>${esc(c.departemen)}</span><span>${c.laporan} laporan</span><span>${c.pctOperasional}% operasional</span><b>${c.skor}</b></div>`).join('') || '-'}
         <p class="dd-ket">Bobot: area Operasional / Kritis ×2, Lingkungan / Kendaraan ×1,5, Fasilitas ×1.</p></div>
     </div>`;
+    const e = d.evaluasi;
+    if (e) {
+      const ya = (v) => (v ? '<b class="dd-ya">Ya</b>' : '<span class="dd-tidak">Tidak</span>');
+      sa += `<h2 class="dd-h2"><i class="fa-solid fa-scale-balanced"></i> Evaluasi Peringatan Dini <span class="dd-badge">Super Admin</span></h2>
+      <div class="dd-kartu">
+        ${e.insiden ? `<div class="dd-kpi">
+          <div><b>${e.pctTerdeteksi}%</b><span>Insiden yang lokasinya sudah KUNING/MERAH ≤ ${e.hariSebelum} hari sebelumnya</span><small>${e.terdeteksi} dari ${e.insiden} insiden</small></div>
+          <div><b>${e.diperingatkan}</b><span>Insiden yang didahului email peringatan untuk lokasinya</span><small>dari ${e.insiden} insiden</small></div>
+          <div><b>${e.pctPenyebabTerlapor}%</b><span>Penyebab insiden sudah pernah dilaporkan sebagai temuan di lokasi itu (≤ 30 hari)</span><small>${e.penyebabTerlapor} insiden</small></div>
+        </div>
+        ${e.daftar.slice(0, 20).map((x) => `<div class="dd-rasio dd-eval"><span>${esc(x.tanggal)} · ${esc(x.klasifikasi)}<small>${esc(x.lokasi)}${x.kode ? ' · ' + esc(x.kode) + ' ' + esc(x.nama) : ''}</small></span>
+          <span><span class="dd-dot" style="background:${WARNA[x.status]}"></span> ${LABEL[x.status]}${x.hariSebelum ? ` <small>sejak H-${x.hariSebelum}</small>` : ''}</span>
+          <span>Peringatan ${ya(x.diperingatkan)}</span><span>Penyebab terlapor ${ya(x.penyebabTerlapor)}</span></div>`).join('')}`
+        : `<div class="dd-kosong">Belum ada insiden sejak data temuan dimulai (${esc(e.mulai || '-')}). Impor register insiden terbaru di Kelola Master; evaluasi muncul otomatis.</div>`}
+        <p class="dd-ket">Tanggapan peringatan: ${e.tanggapan.ditindaklanjuti} ditindaklanjuti · ${e.tanggapan.tidakRelevan} tidak relevan · ${e.tanggapan.belum} belum ditanggapi (dari ${e.tanggapan.total}).
+          Bahan kalibrasi bobot (tahap 7): idealnya sebagian besar insiden didahului status KUNING/MERAH, dan peringatan "tidak relevan" sedikit.</p>
+      </div>`;
+    }
   }
 
   return `

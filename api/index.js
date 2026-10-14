@@ -468,6 +468,7 @@ async function _risikoHazard(data) {
 // ── Deteksi dini tahap 4: indeks risiko & dasbor (2026-10-14) ──────────────
 const Indeks = require('../lib/indeks-risiko');
 const LaporanBulanan = require('../lib/laporan-bulanan');
+const Evaluasi = require('../lib/evaluasi-dd');
 // Inspeksi & SBO belum memakai master lokasi (lokasi teks bebas) → perkiraan lokasi.
 // ponytail: tebakan kata kunci; ganti dengan pilihan lokasi di form Inspeksi/SBO bila perlu presisi.
 const LOKASI_INSPEKSI = { INS_CB: 'CCP', INS_JA: 'Mine Road', INS_KG: 'Office', INS_MD: 'Mess/ Camp', INS_SP: 'Settling Pond', INS_T: 'Front Loading', INS_TB: 'Maintank', INS_WS: 'Workshop' };
@@ -612,6 +613,11 @@ async function dataDeteksiDini(auth) {
   const pp = await sql`SELECT id, to_char(dibuat AT TIME ZONE 'Asia/Makassar', 'YYYY-MM-DD HH24:MI') AS dibuat, jenis, dimensi, nama, status, alasan,
       tanggapan, ditanggapi_oleh FROM peringatan_dd WHERE dibuat > now() - interval '14 days' ORDER BY dibuat DESC LIMIT 60`;
   hasil.peringatan = superAdmin ? pp : pp.filter((p) => p.dimensi !== 'departemen' || up(p.nama).startsWith(co + ' '));
+  if (superAdmin) { // tahap 7: apakah peringatan dini mendahului insiden nyata (bahan kalibrasi)
+    const semuaP = await sql`SELECT to_char(dibuat AT TIME ZONE 'Asia/Makassar', 'YYYY-MM-DD') AS tanggal, jenis, dimensi, nama, tanggapan FROM peringatan_dd`;
+    hasil.evaluasi = Evaluasi.evaluasiInsiden({ siap, insiden, peringatan: semuaP, penyebabInsiden });
+    hasil.evaluasi.daftar = hasil.evaluasi.daftar.map((x) => ({ ...x, nama: nama(x.kode) }));
+  }
   // Bahan laporan bulanan (tahap 6) — tidak ikut JSON respons (non-enumerable).
   if (superAdmin) Object.defineProperty(hasil, '_bahan', { value: { siap, insiden, penyebabInsiden, area, nama } });
   _ddCache.set(kunciCache, { at: Date.now(), data: hasil });
