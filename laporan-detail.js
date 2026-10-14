@@ -42,6 +42,42 @@ function renderWaBadge(r, isInspection) {
   if (btn) btn.style.display = (['ADMIN', 'SUPER_ADMIN'].includes(role) && !tutup) ? '' : 'none';
 }
 
+// Koreksi risiko 5×5 oleh SHE (Super Admin, 2026-10-14) — batas waktu tidak diubah.
+function pasangKoreksiRisiko(r, isInspection) {
+  const row = document.getElementById('dfRiskRow');
+  row?.parentElement.querySelector('.koreksi-risiko')?.remove();
+  const role = String(getDetailUser()?.role || '').toUpperCase().replace(/\s+/g, '_');
+  if (!row || isInspection || role !== 'SUPER_ADMIN' || !r.kode_temuan) return;
+  const N = ['', 'Tidak Signifikan', 'Minor', 'Sedang', 'Mayor', 'Bencana'];
+  const K = ['', 'Jarang', 'Kecil kemungkinan', 'Mungkin', 'Sangat mungkin', 'Hampir pasti'];
+  const opsi = (L, v) => [1, 2, 3, 4, 5].map((i) => `<option value="${i}"${i === Number(v) ? ' selected' : ''}>${i} ${L[i]}</option>`).join('');
+  const box = document.createElement('div');
+  box.className = 'koreksi-risiko';
+  box.style.cssText = 'margin:6px 0 10px;font-size:.82rem';
+  const info = r.koreksi_risiko ? `<div style="color:#64748b;margin-bottom:4px">Dikoreksi ${escapeHTML(r.koreksi_risiko.oleh || '')} (sebelumnya ${escapeHTML(r.koreksi_risiko.sebelum?.tingkat || '-')})</div>` : '';
+  box.innerHTML = `${info}<button type="button" class="btn-secondary" style="padding:5px 10px;font-size:.78rem"><i class="fa-solid fa-sliders"></i> Koreksi risiko</button>
+    <div class="kr-form" style="display:none;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center">
+      <select data-f="p" title="Keparahan">${opsi(N, r.keparahan)}</select>
+      <select data-f="k" title="Kemungkinan">${opsi(K, r.kemungkinan)}</select>
+      <input data-f="alasan" placeholder="Alasan koreksi" maxlength="300" style="flex:1 1 180px;padding:6px 8px">
+      <button type="button" class="btn-primary" style="padding:6px 12px;font-size:.78rem">Simpan</button>
+    </div>`;
+  row.insertAdjacentElement('afterend', box);
+  const form = box.querySelector('.kr-form');
+  box.querySelector('.btn-secondary').addEventListener('click', () => { form.style.display = form.style.display === 'none' ? 'flex' : 'none'; });
+  box.querySelector('.btn-primary').addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      const res = await fetch('/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'koreksiRisiko',
+        data: { id: getReportId(r), keparahan: form.querySelector('[data-f="p"]').value, kemungkinan: form.querySelector('[data-f="k"]').value, alasan: form.querySelector('[data-f="alasan"]').value } }) });
+      const j = await res.json();
+      if (!res.ok || j.status === 'error') throw new Error(j.message || 'Gagal');
+      showToast(j.message);
+      setTimeout(() => location.reload(), 900);
+    } catch (err) { showToast(err.message, 'error'); e.currentTarget.disabled = false; }
+  });
+}
+
 async function resendWaPic() {
   const r = detailReport;
   if (!r) return;
@@ -158,6 +194,7 @@ function renderDetail(r) {
   const skor = !isInspection && getReportValue(r, ['skor_risiko'], '');
   set('dfRisk', skor ? `${riskVal} · skor ${skor} (K${r.kemungkinan} × P${r.keparahan}) · ${r.kelas_temuan || ''}${r.risiko_kritis === 'Ya' ? ' · Risiko kritis' : ''}` : riskVal);
   if (!isInspection && r.kode_temuan) set('dfCategory', `${catVal} · ${r.kode_temuan} ${getReportValue(r, ['sub_ketidaksesuaian'], '')}`);
+  pasangKoreksiRisiko(r, isInspection);
 
   // Description & recommendation
   document.getElementById('dfDescTitle').textContent = isInspection ? 'Temuan Inspeksi' : 'Deskripsi Temuan';

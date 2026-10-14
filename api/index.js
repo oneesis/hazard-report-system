@@ -3098,6 +3098,19 @@ module.exports = async (req, res) => {
           }
           break;
         }
+        case 'getMasterAdmin': {
+          // Halaman Kelola Master (Super Admin): semua master (termasuk nonaktif) + antrean
+          // laporan Hazard yang belum punya sub-lokasi (Lainnya baru & laporan lama).
+          if (!isSuperAdmin(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const m = await masterDeteksiDini({ segar: true });
+          const antrean = await getSql()`SELECT id, data->>'tanggal_kejadian' AS tanggal, data->>'lokasi_bahaya' AS lokasi,
+              data->>'sub_lokasi_lainnya' AS lainnya, data->>'detail_lokasi_bahaya' AS detail,
+              left(data->>'deskripsi_bahaya', 140) AS deskripsi, data->>'kode_temuan' AS kode
+            FROM hazard_report WHERE coalesce(data->>'lokasi_bahaya', '') <> '' AND coalesce(data->>'sub_lokasi_bahaya', '') = ''
+            ORDER BY id DESC`;
+          result = { status: 'success', ...m, antrean };
+          break;
+        }
         case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
         case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
         case 'getSBOReports':       result = await getSBOReports(sheets, auth, req.query.mine === '1'); break;
@@ -3605,6 +3618,87 @@ module.exports = async (req, res) => {
           const notif = await kirimNotifKuisST(sheets, schedule_id).catch((e) => ({ status: 'error', reason: e.message }));
           result = { status: 'success', count: norm.length, notif_kuis: notif,
             message: `Hadir: ${hadirCount}, Quiz: ${quizCount}, Mangkir: ${mangkirCount}.` };
+          break;
+        }
+        // ── Kelola master deteksi dini (Super Admin, 2026-10-14) ──
+        case 'simpanMasterTemuan': {
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN.'), { httpStatus: 403 });
+          const d = data || {}, sql = getSql();
+          const p = Number(d.keparahan), k = Number(d.kemungkinan);
+          if (!String(d.sub || '').trim() || !(p >= 1 && p <= 5) || !(k >= 1 && k <= 5) || !['Kondisi', 'Tindakan'].includes(d.tipe))
+            throw new Error('Isian belum lengkap: sub, tipe, keparahan & kemungkinan 1–5.');
+          await masterDeteksiDini();
+          if (d.kode) {
+            await sql`UPDATE master_temuan SET sub = ${d.sub.trim()}, tipe = ${d.tipe}, keparahan = ${p}, kemungkinan = ${k},
+              kritis = ${!!d.kritis}, aktif = ${d.aktif !== false}, updated_at = now() WHERE kode = ${d.kode}`;
+          } else {
+            const kk = String(d.kategori_kode || '');
+            if (!(await sql`SELECT 1 FROM master_kategori WHERE kode = ${kk}`).length) throw new Error('Kategori tidak dikenal.');
+            const [{ n }] = await sql`SELECT coalesce(max(substring(kode from 4)::int), 0) + 1 AS n FROM master_temuan WHERE kategori_kode = ${kk}`;
+            d.kode = `${kk}-${String(n).padStart(2, '0')}`;
+            await sql`INSERT INTO master_temuan (kode, kategori_kode, sub, tipe, keparahan, kemungkinan, kritis, urutan)
+              VALUES (${d.kode}, ${kk}, ${d.sub.trim()}, ${d.tipe}, ${p}, ${k}, ${!!d.kritis}, (SELECT coalesce(max(urutan), 0) + 1 FROM master_temuan))`;
+          }
+          _masterDD = null;
+          result = { status: 'success', message: `Tersimpan (${d.kode}).`, kode: d.kode };
+          break;
+        }
+        case 'simpanMasterLokasi': {
+          // Tambah/ubah sub-lokasi. Ganti nama sub → laporan yang memakai nama lama ikut diganti.
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN.'), { httpStatus: 403 });
+          const d = data || {}, sql = getSql();
+          const lok = String(d.lokasi || '').trim(), sub = String(d.sub || '').trim(), lama = String(d.sub_lama || '').trim();
+          if (!lok || !sub) throw new Error('Lokasi dan sub-lokasi wajib diisi.');
+          await masterDeteksiDini();
+          if (lama && lama !== sub) {
+            await sql`UPDATE master_lokasi SET sub = ${sub} WHERE lokasi = ${lok} AND sub = ${lama}`;
+            await sql`UPDATE hazard_report SET data = data || jsonb_build_object('sub_lokasi_bahaya', ${sub}::text)
+              WHERE data->>'lokasi_bahaya' = ${lok} AND data->>'sub_lokasi_bahaya' = ${lama}`;
+          }
+          await sql`INSERT INTO master_lokasi (lokasi, sub, jenis_area, aktif, urutan)
+            VALUES (${lok}, ${sub}, ${String(d.jenis_area || '')}, ${d.aktif !== false}, (SELECT coalesce(max(urutan), 0) + 1 FROM master_lokasi))
+            ON CONFLICT (lokasi, sub) DO UPDATE SET jenis_area = EXCLUDED.jenis_area, aktif = EXCLUDED.aktif`;
+          _masterDD = null;
+          result = { status: 'success', message: `Sub-lokasi "${sub}" tersimpan.` };
+          break;
+        }
+        case 'tetapkanSubLokasi': {
+          // Antrean SHE: isi sub-lokasi laporan (gabung ke sub yang ada / jadikan sub baru).
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN.'), { httpStatus: 403 });
+          const d = data || {}, sql = getSql();
+          const ids = (Array.isArray(d.ids) ? d.ids : []).map(String).filter(Boolean);
+          const lok = String(d.lokasi || '').trim(), sub = String(d.sub || '').trim();
+          if (!ids.length || !lok || !sub) throw new Error('Pilih laporan dan sub-lokasinya.');
+          const m = await masterDeteksiDini({ segar: true });
+          if (!m.lokasi.some((l) => l.lokasi === lok && l.sub === sub)) {
+            if (!d.buat_baru) throw new Error('Sub-lokasi belum ada di master.');
+            const area = (m.lokasi.find((l) => l.lokasi === lok) || {}).jenis_area || '';
+            await sql`INSERT INTO master_lokasi (lokasi, sub, jenis_area, urutan)
+              VALUES (${lok}, ${sub}, ${area}, (SELECT coalesce(max(urutan), 0) + 1 FROM master_lokasi)) ON CONFLICT DO NOTHING`;
+            _masterDD = null;
+          }
+          // ponytail: risiko tidak dihitung ulang (jenis area per lokasi sama); hitung ulang bila aturan "berulang" perlu riwayat persis.
+          const upd = await sql`UPDATE hazard_report SET data = data || jsonb_build_object('sub_lokasi_bahaya', ${sub}::text,
+              'sub_lokasi_ditetapkan', ${`${authUser.nama || authUser.nik} ${new Date().toISOString()}`}::text)
+            WHERE id = ANY(${ids}::text[]) AND data->>'lokasi_bahaya' = ${lok} RETURNING id`;
+          result = { status: 'success', message: `${upd.length} laporan diberi sub-lokasi "${sub}".`, jumlah: upd.length };
+          break;
+        }
+        case 'koreksiRisiko': {
+          // SHE mengoreksi keparahan/kemungkinan hasil otomatis. Batas waktu tidak diubah.
+          if (!isSuperAdmin(authUser.role)) throw Object.assign(new Error('Hanya SUPER ADMIN.'), { httpStatus: 403 });
+          const d = data || {}, sql = getSql();
+          const p = Number(d.keparahan), k = Number(d.kemungkinan);
+          if (!(p >= 1 && p <= 5 && k >= 1 && k <= 5)) throw new Error('Keparahan & kemungkinan harus 1–5.');
+          const [row] = await sql`SELECT data FROM hazard_report WHERE id = ${String(d.id || '')}`;
+          if (!row) throw new Error('Laporan tidak ditemukan.');
+          const skor = p * k, t = Taksonomi.tingkat(skor);
+          const sebelum = { keparahan: row.data.keparahan, kemungkinan: row.data.kemungkinan, tingkat: row.data.tingkat_resiko };
+          await sql`UPDATE hazard_report SET data = data || ${JSON.stringify({
+            keparahan: p, kemungkinan: k, skor_risiko: skor, tingkat_resiko: t, kelas_temuan: p >= 4 ? 'Mayor' : 'Minor',
+            koreksi_risiko: { oleh: authUser.nama || authUser.nik, at: new Date().toISOString(), sebelum, alasan: String(d.alasan || '').slice(0, 300) },
+          })}::jsonb WHERE id = ${String(d.id)}`;
+          result = { status: 'success', message: `Risiko dikoreksi: ${t} (${k} × ${p} = ${skor}).`, tingkat: t };
           break;
         }
         case 'importRoster': {

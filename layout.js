@@ -10,6 +10,7 @@
     'admin.html':        'admin-user',
     'laporan-admin.html':'laporan',
     'eskalasi.html':     'eskalasi',
+    'kelola-master.html':'kelola-master',
     'laporan-detail.html':'laporan-detail',
     'capaian-sap.html':  'capaian-sap',
     'sbo.html':          'sbo',
@@ -28,6 +29,7 @@
     'admin-user':     'Manajemen User',
     'laporan':        'Manajemen Laporan',
     'eskalasi':       'Monitoring Eskalasi',
+    'kelola-master':  'Kelola Master',
     'laporan-detail': 'Detail Laporan',
     'capaian-sap':    'Capaian SAP',
     'sbo':            'Safe Behavior Observation',
@@ -88,6 +90,7 @@
         ${navItem('laporan-admin.html', 'fa-file-lines',        'Manajemen Laporan', 'laporan',     active)}
         ${navItem('eskalasi.html',      'fa-circle-exclamation','Eskalasi',          'eskalasi',    active)}
         ${navItem('safety-talk.html',   'fa-chalkboard-user',   'Safety Talk',        'safety_talk', active)}
+        ${role === 'SUPER_ADMIN' ? navItem('kelola-master.html', 'fa-sitemap', 'Kelola Master', 'kelola-master', active) : ''}
       </nav>` : ''}
 
       <div class="sidebar-spacer"></div>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Kelola Master - ONE-SAP</title>
+  <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="kelola-master.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+</head>
+<body>
+
+<div class="app-layout">
+  <aside id="appSidebar" class="app-sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <button class="app-topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <span id="appTopbarTitle" class="app-topbar-title">Kelola Master</span>
+      <div id="notificationBell"></div>
+      <div id="userProfile" class="user-menu"></div>
+    </div>
+
+    <div class="km-content">
+      <div class="km-header">
+        <div>
+          <h1 class="km-title"><i class="fa-solid fa-sitemap"></i> Kelola Master</h1>
+          <p class="km-subtitle">Taksonomi temuan, lokasi & sub-lokasi, dan antrean sub-lokasi laporan — dasar deteksi dini.</p>
+        </div>
+      </div>
+
+      <div class="km-tabs" role="tablist">
+        <button class="km-tab active" data-tab="antrean" role="tab"><i class="fa-solid fa-inbox"></i> Antrean Sub-Lokasi <span id="cntAntrean" class="km-badge">-</span></button>
+        <button class="km-tab" data-tab="temuan" role="tab"><i class="fa-solid fa-list"></i> Temuan</button>
+        <button class="km-tab" data-tab="lokasi" role="tab"><i class="fa-solid fa-location-dot"></i> Lokasi</button>
+      </div>
+
+      <section id="tab-antrean" class="km-panel">
+        <p class="km-help">Laporan Hazard yang belum punya sub-lokasi: pelapor memilih "Lainnya" atau laporan lama. Centang laporan, pilih sub-lokasi, lalu <b>Tetapkan</b>. Nama dari pelapor bisa langsung dijadikan sub baru.</p>
+        <div id="antreanList" class="km-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>
+      </section>
+
+      <section id="tab-temuan" class="km-panel" hidden>
+        <div class="km-toolbar">
+          <input id="cariTemuan" type="search" placeholder="Cari kode / sub / kategori…" />
+          <select id="filterKategori"><option value="">Semua kategori</option></select>
+          <label class="km-check"><input type="checkbox" id="tampilNonaktif"> Tampilkan nonaktif</label>
+        </div>
+        <details class="km-tambah">
+          <summary><i class="fa-solid fa-plus"></i> Tambah sub-ketidaksesuaian</summary>
+          <div class="km-form" id="formTemuanBaru">
+            <select data-f="kategori_kode"></select>
+            <input data-f="sub" placeholder="Nama sub-ketidaksesuaian" maxlength="140" />
+            <select data-f="tipe"><option>Kondisi</option><option>Tindakan</option></select>
+            <select data-f="keparahan" title="Keparahan"></select>
+            <select data-f="kemungkinan" title="Kemungkinan default"></select>
+            <label class="km-check"><input type="checkbox" data-f="kritis"> Risiko kritis</label>
+            <button class="btn-primary" id="btnTambahTemuan"><i class="fa-solid fa-plus"></i> Tambah</button>
+          </div>
+        </details>
+        <div id="temuanList" class="km-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>
+      </section>
+
+      <section id="tab-lokasi" class="km-panel" hidden>
+        <details class="km-tambah">
+          <summary><i class="fa-solid fa-plus"></i> Tambah sub-lokasi</summary>
+          <div class="km-form" id="formLokasiBaru">
+            <input data-f="lokasi" list="daftarLokasi" placeholder="Lokasi (pilih atau ketik baru)" maxlength="60" />
+            <datalist id="daftarLokasi"></datalist>
+            <input data-f="sub" placeholder="Nama sub-lokasi" maxlength="80" />
+            <select data-f="jenis_area"></select>
+            <button class="btn-primary" id="btnTambahLokasi"><i class="fa-solid fa-plus"></i> Tambah</button>
+          </div>
+        </details>
+        <div id="lokasiList" class="km-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="auth.js"></script>
+<script src="layout.js"></script>
+<script src="push-notif.js"></script>
+<script src="notifications.js"></script>
+<script src="lib/taksonomi.js"></script>
+<script src="kelola-master.js"></script>
+<script>
+  requireLogin();
+  window.addEventListener('DOMContentLoaded', () => {
+    const user = getCurrentUser();
+    if (String(user?.role || '').toUpperCase().replace(/\s+/g, '_') !== 'SUPER_ADMIN') {
+      window.location.href = 'index-home.html';
+      return;
+    }
+    renderUserProfile();
+    kmMuat();
+  });
+</script>
+</body>
+</html>

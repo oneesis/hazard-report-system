@@ -1,0 +1,75 @@
+/* Kelola Master (Super Admin) — deteksi dini 2026-10-14 */
+.km-content { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+.km-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.km-title { font-size: 1.4rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; gap: 10px; align-items: center; }
+.km-title i { color: #1e3a8a; }
+.km-subtitle { margin: 4px 0 0; color: #64748b; font-size: .88rem; }
+.km-tabs { display: flex; gap: 6px; border-bottom: 1px solid #e2e8f0; margin-bottom: 16px; overflow-x: auto; }
+.km-tab { border: 0; background: none; padding: 10px 14px; font: inherit; font-weight: 700; font-size: .86rem; color: #64748b;
+  border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; display: flex; gap: 7px; align-items: center; }
+.km-tab.active { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+.km-badge { background: #e2e8f0; color: #334155; border-radius: 999px; padding: 1px 8px; font-size: .74rem; font-weight: 800; }
+.km-help { font-size: .84rem; color: #475569; margin: 0 0 12px; }
+.km-loading, .km-kosong { padding: 28px; text-align: center; color: #64748b; font-size: .9rem; }
+.km-kosong i { color: #16a34a; }
+.km-check { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; color: #334155; cursor: pointer; }
+.km-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+.km-toolbar input[type=search], .km-toolbar select { padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; font-size: .86rem; }
+.km-toolbar input[type=search] { flex: 1 1 220px; }
+
+.km-grup { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; margin-bottom: 12px; overflow: hidden; }
+.km-grup-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.km-lain { color: #9a3412; font-weight: 700; }
+.km-aksi { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
+.km-aksi select, .km-aksi input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; font-size: .84rem; min-width: 0; }
+.km-aksi select { flex: 1 1 200px; }
+.km-aksi input { flex: 1 1 160px; }
+.km-atau { font-size: .78rem; color: #94a3b8; }
+.km-rows { max-height: 420px; overflow-y: auto; }
+.km-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+.km-row:last-child { border-bottom: 0; }
+.km-row input { margin-top: 3px; }
+.km-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.km-row-top { font-size: .78rem; color: #64748b; }
+.km-row-top a { color: #1e3a8a; font-weight: 700; text-decoration: none; }
+.km-row-detail { font-size: .86rem; font-weight: 600; color: #0f172a; }
+.km-row-desk { font-size: .78rem; color: #64748b; overflow-wrap: anywhere; }
+
+.km-item { display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; align-items: center; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; margin-bottom: 8px; }
+.km-grup .km-item { border: 0; border-bottom: 1px solid #f1f5f9; border-radius: 0; margin: 0; grid-template-columns: 1fr; }
+.km-item.nonaktif { opacity: .55; }
+.km-item-kode { font-weight: 800; color: #1e3a8a; font-size: .9rem; display: flex; flex-direction: column; }
+.km-item-kode small { font-weight: 500; color: #64748b; font-size: .72rem; }
+.km-item > input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; font-size: .86rem; min-width: 0; }
+.km-item-isi { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.km-grup .km-item-isi { grid-column: auto; }
+.km-item-isi select { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; font-size: .8rem; }
+.km-item-isi .btn-primary { margin-left: auto; padding: 7px 12px; font-size: .8rem; }
+.km-tambah { border: 1px dashed #94a3b8; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; background: #fff; }
+.km-tambah summary { cursor: pointer; font-weight: 700; font-size: .86rem; color: #1e3a8a; }
+.km-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+.km-form input, .km-form select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; font-size: .84rem; min-width: 0; }
+.km-form input[data-f="sub"] { flex: 1 1 240px; }
+.km-form input[data-f="lokasi"] { flex: 1 1 180px; }
+
+/* lencana tingkat (sama dengan form.css) */
+.pr-tingkat { font-weight: 800; font-size: .76rem; padding: 3px 10px; border-radius: 999px; }
+.pr-tingkat.rendah { background: #dcfce7; color: #166534; } .pr-tingkat.sedang { background: #fef9c3; color: #854d0e; }
+.pr-tingkat.tinggi { background: #fed7aa; color: #9a3412; } .pr-tingkat.ekstrem { background: #fecaca; color: #991b1b; }
+
+@media (max-width: 640px) {
+  .km-content { padding: 14px 12px 90px; }
+  .km-item { grid-template-columns: 1fr; }
+  .km-item-isi .btn-primary { margin-left: 0; width: 100%; justify-content: center; }
+}
+
+/* Reset gaya global style.css (label kapital, input/select 100% & min-height 52px, tombol penuh). */
+.km-content label { display: inline-flex; margin: 0; font-size: .82rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: #334155; }
+.km-content input, .km-content select { width: auto; min-height: 0; padding: 8px 10px; font-size: .84rem; border-radius: 9px; background: #fff; border-color: #cbd5e1; }
+.km-content input[type=checkbox] { width: 16px; height: 16px; min-height: 0; padding: 0; margin: 0; flex: none; box-shadow: none; accent-color: #1e3a8a; }
+.km-content .btn-primary, .km-content .btn-secondary { width: auto; margin: 0; padding: 8px 14px; font-size: .82rem; gap: 6px; border-radius: 10px; box-shadow: none; }
+.km-content .km-grup-head label { font-size: .9rem; }
+.km-content .km-row { display: flex; }
+.km-content .km-item > input { width: 100%; }
+.km-toolbar input[type=search] { width: auto; }
+.km-content .btn-primary:disabled { opacity: .4; cursor: default; }
