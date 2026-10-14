@@ -54,7 +54,7 @@ async function tampilCuaca(r) {
     row.parentElement.querySelector('.cuaca-hari')?.remove();
     const el = document.createElement('div');
     el.className = 'detail-field-row cuaca-hari';
-    el.innerHTML = `<span>Cuaca hari itu</span><strong><i class="fa-solid ${escapeHTML(c.ikon)}"></i> ${c.hujan_mm >= 0.1 ? `hujan ${(+c.hujan_mm).toFixed(1)} mm (${Math.round(c.jam_hujan)} jam)` : 'kering'} · angin ${Math.round(c.angin_maks)} km/j</strong>`;
+    el.innerHTML = `<span>Cuaca hari itu</span><strong><i class="fa-solid ${escapeHTML(c.ikon)}"></i> ${escapeHTML(c.kategori || '')}${c.hujan_mm >= 0.1 ? ` ${(+c.hujan_mm).toFixed(1)} mm (${Math.round(c.jam_hujan)} jam)` : ''} · angin ${Math.round(c.angin_maks)} km/j</strong>`;
     row.insertAdjacentElement('afterend', el);
   } catch {}
 }

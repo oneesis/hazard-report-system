@@ -722,7 +722,23 @@ async function cronDeteksiDini({ dry = false } = {}) {
   return hasil;
 }
 
-const IKON_CUACA = (k, mm) => (k >= 95 ? 'fa-cloud-bolt' : mm >= 20 ? 'fa-cloud-showers-heavy' : mm >= 1 || (k >= 51 && k <= 82) ? 'fa-cloud-rain' : k >= 3 ? 'fa-cloud' : k >= 1 ? 'fa-cloud-sun' : 'fa-sun');
+// Kategori hujan harian standar BMKG (mm/hari): ringan 0,5–20, sedang 20–50, lebat 50–100,
+// sangat lebat 100–150, ekstrem > 150; < 0,5 = gerimis. Tanpa hujan → kode cuaca WMO Open-Meteo.
+function kategoriCuaca(k, mm) {
+  const h = Number(mm) || 0;
+  if (k >= 95) return ['Badai petir', 'fa-cloud-bolt'];
+  if (h > 150) return ['Hujan ekstrem', 'fa-cloud-showers-water'];
+  if (h >= 100) return ['Hujan sangat lebat', 'fa-cloud-showers-water'];
+  if (h >= 50) return ['Hujan lebat', 'fa-cloud-showers-heavy'];
+  if (h >= 20) return ['Hujan sedang', 'fa-cloud-showers-heavy'];
+  if (h >= 0.5) return ['Hujan ringan', 'fa-cloud-rain'];
+  if (h > 0 || (k >= 51 && k <= 57)) return ['Gerimis', 'fa-cloud-rain'];
+  if (k === 45 || k === 48) return ['Berkabut', 'fa-smog'];
+  if (k >= 3) return ['Berawan', 'fa-cloud'];
+  if (k >= 1) return ['Cerah berawan', 'fa-cloud-sun'];
+  return ['Cerah', 'fa-sun'];
+}
+const IKON_CUACA = (k, mm) => kategoriCuaca(k, mm)[1];
 /** Ringkasan untuk semua pengguna: fokus minggu ini (area paling berisiko + penyebab insidennya) & cuaca. */
 async function dataBeranda() {
   const sql = getSql();
@@ -736,7 +752,7 @@ async function dataBeranda() {
   return {
     status: 'success',
     fokus: area ? { lokasi: area.nama, status: area.status, alasan: area.alasan, penyebab: penyebab.slice(0, 3) } : null,
-    cuaca: cuaca.map((c) => ({ ...c, ikon: IKON_CUACA(c.kode_cuaca, c.hujan_mm) })),
+    cuaca: cuaca.map((c) => ({ ...c, ikon: IKON_CUACA(c.kode_cuaca, c.hujan_mm), kategori: kategoriCuaca(c.kode_cuaca, c.hujan_mm)[0] })),
   };
 }
 
@@ -3429,7 +3445,7 @@ module.exports = async (req, res) => {
           const tgl = String(req.query.tanggal || '').slice(0, 10);
           const [c] = /^\d{4}-\d{2}-\d{2}$/.test(tgl) ? await sql`SELECT hujan_mm::float AS hujan_mm, jam_hujan::float AS jam_hujan,
               angin_maks::float AS angin_maks, suhu_maks::float AS suhu_maks, kode_cuaca FROM cuaca_harian WHERE tanggal = ${tgl}::date` : [];
-          result = { status: 'success', data: c ? { ...c, ikon: IKON_CUACA(c.kode_cuaca, c.hujan_mm) } : null };
+          result = { status: 'success', data: c ? { ...c, ikon: IKON_CUACA(c.kode_cuaca, c.hujan_mm), kategori: kategoriCuaca(c.kode_cuaca, c.hujan_mm)[0] } : null };
           break;
         }
         case 'getInsiden': {

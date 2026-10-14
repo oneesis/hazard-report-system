@@ -1174,26 +1174,25 @@
 .ab-report-row--overdue { background: #fff5f5; }
 .ab-report-row--overdue:hover { background: #fee2e2; }
 
-/* Deteksi dini di Beranda (2026-10-15) */
-.beranda-dd { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; margin: 0 0 16px; }
-.bdd-kartu { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
-.bdd-judul { font-size: .78rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: .04em; display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
-.bdd-judul i { color: #1e3a8a; }
-.bdd-hari-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.bdd-hari { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 12px; background: #f8fafc; text-align: center; }
-.bdd-hari.kini { background: #eff6ff; outline: 1px solid #bfdbfe; }
-.bdd-hari i { font-size: 1.6rem; color: #f59e0b; }
-.bdd-hari i.fa-cloud, .bdd-hari i.fa-cloud-rain, .bdd-hari i.fa-cloud-showers-heavy { color: #3b82f6; }
-.bdd-hari i.fa-cloud-bolt { color: #7c3aed; }
-.bdd-lbl { font-size: .72rem; font-weight: 700; color: #64748b; }
-.bdd-hari b { font-size: .86rem; color: #0f172a; }
-.bdd-hari small { font-size: .66rem; color: #94a3b8; }
-.bdd-awas { margin-top: 10px; font-size: .78rem; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 7px 10px; }
-.bdd-fokus.merah { border-color: #fca5a5; background: #fef2f2; }
-.bdd-fokus.kuning { border-color: #fcd34d; background: #fffbeb; }
-.bdd-area { font-size: 1.02rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
-.bdd-area i { color: #dc2626; }
-.bdd-teks { font-size: .78rem; color: #475569; }
-.bdd-fokus ul { margin: 4px 0 10px; padding-left: 18px; font-size: .82rem; color: #0f172a; }
-.bdd-aksi { display: inline-flex; gap: 6px; align-items: center; font-size: .8rem; font-weight: 700; color: #1e3a8a; text-decoration: none; }
-@media (max-width: 720px) { .beranda-dd { grid-template-columns: 1fr; } }
+/* Deteksi dini di Beranda (2026-10-15) — satu kartu ringkas */
+.beranda-dd { margin: 0 0 14px; }
+.bdd-kartu { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.bdd-hari-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.bdd-hari { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 10px; background: #f8fafc; min-width: 0; }
+.bdd-hari.kini { background: #eff6ff; }
+.bdd-lbl { font-size: .66rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+.bdd-kat { display: flex; align-items: flex-start; gap: 5px; font-size: .74rem; font-weight: 700; color: #0f172a; line-height: 1.2; }
+.bdd-kat i { font-size: .9rem; color: #f59e0b; flex-shrink: 0; margin-top: 1px; }
+.bdd-kat i.fa-cloud, .bdd-kat i.fa-smog, .bdd-kat i.fa-cloud-rain, .bdd-kat i.fa-cloud-showers-heavy, .bdd-kat i.fa-cloud-showers-water { color: #3b82f6; }
+.bdd-kat i.fa-cloud-bolt { color: #7c3aed; }
+.bdd-hari small { font-size: .68rem; color: #94a3b8; }
+.bdd-awas { font-size: .74rem; color: #92400e; background: #fffbeb; border-radius: 8px; padding: 5px 8px; }
+.bdd-fokus { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+.bdd-fokus > i { color: #94a3b8; font-size: .8rem; flex-shrink: 0; }
+.bdd-fokus-isi { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.bdd-fokus-lbl { font-size: .8rem; color: #334155; }
+.bdd-fokus-lbl i { color: #1e3a8a; }
+.bdd-fokus.merah .bdd-fokus-lbl i, .bdd-fokus.merah b { color: #b91c1c; }
+.bdd-fokus.kuning .bdd-fokus-lbl i, .bdd-fokus.kuning b { color: #b45309; }
+.bdd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.bdd-chips span { font-size: .7rem; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 2px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
