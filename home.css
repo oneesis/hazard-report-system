@@ -230,8 +230,9 @@
 .ab-due--over { background: #fee2e2; color: #b91c1c; }
 .ab-due--soon { background: #fef3c7; color: #b45309; }
 .ab-more {
-  display: block; padding: 9px 12px; text-align: center;
-  font-size: .75rem; font-weight: 700; color: inherit; text-decoration: none;
+  display: block; width: 100%; padding: 9px 12px; text-align: center;
+  font: inherit; font-size: .75rem; font-weight: 700; color: inherit; text-decoration: none;
+  background: none; border: 0; cursor: pointer;
 }
 .ab-more:hover { text-decoration: underline; }
 .ab-chevron { font-size: .75rem; opacity: .6; transition: transform .2s; flex-shrink: 0; }

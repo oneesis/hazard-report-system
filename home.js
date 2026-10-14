@@ -692,7 +692,8 @@ function renderActionBanner(reports) {
         </div>
         <div class="ab-list" style="display:none">
           ${sortByDue(it.reports).slice(0, MAX_ROWS).map(reportRow).join('')}
-          ${it.reports.length > MAX_ROWS ? `<a href="dashboard.html" class="ab-more">+${it.reports.length - MAX_ROWS} laporan lainnya — lihat di Dashboard <i class="fa-solid fa-arrow-right"></i></a>` : ''}
+          ${it.reports.length > MAX_ROWS ? `<div style="display:none">${sortByDue(it.reports).slice(MAX_ROWS).map(reportRow).join('')}</div>
+          <button type="button" class="ab-more" onclick="this.previousElementSibling.style.display='';this.remove()">Tampilkan ${it.reports.length - MAX_ROWS} laporan lainnya <i class="fa-solid fa-chevron-down"></i></button>` : ''}
         </div>
       </div>`).join('')}
   </div>`;
