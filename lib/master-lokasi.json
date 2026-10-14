@@ -1,0 +1,608 @@
+[
+{
+"lokasi": "Front Loading",
+"sub": "High Wall Blok 2",
+"jenis_area": "Operasional",
+"urutan": 1
+},
+{
+"lokasi": "Front Loading",
+"sub": "Low Wall Blok 2",
+"jenis_area": "Operasional",
+"urutan": 2
+},
+{
+"lokasi": "Front Loading",
+"sub": "Bottom Blok 2",
+"jenis_area": "Operasional",
+"urutan": 3
+},
+{
+"lokasi": "Front Loading",
+"sub": "High Wall Blok 3",
+"jenis_area": "Operasional",
+"urutan": 4
+},
+{
+"lokasi": "Front Loading",
+"sub": "Low Wall Blok 3",
+"jenis_area": "Operasional",
+"urutan": 5
+},
+{
+"lokasi": "Front Loading",
+"sub": "Bottom Blok 3",
+"jenis_area": "Operasional",
+"urutan": 6
+},
+{
+"lokasi": "Front Loading",
+"sub": "High Wall Blok 4",
+"jenis_area": "Operasional",
+"urutan": 7
+},
+{
+"lokasi": "Front Loading",
+"sub": "Low Wall Blok 4",
+"jenis_area": "Operasional",
+"urutan": 8
+},
+{
+"lokasi": "Front Loading",
+"sub": "Bottom Blok 4",
+"jenis_area": "Operasional",
+"urutan": 9
+},
+{
+"lokasi": "Mine Road",
+"sub": "Jalan Getting Lama",
+"jenis_area": "Operasional",
+"urutan": 10
+},
+{
+"lokasi": "Mine Road",
+"sub": "Jalan Getting Baru (KPP)",
+"jenis_area": "Operasional",
+"urutan": 11
+},
+{
+"lokasi": "Mine Road",
+"sub": "High Wall Blok 2",
+"jenis_area": "Operasional",
+"urutan": 12
+},
+{
+"lokasi": "Mine Road",
+"sub": "Low Wall Blok 2",
+"jenis_area": "Operasional",
+"urutan": 13
+},
+{
+"lokasi": "Mine Road",
+"sub": "Bottom Blok 2",
+"jenis_area": "Operasional",
+"urutan": 14
+},
+{
+"lokasi": "Mine Road",
+"sub": "High Wall Blok 3",
+"jenis_area": "Operasional",
+"urutan": 15
+},
+{
+"lokasi": "Mine Road",
+"sub": "Low Wall Blok 3",
+"jenis_area": "Operasional",
+"urutan": 16
+},
+{
+"lokasi": "Mine Road",
+"sub": "Bottom Blok 3",
+"jenis_area": "Operasional",
+"urutan": 17
+},
+{
+"lokasi": "Mine Road",
+"sub": "High Wall Blok 4",
+"jenis_area": "Operasional",
+"urutan": 18
+},
+{
+"lokasi": "Mine Road",
+"sub": "Low Wall Blok 4",
+"jenis_area": "Operasional",
+"urutan": 19
+},
+{
+"lokasi": "Mine Road",
+"sub": "Bottom Blok 4",
+"jenis_area": "Operasional",
+"urutan": 20
+},
+{
+"lokasi": "Mine Road",
+"sub": "Jalan Dekat Validasi",
+"jenis_area": "Operasional",
+"urutan": 21
+},
+{
+"lokasi": "Mine Road",
+"sub": "Jalan antara Blok 2 ke Blok 3",
+"jenis_area": "Operasional",
+"urutan": 22
+},
+{
+"lokasi": "Disposal",
+"sub": "Disposal OPD",
+"jenis_area": "Operasional",
+"urutan": 23
+},
+{
+"lokasi": "Disposal",
+"sub": "Disposal IPD Blok 2",
+"jenis_area": "Operasional",
+"urutan": 24
+},
+{
+"lokasi": "Disposal",
+"sub": "Disposal IPD Blok 3",
+"jenis_area": "Operasional",
+"urutan": 25
+},
+{
+"lokasi": "Disposal",
+"sub": "Disposal IPD Blok 4",
+"jenis_area": "Operasional",
+"urutan": 26
+},
+{
+"lokasi": "Land Clearing",
+"sub": "Land Clearing Blok 2",
+"jenis_area": "Operasional",
+"urutan": 27
+},
+{
+"lokasi": "Land Clearing",
+"sub": "Land Clearing Blok 3",
+"jenis_area": "Operasional",
+"urutan": 28
+},
+{
+"lokasi": "Land Clearing",
+"sub": "Land Clearing Blok 4",
+"jenis_area": "Operasional",
+"urutan": 29
+},
+{
+"lokasi": "Sump",
+"sub": "Sump Blok 2",
+"jenis_area": "Operasional",
+"urutan": 30
+},
+{
+"lokasi": "Workshop",
+"sub": "Workshop CK Tabuhan",
+"jenis_area": "Operasional",
+"urutan": 31
+},
+{
+"lokasi": "Workshop",
+"sub": "Igloo CK",
+"jenis_area": "Operasional",
+"urutan": 32
+},
+{
+"lokasi": "Workshop",
+"sub": "Workshop Wargi",
+"jenis_area": "Operasional",
+"urutan": 33
+},
+{
+"lokasi": "Workshop",
+"sub": "Workshop FAB",
+"jenis_area": "Operasional",
+"urutan": 34
+},
+{
+"lokasi": "Workshop",
+"sub": "Workshop BBA",
+"jenis_area": "Operasional",
+"urutan": 35
+},
+{
+"lokasi": "Workshop",
+"sub": "Workshop OFN",
+"jenis_area": "Operasional",
+"urutan": 36
+},
+{
+"lokasi": "Parkiran/CSA",
+"sub": "Parkiran/CSA",
+"jenis_area": "Operasional",
+"urutan": 37
+},
+{
+"lokasi": "View Point",
+"sub": "View Point Blok 2",
+"jenis_area": "Operasional",
+"urutan": 38
+},
+{
+"lokasi": "Drilling Area",
+"sub": "Drilling Area Blok 2",
+"jenis_area": "Operasional",
+"urutan": 39
+},
+{
+"lokasi": "Drilling Area",
+"sub": "Drilling Area Blok 3",
+"jenis_area": "Operasional",
+"urutan": 40
+},
+{
+"lokasi": "Drilling Area",
+"sub": "Drilling Area Blok 4",
+"jenis_area": "Operasional",
+"urutan": 41
+},
+{
+"lokasi": "Blasting Area",
+"sub": "Blasting Area Blok 2",
+"jenis_area": "Kritis",
+"urutan": 42
+},
+{
+"lokasi": "Blasting Area",
+"sub": "Blasting Area Blok 3",
+"jenis_area": "Kritis",
+"urutan": 43
+},
+{
+"lokasi": "Blasting Area",
+"sub": "Blasting Area Blok 4",
+"jenis_area": "Kritis",
+"urutan": 44
+},
+{
+"lokasi": "Gudang Handak",
+"sub": "Gudang / Bunker Handak",
+"jenis_area": "Kritis",
+"urutan": 45
+},
+{
+"lokasi": "Gudang Handak",
+"sub": "Pos Security & Portal Gudang Handak",
+"jenis_area": "Kritis",
+"urutan": 46
+},
+{
+"lokasi": "Gudang Handak",
+"sub": "Office Gudang Handak",
+"jenis_area": "Kritis",
+"urutan": 47
+},
+{
+"lokasi": "Gudang Handak",
+"sub": "Jalan Akses & Simpang 4 Gudang Handak",
+"jenis_area": "Kritis",
+"urutan": 48
+},
+{
+"lokasi": "Hauling Road",
+"sub": "Hauling SP Lestari",
+"jenis_area": "Operasional",
+"urutan": 49
+},
+{
+"lokasi": "Hauling Road",
+"sub": "Km 41 - 53",
+"jenis_area": "Operasional",
+"urutan": 50
+},
+{
+"lokasi": "Hauling Road",
+"sub": "Km 31 - 40",
+"jenis_area": "Operasional",
+"urutan": 51
+},
+{
+"lokasi": "Hauling Road",
+"sub": "Km 21 - 30",
+"jenis_area": "Operasional",
+"urutan": 52
+},
+{
+"lokasi": "Hauling Road",
+"sub": "Km 11 - 20",
+"jenis_area": "Operasional",
+"urutan": 53
+},
+{
+"lokasi": "Hauling Road",
+"sub": "Km 1 - 10",
+"jenis_area": "Operasional",
+"urutan": 54
+},
+{
+"lokasi": "Jalan Kabupaten",
+"sub": "Jalan Kabupaten",
+"jenis_area": "Operasional",
+"urutan": 55
+},
+{
+"lokasi": "Stock Pile",
+"sub": "Stockpile Lestari",
+"jenis_area": "Operasional",
+"urutan": 56
+},
+{
+"lokasi": "CCP",
+"sub": "Crusher 01",
+"jenis_area": "Operasional",
+"urutan": 57
+},
+{
+"lokasi": "CCP",
+"sub": "Crusher 02",
+"jenis_area": "Operasional",
+"urutan": 58
+},
+{
+"lokasi": "CCP",
+"sub": "Crusher 03",
+"jenis_area": "Operasional",
+"urutan": 59
+},
+{
+"lokasi": "CCP",
+"sub": "Area Stock Chemical",
+"jenis_area": "Operasional",
+"urutan": 60
+},
+{
+"lokasi": "Timbangan",
+"sub": "Timbangan Getting",
+"jenis_area": "Operasional",
+"urutan": 61
+},
+{
+"lokasi": "Timbangan",
+"sub": "Timbangan Hauling",
+"jenis_area": "Operasional",
+"urutan": 62
+},
+{
+"lokasi": "Settling Pond",
+"sub": "Settling Pond Melati 1",
+"jenis_area": "Lingkungan",
+"urutan": 63
+},
+{
+"lokasi": "Settling Pond",
+"sub": "Settling Pond Melati 2",
+"jenis_area": "Lingkungan",
+"urutan": 64
+},
+{
+"lokasi": "Settling Pond",
+"sub": "Settling Pond Lestari",
+"jenis_area": "Lingkungan",
+"urutan": 65
+},
+{
+"lokasi": "Settling Pond",
+"sub": "Settling Pond Blok 2",
+"jenis_area": "Lingkungan",
+"urutan": 66
+},
+{
+"lokasi": "Office",
+"sub": "Office Bungur",
+"jenis_area": "Fasilitas",
+"urutan": 67
+},
+{
+"lokasi": "Office",
+"sub": "Office CK",
+"jenis_area": "Fasilitas",
+"urutan": 68
+},
+{
+"lokasi": "Office",
+"sub": "Office 42",
+"jenis_area": "Fasilitas",
+"urutan": 69
+},
+{
+"lokasi": "Office",
+"sub": "Office 32",
+"jenis_area": "Fasilitas",
+"urutan": 70
+},
+{
+"lokasi": "Office",
+"sub": "Office SCI",
+"jenis_area": "Fasilitas",
+"urutan": 71
+},
+{
+"lokasi": "Office",
+"sub": "Office OFN",
+"jenis_area": "Fasilitas",
+"urutan": 72
+},
+{
+"lokasi": "Office",
+"sub": "Office FAB",
+"jenis_area": "Fasilitas",
+"urutan": 73
+},
+{
+"lokasi": "Klinik FAS",
+"sub": "Klinik EBL",
+"jenis_area": "Fasilitas",
+"urutan": 74
+},
+{
+"lokasi": "Klinik FAS",
+"sub": "Klinik CK",
+"jenis_area": "Fasilitas",
+"urutan": 75
+},
+{
+"lokasi": "Mess/ Camp",
+"sub": "Mess Bungur",
+"jenis_area": "Fasilitas",
+"urutan": 76
+},
+{
+"lokasi": "Mess/ Camp",
+"sub": "Mess DAS",
+"jenis_area": "Fasilitas",
+"urutan": 77
+},
+{
+"lokasi": "Mess/ Camp",
+"sub": "Mess OFN",
+"jenis_area": "Fasilitas",
+"urutan": 78
+},
+{
+"lokasi": "Mess/ Camp",
+"sub": "Mess BBA",
+"jenis_area": "Fasilitas",
+"urutan": 79
+},
+{
+"lokasi": "Mess/ Camp",
+"sub": "Mess CK",
+"jenis_area": "Fasilitas",
+"urutan": 80
+},
+{
+"lokasi": "Mess/ Camp",
+"sub": "Mess SCI",
+"jenis_area": "Fasilitas",
+"urutan": 81
+},
+{
+"lokasi": "Warehouse",
+"sub": "Gudang EBL",
+"jenis_area": "Fasilitas",
+"urutan": 82
+},
+{
+"lokasi": "Warehouse",
+"sub": "Warehouse CK",
+"jenis_area": "Fasilitas",
+"urutan": 83
+},
+{
+"lokasi": "Warehouse",
+"sub": "Warehouse Tabuhan",
+"jenis_area": "Fasilitas",
+"urutan": 84
+},
+{
+"lokasi": "TPS LB3",
+"sub": "TPS LB3",
+"jenis_area": "Kritis",
+"urutan": 85
+},
+{
+"lokasi": "Void",
+"sub": "Void",
+"jenis_area": "Operasional",
+"urutan": 86
+},
+{
+"lokasi": "Maintank",
+"sub": "Maintank EBL",
+"jenis_area": "Kritis",
+"urutan": 87
+},
+{
+"lokasi": "Maintank",
+"sub": "Maintank OFN",
+"jenis_area": "Kritis",
+"urutan": 88
+},
+{
+"lokasi": "Maintank",
+"sub": "Maintank CK",
+"jenis_area": "Kritis",
+"urutan": 89
+},
+{
+"lokasi": "Pit Stop",
+"sub": "Pit Stop",
+"jenis_area": "Operasional",
+"urutan": 90
+},
+{
+"lokasi": "Dalam Kendaraan",
+"sub": "Bus Karyawan",
+"jenis_area": "Kendaraan",
+"urutan": 91
+},
+{
+"lokasi": "Dalam Kendaraan",
+"sub": "LV",
+"jenis_area": "Kendaraan",
+"urutan": 92
+},
+{
+"lokasi": "Dalam Kendaraan",
+"sub": "Unit Alat Berat / HD",
+"jenis_area": "Kendaraan",
+"urutan": 93
+},
+{
+"lokasi": "Nursery",
+"sub": "Nursery",
+"jenis_area": "Lingkungan",
+"urutan": 94
+},
+{
+"lokasi": "Jetty",
+"sub": "Jetty",
+"jenis_area": "Operasional",
+"urutan": 95
+},
+{
+"lokasi": "Area Rehab DAS",
+"sub": "Area Rehab DAS",
+"jenis_area": "Lingkungan",
+"urutan": 96
+},
+{
+"lokasi": "Area Revegetasi",
+"sub": "Area Revegetasi",
+"jenis_area": "Lingkungan",
+"urutan": 97
+},
+{
+"lokasi": "KHDTK / Kawasan Hutan",
+"sub": "KHDTK / Kawasan Hutan",
+"jenis_area": "Lingkungan",
+"urutan": 98
+},
+{
+"lokasi": "Fasum Project",
+"sub": "Fasum Project",
+"jenis_area": "Fasilitas",
+"urutan": 99
+},
+{
+"lokasi": "Pos Security",
+"sub": "Pos 01 / Portal Masuk Tambang",
+"jenis_area": "Fasilitas",
+"urutan": 100
+},
+{
+"lokasi": "Lain-lain",
+"sub": "Lain-lain",
+"jenis_area": "",
+"urutan": 101
+}
+]

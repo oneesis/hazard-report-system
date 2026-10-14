@@ -1,4 +1,4 @@
-const CACHE_NAME = "onesap-cache-v34";
+const CACHE_NAME = "onesap-cache-v35";
 const ASSETS_TO_CACHE = [
   "./",
   "./index-home.html",
@@ -12,6 +12,7 @@ const ASSETS_TO_CACHE = [
   "./dashboard.css",
   "./login.css",
   "./script.js",
+  "./lib/taksonomi.js",
   "./inspection-form.js",
   "./dashboard.js",
   "./login.js",

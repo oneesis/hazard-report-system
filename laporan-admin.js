@@ -211,7 +211,7 @@ function lmRender() {
   } else if (lmActiveTab === 'overdue') {
     lmFiltered = lmFiltered.filter(r => slaDays(r) !== null && slaDays(r) < 0 && r.status_perbaikan !== 'CLOSED');
   } else if (lmActiveTab === 'risiko-tinggi') {
-    lmFiltered = lmFiltered.filter(r => getRiskLevel(r).toUpperCase().includes('TINGGI'));
+    lmFiltered = lmFiltered.filter(r => /TINGGI|EKSTREM|HIGH/.test(getRiskLevel(r).toUpperCase()));
   }
 
   // Sort
@@ -260,7 +260,7 @@ function renderLmCards() {
     const status    = r.status_perbaikan || 'OPEN';
     const risk      = getRiskLevel(r);
     const riskUp    = risk.toUpperCase();
-    const isHigh    = riskUp.includes('TINGGI');
+    const isHigh    = /TINGGI|EKSTREM|HIGH/.test(riskUp);
     const isMed     = riskUp.includes('SEDANG');
     const borderCls = isHigh ? 'lm-card--high' : isMed ? 'lm-card--med' : 'lm-card--low';
 

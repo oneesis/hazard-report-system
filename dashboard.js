@@ -1518,12 +1518,14 @@ function renderPhotosIntoContainer(containerId, placeholderText, imageUrls, altT
 }
 
 function getDashboardLocation(report) {
-  return String(getReportValue(report, [
+  const lok = String(getReportValue(report, [
     "lokasi_bahaya",
     "lokasi_inspeksi",
     "lokasi",
     "location"
   ], ""));
+  const sub = getReportValue(report, ["sub_lokasi_bahaya", "sub_lokasi_lainnya"], "");
+  return sub ? `${lok} — ${sub}` : lok;
 }
 
 function getDashboardDescription(report) {
@@ -2624,6 +2626,7 @@ function renderRiskTrend(allReports) {
     if (val.includes('rendah') || val.includes('low'))   return 'Rendah';
     if (val.includes('sedang') || val.includes('med'))   return 'Sedang';
     if (val.includes('tinggi') || val.includes('high'))  return 'Tinggi';
+    if (val.includes('ekstrem'))                         return 'Ekstrem';
     return null;
   }
 
@@ -2643,7 +2646,8 @@ function renderRiskTrend(allReports) {
       datasets: [
         { label: 'Rendah', data: byMonth('Rendah'), backgroundColor: '#16A34A', borderRadius: 3 },
         { label: 'Sedang', data: byMonth('Sedang'), backgroundColor: '#F2A900', borderRadius: 3 },
-        { label: 'Tinggi', data: byMonth('Tinggi'), backgroundColor: '#DC2626', borderRadius: 3 }
+        { label: 'Tinggi', data: byMonth('Tinggi'), backgroundColor: '#DC2626', borderRadius: 3 },
+        { label: 'Ekstrem', data: byMonth('Ekstrem'), backgroundColor: '#7F1D1D', borderRadius: 3 }
       ]
     },
     options: {

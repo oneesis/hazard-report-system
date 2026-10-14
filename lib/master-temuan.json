@@ -1,0 +1,3724 @@
+{
+"kategori": [
+{
+"kode": "HK",
+"nama": "Kebersihan & Kerapian",
+"lokasi_prioritas": [],
+"urutan": 1
+},
+{
+"kode": "PN",
+"nama": "Penerangan",
+"lokasi_prioritas": [],
+"urutan": 2
+},
+{
+"kode": "BG",
+"nama": "Bangunan & Fasilitas Umum",
+"lokasi_prioritas": [
+"Office",
+"Mess/ Camp",
+"Klinik FAS",
+"Warehouse",
+"Fasum Project",
+"Pos Security",
+"Timbangan",
+"Workshop"
+],
+"urutan": 3
+},
+{
+"kode": "AP",
+"nama": "APD",
+"lokasi_prioritas": [],
+"urutan": 4
+},
+{
+"kode": "BI",
+"nama": "Bahaya Biologi",
+"lokasi_prioritas": [
+"Area Rehab DAS",
+"Area Revegetasi",
+"Nursery",
+"Land Clearing",
+"KHDTK / Kawasan Hutan",
+"Office",
+"Mess/ Camp"
+],
+"urutan": 5
+},
+{
+"kode": "LS",
+"nama": "Listrik",
+"lokasi_prioritas": [],
+"urutan": 6
+},
+{
+"kode": "KB",
+"nama": "Kebakaran",
+"lokasi_prioritas": [],
+"urutan": 7
+},
+{
+"kode": "TD",
+"nama": "Tanggap Darurat",
+"lokasi_prioritas": [],
+"urutan": 8
+},
+{
+"kode": "LK",
+"nama": "Lingkungan Kerja",
+"lokasi_prioritas": [],
+"urutan": 9
+},
+{
+"kode": "FT",
+"nama": "Pemicu Kelelahan (Fatigue)",
+"lokasi_prioritas": [
+"Mess/ Camp",
+"Dalam Kendaraan",
+"Pit Stop",
+"Workshop"
+],
+"urutan": 10
+},
+{
+"kode": "JL",
+"nama": "Jalan Tambang",
+"lokasi_prioritas": [
+"Front Loading",
+"Mine Road",
+"Hauling Road",
+"Jalan Kabupaten",
+"Disposal",
+"Timbangan",
+"Stock Pile",
+"Dalam Kendaraan"
+],
+"urutan": 11
+},
+{
+"kode": "LL",
+"nama": "Lalu Lintas & Mengemudi",
+"lokasi_prioritas": [
+"Front Loading",
+"Mine Road",
+"Hauling Road",
+"Jalan Kabupaten",
+"Disposal",
+"Timbangan",
+"Stock Pile",
+"Dalam Kendaraan"
+],
+"urutan": 12
+},
+{
+"kode": "KD",
+"nama": "Kondisi Kendaraan & Unit",
+"lokasi_prioritas": [
+"Front Loading",
+"Mine Road",
+"Hauling Road",
+"Jalan Kabupaten",
+"Disposal",
+"Timbangan",
+"Stock Pile",
+"Dalam Kendaraan",
+"Workshop",
+"Pit Stop",
+"Parkiran/CSA"
+],
+"urutan": 13
+},
+{
+"kode": "PK",
+"nama": "Area Parkir",
+"lokasi_prioritas": [
+"Parkiran/CSA",
+"Workshop",
+"Office",
+"Mess/ Camp",
+"Pit Stop",
+"Warehouse"
+],
+"urutan": 14
+},
+{
+"kode": "RB",
+"nama": "Rambu & Penandaan",
+"lokasi_prioritas": [],
+"urutan": 15
+},
+{
+"kode": "IZ",
+"nama": "Izin Kerja",
+"lokasi_prioritas": [
+"Workshop",
+"CCP",
+"Sump",
+"Settling Pond",
+"Void",
+"Jetty",
+"Blasting Area",
+"Drilling Area",
+"Land Clearing",
+"Maintank"
+],
+"urutan": 16
+},
+{
+"kode": "KM",
+"nama": "Kompetensi & Dokumen Personil",
+"lokasi_prioritas": [],
+"urutan": 17
+},
+{
+"kode": "SP",
+"nama": "Pengawasan & Prosedur",
+"lokasi_prioritas": [],
+"urutan": 18
+},
+{
+"kode": "AL",
+"nama": "Alat & Perkakas Kerja",
+"lokasi_prioritas": [
+"Workshop",
+"CCP",
+"Warehouse",
+"Maintank",
+"Jetty",
+"Pit Stop"
+],
+"urutan": 19
+},
+{
+"kode": "AA",
+"nama": "Pengangkatan (Alat Angkat)",
+"lokasi_prioritas": [
+"Workshop",
+"CCP",
+"Warehouse",
+"Jetty",
+"Maintank"
+],
+"urutan": 20
+},
+{
+"kode": "KT",
+"nama": "Bekerja di Ketinggian",
+"lokasi_prioritas": [
+"Workshop",
+"CCP",
+"Warehouse",
+"Maintank",
+"Office",
+"Jetty"
+],
+"urutan": 21
+},
+{
+"kode": "LO",
+"nama": "Isolasi Energi (LOTO)",
+"lokasi_prioritas": [
+"Workshop",
+"CCP",
+"Maintank",
+"Pit Stop"
+],
+"urutan": 22
+},
+{
+"kode": "AR",
+"nama": "Bekerja di Dekat Air",
+"lokasi_prioritas": [
+"Sump",
+"Settling Pond",
+"Void",
+"Jetty"
+],
+"urutan": 23
+},
+{
+"kode": "GT",
+"nama": "Geoteknik & Lereng",
+"lokasi_prioritas": [
+"Front Loading",
+"Mine Road",
+"Disposal",
+"Sump",
+"Void",
+"View Point",
+"Land Clearing"
+],
+"urutan": 24
+},
+{
+"kode": "DS",
+"nama": "Dumping di Disposal",
+"lokasi_prioritas": [
+"Disposal"
+],
+"urutan": 25
+},
+{
+"kode": "OB",
+"nama": "OB Removal & Coal Getting",
+"lokasi_prioritas": [
+"Front Loading",
+"Drilling Area",
+"Blasting Area",
+"Mine Road"
+],
+"urutan": 26
+},
+{
+"kode": "HD",
+"nama": "Bahan Peledak (Handak)",
+"lokasi_prioritas": [
+"Gudang Handak",
+"Blasting Area",
+"Drilling Area"
+],
+"urutan": 27
+},
+{
+"kode": "LB",
+"nama": "Lingkungan & Limbah B3",
+"lokasi_prioritas": [
+"TPS LB3",
+"Workshop",
+"Warehouse",
+"Maintank",
+"CCP",
+"Klinik FAS",
+"Pit Stop"
+],
+"urutan": 28
+},
+{
+"kode": "BB",
+"nama": "Bahan Bakar (Main Tank)",
+"lokasi_prioritas": [
+"Maintank",
+"Pit Stop"
+],
+"urutan": 29
+},
+{
+"kode": "SL",
+"nama": "Settling Pond & Air Tambang",
+"lokasi_prioritas": [
+"Settling Pond",
+"Sump"
+],
+"urutan": 30
+}
+],
+"temuan": [
+{
+"kode": "HK-01",
+"kategori_kode": "HK",
+"kategori": "Kebersihan & Kerapian",
+"sub": "Sampah berserakan / tidak dikelola",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"House Keeping | Pengelolaan sampah"
+],
+"urutan": 1
+},
+{
+"kode": "HK-02",
+"kategori_kode": "HK",
+"kategori": "Kebersihan & Kerapian",
+"sub": "Area kerja tidak rapi",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"House Keeping | Kerapihan area kerja"
+],
+"urutan": 2
+},
+{
+"kode": "HK-03",
+"kategori_kode": "HK",
+"kategori": "Kebersihan & Kerapian",
+"sub": "Peletakan barang tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"House Keeping | Kesesuaian peletakan barang"
+],
+"urutan": 3
+},
+{
+"kode": "HK-04",
+"kategori_kode": "HK",
+"kategori": "Kebersihan & Kerapian",
+"sub": "Lantai licin",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"House Keeping | Lantai Licin"
+],
+"urutan": 4
+},
+{
+"kode": "HK-05",
+"kategori_kode": "HK",
+"kategori": "Kebersihan & Kerapian",
+"sub": "Identitas lokasi tidak ada",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"House Keeping | Identitas Lokasi"
+],
+"urutan": 5
+},
+{
+"kode": "HK-06",
+"kategori_kode": "HK",
+"kategori": "Kebersihan & Kerapian",
+"sub": "Kebersihan dapur / makanan tidak higienis",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [],
+"urutan": 6
+},
+{
+"kode": "PN-01",
+"kategori_kode": "PN",
+"kategori": "Penerangan",
+"sub": "Tidak ada penerangan",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Workshop | Tidak ada penerangan",
+"Fasilitas Warehouse | Tidak ada penerangan",
+"Fasilitas Jembatan Timbang CPP | Tidak ada penerangan",
+"Fasilitas Office | Tidak ada penerangan",
+"Fasilitas Mixing Plant | Tidak ada penerangan"
+],
+"urutan": 7
+},
+{
+"kode": "PN-02",
+"kategori_kode": "PN",
+"kategori": "Penerangan",
+"sub": "Penerangan kurang / tidak standar",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Penerangan Tidak Standar",
+"Fasilitas Workshop | Penerangan Tidak Standar",
+"Fasilitas Warehouse | Penerangan Tidak Standar",
+"Fasilitas Jembatan Timbang CPP | Penerangan Tidak Standar",
+"Fasilitas Office | Penerangan Tidak Standar",
+"Fasilitas Gudang Handak | Penerangan Tidak Standar",
+"Fasilitas Mixing Plant | Penerangan Tidak Standar",
+"Fasilitas Main Tank | Penerangan Tidak Standar",
+"TPS | Penerangan tidak sesuai / standar",
+"Lingkungan Kerja | Pencahayaan"
+],
+"urutan": 8
+},
+{
+"kode": "PN-03",
+"kategori_kode": "PN",
+"kategori": "Penerangan",
+"sub": "Tower lamp tidak ada di area kerja malam",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Tidak ada Tower Lamp"
+],
+"urutan": 9
+},
+{
+"kode": "PN-04",
+"kategori_kode": "PN",
+"kategori": "Penerangan",
+"sub": "Posisi tower lamp tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Posisi Tower Lamp"
+],
+"urutan": 10
+},
+{
+"kode": "PN-05",
+"kategori_kode": "PN",
+"kategori": "Penerangan",
+"sub": "Tower lamp tanpa tanggul pengaman",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Tidak terdapat tanggulan di Tower Lamp"
+],
+"urutan": 11
+},
+{
+"kode": "BG-01",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Bangunan tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Kelayakan Bangunan | Kelayakan Bangunan"
+],
+"urutan": 12
+},
+{
+"kode": "BG-02",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Bangunan rusak (atap, dinding, lantai)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelayakan Bangunan | Bangunan Rusak"
+],
+"urutan": 13
+},
+{
+"kode": "BG-03",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Toilet tidak ada / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Tidak ada toilet",
+"Fasilitas Tambang | Kondisi toilet tidak layak",
+"Fasilitas Workshop | Kondisi toilet tidak layak",
+"Fasilitas Warehouse | Kondisi toilet tidak layak",
+"Fasilitas Jembatan Timbang CPP | Kondisi toilet tidak layak",
+"Fasilitas Office | Kondisi toilet tidak layak",
+"Fasilitas Settling Pond | Toilet tidak ada / rusak",
+"Fasilitas Gudang Handak | Toilet tidak ada / rusak",
+"Fasilitas Mixing Plant | Toilet tidak ada / rusak",
+"Fasilitas Main Tank | Toilet tidak ada / rusak"
+],
+"urutan": 14
+},
+{
+"kode": "BG-04",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Genset / generator tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Kondisi Genset",
+"Fasilitas Workshop | Kondisi Genset",
+"Fasilitas Warehouse | Kondisi Genset",
+"Fasilitas Office | Kondisi Genset",
+"Fasilitas Mixing Plant | Generator Rusak"
+],
+"urutan": 15
+},
+{
+"kode": "BG-05",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Saluran air / drainase buruk",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Saluran Air/Drainase untuk fasilitas tambang",
+"Fasilitas Workshop | Saluran Air/Drainase untuk fasilitas workshop"
+],
+"urutan": 16
+},
+{
+"kode": "BG-06",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Pompa air tidak layak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Kondisi Pompa"
+],
+"urutan": 17
+},
+{
+"kode": "BG-07",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "View point rusak / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Kondisi View Point"
+],
+"urutan": 18
+},
+{
+"kode": "BG-08",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Pos jaga / pos pantau tidak ada atau rusak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | Kondisi Pos Pantau rusak / tidak layak",
+"Fasilitas Gudang Handak | Pos Pantau Rusak",
+"Fasilitas Gudang Handak | Pos Pantau Tidak Tersedia",
+"Fasilitas Jembatan Timbang CPP | Pos Jembatan Timbang tidak layak/rusak"
+],
+"urutan": 19
+},
+{
+"kode": "BG-09",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Tangga / akses pos tidak layak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Jembatan Timbang CPP | Tangga Pos Jembatan timbang tidak layak/rusak"
+],
+"urutan": 20
+},
+{
+"kode": "BG-10",
+"kategori_kode": "BG",
+"kategori": "Bangunan & Fasilitas Umum",
+"sub": "Gudang kapur rusak / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | Kondisi Gudang Kapur rusak / tidak layak"
+],
+"urutan": 21
+},
+{
+"kode": "AP-01",
+"kategori_kode": "AP",
+"kategori": "APD",
+"sub": "Tidak memakai APD",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"APD | Tidak menggunakan APD"
+],
+"urutan": 22
+},
+{
+"kode": "AP-02",
+"kategori_kode": "AP",
+"kategori": "APD",
+"sub": "Cara memakai APD salah",
+"tipe": "Tindakan",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"APD | Cara Penggunaan APD"
+],
+"urutan": 23
+},
+{
+"kode": "AP-03",
+"kategori_kode": "AP",
+"kategori": "APD",
+"sub": "APD tidak sesuai / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"APD | Kesesuaian dan Kelayakan APD"
+],
+"urutan": 24
+},
+{
+"kode": "BI-01",
+"kategori_kode": "BI",
+"kategori": "Bahaya Biologi",
+"sub": "Pohon kering / rawan tumbang",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bahaya Biologi | Pohon kering"
+],
+"urutan": 25
+},
+{
+"kode": "BI-02",
+"kategori_kode": "BI",
+"kategori": "Bahaya Biologi",
+"sub": "Hewan buas / berbisa (ular, dll.)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bahaya Biologi | Bahaya hewan buas"
+],
+"urutan": 26
+},
+{
+"kode": "BI-03",
+"kategori_kode": "BI",
+"kategori": "Bahaya Biologi",
+"sub": "Serangga (tawon, lebah)",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Bahaya Biologi | Serangga"
+],
+"urutan": 27
+},
+{
+"kode": "BI-04",
+"kategori_kode": "BI",
+"kategori": "Bahaya Biologi",
+"sub": "Tumbuhan berbahaya / beracun",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Bahaya Biologi | Tumbuhan/vegetasi berbahaya/beracun"
+],
+"urutan": 28
+},
+{
+"kode": "LS-01",
+"kategori_kode": "LS",
+"kategori": "Listrik",
+"sub": "Instalasi listrik tidak layak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bahaya Eletrikal | Kelayakan instalasi listrik"
+],
+"urutan": 29
+},
+{
+"kode": "LS-02",
+"kategori_kode": "LS",
+"kategori": "Listrik",
+"sub": "Kabel rusak / terkelupas",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bahaya Eletrikal | Kelayakan kabel"
+],
+"urutan": 30
+},
+{
+"kode": "LS-03",
+"kategori_kode": "LS",
+"kategori": "Listrik",
+"sub": "Peralatan listrik tidak diamankan",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bahaya Eletrikal | Pengamanan peralatan listrik"
+],
+"urutan": 31
+},
+{
+"kode": "LS-04",
+"kategori_kode": "LS",
+"kategori": "Listrik",
+"sub": "Potensi arus pendek / korsleting",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bahaya Eletrikal | Potensi Arus Pendek"
+],
+"urutan": 32
+},
+{
+"kode": "LS-05",
+"kategori_kode": "LS",
+"kategori": "Listrik",
+"sub": "Jaringan listrik di atas / dekat jalur unit tidak aman",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 33
+},
+{
+"kode": "KB-01",
+"kategori_kode": "KB",
+"kategori": "Kebakaran",
+"sub": "Menyalakan api terbuka di area terlarang",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bahaya Kebakaran | Menyalakan api terbuka"
+],
+"urutan": 34
+},
+{
+"kode": "KB-02",
+"kategori_kode": "KB",
+"kategori": "Kebakaran",
+"sub": "Merokok bukan di tempatnya (termasuk di kabin unit)",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bahaya Kebakaran | Merokok tidak pada tempat yang diijinkan",
+"Pengoperasian Kendaraan / unit | Merokok di dalam kabin unit / kendaraan"
+],
+"urutan": 35
+},
+{
+"kode": "KB-03",
+"kategori_kode": "KB",
+"kategori": "Kebakaran",
+"sub": "Swabakar batubara (sponcom)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Sponcom / Swabakar"
+],
+"urutan": 36
+},
+{
+"kode": "KB-04",
+"kategori_kode": "KB",
+"kategori": "Kebakaran",
+"sub": "Kerja panas tanpa fire watch / APAR",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [],
+"urutan": 37
+},
+{
+"kode": "KB-05",
+"kategori_kode": "KB",
+"kategori": "Kebakaran",
+"sub": "Penumpukan bahan mudah terbakar pada mesin / peralatan (debu batubara, oli, BBM)",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [],
+"urutan": 38
+},
+{
+"kode": "TD-01",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "APAR tidak tersedia",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bahaya Kebakaran | APAR tidak tersedia"
+],
+"urutan": 39
+},
+{
+"kode": "TD-02",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "APAR tidak layak / kedaluwarsa / terhalang",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | APAR"
+],
+"urutan": 40
+},
+{
+"kode": "TD-03",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Hydrant tidak layak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | Hydran"
+],
+"urutan": 41
+},
+{
+"kode": "TD-04",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Spill kit tidak ada / tidak lengkap",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | Spill kit",
+"Bekerja di dekat air | Spill Kit tidak disediakan di pompa air"
+],
+"urutan": 42
+},
+{
+"kode": "TD-05",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Eye wash tidak ada / rusak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | Eye Wash"
+],
+"urutan": 43
+},
+{
+"kode": "TD-06",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Kotak P3K tidak ada / tidak lengkap",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | P3K"
+],
+"urutan": 44
+},
+{
+"kode": "TD-07",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Jalur evakuasi / titik kumpul tidak ada atau terhalang",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | Jalur Evakuasi"
+],
+"urutan": 45
+},
+{
+"kode": "TD-08",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Alat tanggap darurat belum diinspeksi",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan tanggap darurat | Alat Tanggap Darurat Belum dilakukan Inspeksi"
+],
+"urutan": 46
+},
+{
+"kode": "TD-09",
+"kategori_kode": "TD",
+"kategori": "Tanggap Darurat",
+"sub": "Sirene tidak ada / rusak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"TPS | Sirene tidak ada",
+"TPS | Sirene rusak"
+],
+"urutan": 47
+},
+{
+"kode": "LK-01",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Lingkungan berdebu",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Lingkungan berdebu"
+],
+"urutan": 48
+},
+{
+"kode": "LK-02",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Kabut / jarak pandang terbatas",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Kabut"
+],
+"urutan": 49
+},
+{
+"kode": "LK-03",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Kebisingan tinggi",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Kebisingan"
+],
+"urutan": 50
+},
+{
+"kode": "LK-04",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Getaran tinggi",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Getaran"
+],
+"urutan": 51
+},
+{
+"kode": "LK-05",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Suhu panas / dingin",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Suhu panas/dingin"
+],
+"urutan": 52
+},
+{
+"kode": "LK-06",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Radiasi",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Radiasi"
+],
+"urutan": 53
+},
+{
+"kode": "LK-07",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Posisi kerja / angkat manual tidak ergonomis",
+"tipe": "Tindakan",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Lingkungan Kerja | Ergonomi"
+],
+"urutan": 54
+},
+{
+"kode": "LK-08",
+"kategori_kode": "LK",
+"kategori": "Lingkungan Kerja",
+"sub": "Cuaca ekstrem (petir, angin kencang, hujan lebat)",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [],
+"urutan": 55
+},
+{
+"kode": "FT-01",
+"kategori_kode": "FT",
+"kategori": "Pemicu Kelelahan (Fatigue)",
+"sub": "Suhu kamar mess terlalu panas",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fatigue Hazard | Suhu kamar (mess) terlalu panas"
+],
+"urutan": 56
+},
+{
+"kode": "FT-02",
+"kategori_kode": "FT",
+"kategori": "Pemicu Kelelahan (Fatigue)",
+"sub": "Lingkungan mess terlalu bising",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fatigue Hazard | Lingkungan mess terlalu bising"
+],
+"urutan": 57
+},
+{
+"kode": "FT-03",
+"kategori_kode": "FT",
+"kategori": "Pemicu Kelelahan (Fatigue)",
+"sub": "Tempat tidur tidak memadai",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fatigue Hazard | Fasilitas Tempat Tidur tidak memadai"
+],
+"urutan": 58
+},
+{
+"kode": "FT-04",
+"kategori_kode": "FT",
+"kategori": "Pemicu Kelelahan (Fatigue)",
+"sub": "Rest area tidak memadai",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fatigue Hazard | Rest area tidak memadai"
+],
+"urutan": 59
+},
+{
+"kode": "FT-05",
+"kategori_kode": "FT",
+"kategori": "Pemicu Kelelahan (Fatigue)",
+"sub": "AC kabin unit panas / rusak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fatigue Hazard | AC unit Panas"
+],
+"urutan": 60
+},
+{
+"kode": "FT-06",
+"kategori_kode": "FT",
+"kategori": "Pemicu Kelelahan (Fatigue)",
+"sub": "Getaran / kebisingan kabin unit tinggi",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fatigue Hazard | Getaran unit terlalu tinggi",
+"Fatigue Hazard | kebisingan di dalam kabin unit tinggi"
+],
+"urutan": 61
+},
+{
+"kode": "JL-01",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Jalan berlubang",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Jalan Berlubang"
+],
+"urutan": 62
+},
+{
+"kode": "JL-02",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Jalan bergelombang (undulating)",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Jalan Undulating"
+],
+"urutan": 63
+},
+{
+"kode": "JL-03",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Jalan licin",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Jalan Licin",
+"Lingkungan Kerja | Hujan"
+],
+"urutan": 64
+},
+{
+"kode": "JL-04",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Material tumpah di jalan",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Material Tumpah (OB, Lumpur, Soil, Batu Bara, dll.)"
+],
+"urutan": 65
+},
+{
+"kode": "JL-05",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Spoil di tepi jalan",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Spoil"
+],
+"urutan": 66
+},
+{
+"kode": "JL-06",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Boulder / batu besar di jalan",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Boulder"
+],
+"urutan": 67
+},
+{
+"kode": "JL-07",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Genangan air di jalan",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perawatan Jalan | Genangan air"
+],
+"urutan": 68
+},
+{
+"kode": "JL-08",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Material jalan lunak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Material Lunak"
+],
+"urutan": 69
+},
+{
+"kode": "JL-09",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Lebar jalan tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Lebar Jalan tidak standar"
+],
+"urutan": 70
+},
+{
+"kode": "JL-10",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Grade (kemiringan) jalan tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Grade jalan"
+],
+"urutan": 71
+},
+{
+"kode": "JL-11",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Super elevasi tikungan tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Super Elevasi"
+],
+"urutan": 72
+},
+{
+"kode": "JL-12",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Cross fall (crown) jalan tidak standar",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Cross Fall (Crown)"
+],
+"urutan": 73
+},
+{
+"kode": "JL-13",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Drainase / paritan jalan buruk",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Drainage / chanel jalan"
+],
+"urutan": 74
+},
+{
+"kode": "JL-14",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Tidak ada tanggul jalan (safety berm)",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Tidak ada tanggul jalan"
+],
+"urutan": 75
+},
+{
+"kode": "JL-15",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Tanggul jalan tidak standar (< ½ tinggi roda)",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Tanggul jalan tidak Standar"
+],
+"urutan": 76
+},
+{
+"kode": "JL-16",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Persimpangan tidak standar (sudut, > 4 cabang)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Sudut persimpanagan",
+"Standar Jalan | Jumlah Persimpangan lebih dari 4",
+"Standar Jalan | Persimpangan jalan"
+],
+"urutan": 77
+},
+{
+"kode": "JL-17",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Blind spot",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Blindspot"
+],
+"urutan": 78
+},
+{
+"kode": "JL-18",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Jalan pintas (shortcut) tidak resmi",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Standar Jalan | Shortcut"
+],
+"urutan": 79
+},
+{
+"kode": "JL-19",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Jalan tidak terpakai belum ditutup",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Jalan tidak terpakai belum ditutup"
+],
+"urutan": 80
+},
+{
+"kode": "JL-20",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Median jalan tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Median Tidak Sesuai"
+],
+"urutan": 81
+},
+{
+"kode": "JL-21",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Polisi tidur (speed bump) tidak standar",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Standar Jalan | Speed Bumb tidak standar"
+],
+"urutan": 82
+},
+{
+"kode": "JL-22",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Pekerjaan di jalan tanpa pengaturan lalu lintas (perbaikan, penyiraman)",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 83
+},
+{
+"kode": "JL-23",
+"kategori_kode": "JL",
+"kategori": "Jalan Tambang",
+"sub": "Permukaan jalan / area kerja beda tinggi atau tidak rata",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 84
+},
+{
+"kode": "LL-01",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Melebihi batas kecepatan",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Over speed",
+"Pengoperasian Kendaraan / unit | Over speed melebihi 30 km/jam"
+],
+"urutan": 85
+},
+{
+"kode": "LL-02",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Melanggar rambu lalu lintas tambang",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Melanggar rambu lalu lintas tambang"
+],
+"urutan": 86
+},
+{
+"kode": "LL-03",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Jarak beriring tidak aman",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Jarak Tidak Aman"
+],
+"urutan": 87
+},
+{
+"kode": "LL-04",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Mengemudi dalam keadaan lelah / mengantuk",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Fatigue"
+],
+"urutan": 88
+},
+{
+"kode": "LL-05",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Distraksi saat mengemudi (HP, headset, kegiatan lain)",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Menggunakan telepon genggam",
+"Pengoperasian Kendaraan / unit | Menggunakan alat bantu dengar (headset)",
+"Pengoperasian Kendaraan / unit | Melakukan kegiatan lain saat mengoperasikan unit"
+],
+"urutan": 89
+},
+{
+"kode": "LL-06",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Tidak memakai sabuk pengaman",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Pengoprasian Tanpa Sabuk Pengaman"
+],
+"urutan": 90
+},
+{
+"kode": "LL-07",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Tidak melakukan komunikasi 2 arah (radio)",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Komunikasi 2 arah"
+],
+"urutan": 91
+},
+{
+"kode": "LL-08",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Masuk / berhenti / parkir di area manuver alat berat tanpa komunikasi",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Berhenti tanpa komunikasi pada area manuver alat berat",
+"Pengoperasian Kendaraan / unit | Parkir tanpa komunikasi pada area manuver alat berat",
+"Pengoperasian Kendaraan / unit | Memasuki area manuver alat berat tanpa komunikasi"
+],
+"urutan": 92
+},
+{
+"kode": "LL-09",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Parkir tidak aman / jarak parkir tidak standar",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Parkir Tidak Aman",
+"Area Parkir | Jarak Parkir Unit Tidak Standar"
+],
+"urutan": 93
+},
+{
+"kode": "LL-10",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Arah manuver tidak searah jarum jam",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Arah manufer tidak searah jarum jam",
+"Pelanggaran OB Removal atau Coal Getting | Arah manufer tidak searah jarum jam"
+],
+"urutan": 94
+},
+{
+"kode": "LL-11",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Membiarkan mesin menyala tanpa pengawasan",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Membiarkan engine menyala"
+],
+"urutan": 95
+},
+{
+"kode": "LL-12",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Manuver tanpa memastikan area sekitar aman",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 96
+},
+{
+"kode": "LL-13",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Mengoperasikan unit dengan vessel / bucket masih terangkat",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 97
+},
+{
+"kode": "LL-14",
+"kategori_kode": "LL",
+"kategori": "Lalu Lintas & Mengemudi",
+"sub": "Tidak menjaga jalur (keluar jalur / pindah lajur tanpa memastikan aman)",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 98
+},
+{
+"kode": "KD-01",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Kendaraan / unit tidak layak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Kelayakan Kendaraan/Unit"
+],
+"urutan": 99
+},
+{
+"kode": "KD-02",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Tidak melakukan P2H",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Pelaksanaan P2H Kendaraan/unit"
+],
+"urutan": 100
+},
+{
+"kode": "KD-03",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Mengoperasikan unit dengan rem / kemudi rusak",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Mengoperasikan Unit/Kendaraan dengan fungsi rem rusak",
+"Kondisi Kendaraan/unit | Mengoperasikan Unit/Kendaraan dengan kemudi rusak"
+],
+"urutan": 101
+},
+{
+"kode": "KD-04",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Mengoperasikan unit dengan sabuk pengaman rusak",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Mengoperasikan Unit/Kendaraan dengan sabuk pengaman rusak"
+],
+"urutan": 102
+},
+{
+"kode": "KD-05",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Unit tanpa buggy whip / lampu strobe di area tambang",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Mengoperasikan Unit/Kendaraan tanpa buggy-whip",
+"Kondisi Kendaraan/unit | Mengoperasikan Unit/Kendaraan tanpa lampu strobe"
+],
+"urutan": 103
+},
+{
+"kode": "KD-06",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Unit tanpa radio komunikasi",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Mengoperasikan Unit/Kendaraan tanpa radio komunikasi"
+],
+"urutan": 104
+},
+{
+"kode": "KD-07",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Menonaktifkan alat keselamatan unit (bypass)",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kondisi Kendaraan/unit | Menghilangkan fungsi alat keselamatan pada kendaraan/unit"
+],
+"urutan": 105
+},
+{
+"kode": "KD-08",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Mengoperasikan unit yang masih terpasang LOTO / tanda perawatan",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Mengoperasikan Unit/Kendaraan masih terdapat tanda perawatan (LOTO)"
+],
+"urutan": 106
+},
+{
+"kode": "KD-09",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Ban rusak / tekanan tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 107
+},
+{
+"kode": "KD-10",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Penanganan ban & velg tanpa prosedur",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 108
+},
+{
+"kode": "KD-11",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Lampu kerja / rotary tidak dinyalakan",
+"tipe": "Tindakan",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Tidak menyalakan lampu kerja / rotari"
+],
+"urutan": 109
+},
+{
+"kode": "KD-12",
+"kategori_kode": "KD",
+"kategori": "Kondisi Kendaraan & Unit",
+"sub": "Muatan tidak aman (berlebih, tercecer, tidak diikat)",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 110
+},
+{
+"kode": "PK-01",
+"kategori_kode": "PK",
+"kategori": "Area Parkir",
+"sub": "Tidak ada area parkir",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Area Parkir | Tidak ada area Parkir"
+],
+"urutan": 111
+},
+{
+"kode": "PK-02",
+"kategori_kode": "PK",
+"kategori": "Area Parkir",
+"sub": "Tidak ada stopper / ganjal roda (parkir & area loading)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Area Parkir | Tidak ada Stopper",
+"Fasilitas Warehouse | Tidak ada stopper di area loading"
+],
+"urutan": 112
+},
+{
+"kode": "PK-03",
+"kategori_kode": "PK",
+"kategori": "Area Parkir",
+"sub": "Tidak ada rambu parkir",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Area Parkir | Tidak ada Rambu Parkir"
+],
+"urutan": 113
+},
+{
+"kode": "PK-04",
+"kategori_kode": "PK",
+"kategori": "Area Parkir",
+"sub": "Tidak ada desain / layout parkir (LK3)",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Area Parkir | Tidak tersedia desain LK3"
+],
+"urutan": 114
+},
+{
+"kode": "PK-05",
+"kategori_kode": "PK",
+"kategori": "Area Parkir",
+"sub": "Tidak ada pembatas antar unit",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Area Parkir | Tidak tersedia pembatas antar unit"
+],
+"urutan": 115
+},
+{
+"kode": "PK-06",
+"kategori_kode": "PK",
+"kategori": "Area Parkir",
+"sub": "Permukaan area parkir tidak rata",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Area Parkir | Permukaan Area Parkir tidak rata"
+],
+"urutan": 116
+},
+{
+"kode": "RB-01",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Tidak ada rambu",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Rambu | Tidak ada Rambu"
+],
+"urutan": 117
+},
+{
+"kode": "RB-02",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Posisi rambu tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Rambu | Posisi Rambu tidak sesuai"
+],
+"urutan": 118
+},
+{
+"kode": "RB-03",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Rambu rusak / tidak terbaca",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Rambu | Kelayakan Rambu"
+],
+"urutan": 119
+},
+{
+"kode": "RB-04",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Rambu APD tidak ada",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Rambu | Rambu APD"
+],
+"urutan": 120
+},
+{
+"kode": "RB-05",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Patok retro (reflektor) tidak lengkap",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Rambu | Kelengkapan Patok Retro"
+],
+"urutan": 121
+},
+{
+"kode": "RB-06",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Unit breakdown di jalan tanpa rambu / alat pengaman",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Rambu | Unit Breakdown tanpa alat pengaman dan rambu"
+],
+"urutan": 122
+},
+{
+"kode": "RB-07",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Barikade / safety line tidak ada atau rusak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Penandaan | Barikade/Safety Line"
+],
+"urutan": 123
+},
+{
+"kode": "RB-08",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Demarkasi tidak ada",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Penandaan | Dermakasi"
+],
+"urutan": 124
+},
+{
+"kode": "RB-09",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Kode warna tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Penandaan | Kode warna"
+],
+"urutan": 125
+},
+{
+"kode": "RB-10",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Label tidak standar",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Penandaan | Labelling tidak standar / sesuai"
+],
+"urutan": 126
+},
+{
+"kode": "RB-11",
+"kategori_kode": "RB",
+"kategori": "Rambu & Penandaan",
+"sub": "Papan informasi tidak ada / rusak",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"TPS | Papan Informasi",
+"Fasilitas Settling Pond | Papan Informasi Settling Pond rusak",
+"Area Parkir | Tidak tersedia Papan Informasi Area Parkir"
+],
+"urutan": 127
+},
+{
+"kode": "IZ-01",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Tidak ada izin kerja di ketinggian",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Ada Izin Kerja di Ketinggian"
+],
+"urutan": 128
+},
+{
+"kode": "IZ-02",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Tidak ada izin kerja di dekat air",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Ada Izin Kerja di Dekat Air"
+],
+"urutan": 129
+},
+{
+"kode": "IZ-03",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Tidak ada izin kerja di ruang terbatas",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Ada Izin Kerja di Ruang Terbatas"
+],
+"urutan": 130
+},
+{
+"kode": "IZ-04",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Tidak ada izin kerja panas",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Ada Izin Kerja dengan Panas"
+],
+"urutan": 131
+},
+{
+"kode": "IZ-05",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Masuk area blasting tanpa izin",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Ada Izin Kerja Masuk Area Blasting"
+],
+"urutan": 132
+},
+{
+"kode": "IZ-06",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Masuk area land clearing tanpa izin",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Izin Masuk Area Land Clearing"
+],
+"urutan": 133
+},
+{
+"kode": "IZ-07",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Izin kerja ketinggian tidak dibawa / tidak sesuai / kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Izin Kerja | Tidak Bawa Izin Kerja di Ketinggian",
+"Izin Kerja | Izin Kerja di Ketinggian Tidak Sesuai",
+"Izin Kerja | Izin Kerja di Ketinggian Expired"
+],
+"urutan": 134
+},
+{
+"kode": "IZ-08",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Izin kerja dekat air tidak dibawa / tidak sesuai / kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Izin Kerja | Tidak Bawa Izin Kerja di Dekat Air",
+"Izin Kerja | Izin Kerja di Dekat Air Tidak Sesuai",
+"Izin Kerja | Izin Kerja di Dekat Air Expired"
+],
+"urutan": 135
+},
+{
+"kode": "IZ-09",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Izin kerja ruang terbatas tidak dibawa / tidak sesuai / kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Bawa Izin Kerja di Ruang Terbatas",
+"Izin Kerja | Izin Kerja di Ruang Terbatas Tidak Sesuai",
+"Izin Kerja | Izin Kerja di Ruang Terbatas Expired"
+],
+"urutan": 136
+},
+{
+"kode": "IZ-10",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Izin kerja panas tidak dibawa / tidak sesuai / kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Izin Kerja | Tidak Bawa Izin Kerja dengan Panas",
+"Izin Kerja | Izin Kerja dengan Panas Tidak Sesuai",
+"Izin Kerja | Izin Kerja dengan Panas Expired"
+],
+"urutan": 137
+},
+{
+"kode": "IZ-11",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Izin masuk area blasting tidak dibawa / tidak sesuai / kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Izin Kerja | Tidak Bawa Izin Kerja Masuk Area Blasting",
+"Izin Kerja | Izin Kerja Masuk Area Blasting Tidak Sesuai",
+"Izin Kerja | Izin Kerja Masuk Area Blasting Expired"
+],
+"urutan": 138
+},
+{
+"kode": "IZ-12",
+"kategori_kode": "IZ",
+"kategori": "Izin Kerja",
+"sub": "Masuk ruang terbatas tanpa uji gas",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 139
+},
+{
+"kode": "KM-01",
+"kategori_kode": "KM",
+"kategori": "Kompetensi & Dokumen Personil",
+"sub": "Mengoperasikan unit tanpa SIMPER / SIMPER kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Pengoprasian Tanpa License (SIMPER Tidak Ada, SIMPER Expired)",
+"Alat Angkat & Alat Penyangga | Pengoperasian tanpa SIMPER"
+],
+"urutan": 140
+},
+{
+"kode": "KM-02",
+"kategori_kode": "KM",
+"kategori": "Kompetensi & Dokumen Personil",
+"sub": "SIO / SKO tidak ada atau kedaluwarsa",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengoperasian Kendaraan / unit | Tidak ada SKO / SKO Expired",
+"Kelengkapan_Administrasi_Dokumen | SIO/SKO tidak berlaku/expired"
+],
+"urutan": 141
+},
+{
+"kode": "KM-03",
+"kategori_kode": "KM",
+"kategori": "Kompetensi & Dokumen Personil",
+"sub": "Tidak punya Mine Permit",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan_Administrasi_Dokumen | Tidak Mempunyai Mine Permit"
+],
+"urutan": 142
+},
+{
+"kode": "KM-04",
+"kategori_kode": "KM",
+"kategori": "Kompetensi & Dokumen Personil",
+"sub": "Tidak membawa Mine Permit (punya)",
+"tipe": "Tindakan",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan_Administrasi_Dokumen | Tidak membawa Mine Permit (Mempunyai Mine Permit)"
+],
+"urutan": 143
+},
+{
+"kode": "KM-05",
+"kategori_kode": "KM",
+"kategori": "Kompetensi & Dokumen Personil",
+"sub": "Pengawas tidak punya kartu kompetensi",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengawasan | Kompetensi Pengawas (Tidak memiliki kartu kompetensi)"
+],
+"urutan": 144
+},
+{
+"kode": "SP-01",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Tidak ada pengawas di area kerja",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengawasan | Tidak ada pengawas"
+],
+"urutan": 145
+},
+{
+"kode": "SP-02",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Pengawas tidak menjalankan fungsinya",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengawasan | Fungsi Pengawas"
+],
+"urutan": 146
+},
+{
+"kode": "SP-03",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Form / checklist tidak diisi",
+"tipe": "Tindakan",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Pengawasan | Tidak mengisi Form/Checklist"
+],
+"urutan": 147
+},
+{
+"kode": "SP-04",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Pekerjaan tidak sesuai rencana (DOP, desain)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pengawasan | Ketidak sesuaian dengan Plan (e.g DOP, Design, dll.)"
+],
+"urutan": 148
+},
+{
+"kode": "SP-05",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Tidak ada panduan kerja (IK / JSA / prosedur)",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan_Administrasi_Dokumen | Tidak ada panduan kerja (IK/JSA/Prosedur)"
+],
+"urutan": 149
+},
+{
+"kode": "SP-06",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "JSA tidak ada di lokasi kerja",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Kelengkapan_Administrasi_Dokumen | JSA tidak terdapat dilokasi"
+],
+"urutan": 150
+},
+{
+"kode": "SP-07",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Melanggar SOP / IK / JSA (lainnya)",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pemenuhan SOP/IK/JSA/Peraturan | Pelanggaran"
+],
+"urutan": 151
+},
+{
+"kode": "SP-08",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "SOP / IK belum disosialisasikan",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Pemenuhan SOP/IK/JSA/Peraturan | Belum disosialisasi"
+],
+"urutan": 152
+},
+{
+"kode": "SP-09",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Tidur / istirahat di area kerja berbahaya",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Karyawan tidur di area disposal"
+],
+"urutan": 153
+},
+{
+"kode": "SP-10",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Berada di garis bahaya (line of fire)",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [],
+"urutan": 154
+},
+{
+"kode": "SP-11",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Orang tidak berwenang masuk area tambang",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [],
+"urutan": 155
+},
+{
+"kode": "SP-12",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Bercanda / bermain di area kerja",
+"tipe": "Tindakan",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [],
+"urutan": 156
+},
+{
+"kode": "SP-13",
+"kategori_kode": "SP",
+"kategori": "Pengawasan & Prosedur",
+"sub": "Bekerja dalam kondisi tidak fit tanpa melapor (sakit, minum obat, mengantuk)",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [],
+"urutan": 157
+},
+{
+"kode": "AL-01",
+"kategori_kode": "AL",
+"kategori": "Alat & Perkakas Kerja",
+"sub": "Hand tools (common tools) tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Kelayakan/Penggunaan Tools | Kelayakan Common Tools"
+],
+"urutan": 158
+},
+{
+"kode": "AL-02",
+"kategori_kode": "AL",
+"kategori": "Alat & Perkakas Kerja",
+"sub": "Power tools tidak layak / tidak berlabel",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelayakan/Penggunaan Tools | Kelayakan Power Tools",
+"Kelayakan/Penggunaan Tools | Pelabelan/Penandaan Power Tools"
+],
+"urutan": 159
+},
+{
+"kode": "AL-03",
+"kategori_kode": "AL",
+"kategori": "Alat & Perkakas Kerja",
+"sub": "Special tools tidak layak / tidak berlabel / belum dikalibrasi",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelayakan/Penggunaan Tools | Kelayakan Special Tools",
+"Kelayakan/Penggunaan Tools | Pelabelan/Penandaan Special Tools",
+"Kelayakan/Penggunaan Tools | Sertifikasi & Kalibrasi Special Tools"
+],
+"urutan": 160
+},
+{
+"kode": "AL-04",
+"kategori_kode": "AL",
+"kategori": "Alat & Perkakas Kerja",
+"sub": "Alat / perkakas dipakai tidak sesuai fungsinya",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Kelayakan/Penggunaan Tools | Kesesuaian penggunaan Common Tools",
+"Kelayakan/Penggunaan Tools | Kesesuaian penggunaan Special Tools",
+"Kelayakan/Penggunaan Tools | Kesesuaian penggunaan Power Tools",
+"Alat Angkat & Alat Penyangga | Alat/Peralatan tidak sesuai dengan fungsinya"
+],
+"urutan": 161
+},
+{
+"kode": "AL-05",
+"kategori_kode": "AL",
+"kategori": "Alat & Perkakas Kerja",
+"sub": "Perlengkapan mesin tidak lengkap / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perlengkapan_Mesin_atau_Peralatan | Perlengkapan Mesin"
+],
+"urutan": 162
+},
+{
+"kode": "AL-06",
+"kategori_kode": "AL",
+"kategori": "Alat & Perkakas Kerja",
+"sub": "Perlengkapan peralatan tidak lengkap / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Perlengkapan_Mesin_atau_Peralatan | Perlengkapan Peralatan"
+],
+"urutan": 163
+},
+{
+"kode": "AA-01",
+"kategori_kode": "AA",
+"kategori": "Pengangkatan (Alat Angkat)",
+"sub": "Alat angkat tidak lulus uji kelayakan",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Alat Angkat & Alat Penyangga | Alat/Peralatan tidak lulus uji kelayakan"
+],
+"urutan": 164
+},
+{
+"kode": "AA-02",
+"kategori_kode": "AA",
+"kategori": "Pengangkatan (Alat Angkat)",
+"sub": "Lifting gear (sling, shackle) tidak layak / tidak bersertifikat / tidak berlabel",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kelayakan/Penggunaan Tools | Kelayakan Lifting Gear",
+"Kelayakan/Penggunaan Tools | Pelabelan/Penandaan Lifting Gear",
+"Kelayakan/Penggunaan Tools | Sertifikasi & Kalibrasi Lifting Gear"
+],
+"urutan": 165
+},
+{
+"kode": "AA-03",
+"kategori_kode": "AA",
+"kategori": "Pengangkatan (Alat Angkat)",
+"sub": "Lifting gear dipakai tidak sesuai",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Kelayakan/Penggunaan Tools | Kesesuaian penggunaan Lifting Gear"
+],
+"urutan": 166
+},
+{
+"kode": "AA-04",
+"kategori_kode": "AA",
+"kategori": "Pengangkatan (Alat Angkat)",
+"sub": "Berada di bawah beban gantung",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Alat Angkat & Alat Penyangga | Posisi Pekerja di bawah beban yang sedang diangkat"
+],
+"urutan": 167
+},
+{
+"kode": "AA-05",
+"kategori_kode": "AA",
+"kategori": "Pengangkatan (Alat Angkat)",
+"sub": "Pengangkatan tanpa signalman",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 168
+},
+{
+"kode": "KT-01",
+"kategori_kode": "KT",
+"kategori": "Bekerja di Ketinggian",
+"sub": "Bekerja di ketinggian tanpa full body harness",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran bekerja di ketinggian | Bekerja tanpa safety body harness"
+],
+"urutan": 169
+},
+{
+"kode": "KT-02",
+"kategori_kode": "KT",
+"kategori": "Bekerja di Ketinggian",
+"sub": "Full body harness tidak double lanyard",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran bekerja di ketinggian | Penggunaan safety body harness tidak double lanyard"
+],
+"urutan": 170
+},
+{
+"kode": "KT-03",
+"kategori_kode": "KT",
+"kategori": "Bekerja di Ketinggian",
+"sub": "Tangga / perancah tidak layak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 171
+},
+{
+"kode": "KT-04",
+"kategori_kode": "KT",
+"kategori": "Bekerja di Ketinggian",
+"sub": "Tepi terbuka tanpa pagar pengaman",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 172
+},
+{
+"kode": "LO-01",
+"kategori_kode": "LO",
+"kategori": "Isolasi Energi (LOTO)",
+"sub": "Tidak memasang LOTO saat perbaikan",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Penandaan | Tidak memasang LOTO"
+],
+"urutan": 173
+},
+{
+"kode": "LO-02",
+"kategori_kode": "LO",
+"kategori": "Isolasi Energi (LOTO)",
+"sub": "LOTO tidak sesuai",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Penandaan | Ketidaksesuaian LOTO"
+],
+"urutan": 174
+},
+{
+"kode": "LO-03",
+"kategori_kode": "LO",
+"kategori": "Isolasi Energi (LOTO)",
+"sub": "Melepas / memindahkan LOTO milik orang lain",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Penandaan | Memindahkan LOTO milik pekerja lain",
+"Penandaan | Melepaskan LOTO milik pekerja lain"
+],
+"urutan": 175
+},
+{
+"kode": "LO-04",
+"kategori_kode": "LO",
+"kategori": "Isolasi Energi (LOTO)",
+"sub": "Energi tersimpan tidak dibuang sebelum perbaikan",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [],
+"urutan": 176
+},
+{
+"kode": "AR-01",
+"kategori_kode": "AR",
+"kategori": "Bekerja di Dekat Air",
+"sub": "Tidak memakai pelampung",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja di dekat air | Tidak menggunakan Pelampung"
+],
+"urutan": 177
+},
+{
+"kode": "AR-02",
+"kategori_kode": "AR",
+"kategori": "Bekerja di Dekat Air",
+"sub": "Perahu ponton tidak layak",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja di dekat air | Perahu ponton tidak layak"
+],
+"urutan": 178
+},
+{
+"kode": "AR-03",
+"kategori_kode": "AR",
+"kategori": "Bekerja di Dekat Air",
+"sub": "Ponton melebihi kapasitas",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja di dekat air | Menyeberang dengan perahu ponton melebihi kapasitas muat"
+],
+"urutan": 179
+},
+{
+"kode": "AR-04",
+"kategori_kode": "AR",
+"kategori": "Bekerja di Dekat Air",
+"sub": "Tepi kolam / sump tanpa pembatas atau railing",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Fasilitas Settling Pond | Tidak ada railing pada area treatment air dan pengambilan sample air"
+],
+"urutan": 180
+},
+{
+"kode": "GT-01",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Retakan pada lereng / tanggul",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Retakan"
+],
+"urutan": 181
+},
+{
+"kode": "GT-02",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Longsor",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Longsor"
+],
+"urutan": 182
+},
+{
+"kode": "GT-03",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Material menggantung",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Material Menggantung"
+],
+"urutan": 183
+},
+{
+"kode": "GT-04",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Undercut",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Undercut"
+],
+"urutan": 184
+},
+{
+"kode": "GT-05",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Tinggi lereng tunggal (single slope) tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Single Slope"
+],
+"urutan": 185
+},
+{
+"kode": "GT-06",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Kemiringan lereng tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Kemiringan Lereng tidak standar"
+],
+"urutan": 186
+},
+{
+"kode": "GT-07",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Embankment / tanggul tidak layak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Geotech and Hydrology | Kondisi Embankment/Tanggulan"
+],
+"urutan": 187
+},
+{
+"kode": "GT-08",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Aliran air / lumpur tidak pada tempatnya",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Geotech and Hydrology | Aliran air / lumpur tidak pada tempatnya"
+],
+"urutan": 188
+},
+{
+"kode": "GT-09",
+"kategori_kode": "GT",
+"kategori": "Geoteknik & Lereng",
+"sub": "Kantung air di lereng / kaki lereng",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Geotech and Hydrology | Terdapat kantung air"
+],
+"urutan": 189
+},
+{
+"kode": "DS-01",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Tidak ada tanggul di area dumping",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Tidak terdapat tanggulan di area Disposal"
+],
+"urutan": 190
+},
+{
+"kode": "DS-02",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Tinggi bundwall tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Tinggi Bundwall tidak standard"
+],
+"urutan": 191
+},
+{
+"kode": "DS-03",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Dumping melewati crest line",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Dumping melewati bibir tebing (crest line)"
+],
+"urutan": 192
+},
+{
+"kode": "DS-04",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Jarak dumping dari crest tidak sesuai (area kering / rawa / air)",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Pelanggaran jarak dumping di area kering",
+"Pelanggaran Dumping di Disposal | Pelanggaran jarak dumping di area rawa",
+"Pelanggaran Dumping di Disposal | Pelanggaran jarak dumping di area air"
+],
+"urutan": 193
+},
+{
+"kode": "DS-05",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Posisi unit dumping tidak tegak lurus tanggul",
+"tipe": "Tindakan",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Posisi Unit dumping tidak tegak lurus dengan tanggulan"
+],
+"urutan": 194
+},
+{
+"kode": "DS-06",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Luas / lebar disposal tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Luas Disposal per fleet tidak sesuai dengan prosedur",
+"Pelanggaran Dumping di Disposal | Lebar disposal tidak standard"
+],
+"urutan": 195
+},
+{
+"kode": "DS-07",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Bendera batas dumping tidak ada / tidak diperbarui",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Tidak ada bendera batas dumping",
+"Pelanggaran Dumping di Disposal | Bendera Batas Dumping tidak di update"
+],
+"urutan": 196
+},
+{
+"kode": "DS-08",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Pita batas / pita elevasi penimbunan tidak ada",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Tidak terdapat pita batas penimbunan",
+"Pelanggaran Dumping di Disposal | Tidak terdapat pita check elevasi penimbunan"
+],
+"urutan": 197
+},
+{
+"kode": "DS-09",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Pengawas disposal tanpa radio / radio rusak / tanpa baterai cadangan",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran Dumping di Disposal | Pengawas tidak membawa radio komunikasi",
+"Pelanggaran Dumping di Disposal | Radio yang dibawa pengawas rusak",
+"Pelanggaran Dumping di Disposal | Tidak tersedia baterai cadangan untuk radio HT Pengawas"
+],
+"urutan": 198
+},
+{
+"kode": "DS-10",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Pos pengawas penimbunan tidak ada / posisi tidak sesuai",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Tidak ada pos pengawasan penimbunan",
+"Fasilitas Tambang | Posisi Pos Pengawasan Penimbunan"
+],
+"urutan": 199
+},
+{
+"kode": "DS-11",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Pos pengawas penimbunan tanpa tanggul pengaman",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Fasilitas Tambang | Tanggul pos pengawas dan toilet tidak ada"
+],
+"urutan": 200
+},
+{
+"kode": "DS-12",
+"kategori_kode": "DS",
+"kategori": "Dumping di Disposal",
+"sub": "Pos pengawas / rotary lamp pos rusak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Tambang | Pos pengawasan rusak / tidak sesuai prosedur",
+"Fasilitas Tambang | Rotary Lamp Pos Pengawasan Penimbunan rusak"
+],
+"urutan": 201
+},
+{
+"kode": "OB-01",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Lebar front loading tidak standar",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Lebar front loading tidak standard"
+],
+"urutan": 202
+},
+{
+"kode": "OB-02",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Top loading tanpa tanggul belakang HD",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Top Loading tanpa tanggul belakang HD"
+],
+"urutan": 203
+},
+{
+"kode": "OB-03",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Beda tinggi akses jalan ke front tanpa tanggul",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Beda tinggi akses jalan menuju front tanpa tanggul"
+],
+"urutan": 204
+},
+{
+"kode": "OB-04",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Unit parkir dekat tebing (< 1,5 × tinggi tebing)",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Terdapat unit parkir di dekat tebing (kurang dari 1,5 tinggi tebing)"
+],
+"urutan": 205
+},
+{
+"kode": "OB-05",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Tanggul area drilling / blasting tidak ada atau tidak standar",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Tidak ada tanggul di area Drilling/Blasting",
+"Pelanggaran OB Removal atau Coal Getting | Tanggul tidak standar di area Drilling/Blasting"
+],
+"urutan": 206
+},
+{
+"kode": "OB-06",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Tidak ada safety line / penandaan di area drilling / blasting",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Tidak ada safety line/penandaan di area Drilling/Blasting"
+],
+"urutan": 207
+},
+{
+"kode": "OB-07",
+"kategori_kode": "OB",
+"kategori": "OB Removal & Coal Getting",
+"sub": "Tidak ada tempat ID card personil di area drilling / blasting",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Pelanggaran OB Removal atau Coal Getting | Tempat menempatkan ID Card Personil di Area Drilling/Blasting"
+],
+"urutan": 208
+},
+{
+"kode": "HD-01",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Sistem pengamanan handak gagal",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Sistem pengamanan gagal"
+],
+"urutan": 209
+},
+{
+"kode": "HD-02",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Orang tidak berkepentingan masuk area handak / peledakan",
+"tipe": "Tindakan",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Akses Orang Tidak Berkepentingan"
+],
+"urutan": 210
+},
+{
+"kode": "HD-03",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Paparan gas beracun hasil peledakan",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Paparan Gas Beracun Hasil Peledakan"
+],
+"urutan": 211
+},
+{
+"kode": "HD-04",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Lontaran batuan (flyrock)",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Flyrock (Lontaran Batuan)"
+],
+"urutan": 212
+},
+{
+"kode": "HD-05",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Getaran tanah (ground vibration) berlebih",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Ground Vibration"
+],
+"urutan": 213
+},
+{
+"kode": "HD-06",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Paparan debu peledakan ke pemukiman",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Paparan Debu Ke Pemukiman"
+],
+"urutan": 214
+},
+{
+"kode": "HD-07",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Personil handak tidak kompeten",
+"tipe": "Tindakan",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Kompetensi Personil tidak memadai"
+],
+"urutan": 215
+},
+{
+"kode": "HD-08",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Misfire (handak tidak meledak)",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Missfire"
+],
+"urutan": 216
+},
+{
+"kode": "HD-09",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Peledakan prematur",
+"tipe": "Kondisi",
+"keparahan": 5,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Bekerja dengan bahan peledak | Premature Blast"
+],
+"urutan": 217
+},
+{
+"kode": "HD-10",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Termometer gudang handak tidak ada / rusak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Gudang Handak | Thermometer tidak tersedia",
+"Fasilitas Gudang Handak | Thermometer rusak"
+],
+"urutan": 218
+},
+{
+"kode": "HD-11",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Kunci / gembok gudang handak tidak ada / rusak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Fasilitas Gudang Handak | Kunci gembok tidak tersedia",
+"Fasilitas Gudang Handak | Kunci gembok rusak"
+],
+"urutan": 219
+},
+{
+"kode": "HD-12",
+"kategori_kode": "HD",
+"kategori": "Bahan Peledak (Handak)",
+"sub": "Tanggul gudang handak tidak standar / rusak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": true,
+"nama_lama": [
+"Fasilitas Gudang Handak | Kondisi tanggul tidak standar / rusak / perlu perawatan"
+],
+"urutan": 220
+},
+{
+"kode": "LB-01",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Ceceran B3 / LB3 ke tanah",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"House Keeping | Terdapat ceceran B3/LB3 ke lingkungan",
+"Fasilitas Workshop | Terdapat ceceran B3/LB3 ke lingkungan",
+"Fasilitas Warehouse | Terdapat ceceran B3/LB3 ke lingkungan"
+],
+"urutan": 221
+},
+{
+"kode": "LB-02",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Ceceran B3 ke badan air",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Bekerja di dekat air | Ceceran B3 ke badan air"
+],
+"urutan": 222
+},
+{
+"kode": "LB-03",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Penyimpanan B3 / LB3 tidak dipisah sesuai karakteristik",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Warehouse | Penyimpanan B3 tidak terpisah sesai dengan karakteristiknya",
+"TPS | Tidak terjadi pemisahan Limbah B3 sesuai dengan karakteristiknya"
+],
+"urutan": 223
+},
+{
+"kode": "LB-04",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Kemasan B3 / LB3 tanpa label",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Warehouse | Tidak ada label B3",
+"TPS | Tidak ada Label LB3 di masing-masing kemasan"
+],
+"urutan": 224
+},
+{
+"kode": "LB-05",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "MSDS tidak ada",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Warehouse | Tidak ada MSDS"
+],
+"urutan": 225
+},
+{
+"kode": "LB-06",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Izin TPS LB3 tidak ada / kedaluwarsa",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"TPS | Ijin tidak ada / expired"
+],
+"urutan": 226
+},
+{
+"kode": "LB-07",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Logbook LB3 tidak diperbarui",
+"tipe": "Kondisi",
+"keparahan": 1,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"TPS | Log Book tidak terupdate"
+],
+"urutan": 227
+},
+{
+"kode": "LB-08",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Oil trap tidak ada / kotor / rusak / tersumbat",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"TPS | Tidak ada oil trap",
+"TPS | Oil Trap kotor / tidak terawat",
+"TPS | Oil Trap rusak / bocor",
+"Fasilitas Main Tank | Oil Trap tersumbat / tidak berfungsi"
+],
+"urutan": 228
+},
+{
+"kode": "LB-09",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Obat kedaluwarsa belum dipisahkan",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Klinik | Obat Kadaluarsa belum dipisahkan"
+],
+"urutan": 229
+},
+{
+"kode": "LB-10",
+"kategori_kode": "LB",
+"kategori": "Lingkungan & Limbah B3",
+"sub": "Tidak ada tempat sampah limbah medis",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Klinik | Tidak ada tempat sampah limbah medis"
+],
+"urutan": 230
+},
+{
+"kode": "BB-01",
+"kategori_kode": "BB",
+"kategori": "Bahan Bakar (Main Tank)",
+"sub": "Tangki BBM rusak / bocor",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Main Tank | Fuel Storage rusak / bocor"
+],
+"urutan": 231
+},
+{
+"kode": "BB-02",
+"kategori_kode": "BB",
+"kategori": "Bahan Bakar (Main Tank)",
+"sub": "Pipa BBM bocor / rusak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Main Tank | Pipa bocor / rusak"
+],
+"urutan": 232
+},
+{
+"kode": "BB-03",
+"kategori_kode": "BB",
+"kategori": "Bahan Bakar (Main Tank)",
+"sub": "Pompa BBM rusak / bocor",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Main Tank | Pompa Fuel rusak / bocor"
+],
+"urutan": 233
+},
+{
+"kode": "BB-04",
+"kategori_kode": "BB",
+"kategori": "Bahan Bakar (Main Tank)",
+"sub": "Filling shed bocor / rusak",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Main Tank | Filling shed bocor / rusak"
+],
+"urutan": 234
+},
+{
+"kode": "BB-05",
+"kategori_kode": "BB",
+"kategori": "Bahan Bakar (Main Tank)",
+"sub": "Secondary containment bocor / rusak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Main Tank | Secondary contaiment bocor / rusak"
+],
+"urutan": 235
+},
+{
+"kode": "SL-01",
+"kategori_kode": "SL",
+"kategori": "Settling Pond & Air Tambang",
+"sub": "Sedimentasi lumpur",
+"tipe": "Kondisi",
+"keparahan": 3,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | Sedimentasi lumpur"
+],
+"urutan": 236
+},
+{
+"kode": "SL-02",
+"kategori_kode": "SL",
+"kategori": "Settling Pond & Air Tambang",
+"sub": "Pintu air rusak / tidak layak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | Kondisi Pintu air rusak / tidak layak"
+],
+"urutan": 237
+},
+{
+"kode": "SL-03",
+"kategori_kode": "SL",
+"kategori": "Settling Pond & Air Tambang",
+"sub": "Geomembran / gorong-gorong rusak",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | Kondisi Geomembran / gorong-gorong rusak / tidak layak."
+],
+"urutan": 238
+},
+{
+"kode": "SL-04",
+"kategori_kode": "SL",
+"kategori": "Settling Pond & Air Tambang",
+"sub": "Air limbah tambang tidak sesuai baku mutu",
+"tipe": "Kondisi",
+"keparahan": 4,
+"kemungkinan": 3,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | Air limbah tambang tidak sesuai baku mutu"
+],
+"urutan": 239
+},
+{
+"kode": "SL-05",
+"kategori_kode": "SL",
+"kategori": "Settling Pond & Air Tambang",
+"sub": "Alat ukur debit air tidak ada / rusak",
+"tipe": "Kondisi",
+"keparahan": 2,
+"kemungkinan": 2,
+"kritis": false,
+"nama_lama": [
+"Fasilitas Settling Pond | AlaT Ukur debit air tidak ada / rusak"
+],
+"urutan": 240
+}
+]
+}

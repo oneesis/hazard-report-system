@@ -366,6 +366,88 @@ async function ensureRosterTable(sql) {
   _rosterTableOk = true;
 }
 
+// ── Deteksi dini: master temuan & lokasi di Neon (2026-10-14) ───────────────
+// Seed dari lib/master-*.json saat tabel masih kosong; setelah itu dikelola Super Admin.
+const Taksonomi = require('../lib/taksonomi');
+let _masterDD = null, _masterDDAt = 0;
+const MASTER_DD_TTL = 5 * 60e3;
+async function ensureMasterDeteksiDini(sql) {
+  await sql`CREATE TABLE IF NOT EXISTS master_kategori (
+    kode TEXT PRIMARY KEY, nama TEXT NOT NULL, lokasi_prioritas JSONB NOT NULL DEFAULT '[]', urutan INT NOT NULL DEFAULT 0)`;
+  await sql`CREATE TABLE IF NOT EXISTS master_temuan (
+    kode TEXT PRIMARY KEY, kategori_kode TEXT NOT NULL, sub TEXT NOT NULL, tipe TEXT NOT NULL,
+    keparahan INT NOT NULL, kemungkinan INT NOT NULL, kritis BOOLEAN NOT NULL DEFAULT false,
+    aktif BOOLEAN NOT NULL DEFAULT true, nama_lama JSONB NOT NULL DEFAULT '[]', urutan INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS master_lokasi (
+    lokasi TEXT NOT NULL, sub TEXT NOT NULL, jenis_area TEXT NOT NULL DEFAULT '', aktif BOOLEAN NOT NULL DEFAULT true,
+    urutan INT NOT NULL DEFAULT 0, PRIMARY KEY (lokasi, sub))`;
+  if (!(await sql`SELECT 1 FROM master_temuan LIMIT 1`).length) {
+    const m = require('../lib/master-temuan.json');
+    await sql`INSERT INTO master_kategori (kode, nama, lokasi_prioritas, urutan)
+      SELECT x.kode, x.nama, x.lokasi_prioritas, x.urutan FROM jsonb_to_recordset(${JSON.stringify(m.kategori)}::jsonb)
+      AS x(kode text, nama text, lokasi_prioritas jsonb, urutan int) ON CONFLICT DO NOTHING`;
+    await sql`INSERT INTO master_temuan (kode, kategori_kode, sub, tipe, keparahan, kemungkinan, kritis, nama_lama, urutan)
+      SELECT x.kode, x.kategori_kode, x.sub, x.tipe, x.keparahan, x.kemungkinan, x.kritis, x.nama_lama, x.urutan
+      FROM jsonb_to_recordset(${JSON.stringify(m.temuan)}::jsonb)
+      AS x(kode text, kategori_kode text, sub text, tipe text, keparahan int, kemungkinan int, kritis boolean, nama_lama jsonb, urutan int)
+      ON CONFLICT DO NOTHING`;
+  }
+  if (!(await sql`SELECT 1 FROM master_lokasi LIMIT 1`).length) {
+    await sql`INSERT INTO master_lokasi (lokasi, sub, jenis_area, urutan)
+      SELECT x.lokasi, x.sub, x.jenis_area, x.urutan FROM jsonb_to_recordset(${JSON.stringify(require('../lib/master-lokasi.json'))}::jsonb)
+      AS x(lokasi text, sub text, jenis_area text, urutan int) ON CONFLICT DO NOTHING`;
+  }
+}
+/** { kategori, temuan (+nama kategori), lokasi } aktif — cache 5 menit per instance. */
+let _masterDDSiap = null; // satu kali per instance: request paralel pertama tidak berebut CREATE TABLE
+async function masterDeteksiDini({ segar = false } = {}) {
+  if (!segar && _masterDD && Date.now() - _masterDDAt < MASTER_DD_TTL) return _masterDD;
+  const sql = getSql();
+  if (!_masterDDSiap) _masterDDSiap = ensureMasterDeteksiDini(sql).catch((e) => { _masterDDSiap = null; throw e; });
+  await _masterDDSiap;
+  const [kategori, temuan, lokasi] = await Promise.all([
+    sql`SELECT * FROM master_kategori ORDER BY urutan`,
+    sql`SELECT t.*, k.nama AS kategori FROM master_temuan t JOIN master_kategori k ON k.kode = t.kategori_kode ORDER BY t.urutan`,
+    sql`SELECT * FROM master_lokasi ORDER BY urutan`,
+  ]);
+  _masterDD = { kategori, temuan, lokasi };
+  _masterDDAt = Date.now();
+  return _masterDD;
+}
+
+/** Hitung risiko Hazard di server (5×5) & lengkapi data laporan. Laporan dengan
+ * kategori/sub di luar master (mis. draft lama) dibiarkan apa adanya. */
+async function _risikoHazard(data) {
+  const m = await masterDeteksiDini();
+  const t = m.temuan.find((x) => x.aktif && x.kode === data.kode_temuan)
+    || m.temuan.find((x) => x.aktif && x.kategori === data.ketidaksesuaian_bahaya && x.sub === data.sub_ketidaksesuaian);
+  if (!t) return null;
+  const lok = String(data.lokasi_bahaya || ''), sub = String(data.sub_lokasi_bahaya || '');
+  const area = (m.lokasi.find((l) => l.lokasi === lok && l.sub === sub) || m.lokasi.find((l) => l.lokasi === lok))?.jenis_area || '';
+  const tgl = String(data.tanggal_kejadian || todayJakarta()).slice(0, 10);
+  const lain = sub ? await getSql()`SELECT data->>'tanggal_kejadian' AS tanggal FROM hazard_report
+    WHERE data->>'kode_temuan' = ${t.kode} AND data->>'lokasi_bahaya' = ${lok} AND data->>'sub_lokasi_bahaya' = ${sub}
+      AND left(data->>'tanggal_kejadian', 10) BETWEEN to_char(${tgl}::date - 30, 'YYYY-MM-DD') AND ${tgl}` : [];
+  const r = Taksonomi.hitung({
+    keparahan: Math.max(t.keparahan, Number(data.keparahan_pelapor) || 0), // pelapor boleh menaikkan
+    kemungkinan: t.kemungkinan, jenisArea: area, berulang: lain.length > 0,
+  });
+  Object.assign(data, {
+    kode_temuan: t.kode, ketidaksesuaian_bahaya: t.kategori, sub_ketidaksesuaian: t.sub,
+    jenis_bahaya: t.tipe === 'Tindakan' ? 'Tindakan Tidak Aman' : 'Kondisi Tidak Aman',
+    keparahan: r.keparahan, kemungkinan: r.kemungkinan, skor_risiko: r.skor, tingkat_risiko: r.tingkat,
+    kelas_temuan: r.kelas, risiko_kritis: t.kritis ? 'Ya' : '', jenis_area: area, temuan_berulang: lain.length ? 'Ya' : '',
+  });
+  // Batas waktu otomatis mengikuti tingkat final server (bisa lebih ketat dari pratinjau form,
+  // mis. karena berulang). Isian manual pelapor tidak disentuh.
+  if (data.batas_auto === '1') {
+    const d = new Date(`${todayJakarta()}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + r.batasHari);
+    data.batas_waktu = d.toISOString().slice(0, 10);
+  }
+  return r;
+}
+
 function todayJakarta() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 }
@@ -1439,6 +1521,9 @@ async function submitHazardReport(sheets, data) {
   if (data.tanda_tangan && String(data.tanda_tangan).startsWith('data:'))
     data.tanda_tangan = await saveBase64ImageToDrive(data.tanda_tangan, process.env.FOLDER_HAZARD_ID, id + '-TTD.png').catch(() => data.tanda_tangan);
 
+  // Matriks 5×5 dihitung ulang di server (pratinjau form tidak dipercaya). Gagal → tetap simpan.
+  try { await _risikoHazard(data); } catch (e) { console.error('[risikoHazard]', e.message); }
+
   const row = [
     id, new Date().toISOString(), data.perusahaan, data.subcont1, data.nama, data.nik,
     data.jabatan, data.departemen, data.no_whatsapp, data.tanggal_kejadian, data.shift_kejadian,
@@ -1455,6 +1540,10 @@ async function submitHazardReport(sheets, data) {
   _hzHeaders.forEach((h, i) => { _hzData[normalizeHeader(h)] = row[i] ?? ''; });
   if (data.client_ref) _hzData.client_ref = String(data.client_ref);
   _hzData.nik_pic = data.nik_pic || '';
+  for (const k of ['sub_lokasi_bahaya', 'sub_lokasi_lainnya', 'kode_temuan', 'keparahan', 'keparahan_pelapor', 'kemungkinan',
+    'skor_risiko', 'kelas_temuan', 'risiko_kritis', 'jenis_area', 'temuan_berulang']) {
+    if (data[k] !== undefined && data[k] !== '') _hzData[k] = data[k];
+  }
   const _hzDup = await _insertOnce('hazard_report', data.client_ref, () => getSql()`
     INSERT INTO hazard_report (id, nik, perusahaan, status_perbaikan, data)
     VALUES (${id}, ${_hzData.nik || ''}, ${_hzData.perusahaan || ''}, ${_hzData.status_perbaikan || 'OPEN'}, ${JSON.stringify(_hzData)}::jsonb)`, 'Hazard Report');
@@ -2977,7 +3066,12 @@ module.exports = async (req, res) => {
           }
           break;
         }
-        case 'masterLokasi':         result = await getSheetData(sheets, 'Master_Lokasi'); break;
+        case 'masterLokasi': {
+          // Lokasi + sub-lokasi + jenis area (Neon). Kunci pertama LOKASI — kompatibel form lama.
+          const m = await masterDeteksiDini();
+          result = m.lokasi.filter((l) => l.aktif).map((l) => ({ LOKASI: l.lokasi, SUB_LOKASI: l.sub, JENIS_AREA: l.jenis_area }));
+          break;
+        }
         case 'masterJenisInspeksi':  result = await getSheetData(sheets, 'Jenis_Inspeksi'); break;
         case 'inspectionChecklist': {
           const sheet = String(type || '').trim().toUpperCase();
@@ -2991,7 +3085,16 @@ module.exports = async (req, res) => {
             if (!INSPECTION_SHEETS.includes(sheet)) throw new Error('Jenis inspeksi tidak valid.');
             result = await getSheetHeaders(sheets, sheet);
           } else {
-            result = await getSheetData(sheets, 'Master_Temuan');
+            // Taksonomi v3 (Neon). Kunci lama (KETIDAKSESUAIAN / SUB KETIDAKSESUAIAN / RESIKO)
+            // dipertahankan; RESIKO = tingkat default 5×5 sebelum penyesuaian lokasi.
+            const m = await masterDeteksiDini();
+            const prio = Object.fromEntries(m.kategori.map((k) => [k.kode, k.lokasi_prioritas]));
+            result = m.temuan.filter((t) => t.aktif).map((t) => ({
+              KODE: t.kode, KATEGORI_KODE: t.kategori_kode, 'KETIDAKSESUAIAN': t.kategori, 'SUB KETIDAKSESUAIAN': t.sub,
+              TIPE: t.tipe, KEPARAHAN: t.keparahan, KEMUNGKINAN: t.kemungkinan, KRITIS: t.kritis,
+              RESIKO: Taksonomi.hitung({ keparahan: t.keparahan, kemungkinan: t.kemungkinan }).tingkat,
+              LOKASI_PRIORITAS: prio[t.kategori_kode] || [],
+            }));
           }
           break;
         }
@@ -3702,3 +3805,4 @@ module.exports = async (req, res) => {
 };
 module.exports.cronKuisST = cronKuisST;
 module.exports.cronAlurLaporan = cronAlurLaporan;
+module.exports._risikoHazard = _risikoHazard; // dipakai uji lokal (baca saja)

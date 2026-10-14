@@ -154,7 +154,10 @@ function renderDetail(r) {
   const riskVal = isInspection
     ? getReportValue(r, ['shift_inspeksi','shift_kejadian'], '-')
     : getReportValue(r, ['tingkat_resiko','tingkat_risiko','risiko','risk_level'], '-');
-  set('dfRisk', riskVal);
+  // Matriks 5×5 (deteksi dini, 2026-10-14): skor, kelas Mayor/Minor, risiko kritis, kode temuan.
+  const skor = !isInspection && getReportValue(r, ['skor_risiko'], '');
+  set('dfRisk', skor ? `${riskVal} · skor ${skor} (K${r.kemungkinan} × P${r.keparahan}) · ${r.kelas_temuan || ''}${r.risiko_kritis === 'Ya' ? ' · Risiko kritis' : ''}` : riskVal);
+  if (!isInspection && r.kode_temuan) set('dfCategory', `${catVal} · ${r.kode_temuan} ${getReportValue(r, ['sub_ketidaksesuaian'], '')}`);
 
   // Description & recommendation
   document.getElementById('dfDescTitle').textContent = isInspection ? 'Temuan Inspeksi' : 'Deskripsi Temuan';
@@ -679,7 +682,8 @@ function normalizeImageUrl(url) {
 }
 
 function getDashboardLocation(r) {
-  return String(getReportValue(r, ['lokasi_bahaya','lokasi_inspeksi','lokasi','location'], ''));
+  const sub = getReportValue(r, ['sub_lokasi_bahaya', 'sub_lokasi_lainnya'], '');
+  return [getReportValue(r, ['lokasi_bahaya','lokasi_inspeksi','lokasi','location'], ''), sub].filter(Boolean).join(' — ');
 }
 
 function getDashboardDescription(r) {

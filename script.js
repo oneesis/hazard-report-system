@@ -198,6 +198,17 @@ function resetNamaDropdown() {
 // ========================================
 // STEP 2 - DETAIL KEJADIAN
 // ========================================
+// Deteksi dini (2026-10-14): lokasi → sub-lokasi dari master Neon (+ "Lainnya" yang dikurasi
+// SHE), sub terakhir per lokasi diingat, tombol titik cepat untuk area Fasilitas.
+const SUB_LAINNYA = "__lainnya__";
+const TITIK_CEPAT = ["Toilet", "Pantry / Dapur", "Pos Security", "Parkiran", "Pencucian Sarana", "TPS Sampah", "Gazebo", "Halaman", "Kamar / Ruang Kerja"];
+const _subLokKey = (lok) => "onesap_sublokasi_" + lok;
+const _val = (id) => document.getElementById(id)?.value || "";
+
+function jenisAreaLokasi(lok) {
+  return (masterLokasi.find(l => l.LOKASI === lok) || {}).JENIS_AREA || "";
+}
+
 function loadLokasiOptions() {
   const select = document.getElementById("lokasi_bahaya");
   if (!select) return;
@@ -205,77 +216,197 @@ function loadLokasiOptions() {
   select.innerHTML = '<option value="">Pilih Lokasi Bahaya</option>';
 
   const list = [...new Set(
-    masterLokasi.map(item => {
-      const key = Object.keys(item)[0];
-      return item[key];
-    }).filter(Boolean)
+    masterLokasi.map(item => item.LOKASI || item[Object.keys(item)[0]]).filter(Boolean)
   )].sort();
   list.forEach(item => select.add(new Option(item, item)));
+}
+
+function loadSubLokasiOptions(pilih) {
+  const lok = _val("lokasi_bahaya");
+  const grp = document.getElementById("grpSubLokasi");
+  const sel = document.getElementById("sub_lokasi_bahaya");
+  if (!sel) return;
+  const sebelum = pilih !== undefined ? pilih : sel.value;
+  sel.innerHTML = '<option value="">Pilih Sub-Lokasi</option>';
+  const subs = masterLokasi.filter(l => l.LOKASI === lok && l.SUB_LOKASI).map(l => l.SUB_LOKASI);
+  subs.forEach(s => sel.add(new Option(s, s)));
+  if (lok) sel.add(new Option("Lainnya (tulis sendiri)", SUB_LAINNYA));
+  if (grp) grp.style.display = lok ? "" : "none";
+
+  const ada = (v) => v && [...sel.options].some(o => o.value === v);
+  let v = ada(sebelum) ? sebelum : "";
+  if (!v && subs.length === 1) v = subs[0];
+  if (!v) { try { const t = localStorage.getItem(_subLokKey(lok)); if (ada(t)) v = t; } catch {} }
+  sel.value = v;
+  toggleSubLainnya();
+  renderTitikCepat();
+}
+
+function toggleSubLainnya() {
+  const inp = document.getElementById("sub_lokasi_lainnya");
+  if (inp) inp.style.display = _val("sub_lokasi_bahaya") === SUB_LAINNYA ? "" : "none";
+}
+
+function renderTitikCepat() {
+  const box = document.getElementById("titikCepat");
+  const ta = document.getElementById("detail_lokasi_bahaya");
+  if (!box || !ta) return;
+  if (jenisAreaLokasi(_val("lokasi_bahaya")) !== "Fasilitas") { box.style.display = "none"; box.innerHTML = ""; return; }
+  box.style.display = "";
+  box.innerHTML = "";
+  TITIK_CEPAT.forEach(t => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = t;
+    if (ta.value.split(/,\s*/).includes(t)) b.classList.add("on");
+    b.addEventListener("click", () => {
+      const isi = ta.value.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+      ta.value = (isi.includes(t) ? isi.filter(s => s !== t) : [...isi, t]).join(", ");
+      b.classList.toggle("on");
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    box.appendChild(b);
+  });
+}
+
+function onLokasiChange() {
+  loadSubLokasiOptions("");
+  loadKetidaksesuaianOptions(); // urutan kategori mengikuti lokasi
+  autoFillRisiko();             // jenis area memengaruhi kemungkinan
 }
 
 // ========================================
 // STEP 3 - IDENTIFIKASI BAHAYA
 // ========================================
+// Kategori: "Khusus lokasi ini" → "Umum" → "Kategori lain"; difilter jenis bahaya (Kondisi/
+// Tindakan). Sub bisa dicari lintas kategori (kategori kosong → semua sub per grup);
+// memilih sub mengisi kategori & jenis bahaya otomatis.
+let keparahanPelapor = 0;
+let _syncTaksonomi = false;
+const _tipeJenis = () => ({ "Kondisi Tidak Aman": "Kondisi", "Tindakan Tidak Aman": "Tindakan" })[_val("jenis_bahaya")] || "";
+const _temuanCocok = () => { const t = _tipeJenis(); return masterTemuan.filter(i => !t || i.TIPE === t); };
+const _setPilihan = (choices, id, v) => {
+  const el = document.getElementById(id);
+  if (choices) { try { choices.setChoiceByValue(v); } catch {} }
+  if (el) el.value = v;
+};
+
+function _isiGrup(select, grup) {
+  grup.filter(g => g.items.length).forEach(g => {
+    const og = document.createElement("optgroup");
+    og.label = g.label;
+    g.items.forEach(v => og.appendChild(new Option(v, v)));
+    select.appendChild(og);
+  });
+}
+
 function loadKetidaksesuaianOptions() {
   const select = document.getElementById("ketidaksesuaian_bahaya");
   if (!select) return;
-
+  const sebelum = select.value;
+  const lok = _val("lokasi_bahaya");
   select.innerHTML = '<option value="">Pilih Ketidaksesuaian Bahaya</option>';
 
-  const list = [...new Set(
-    masterTemuan.map(item => getValue(item, ["KETIDAKSESUAIAN", "KETIDAKSESUAIAN BAHAYA", "KETIDAKSESUAIAN_BAHAYA"])).filter(Boolean)
-  )].sort();
-  list.forEach(item => select.add(new Option(item, item)));
+  const kat = [];
+  _temuanCocok().forEach(i => { if (!kat.some(k => k.nama === i.KETIDAKSESUAIAN)) kat.push({ nama: i.KETIDAKSESUAIAN, prio: i.LOKASI_PRIORITAS || [] }); });
+  _isiGrup(select, [
+    { label: "Khusus lokasi ini", items: kat.filter(k => lok && k.prio.includes(lok)).map(k => k.nama) },
+    { label: "Umum (semua lokasi)", items: kat.filter(k => !k.prio.length).map(k => k.nama) },
+    { label: "Kategori lain", items: kat.filter(k => k.prio.length && !(lok && k.prio.includes(lok))).map(k => k.nama) },
+  ]);
+  const ada = sebelum && [...select.options].some(o => o.value === sebelum);
+  if (ada) select.value = sebelum;
 
   initializeKetidaksesuaianChoices();
+  if (ada) _setPilihan(ketidaksesuaianChoices, "ketidaksesuaian_bahaya", sebelum);
+  loadSubKetidaksesuaianOptions(_val("sub_ketidaksesuaian"));
 }
 
-function loadSubKetidaksesuaianOptions() {
-  const ketidaksesuaian = document.getElementById("ketidaksesuaian_bahaya").value;
+function loadSubKetidaksesuaianOptions(pilih) {
+  const kategori = _val("ketidaksesuaian_bahaya");
   const select = document.getElementById("sub_ketidaksesuaian");
-  const risiko = document.getElementById("tingkat_risiko");
+  if (!select) return;
+  select.innerHTML = '<option value="">Pilih / cari sub ketidaksesuaian</option>';
 
-  select.innerHTML = '<option value="">Pilih Sub Ketidaksesuaian</option>';
-  if (risiko) risiko.value = "";
-
-  if (!ketidaksesuaian) {
-    initializeSubKetidaksesuaianChoices();
-    return;
+  const items = _temuanCocok();
+  if (kategori) {
+    items.filter(i => i.KETIDAKSESUAIAN === kategori).forEach(i => select.add(new Option(i["SUB KETIDAKSESUAIAN"], i["SUB KETIDAKSESUAIAN"])));
+  } else {
+    const per = {};
+    items.forEach(i => (per[i.KETIDAKSESUAIAN] ||= []).push(i["SUB KETIDAKSESUAIAN"]));
+    _isiGrup(select, Object.entries(per).map(([label, v]) => ({ label, items: v })));
   }
-
-  const list = [...new Set(
-    masterTemuan.filter(item => {
-      const kategori = item["KETIDAKSESUAIAN"] || item["KETIDAKSESUAIAN BAHAYA"];
-      return kategori === ketidaksesuaian;
-    }).map(item => item["SUB KETIDAKSESUAIAN"]).filter(Boolean)
-  )].sort();
-  list.forEach(item => select.add(new Option(item, item)));
-
+  const v = typeof pilih === "string" ? pilih : "";
+  const ada = v && [...select.options].some(o => o.value === v);
+  if (ada) select.value = v;
   initializeSubKetidaksesuaianChoices();
+  if (ada) _setPilihan(subKetidaksesuaianChoices, "sub_ketidaksesuaian", v);
+  if (!_syncTaksonomi) autoFillRisiko();
+}
+
+function onJenisBahayaChange() {
+  const item = masterTemuan.find(i => i["SUB KETIDAKSESUAIAN"] === _val("sub_ketidaksesuaian"));
+  if (item && _tipeJenis() && item.TIPE !== _tipeJenis()) _setPilihan(subKetidaksesuaianChoices, "sub_ketidaksesuaian", "");
+  loadKetidaksesuaianOptions();
 }
 
 function autoFillRisiko() {
-  const ketidaksesuaian = document.getElementById("ketidaksesuaian_bahaya").value;
-  const sub = document.getElementById("sub_ketidaksesuaian").value;
+  const panel = document.getElementById("panelRisiko");
+  const hidden = document.getElementById("tingkat_risiko");
+  const item = masterTemuan.find(i => i["SUB KETIDAKSESUAIAN"] === _val("sub_ketidaksesuaian"));
+  if (!item) {
+    if (hidden) hidden.value = "";
+    if (panel) panel.innerHTML = '<div class="pr-kosong">Terisi otomatis setelah memilih sub ketidaksesuaian.</div>';
+    return;
+  }
 
-  const selected = masterTemuan.find(item => {
-    const kategori = item["KETIDAKSESUAIAN"] || item["KETIDAKSESUAIAN BAHAYA"];
-    return kategori === ketidaksesuaian && item["SUB KETIDAKSESUAIAN"] === sub;
+  // Sub dipilih lewat pencarian lintas kategori → lengkapi kategori & jenis bahaya.
+  if (_val("ketidaksesuaian_bahaya") !== item.KETIDAKSESUAIAN || (_tipeJenis() && _tipeJenis() !== item.TIPE)) {
+    _syncTaksonomi = true;
+    const jenis = document.getElementById("jenis_bahaya");
+    if (jenis) jenis.value = item.TIPE === "Tindakan" ? "Tindakan Tidak Aman" : "Kondisi Tidak Aman";
+    loadKetidaksesuaianOptions();
+    _setPilihan(ketidaksesuaianChoices, "ketidaksesuaian_bahaya", item.KETIDAKSESUAIAN);
+    loadSubKetidaksesuaianOptions(item["SUB KETIDAKSESUAIAN"]);
+    _syncTaksonomi = false;
+  } else if (!_val("jenis_bahaya")) {
+    document.getElementById("jenis_bahaya").value = item.TIPE === "Tindakan" ? "Tindakan Tidak Aman" : "Kondisi Tidak Aman";
+  }
+
+  const minP = Number(item.KEPARAHAN) || 1;
+  const p = Math.max(minP, keparahanPelapor || 0);
+  const r = Taksonomi.hitung({ keparahan: p, kemungkinan: item.KEMUNGKINAN, jenisArea: jenisAreaLokasi(_val("lokasi_bahaya")) });
+  if (hidden) hidden.value = r.tingkat;
+
+  const N = Taksonomi.NAMA_KEPARAHAN, K = Taksonomi.NAMA_KEMUNGKINAN;
+  const opsi = [];
+  for (let i = minP; i <= 5; i++) opsi.push(`<option value="${i}"${i === p ? " selected" : ""}>${i} — ${N[i]}</option>`);
+  panel.innerHTML = `
+    <div class="pr-atas">
+      <span class="pr-tingkat ${r.tingkat.toLowerCase()}">${r.tingkat}</span>
+      <span class="pr-lencana ${r.kelas.toLowerCase()}">${r.kelas.toUpperCase()}</span>
+      ${item.KRITIS ? '<span class="pr-lencana kritis">RISIKO KRITIS</span>' : ""}
+    </div>
+    <div class="pr-rinci">
+      <div><b>Keparahan</b><select id="keparahan_pelapor" aria-label="Keparahan">${opsi.join("")}</select></div>
+      <div><b>Kemungkinan</b>${r.kemungkinan} — ${K[r.kemungkinan]}</div>
+      <div><b>Skor</b>${r.kemungkinan} × ${r.keparahan} = ${r.skor}</div>
+      <div><b>Batas perbaikan</b>${r.batasHari} hari</div>
+    </div>
+    ${r.tingkat === "Ekstrem" ? '<div class="pr-catatan stop">Risiko EKSTREM: hentikan pekerjaan di area ini dan segera lapor pengawas.</div>' : ""}
+    <div class="pr-catatan">Kemungkinan dihitung otomatis dari jenis temuan dan lokasi. Keparahan boleh dinaikkan bila kondisinya lebih parah.</div>`;
+  panel.querySelector("#keparahan_pelapor").addEventListener("change", (e) => {
+    keparahanPelapor = Number(e.target.value) > minP ? Number(e.target.value) : 0;
+    autoFillRisiko();
   });
-
-  if (!selected) return;
-
-  document.getElementById("tingkat_risiko").value = selected["RESIKO"] || selected["TINGKAT RESIKO"] || "";
-  autoFillBatasWaktu(document.getElementById("tingkat_risiko").value);
+  autoFillBatasWaktu(r.tingkat);
 }
 
-// Batas waktu otomatis dari tingkat risiko (fitur 2.3, 2026-10-07). Tetap bisa diubah;
-// isian manual pelapor tidak ditimpa.
-// ponytail: jumlah hari tetap di sini — nanti dipindah ke pengaturan Super Admin.
-const BATAS_HARI_PER_RISIKO = { HIGH: 1, "RISIKO TINGGI": 1, MEDIUM: 3, LOW: 7 };
+// Batas waktu otomatis dari tingkat risiko 5×5 (Ekstrem/Tinggi 1, Sedang 3, Rendah 7 hari).
+// Tetap bisa diubah; isian manual pelapor tidak ditimpa.
 function autoFillBatasWaktu(risiko) {
   const el = document.getElementById("batas_waktu");
-  const hari = BATAS_HARI_PER_RISIKO[String(risiko || "").trim().toUpperCase()];
+  const hari = Taksonomi.BATAS_HARI[risiko];
   if (!el || !hari) return;
   if (el.value && el.dataset.auto !== "1") return; // sudah diisi manual
   const d = new Date();
@@ -557,6 +688,16 @@ function loadDraft() {
           } catch(e) {}
         }
       }
+      loadSubLokasiOptions(data.sub_lokasi_lainnya ? SUB_LAINNYA : (data.sub_lokasi_bahaya || ""));
+      const lainEl = document.getElementById("sub_lokasi_lainnya");
+      if (lainEl) lainEl.value = data.sub_lokasi_lainnya || "";
+      loadKetidaksesuaianOptions();
+    }
+    keparahanPelapor = Number(data.keparahan_pelapor) || 0;
+    if (data.jenis_bahaya) {
+      const jEl = document.getElementById("jenis_bahaya");
+      if (jEl) jEl.value = data.jenis_bahaya;
+      loadKetidaksesuaianOptions();
     }
 
     if (data.ketidaksesuaian_bahaya) {
@@ -569,20 +710,7 @@ function loadDraft() {
           } catch(e) {}
         }
       }
-      loadSubKetidaksesuaianOptions();
-      
-      if (data.sub_ketidaksesuaian) {
-        const subEl = document.getElementById("sub_ketidaksesuaian");
-        if (subEl) {
-          subEl.value = data.sub_ketidaksesuaian;
-          if (subKetidaksesuaianChoices) {
-            try {
-              subKetidaksesuaianChoices.setChoiceByValue(data.sub_ketidaksesuaian);
-            } catch(e) {}
-          }
-        }
-        autoFillRisiko();
-      }
+      loadSubKetidaksesuaianOptions(data.sub_ketidaksesuaian || "");
     }
 
     if (data.perusahaan_pic) {
@@ -1021,7 +1149,9 @@ function validateSection1() {
 }
 
 function validateSection2() {
-  return validateRequiredFields(["tanggal_kejadian", "shift_kejadian", "lokasi_bahaya", "detail_lokasi_bahaya"]);
+  const ids = ["tanggal_kejadian", "shift_kejadian", "lokasi_bahaya", "sub_lokasi_bahaya"];
+  if (_val("sub_lokasi_bahaya") === SUB_LAINNYA) ids.push("sub_lokasi_lainnya");
+  return validateRequiredFields(ids);
 }
 
 function validateSection3() {
@@ -1204,6 +1334,8 @@ function getFormData() {
     tanggal_kejadian: document.getElementById("tanggal_kejadian")?.value || "",
     shift_kejadian: document.getElementById("shift_kejadian")?.value || "",
     lokasi_bahaya: document.getElementById("lokasi_bahaya")?.value || "",
+    sub_lokasi_bahaya: _val("sub_lokasi_bahaya") === SUB_LAINNYA ? "" : _val("sub_lokasi_bahaya"),
+    sub_lokasi_lainnya: _val("sub_lokasi_bahaya") === SUB_LAINNYA ? _val("sub_lokasi_lainnya").trim() : "",
     detail_lokasi_bahaya: document.getElementById("detail_lokasi_bahaya")?.value || "",
 
     jenis_bahaya: document.getElementById("jenis_bahaya")?.value || "",
@@ -1211,6 +1343,8 @@ function getFormData() {
     sub_ketidaksesuaian: document.getElementById("sub_ketidaksesuaian")?.value || "",
     deskripsi_bahaya: document.getElementById("deskripsi_bahaya")?.value || "",
     tingkat_risiko: document.getElementById("tingkat_risiko")?.value || "",
+    kode_temuan: (masterTemuan.find(i => i["SUB KETIDAKSESUAIAN"] === _val("sub_ketidaksesuaian")) || {}).KODE || "",
+    keparahan_pelapor: keparahanPelapor || "",
     upload_foto_bahaya: document.getElementById("upload_foto_bahaya")?.dataset?.base64 || "",
 
     tindakan_langsung: document.getElementById("tindakan_langsung")?.value || "",
@@ -1228,6 +1362,7 @@ function getFormData() {
       return masterKaryawan.find(r => r["PERUSAHAAN"] === p && r["SUBCONT"] === s && r["NAMA"] === n)?.["NIK"] || "";
     })(),
     batas_waktu: document.getElementById("batas_waktu")?.value || "",
+    batas_auto: document.getElementById("batas_waktu")?.dataset.auto === "1" ? "1" : "",
 
     pernyataan: document.getElementById("pernyataan")?.checked ? "Ya" : "Tidak",
     tanda_tangan: signaturePad && !signaturePad.isEmpty() ? signaturePad.toDataURL("image/png") : ""
@@ -1290,6 +1425,7 @@ async function submitForm() {
     if (result.status === "success") {
       if (typeof MySignature !== "undefined") MySignature.remember(data.tanda_tangan); // simpan bila tanda tangan baru (fitur 2.1)
       FormDefaults.rememberLokasi("hr", data.lokasi_bahaya);
+      if (data.sub_lokasi_bahaya) { try { localStorage.setItem(_subLokKey(data.lokasi_bahaya), data.sub_lokasi_bahaya); } catch {} }
       clearDraft(); // dulu draft tak dihapus → isian lama muncul lagi saat form dibuka
       SubmitResult.show({
         title: "Hazard Report Terkirim", id: result.id,
@@ -1391,8 +1527,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Photo upload preview
     document.getElementById("upload_foto_bahaya")?.addEventListener("change", previewFotoBahaya);
 
-    document.getElementById("ketidaksesuaian_bahaya")?.addEventListener("change", loadSubKetidaksesuaianOptions);
-    document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", autoFillRisiko);
+    document.getElementById("lokasi_bahaya")?.addEventListener("change", onLokasiChange);
+    document.getElementById("sub_lokasi_bahaya")?.addEventListener("change", toggleSubLainnya);
+    document.getElementById("jenis_bahaya")?.addEventListener("change", onJenisBahayaChange);
+    document.getElementById("ketidaksesuaian_bahaya")?.addEventListener("change", () => { if (!_syncTaksonomi) loadSubKetidaksesuaianOptions(""); });
+    document.getElementById("sub_ketidaksesuaian")?.addEventListener("change", () => { if (!_syncTaksonomi) { keparahanPelapor = 0; autoFillRisiko(); } });
 
     document.getElementById("perusahaan_pic")?.addEventListener("change", loadSubcontPicOptions);
     document.getElementById("subcont2")?.addEventListener("change", loadNamaPicOptions);

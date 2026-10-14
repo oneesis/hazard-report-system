@@ -180,15 +180,21 @@
           </select>
         </div>
 
+        <div class="form-group" id="grpSubLokasi" style="display:none">
+          <label>SUB-LOKASI <span class="required">*</span></label>
+          <select id="sub_lokasi_bahaya">
+            <option value="">Pilih Sub-Lokasi</option>
+          </select>
+          <input type="text" id="sub_lokasi_lainnya" maxlength="80" placeholder="Tulis nama tempatnya (akan dicek SHE)" style="display:none;margin-top:8px" />
+        </div>
+
         <div class="form-group">
-          <label>
-            DETAIL LOKASI BAHAYA
-            <span class="required">*</span>
-          </label>
+          <label>PATOKAN / DETAIL LOKASI</label>
+          <div id="titikCepat" class="titik-cepat" style="display:none"></div>
           <textarea
             id="detail_lokasi_bahaya"
-            rows="4"
-            placeholder="Contoh: Dekat panel listrik sebelah utara."
+            rows="3"
+            placeholder="Opsional. Contoh: dekat panel listrik sebelah utara."
           ></textarea>
         </div>
 
@@ -252,15 +258,13 @@
             ></textarea>
         </div>
 
-        <!-- TINGKAT RISIKO -->
+        <!-- TINGKAT RISIKO — matriks 5×5, dihitung otomatis (lib/taksonomi.js) -->
         <div class="form-group">
             <label>TINGKAT RISIKO</label>
-            <input
-            type="text"
-            id="tingkat_risiko"
-            readonly
-            placeholder="Akan terisi otomatis"
-            />
+            <input type="hidden" id="tingkat_risiko" />
+            <div id="panelRisiko" class="panel-risiko">
+              <div class="pr-kosong">Terisi otomatis setelah memilih sub ketidaksesuaian.</div>
+            </div>
         </div>
 
                     <!-- UPLOAD FOTO BAHAYA -->
@@ -543,6 +547,7 @@
     renderUserProfile();
   });
 </script>
+<script src="lib/taksonomi.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
