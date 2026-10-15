@@ -741,6 +741,7 @@ async function cronDeteksiDini({ dry = false } = {}) {
       await kirim(penerima, subjek, teks, 'https://sap-ebl.vercel.app/inspection-form.html?type=INS_JA');
     }
   }
+  if (!dry) await sql`DELETE FROM cache_kv WHERE kunci = 'beranda'`.catch(() => {});
   if (!dry) try { hasil.laporanBulanan = await simpanLaporanBulanan(sql, d); } catch (e) { hasil.laporanBulananGalat = e.message; }
   console.log('[deteksi-dini]', JSON.stringify({ ...hasil, peringatan: hasil.peringatan.length }));
   return hasil;
@@ -793,7 +794,28 @@ function kategoriCuaca(k, mm) {
 }
 const IKON_CUACA = (k, mm) => kategoriCuaca(k, mm)[1];
 /** Ringkasan untuk semua pengguna: fokus minggu ini (area paling berisiko + penyebab insidennya) & cuaca. */
+// Cache bersama lintas instance server (tabel cache_kv) untuk hasil berat yang SAMA bagi semua pengguna
+// (2026-10-15, hemat kuota transfer Neon): tiap instance baru tak perlu membaca ulang semua temuan.
+let _cacheKvOk = false;
+async function _cacheBersama(kunci, ttlMenit, hitung) {
+  const sql = getSql();
+  if (!_cacheKvOk) {
+    await sql`CREATE TABLE IF NOT EXISTS cache_kv (kunci TEXT PRIMARY KEY, data JSONB NOT NULL, dibuat TIMESTAMPTZ NOT NULL DEFAULT now())`;
+    _cacheKvOk = true;
+  }
+  const [r] = await sql`SELECT data FROM cache_kv WHERE kunci = ${kunci} AND dibuat > now() - make_interval(mins => ${ttlMenit})`;
+  if (r) return r.data;
+  const data = await hitung();
+  await sql`INSERT INTO cache_kv (kunci, data, dibuat) VALUES (${kunci}, ${JSON.stringify(data)}::jsonb, now())
+    ON CONFLICT (kunci) DO UPDATE SET data = EXCLUDED.data, dibuat = now()`;
+  return data;
+}
+
+/** Beranda: fokus minggu ini & cuaca — cache bersama 30 menit, dikosongkan cron pagi. */
 async function dataBeranda() {
+  return _cacheBersama('beranda', 30, _hitungBeranda);
+}
+async function _hitungBeranda() {
   const sql = getSql();
   const d = await dataDeteksiDini({ role: 'SUPER_ADMIN', perusahaan: '' });
   const area = d.lokasi.find((l) => l.status !== 'hijau') || d.lokasi[0];
@@ -1540,15 +1562,17 @@ async function getAllReports(sheets, nik, nama, role, perusahaan) {
 
 // Absensi Safety Talk milik user sbg "laporan" ringkas untuk feed beranda —
 // join ke schedule buat tanggal + judul materi. Scope perusahaan spt getter lain.
-async function getSafetyTalkFeed(auth) {
+async function getSafetyTalkFeed(auth, milik) {
   const sql = getSql();
   let rows;
+  const n = milik?.nik || '', m = milik?.nama || '';
   try {
     rows = await sql`
       SELECT a.schedule_id, a.nik, a.nama, a.perusahaan, a.status_kehadiran, a.checked_at,
              s.tanggal AS s_tanggal, s.bulan AS s_bulan, s.judul_materi
       FROM safety_talk_absensi a
-      LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id`;
+      LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id
+      WHERE ${!milik} OR (${n} <> '' AND lower(trim(a.nik)) = ${n}) OR (${m} <> '' AND lower(trim(a.nama)) = ${m})`;
   } catch { return { status: 'success', data: [] }; }
   let data = rows.map(r => ({
     id: `ST-${r.schedule_id}-${r.nik}`,
@@ -1573,10 +1597,11 @@ async function getSafetyTalkFeed(auth) {
 // bisa digabung dgn HR/INS di sisi klien. Selalu difilter ke kepemilikan user (nik/nama);
 // endpoint TERPISAH dari getAllReports agar halaman Export (HR/INS) tak terpengaruh.
 async function getMyActivityExtras(sheets, auth) {
+  const milik = { nik: String(auth?.nik || '').trim().toLowerCase(), nama: String(auth?.nama || '').trim().toLowerCase() };
   const [sbo, pc, st] = await Promise.all([
-    getSBOReports(sheets, auth).catch(() => ({ data: [] })),
-    getPCReports(sheets, auth).catch(() => ({ data: [] })),
-    getSafetyTalkFeed(auth).catch(() => ({ data: [] })),
+    getSBOReports(sheets, auth, false, milik).catch(() => ({ data: [] })),
+    getPCReports(sheets, auth, false, milik).catch(() => ({ data: [] })),
+    getSafetyTalkFeed(auth, milik).catch(() => ({ data: [] })),
   ]);
   const sboN = (sbo.data || []).map(r => ({
     ...r,
@@ -2103,10 +2128,16 @@ async function submitPCReport(sheets, data) {
   return { status: 'success', message: `PC ${id} berhasil disimpan. Notifikasi dikirim ke coachee.`, id, wa_coachee_status: waStatus };
 }
 
-async function getPCReports(sheets, auth, mineOnly) {
+// milik {nik, nama} (huruf kecil): hanya baris dengan coach = pengguna, disaring di database.
+async function getPCReports(sheets, auth, mineOnly, milik) {
   const sql = getSql();
   let rows;
-  try { rows = await sql`SELECT * FROM pc_report`; } catch { return { status: 'success', data: [] }; }
+  try {
+    rows = milik
+      ? await sql`SELECT * FROM pc_report WHERE (${milik.nik} <> '' AND lower(trim(nik_coach)) = ${milik.nik})
+          OR (${milik.nama} <> '' AND lower(trim(nama_coach)) = ${milik.nama})`
+      : await sql`SELECT * FROM pc_report`;
+  } catch { return { status: 'success', data: [] }; }
   let data = rows.map(r => ({ ...r, report_type: 'PC' })).filter(r => String(r.id || '').trim());
   if (!isSuperAdmin(auth?.role)) {
     const co = String(auth?.perusahaan || '').trim().toUpperCase();
@@ -2619,10 +2650,16 @@ async function getPicDisputes(auth) {
   return { status: 'success', data: rows };
 }
 
-async function getSBOReports(sheets, auth, mineOnly) {
+// milik {nik, nama} (huruf kecil): hanya baris dengan observer = pengguna, disaring di database.
+async function getSBOReports(sheets, auth, mineOnly, milik) {
   const sql = getSql();
   let rows;
-  try { rows = await sql`SELECT * FROM sbo_report`; } catch { return { status: 'success', data: [] }; }
+  try {
+    rows = milik
+      ? await sql`SELECT * FROM sbo_report WHERE (${milik.nik} <> '' AND lower(trim(nik_observer)) = ${milik.nik})
+          OR (${milik.nama} <> '' AND lower(trim(nama_observer)) = ${milik.nama})`
+      : await sql`SELECT * FROM sbo_report`;
+  } catch { return { status: 'success', data: [] }; }
   let data = rows.map(r => ({ ...r, report_type: 'SBO' })).filter(r => String(r.id || '').trim());
   if (!isSuperAdmin(auth?.role)) {
     const co = String(auth?.perusahaan || '').trim().toUpperCase();
