@@ -129,3 +129,20 @@
   .dd-modal { align-items: flex-end; padding: 0; }
   .dd-modal-box { border-radius: 16px 16px 0 0; max-height: 90vh; }
 }
+
+/* Pemecahan skor & penjelasan teknis */
+.dd-pecah { margin: 8px 0 4px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: .78rem; color: #334155; display: grid; gap: 4px; }
+.dd-pecah-rumus { font-size: .84rem; color: #0f172a; }
+.dd-pecah small { color: #64748b; }
+.dd-tm-poin { margin-top: 5px; padding-top: 5px; border-top: 1px dashed #e2e8f0; font-size: .74rem; color: #334155; }
+.dd-tm-poin small { display: block; color: #64748b; font-size: .7rem; }
+.dd-tm-denda { display: block; color: #b91c1c; font-weight: 600; }
+.dd-teknis { margin: 10px 0 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 0 14px; font-size: .8rem; color: #334155; }
+.dd-teknis summary { cursor: pointer; padding: 10px 0; font-weight: 700; color: #1e3a8a; }
+.dd-teknis[open] { padding-bottom: 12px; }
+.dd-teknis h4 { margin: 10px 0 4px; font-size: .84rem; color: #0f172a; }
+.dd-teknis p { margin: 4px 0; }
+.dd-teknis table { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: .76rem; }
+.dd-teknis th, .dd-teknis td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; vertical-align: top; }
+.dd-teknis th { background: #f1f5f9; }
+.dd-teknis .t-merah { color: #b91c1c; } .dd-teknis .t-kuning { color: #b45309; } .dd-teknis .t-hijau { color: #15803d; }

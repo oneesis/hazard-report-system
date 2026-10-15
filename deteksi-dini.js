@@ -39,6 +39,36 @@ async function ddMuat(segar = false) {
 }
 document.getElementById('btnSegarkan').addEventListener('click', () => ddMuat(true));
 
+/** Penjelasan teknis cara hitung (sama dengan lib/indeks-risiko.js di server). */
+function teknisHTML() {
+  return `<details class="dd-teknis"><summary><i class="fa-solid fa-calculator"></i> Cara menghitung (teknis)</summary>
+    <h4>1. Poin setiap temuan</h4>
+    <table><tr><th>Sifat temuan</th><th>Poin</th></tr>
+      <tr><td>Mayor (potensi keparahan 4–5: cedera berat s/d fatal)</td><td>3</td></tr>
+      <tr><td>Minor (potensi keparahan 1–3)</td><td>1</td></tr>
+      <tr><td>Tindakan tidak aman (perilaku)</td><td>+2</td></tr>
+      <tr><td>Risiko kritis (ketinggian, handak, LOTO, lalu lintas tambang, lereng, dll.)</td><td>+2</td></tr>
+      <tr><td>Berulang: kode sama di lokasi + sub-lokasi sama, hari berbeda, ≤ 30 hari</td><td>+3</td></tr>
+      <tr><td>Kode temuan pernah menjadi penyebab insiden (register insiden SHE)</td><td>+2</td></tr></table>
+    <p>Poin masuk ke minggu saat temuan terjadi. Laporan dobel (pelapor, kode, lokasi + sub, dan hari sama) dihitung sekali.</p>
+    <h4>2. Skor minggu ini</h4>
+    <p><b>Skor = poin temuan 7 hari terakhir + denda 4 poin × temuan Mayor terbuka yang lewat batas waktu 1–60 hari.</b>
+      Mayor yang lewat &gt; 60 hari tidak didenda (dianggap data lama belum ditutup, ditangani eskalasi) agar status tetap bermakna.</p>
+    <h4>3. Rata-rata</h4>
+    <p>Rata-rata <b>poin temuan baru</b> per minggu selama 8 minggu sebelumnya (tanpa denda), hanya minggu setelah data mulai, minimal 4 minggu.
+      Ini pembanding "normal" tiap area / departemen.</p>
+    <h4>4. Status</h4>
+    <table><tr><th>Status</th><th>Syarat (cukup salah satu)</th></tr>
+      <tr><td><b class="t-merah">MERAH</b></td><td>Temuan keparahan 5 (potensi fatal) belum ditutup — baru ≤ 7 hari atau lewat batas ≤ 60 hari;
+        atau lonjakan Mayor: temuan Mayor baru minggu ini ≥ 3 dan ≥ 2× rata-rata Mayor mingguan</td></tr>
+      <tr><td><b class="t-kuning">KUNING</b></td><td>Ada temuan Mayor lewat batas ≤ 60 hari;
+        atau poin temuan baru minggu ini ≥ 10 dan ≥ 1,5× rata-rata</td></tr>
+      <tr><td><b class="t-hijau">HIJAU</b></td><td>Tidak memenuhi syarat di atas</td></tr></table>
+    <p>Dihitung ulang setiap kali halaman dibuka (cache 10 menit; tombol <b>Hitung ulang</b> untuk memaksa).
+      Indikator dini, bukan ramalan pasti — bobot akan dikalibrasi dengan data insiden.</p>
+  </details>`;
+}
+
 /** Panel rincian temuan satu lokasi / departemen / perusahaan (GET detailDeteksiDini). */
 async function ddRincian(dim, nama) {
   document.getElementById('ddModal')?.remove();
@@ -75,14 +105,28 @@ async function ddRincian(dim, nama) {
         <span><b>${e.skor}</b> skor minggu ini${e.baseline !== null ? ` (rata-rata ${e.baseline})` : ''}</span>
         <span><b>${e.mayorTerbuka}</b> Mayor terbuka${e.terlambat ? ` · ${e.terlambat} lewat batas` : ''}</span>
       </div>
-      ${e.alasan.length ? `<ul class="dd-modal-alasan">${e.alasan.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : ''}
-      <p class="dd-ket">${j.total} temuan (12 minggu terakhir + Mayor yang masih terbuka)${j.total > t.length ? `, ditampilkan ${t.length} terbaru` : ''}. Mayor yang masih terbuka ditaruh paling atas. Angka <b>+N</b> = sumbangan skor temuan.</p>
+      ${e.alasan.length ? `<ul class="dd-modal-alasan">${e.alasan.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
+      <div class="dd-pecah">
+        <div class="dd-pecah-rumus"><b>${e.skor}</b> skor minggu ini = <b>${e.skorBaru}</b> poin temuan baru <small>(${e.baru} temuan, 7 hari terakhir)</small>
+          + <b>${e.terlambat * j.bobot.terlambat}</b> denda <small>(${e.terlambat} Mayor lewat batas × ${j.bobot.terlambat})</small></div>
+        <div>${e.baseline !== null
+          ? `Rata-rata <b>${e.baseline}</b> = poin temuan baru per minggu, 8 minggu sebelumnya. Untuk status "temuan baru naik", yang dibandingkan
+             <b>${e.skorBaru}</b> (poin baru) dengan rata-rata, bukan ${e.skor}.`
+          : 'Rata-rata belum tersedia (data area ini belum 4 minggu), aturan lonjakan belum berlaku.'}</div>
+        ${e.terlambatLama ? `<div>${e.terlambatLama} Mayor lewat batas &gt; 60 hari tidak didenda (data lama belum ditutup, ditangani eskalasi).</div>` : ''}
+        ${e.mayorBaru ? `<div>Temuan Mayor baru minggu ini: <b>${e.mayorBaru}</b>.</div>` : ''}
+      </div>` : ''}
+      <p class="dd-ket">${j.total} temuan (12 minggu terakhir + Mayor yang masih terbuka)${j.total > t.length ? `, ditampilkan ${t.length} terbaru` : ''}. Mayor yang masih terbuka ditaruh paling atas. Angka <b>+N</b> = poin temuan (rinciannya di bawah tiap laporan).</p>
       ${t.map((x) => `<div class="dd-tm${x.keparahan >= 4 && x.status.toUpperCase() !== 'CLOSED' ? ' mayor-buka' : ''}">
         <div class="dd-tm-top"><span>${esc(x.tanggal)} · ${esc(x.sumber)} · ${link(x)}</span><b class="dd-tm-skor">+${x.skor}</b></div>
         <div class="dd-tm-nama">${esc(x.kode)} ${esc(x.nama)}</div>
         <div class="dd-tm-lencana">${lencana(x)}</div>
         <div class="dd-tm-ket">${tempat(x)}</div>
-        <div class="dd-tm-ket">${keadaan(x)}</div></div>`).join('') || '<div class="dd-kosong">Tidak ada temuan.</div>'}`;
+        <div class="dd-tm-ket">${keadaan(x)}</div>
+        <div class="dd-tm-poin">${x.rincian.map(([l, n]) => `${esc(l)} ${n}`).join(' + ')} = <b>${x.skor} poin</b>
+          <small>${x.mingguIni ? 'masuk skor minggu ini' : 'masuk skor minggu saat dilaporkan (lihat garis tren)'}</small>
+          ${x.denda ? `<span class="dd-tm-denda">+ denda ${x.denda} poin di skor minggu ini (Mayor terbuka lewat batas)</span>` : ''}</div></div>`).join('') || '<div class="dd-kosong">Tidak ada temuan.</div>'}
+      ${teknisHTML()}`;
   } catch (err) { isi.innerHTML = `<div class="dd-loading">${esc(err.message || 'Gagal memuat.')}</div>`; }
 }
 
@@ -184,6 +228,8 @@ function render(d) {
       <ul>${x.alasan.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>${spark(x.seri, WARNA[x.status], 220, 34)}</div>`).join('')}</div>` : ''}
 
     <h2 class="dd-h2"><i class="fa-solid fa-ranking-star"></i> Indeks risiko</h2>
+    <p class="dd-ket">Ketuk lokasi / departemen / perusahaan untuk melihat laporan penyumbang skornya.</p>
+    ${teknisHTML()}
     <div class="dd-tabs"><button class="dd-tab active" data-dim="lokasi">Lokasi</button><button class="dd-tab" data-dim="departemen">Departemen</button>
       ${d.perusahaan.length ? '<button class="dd-tab" data-dim="perusahaan">Perusahaan</button>' : ''}</div>
     ${tabel(d.lokasi, 'lokasi')}${tabel(d.departemen, 'departemen')}${d.perusahaan.length ? tabel(d.perusahaan, 'perusahaan') : ''}

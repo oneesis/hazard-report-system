@@ -628,7 +628,8 @@ async function dataDeteksiDini(auth) {
       .map((t) => ({ sumber: t.sumber, id: t.id, tanggal: String(t.tanggal).slice(0, 10), lokasi: t.lokasi, sub: t.sub, departemen: t.departemen,
         kode: t.kode, nama: nama(t.kode), keparahan: t.keparahan, tipe: t.tipe, kritis: t.kritis, berulang: t.berulang, status: t.status || '',
         batas: t.batasWaktu ? String(t.batasWaktu).slice(0, 10) : '', lewatHari: buka(t) && t.batasWaktu ? umur(t.batasWaktu) : null,
-        skor: Indeks.skorTemuan(t, penyebabInsiden), mingguIni: umur(t.tanggal) < 7 }))
+        skor: Indeks.skorTemuan(t, penyebabInsiden), rincian: Indeks.rincianSkor(t, penyebabInsiden),
+        denda: Indeks.kenaDenda(t, now) ? Indeks.BOBOT.terlambat : 0, mingguIni: umur(t.tanggal) < 7 }))
       .sort((a, b) => b.tanggal.localeCompare(a.tanggal));
   } });
   // Bahan laporan bulanan (tahap 6) — tidak ikut JSON respons (non-enumerable).
@@ -3489,7 +3490,7 @@ module.exports = async (req, res) => {
           const dim = String(req.query.dim || ''), nm = String(req.query.nama || '');
           const temuan = d._detail(dim, nm);
           if (!temuan) throw Object.assign(new Error('Dimensi tidak valid.'), { httpStatus: 400 });
-          result = { status: 'success', dim, nama: nm, entitas: (d[dim] || []).find((x) => x.nama === nm) || null, total: temuan.length, temuan: temuan.slice(0, 200) };
+          result = { status: 'success', dim, nama: nm, bobot: Indeks.BOBOT, entitas: (d[dim] || []).find((x) => x.nama === nm) || null, total: temuan.length, temuan: temuan.slice(0, 200) };
           break;
         }
         case 'deteksiDini': {
