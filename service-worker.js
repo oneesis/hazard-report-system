@@ -1,4 +1,4 @@
-const CACHE_NAME = "onesap-cache-v48";
+const CACHE_NAME = "onesap-cache-v49";
 const ASSETS_TO_CACHE = [
   "./",
   "./index-home.html",

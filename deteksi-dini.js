@@ -24,6 +24,11 @@ async function ddMuat(segar = false) {
         showToast(r.message); ddMuat(true);
       } catch (e) { showToast(e.message, 'error'); b.disabled = false; }
     }));
+    isi.querySelectorAll('.dd-klik').forEach((el) => {
+      const buka = () => ddRincian(el.dataset.dim, el.dataset.nama);
+      el.addEventListener('click', buka);
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); buka(); } });
+    });
     isi.querySelectorAll('.dd-tab').forEach((b) => b.addEventListener('click', () => {
       isi.querySelectorAll('.dd-tab').forEach((x) => x.classList.toggle('active', x === b));
       isi.querySelectorAll('.dd-tabel').forEach((t) => { t.hidden = t.dataset.dim !== b.dataset.dim; });
@@ -33,6 +38,53 @@ async function ddMuat(segar = false) {
   } finally { btn.disabled = false; }
 }
 document.getElementById('btnSegarkan').addEventListener('click', () => ddMuat(true));
+
+/** Panel rincian temuan satu lokasi / departemen / perusahaan (GET detailDeteksiDini). */
+async function ddRincian(dim, nama) {
+  document.getElementById('ddModal')?.remove();
+  const m = document.createElement('div');
+  m.id = 'ddModal'; m.className = 'dd-modal';
+  m.innerHTML = `<div class="dd-modal-box" role="dialog" aria-modal="true" aria-label="Rincian ${esc(nama)}">
+    <div class="dd-modal-head"><div><small>${{ lokasi: 'Lokasi', departemen: 'Departemen PIC', perusahaan: 'Perusahaan' }[dim] || ''}</small><h3>${esc(nama)}</h3></div>
+      <button class="dd-modal-x" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="dd-modal-isi"><div class="dd-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat temuan…</div></div></div>`;
+  const tutup = () => { m.remove(); document.removeEventListener('keydown', esc_); };
+  const esc_ = (e) => { if (e.key === 'Escape') tutup(); };
+  m.addEventListener('click', (e) => { if (e.target === m) tutup(); });
+  m.querySelector('.dd-modal-x').addEventListener('click', tutup);
+  document.addEventListener('keydown', esc_);
+  document.body.appendChild(m);
+  m.querySelector('.dd-modal-x').focus();
+  const isi = m.querySelector('.dd-modal-isi');
+  try {
+    const j = await fetch(`/api?action=detailDeteksiDini&dim=${encodeURIComponent(dim)}&nama=${encodeURIComponent(nama)}`).then((r) => r.json());
+    if (j.status === 'error') throw new Error(j.message);
+    const e = j.entitas;
+    // Mayor yang masih terbuka (penyebab status kuning/merah) di atas, potensi fatal paling atas; sisanya terbaru dulu.
+    const prio = (x) => (x.keparahan >= 4 && x.status.toUpperCase() !== 'CLOSED' ? x.keparahan : 0);
+    const t = [...j.temuan].sort((a, b) => prio(b) - prio(a) || b.tanggal.localeCompare(a.tanggal));
+    const link = (x) => (x.sumber === 'SBO' ? esc(x.id) : `<a href="laporan-detail.html?id=${encodeURIComponent(x.id)}" target="_blank">${esc(x.id)}</a>`);
+    const lencana = (x) => [x.keparahan >= 5 ? '<em class="b-mayor">Mayor · potensi fatal</em>' : x.keparahan >= 4 ? '<em class="b-mayor">Mayor</em>' : '<em>Minor</em>', x.tipe === 'Tindakan' ? '<em class="b-tind">Tindakan</em>' : '',
+      x.kritis ? '<em class="b-kritis">Kritis</em>' : '', x.berulang ? '<em class="b-ulang">Berulang</em>' : '', x.mingguIni ? '<em class="b-baru">Minggu ini</em>' : ''].join('');
+    const keadaan = (x) => (x.status.toUpperCase() === 'CLOSED' ? '<span class="s-tutup">Ditutup</span>'
+      : x.lewatHari > 0 ? `<span class="s-lewat">${esc(x.status || 'Terbuka')} · lewat batas ${x.lewatHari} hari</span>`
+      : `<span>${esc(x.status || 'Terbuka')}${x.batas ? ' · batas ' + esc(x.batas) : ''}</span>`);
+    const tempat = (x) => (dim === 'lokasi' ? `${x.sub ? esc(x.sub) + ' · ' : ''}${esc(x.departemen)}` : `${esc(x.lokasi)}${x.sub ? ' — ' + esc(x.sub) : ''}`);
+    isi.innerHTML = `${e ? `<div class="dd-modal-ring">
+        <span class="dd-status s-${e.status}">${LABEL[e.status]}</span>
+        <span><b>${e.skor}</b> skor minggu ini${e.baseline !== null ? ` (rata-rata ${e.baseline})` : ''}</span>
+        <span><b>${e.mayorTerbuka}</b> Mayor terbuka${e.terlambat ? ` · ${e.terlambat} lewat batas` : ''}</span>
+      </div>
+      ${e.alasan.length ? `<ul class="dd-modal-alasan">${e.alasan.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : ''}
+      <p class="dd-ket">${j.total} temuan (12 minggu terakhir + Mayor yang masih terbuka)${j.total > t.length ? `, ditampilkan ${t.length} terbaru` : ''}. Mayor yang masih terbuka ditaruh paling atas. Angka <b>+N</b> = sumbangan skor temuan.</p>
+      ${t.map((x) => `<div class="dd-tm${x.keparahan >= 4 && x.status.toUpperCase() !== 'CLOSED' ? ' mayor-buka' : ''}">
+        <div class="dd-tm-top"><span>${esc(x.tanggal)} · ${esc(x.sumber)} · ${link(x)}</span><b class="dd-tm-skor">+${x.skor}</b></div>
+        <div class="dd-tm-nama">${esc(x.kode)} ${esc(x.nama)}</div>
+        <div class="dd-tm-lencana">${lencana(x)}</div>
+        <div class="dd-tm-ket">${tempat(x)}</div>
+        <div class="dd-tm-ket">${keadaan(x)}</div></div>`).join('') || '<div class="dd-kosong">Tidak ada temuan.</div>'}`;
+  } catch (err) { isi.innerHTML = `<div class="dd-loading">${esc(err.message || 'Gagal memuat.')}</div>`; }
+}
 
 /** Garis kecil 12 minggu (SVG, tanpa library). */
 function spark(seri, warna = '#1e3a8a', w = 110, h = 28) {
@@ -46,7 +98,7 @@ function render(d) {
   const perhatian = lok.filter((x) => x.status !== 'hijau');
   const link = (m) => (m.sumber === 'SBO' ? esc(m.id) : `<a href="laporan-detail.html?id=${encodeURIComponent(m.id)}" target="_blank">${esc(m.id)}</a>`);
   const tabel = (rows, dim) => `<div class="dd-tabel" data-dim="${dim}"${dim === 'lokasi' ? '' : ' hidden'}>
-    ${rows.length ? rows.map((x) => `<div class="dd-baris">
+    ${rows.length ? rows.map((x) => `<div class="dd-baris dd-klik" role="button" tabindex="0" data-dim="${dim}" data-nama="${esc(x.nama)}" title="Lihat rincian temuan">
       <span class="dd-dot" style="background:${WARNA[x.status]}" title="${LABEL[x.status]}"></span>
       <span class="dd-nama">${esc(x.nama)}<small>${x.alasan.length ? esc(x.alasan.join(' · ')) : 'Normal'}</small></span>
       <span class="dd-angka" title="Skor minggu ini (rata-rata 8 minggu)"><b>${x.skor}</b><small>rata ${x.baseline ?? '-'}</small></span>
@@ -127,7 +179,7 @@ function render(d) {
     </div>`).join('')}<p class="dd-ket">Tanggapanmu dipakai untuk menyetel bobot indeks agar peringatan makin tepat.</p></div>` : ''}
 
     ${perhatian.length ? `<h2 class="dd-h2"><i class="fa-solid fa-triangle-exclamation"></i> Area perlu perhatian</h2>
-    <div class="dd-perhatian">${perhatian.map((x) => `<div class="dd-alert dd-alert--${x.status}">
+    <div class="dd-perhatian">${perhatian.map((x) => `<div class="dd-alert dd-alert--${x.status} dd-klik" role="button" tabindex="0" data-dim="lokasi" data-nama="${esc(x.nama)}" title="Lihat rincian temuan">
       <div class="dd-alert-top"><b>${esc(x.nama)}</b><span>${LABEL[x.status]}</span></div>
       <ul>${x.alasan.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>${spark(x.seri, WARNA[x.status], 220, 34)}</div>`).join('')}</div>` : ''}
 

@@ -618,6 +618,19 @@ async function dataDeteksiDini(auth) {
     hasil.evaluasi = Evaluasi.evaluasiInsiden({ siap, insiden, peringatan: semuaP, penyebabInsiden });
     hasil.evaluasi.daftar = hasil.evaluasi.daftar.map((x) => ({ ...x, nama: nama(x.kode) }));
   }
+  // Rincian temuan per entitas (ketuk baris indeks) — 12 minggu terakhir + Mayor yang masih terbuka.
+  const kunciDim = { lokasi: (t) => t.lokasi, departemen: (t) => t.departemen, perusahaan: (t) => t.perusahaan && up(t.perusahaan) };
+  Object.defineProperty(hasil, '_detail', { value: (dim, nm) => {
+    const f = kunciDim[dim];
+    if (!f || (dim === 'perusahaan' && !superAdmin)) return null;
+    const buka = (t) => String(t.status).toUpperCase() !== 'CLOSED';
+    return siap.filter((t) => f(t) === nm && (umur(t.tanggal) <= 84 || (t.keparahan >= 4 && buka(t))))
+      .map((t) => ({ sumber: t.sumber, id: t.id, tanggal: String(t.tanggal).slice(0, 10), lokasi: t.lokasi, sub: t.sub, departemen: t.departemen,
+        kode: t.kode, nama: nama(t.kode), keparahan: t.keparahan, tipe: t.tipe, kritis: t.kritis, berulang: t.berulang, status: t.status || '',
+        batas: t.batasWaktu ? String(t.batasWaktu).slice(0, 10) : '', lewatHari: buka(t) && t.batasWaktu ? umur(t.batasWaktu) : null,
+        skor: Indeks.skorTemuan(t, penyebabInsiden), mingguIni: umur(t.tanggal) < 7 }))
+      .sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+  } });
   // Bahan laporan bulanan (tahap 6) — tidak ikut JSON respons (non-enumerable).
   if (superAdmin) Object.defineProperty(hasil, '_bahan', { value: { siap, insiden, penyebabInsiden, area, nama } });
   _ddCache.set(kunciCache, { at: Date.now(), data: hasil });
@@ -3468,6 +3481,15 @@ module.exports = async (req, res) => {
             FROM hazard_report WHERE coalesce(data->>'lokasi_bahaya', '') <> '' AND coalesce(data->>'sub_lokasi_bahaya', '') = ''
             ORDER BY id DESC`;
           result = { status: 'success', ...m, antrean };
+          break;
+        }
+        case 'detailDeteksiDini': {
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const d = await dataDeteksiDini(auth);
+          const dim = String(req.query.dim || ''), nm = String(req.query.nama || '');
+          const temuan = d._detail(dim, nm);
+          if (!temuan) throw Object.assign(new Error('Dimensi tidak valid.'), { httpStatus: 400 });
+          result = { status: 'success', dim, nama: nm, entitas: (d[dim] || []).find((x) => x.nama === nm) || null, total: temuan.length, temuan: temuan.slice(0, 200) };
           break;
         }
         case 'deteksiDini': {
