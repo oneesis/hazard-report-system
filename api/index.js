@@ -1508,6 +1508,22 @@ function isReportVisibleForUser(report, userNik, userName) {
          (userNik && picNik === userNik) || (userName && picName === userName);
 }
 
+/**
+ * Sidik jari daftar laporan (2026-10-15, hemat kuota transfer Neon & CPU Vercel): halaman memuat ulang semua
+ * laporan tiap 5 menit. Bila Hazard/Inspeksi tidak berubah sejak respons terakhir browser → 304 tanpa membaca
+ * tabel (Neon hanya mengirim 32 karakter md5). Kunci memuat lingkup akun karena isi respons berbeda per akun.
+ */
+async function _laporanTakBerubah(req, res, action, auth) {
+  const [r] = await getSql()`SELECT md5(
+      coalesce((SELECT string_agg(id || md5(data::text), ',' ORDER BY id) FROM hazard_report), '') || '|' ||
+      coalesce((SELECT string_agg(id || md5(data::text), ',' ORDER BY id) FROM inspection_report), '')) AS h`;
+  const tag = '"' + require('crypto').createHash('md5')
+    .update([r.h, action, auth.nik, auth.nama, auth.role, auth.perusahaan].join('|')).digest('hex') + '"';
+  res.setHeader('ETag', tag);
+  res.setHeader('Cache-Control', 'private, no-cache');
+  return req.headers['if-none-match'] === tag;
+}
+
 async function getAllReports(sheets, nik, nama, role, perusahaan) {
   const auth = { role, perusahaan };
   const [h, i] = await Promise.all([getHazardReports(sheets, auth), getInspectionReports(sheets, auth)]);
@@ -3520,8 +3536,8 @@ module.exports = async (req, res) => {
           result = { status: 'success', data: rows };
           break;
         }
-        case 'getHazardReports':    result = await getHazardReports(sheets, auth); break;
-        case 'getInspectionReports':result = await getInspectionReports(sheets, auth); break;
+        case 'getHazardReports':    if (await _laporanTakBerubah(req, res, action, auth)) { res.statusCode = 304; return res.end(); } result = await getHazardReports(sheets, auth); break;
+        case 'getInspectionReports':if (await _laporanTakBerubah(req, res, action, auth)) { res.statusCode = 304; return res.end(); } result = await getInspectionReports(sheets, auth); break;
         case 'getSBOReports':       result = await getSBOReports(sheets, auth, req.query.mine === '1'); break;
         case 'getSafetyTalkSchedules': {
           if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
@@ -3709,7 +3725,7 @@ module.exports = async (req, res) => {
         }
         case 'getPCReports':        result = await getPCReports(sheets, auth, req.query.mine === '1'); break;
         // Identitas & role diambil dari token — parameter query diabaikan
-        case 'getAllReports':        result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
+        case 'getAllReports':        if (await _laporanTakBerubah(req, res, action, auth)) { res.statusCode = 304; return res.end(); } result = await getAllReports(sheets, auth.nik, auth.nama, auth.role, auth.perusahaan); break;
         case 'getMyActivityExtras':  result = await getMyActivityExtras(sheets, auth); break;
         case 'ensureDocFolders': {
           // Buat (kalau belum ada) subfolder HR/INS/SBO/PC di DOKUMENTASI LAPORAN
