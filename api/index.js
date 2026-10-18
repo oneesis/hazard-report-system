@@ -94,9 +94,7 @@ async function sendPasswordResetEmail(to, nama, link) {
 
 // Cari NIK di Master_Karyawan; balikkan { nama, email } atau null.
 async function _findKaryawanEmail(sheets, nik) {
-  const rows = await _karyawanRows(sheets);
-  const target = String(nik || '').trim();
-  const r = rows.find(x => String(x['NIK'] || '').trim() === target);
+  const r = await _karyawanByNik(sheets, nik);
   if (!r) return null;
   return { nama: String(r['NAMA'] || '').trim(), email: String(r['EMAIL'] || '').trim() };
 }
@@ -229,8 +227,21 @@ async function _karyawanRows(sheets) {
     try { data = (await sql`SELECT data FROM karyawan`).map(x => x.data || {}); } catch { data = []; }
   }
   if (!data.length) { try { data = await getSheetData(sheets, 'Master_Karyawan'); } catch { data = []; } }
-  _dataCache.set(key, { data, expAt: now + 30_000 });
+  // 5 menit (dulu 30 dtk) — hemat kuota transfer Neon (2026-10-18). Jalur yang wajib segar (login, kunci
+  // akun, cabut sesi, email OTP) memakai _karyawanByNik (satu baris langsung dari DB), bukan cache ini.
+  _dataCache.set(key, { data, expAt: now + 5 * 60_000 });
   return data;
+}
+
+/** Satu baris roster langsung dari DB (selalu segar & kecil); fallback ke roster (cache) bila DB tak tersedia. */
+async function _karyawanByNik(sheets, nik) {
+  const n = String(nik || '').trim();
+  if (!n) return null;
+  const sql = getSql();
+  if (sql) {
+    try { const [r] = await sql`SELECT data FROM karyawan WHERE nik = ${n}`; return r ? r.data || {} : null; } catch {}
+  }
+  return (await _karyawanRows(sheets)).find((row) => String(row['NIK'] || '').trim() === n) || null;
 }
 
 function normalizeHeader(h) {
@@ -1024,8 +1035,7 @@ function requireAuth(req) {
 
 // #2 — Cek apakah token sudah di-invalidasi via logout (LAST_LOGOUT_AT di sheet)
 async function checkTokenValid(sheets, auth) {
-  const data = await _karyawanRows(sheets);
-  const user = data.find(r => String(r['NIK'] || '').trim() === String(auth.nik || '').trim());
+  const user = await _karyawanByNik(sheets, auth.nik);
   if (!user) return;
   const lastLogout = Number(user['LAST_LOGOUT_AT'] || 0);
   if (lastLogout && (auth.iat || 0) * 1000 < lastLogout)
@@ -1060,8 +1070,7 @@ async function login(sheets, nik, password, ip) {
   const rateCheck = checkLoginRateLimit(nik);
   if (!rateCheck.ok) return { status: 'error', message: rateCheck.message };
 
-  const data = await _karyawanRows(sheets);
-  const user = data.find(row => String(row['NIK'] || '').trim() === String(nik || '').trim());
+  const user = await _karyawanByNik(sheets, nik);
 
   // #1 — Persistent lockout check (survives cold start / multi-instance)
   if (user) {
