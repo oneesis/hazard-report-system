@@ -151,7 +151,7 @@ module.exports = async (req, res) => {
   const bulanNama = `${MONTHS_ID[bm - 1]} ${by}`;
   const deadlineStr = `${new Date(Date.UTC(by, bm, 0)).getUTCDate()} ${bulanNama}`;
 
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = neon(process.env.DATABASE_URL_INTI || process.env.DATABASE_URL);
   const [kar, hz, ins, sbo, pc] = await Promise.all([
     sql`SELECT email, data FROM karyawan`,
     sql`SELECT data FROM hazard_report`,

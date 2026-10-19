@@ -122,7 +122,7 @@ module.exports = async (req, res) => {
   if (!dry && !viaWa && !(process.env.GMAIL_SENDER && process.env.GMAIL_APP_PASSWORD))
     return res.status(500).json({ error: 'Env GMAIL_SENDER/GMAIL_APP_PASSWORD belum diset' });
 
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = neon(process.env.DATABASE_URL_INTI || process.env.DATABASE_URL);
   const [hazard, inspection, karyawan] = await Promise.all([
     sql`SELECT id, status_perbaikan, data FROM hazard_report WHERE upper(coalesce(status_perbaikan,'')) <> 'CLOSED'`,
     sql`SELECT id, status_perbaikan, data FROM inspection_report WHERE upper(coalesce(status_perbaikan,'')) <> 'CLOSED'`,

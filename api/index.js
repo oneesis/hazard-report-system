@@ -38,9 +38,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let _sql = null;
 function getSql() {
   if (_sql) return _sql;
-  if (!process.env.DATABASE_URL) return null;
+  // DATABASE_URL_INTI (2026-10-19): DB inti dipindah ke project Neon `inti-ebl`; DATABASE_URL lama
+  // dikelola integrasi Vercel (project lama) dan dibiarkan sebagai cadangan.
+  const url = process.env.DATABASE_URL_INTI || process.env.DATABASE_URL;
+  if (!url) return null;
   const { neon } = require('@neondatabase/serverless');
-  _sql = neon(process.env.DATABASE_URL);
+  _sql = neon(url);
   return _sql;
 }
 
