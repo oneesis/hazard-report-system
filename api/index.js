@@ -1499,8 +1499,26 @@ function stripSensitiveKaryawan(rows) {
 // dibutuhkan di halaman/ modal detail, yang mengambilnya lewat action getReport.
 function _stripHeavy(o) { delete o.tanda_tangan; delete o.signature; return o; }
 
-async function getHazardReports(sheets, auth) {
-  let result = (await getSql()`SELECT data FROM hazard_report`)
+// Saring di database (2026-10-19, hemat kuota transfer Neon): non-Super Admin hanya perusahaannya; `milik`
+// {nik,nama} (huruf kecil, user biasa) hanya laporan yang ia lapor/PIC. Hanya mempersempit — aturan JS lama
+// (filter perusahaan & isReportVisibleForUser) tetap dijalankan, jadi hasil identik.
+const _KUNCI_MILIK = { nik: ['nik', 'reporter_nik', 'nik_pic', 'nip_pic'], nama: ['nama', 'pelapor', 'reporter', 'nama_pelapor', 'nama_pic', 'pic', 'penanggung_jawab'] };
+function _saringLaporan(auth, milik) {
+  const co = isSuperAdmin(auth?.role) ? '' : String(auth?.perusahaan || '').trim().toUpperCase();
+  const params = [], where = [], p = (v) => { params.push(v); return '$' + params.length; };
+  if (co) where.push(`upper(trim(coalesce(data->>'perusahaan', ''))) = ${p(co)}`);
+  if (milik) {
+    const ors = [];
+    if (milik.nik) { const x = p(milik.nik); for (const k of _KUNCI_MILIK.nik) ors.push(`lower(trim(coalesce(data->>'${k}', ''))) = ${x}`); }
+    if (milik.nama) { const x = p(milik.nama); for (const k of _KUNCI_MILIK.nama) ors.push(`lower(trim(coalesce(data->>'${k}', ''))) = ${x}`); }
+    where.push(ors.length ? `(${ors.join(' OR ')})` : 'false');
+  }
+  return { where: where.join(' AND ') || 'true', params };
+}
+
+async function getHazardReports(sheets, auth, milik) {
+  const f = _saringLaporan(auth, milik);
+  let result = (await getSql()(`SELECT data FROM hazard_report WHERE ${f.where}`, f.params))
     .map(r => _stripHeavy({ ...r.data, report_type: 'HAZARD' }))
     .filter(obj => String(obj.id || '').trim());
   // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
@@ -1511,8 +1529,9 @@ async function getHazardReports(sheets, auth) {
   return { status: 'success', data: result };
 }
 
-async function getInspectionReports(sheets, auth) {
-  let data = (await getSql()`SELECT jenis, data FROM inspection_report`)
+async function getInspectionReports(sheets, auth, milik) {
+  const f = _saringLaporan(auth, milik);
+  let data = (await getSql()(`SELECT jenis, data FROM inspection_report WHERE ${f.where}`, f.params))
     .map(r => _stripHeavy({ ...r.data, report_type: 'INSPECTION', inspection_sheet: r.jenis }))
     .filter(obj => String(obj.id || '').trim());
   // Scope by company — hanya SUPER_ADMIN yang bisa lihat semua perusahaan
@@ -1557,7 +1576,10 @@ async function _laporanTakBerubah(req, res, action, auth) {
 
 async function getAllReports(sheets, nik, nama, role, perusahaan) {
   const auth = { role, perusahaan };
-  const [h, i] = await Promise.all([getHazardReports(sheets, auth), getInspectionReports(sheets, auth)]);
+  const r = String(role || '').trim().toUpperCase();
+  const nk = String(nik || '').trim().toLowerCase(), nm = String(nama || '').trim().toLowerCase();
+  const milik = r !== 'ADMIN' && r !== 'SUPER_ADMIN' && (nk || nm) ? { nik: nk, nama: nm } : null;
+  const [h, i] = await Promise.all([getHazardReports(sheets, auth, milik), getInspectionReports(sheets, auth, milik)]);
   let combined = [...(h.data || []), ...(i.data || [])];
   const userNik = String(nik || '').trim().toLowerCase();
   const userName = String(nama || '').trim().toLowerCase();
