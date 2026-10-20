@@ -3837,6 +3837,7 @@ module.exports = async (req, res) => {
               sbo: parseInt(me?.['OBJ SBO'] || 0) || 0,
               pc:  parseInt(me?.['OBJ PC']  || 0) || 0,
               st:  parseInt(me?.['OBJ_ST']  || me?.['OBJ ST'] || 0) || 0,
+              mulai: String(me?.['TGL MULAI KERJA'] || ''),
             }
           };
           break;

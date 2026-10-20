@@ -737,13 +737,15 @@ function renderSapAchievement(reports, obj, offset) {
   const cnt = t => mine.filter(r => String(r.report_type || '').toUpperCase() === t).length;
   const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
 
+  // Karyawan baru: target bulan mulai kerja proporsional (lib/target-mulai.js).
+  const tb = o => TargetMulai.targetBulan(o, obj.mulai, monthKey);
   const rows = [
-    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: cnt('HAZARD'),     target: obj.hr  },
-    { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: cnt('INSPECTION'), target: obj.ins },
-    { label: 'SBO',           icon: 'fa-eye',                   count: cnt('SBO'),        target: obj.sbo },
-    { label: 'Personal Contact', icon: 'fa-handshake',           count: cnt('PC'),         target: obj.pc  },
+    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: cnt('HAZARD'),     target: tb(obj.hr)  },
+    { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: cnt('INSPECTION'), target: tb(obj.ins) },
+    { label: 'SBO',           icon: 'fa-eye',                   count: cnt('SBO'),        target: tb(obj.sbo) },
+    { label: 'Personal Contact', icon: 'fa-handshake',           count: cnt('PC'),         target: tb(obj.pc)  },
     // Safety Talk: terpenuhi = HADIR, atau tidak hadir (bukan mangkir) tapi kuis pengganti lulus.
-    { label: 'Safety Talk', icon: 'fa-bullhorn', target: stObjForMonth(obj.st, monthKey, user?.perusahaan, _stCounts),
+    { label: 'Safety Talk', icon: 'fa-bullhorn', target: tb(stObjForMonth(obj.st, monthKey, user?.perusahaan, _stCounts)),
       count: _stRows.filter(s => String(s.bulan || '').slice(0, 7) === monthKey).filter(s => {
         const st = String(s.status_kehadiran || 'HADIR').toUpperCase();
         return st === 'HADIR' || (st !== 'MANGKIR' && String(s.quiz_done || '').toUpperCase() === 'YA');

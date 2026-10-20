@@ -177,13 +177,15 @@ function computeAndRender() {
     const achINS   = mine.filter(r => r.report_type === 'INSPECTION').length;
     const achSBO   = mineSBO.length;
     const achPC    = minePC.length;
-    const objHR    = parseInt(k['OBJ HR']  || 0) || 0;
-    const objINS   = parseInt(k['OBJ INS'] || 0) || 0;
-    const objSBO   = parseInt(k['OBJ SBO'] || 0) || 0;
-    const objPC    = parseInt(k['OBJ PC']  || 0) || 0;
+    // Karyawan baru: target bulan mulai kerja proporsional, sebelumnya 0 (lib/target-mulai.js).
+    const tb       = o => TargetMulai.targetBulan(o, k['TGL MULAI KERJA'], monthStr);
+    const objHR    = tb(parseInt(k['OBJ HR']  || 0) || 0);
+    const objINS   = tb(parseInt(k['OBJ INS'] || 0) || 0);
+    const objSBO   = tb(parseInt(k['OBJ SBO'] || 0) || 0);
+    const objPC    = tb(parseInt(k['OBJ PC']  || 0) || 0);
     // OBJ ST per bulan: mulai Okt 2026 = jumlah jadwal ST bulan itu (perusahaan
     // karyawan); Sep 2026 = 3; sebelumnya OBJ tersimpan. Lihat stObjForMonth.
-    const objST    = stObjForMonth(parseInt(k['OBJ_ST'] || k['OBJ ST'] || 0) || 0, monthStr, k['PERUSAHAAN'], _capStCounts);
+    const objST    = tb(stObjForMonth(parseInt(k['OBJ_ST'] || k['OBJ ST'] || 0) || 0, monthStr, k['PERUSAHAAN'], _capStCounts));
     // Cap di 100% — kelebihan capaian tidak menambah persentase
     const pctHR    = objHR  > 0 ? Math.min(100, Math.round(achHR  / objHR  * 100)) : null;
     const pctINS   = objINS > 0 ? Math.min(100, Math.round(achINS / objINS * 100)) : null;

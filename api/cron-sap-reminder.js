@@ -11,6 +11,7 @@
 // Query (manual/uji): ?dry=1 (tak kirim, balas daftar) ?force=1 (abaikan H-3)
 //                     ?bulan=YYYY-MM ?only=<NIK> (kirim ke 1 orang saja)
 const { neon } = require('@neondatabase/serverless');
+const { targetBulan } = require('../lib/target-mulai');
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const APP_URL     = 'https://sap-ebl.vercel.app/index-home.html';
@@ -52,7 +53,7 @@ function computeUnmet(kar, hz, ins, sbo, pc, bulan) {
     if (!nik || !/EBL/i.test(String(d.PERUSAHAAN ?? ''))) continue;
     if (String(d.ROLE ?? '').toUpperCase() === 'DELETED') continue;
     const target = {}; let total = 0;
-    for (const m of MODULES) { target[m.key] = num(d[m.obj]); total += target[m.key]; }
+    for (const m of MODULES) { target[m.key] = targetBulan(num(d[m.obj]), d['TGL MULAI KERJA'], bulan); total += target[m.key]; }
     if (total <= 0) continue; // magang / tanpa kewajiban SAP
     people.set(nik, { nik, nama: String(d.NAMA ?? '').trim(), email: String(row.email || d.EMAIL || '').trim(),
       target, got: { HR: 0, INS: 0, SBO: 0, PC: 0 } });
