@@ -3625,6 +3625,9 @@ module.exports = async (req, res) => {
           // Jumlah jadwal Safety Talk per bulan × perusahaan target — dasar OBJ ST
           // mulai Okt 2026 (lihat stObjForMonth di reports-utils.js). Agregat saja,
           // aman utk semua user (endpoint jadwal lengkap khusus admin).
+          // Jadwal baru jadi target setelah terlaksana: status SELESAI atau tanggalnya
+          // sudah lewat (WITA) — jadwal hari ini/mendatang tak menurunkan capaian
+          // sebelum absensinya diisi (keputusan user 2026-10-21).
           let rows = [];
           try {
             rows = await getSql()`
@@ -3633,6 +3636,8 @@ module.exports = async (req, res) => {
                      count(*)::int AS n
               FROM safety_talk_schedule
               WHERE upper(coalesce(status, '')) NOT LIKE '%BATAL%'
+                AND (upper(coalesce(status, '')) LIKE '%SELESAI%'
+                     OR left(coalesce(tanggal, ''), 10) < to_char(now() AT TIME ZONE 'Asia/Makassar', 'YYYY-MM-DD'))
               GROUP BY 1, 2`;
           } catch {}
           result = { status: 'success', data: rows };
