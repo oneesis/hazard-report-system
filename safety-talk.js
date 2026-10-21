@@ -1,6 +1,7 @@
 // Safety Talk — halaman list jadwal (admin only)
 
-const QUIZ_URL = 'https://quiz-she.vercel.app';
+// Kuis pengganti dikelola di SIMANTRA (2026-10-22, pindahan quiz-she).
+const QUIZ_ADMIN_URL = 'https://simantra-k3.vercel.app/kelola-kuis-st';
 
 let _stSchedules = [];
 let _stAbsensiMap = {}; // schedule_id → jumlah hadir
@@ -19,14 +20,8 @@ let _quizLinked = new Set();
 // (indikator tidak tampil), bukan error — quiz-she opsional bagi halaman ini.
 async function _loadQuizLinks() {
   try {
-    const res  = await fetch(`${QUIZ_URL}/api/data?action=sessions`);
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.value || data.sessions || []);
-    _quizLinked = new Set(
-      list.filter(s => s.status === 'published')
-          .map(s => String(s.topicCode || '').trim())
-          .filter(Boolean)
-    );
+    const data = await (await fetch('/api?action=getKuisStTerbit')).json();
+    _quizLinked = new Set((data.data || []).map(s => String(s).trim()).filter(Boolean));
   } catch { _quizLinked = new Set(); }
 }
 

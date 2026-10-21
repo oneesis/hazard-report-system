@@ -80,7 +80,8 @@ function computeUnmet(kar, hz, ins, sbo, pc, bulan) {
 
 const ST_WAJIB_KUIS = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA'];
 const ST_LABEL = { CUTI: 'Cuti', DINAS_LUAR: 'Dinas luar', SHIFT_MALAM: 'Shift malam', LIBUR: 'Libur', SECURITY_JAGA: 'Jaga' };
-const QUIZ_URL = 'https://quiz-she.vercel.app';
+// Kuis pengganti ST dikerjakan di SIMANTRA (2026-10-22, pindahan quiz-she).
+const QUIZ_URL = 'https://simantra-k3.vercel.app/kuis-st';
 
 // Murni: kuis pengganti ST yang belum dikerjakan per NIK (kuis sudah terbit, tidak sedang cuti).
 function computeKuis(absRows, terbit, sedangCuti) {
@@ -104,7 +105,7 @@ function buildEmail(p, bulanNama, deadlineStr) {
       <td style="padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:center;color:#b91c1c;font-weight:700">kurang ${u.target - u.got}</td>
     </tr>`).join('');
   const kuis = p.kuis || [];
-  const quizLink = `${QUIZ_URL}/?nik=${encodeURIComponent(p.nik)}`;
+  const quizLink = QUIZ_URL;
   const tglPendek = t => { const d = new Date(String(t) + 'T00:00:00'); return isNaN(d) ? String(t || '') : `${d.getDate()} ${MONTHS_ID[d.getMonth()].slice(0, 3)}`; };
   const text = `Halo ${first},\n\n`
     + (p.unmet.length ? `Capaian SAP kamu bulan ${bulanNama} belum 100% dan tersisa ${REMIND_DAYS} hari (s/d ${deadlineStr}).\n\n`
@@ -163,19 +164,18 @@ module.exports = async (req, res) => {
 
   let list = computeUnmet(kar, hz, ins, sbo, pc, bulan);
 
-  // Kuis pengganti Safety Talk (best-effort: quiz-she/SISTER MINER tak terjangkau → bagian kuis dilewati)
+  // Kuis pengganti Safety Talk (best-effort: gagal baca → bagian kuis dilewati)
   try {
     const todayStr = `${today.y}-${String(today.m + 1).padStart(2, '0')}-${String(today.d).padStart(2, '0')}`;
-    const [absRows, cutiRows, sesJ] = await Promise.all([
+    const [absRows, cutiRows, sesi] = await Promise.all([
       sql`SELECT a.schedule_id, a.nik, a.status_kehadiran, a.quiz_done, s.judul_materi, s.tanggal
            FROM safety_talk_absensi a JOIN safety_talk_schedule s ON s.id = a.schedule_id
            WHERE a.bulan = ${bulan} AND a.status_kehadiran = ANY(${ST_WAJIB_KUIS})`,
       sql`SELECT data->>'nrp' AS nrp FROM sm."Karyawan"
            WHERE coalesce(data->>'cutiMulai', '') <> '' AND data->>'cutiMulai' <= ${todayStr} AND data->>'cutiSelesai' >= ${todayStr}`.catch(() => []),
-      fetch(`${QUIZ_URL}/api/data?action=sessions`).then(r => r.json()),
+      sql`SELECT DISTINCT topic_code FROM sesi WHERE status = 'published'`,
     ]);
-    const sesi = Array.isArray(sesJ) ? sesJ : (sesJ.value || sesJ.sessions || []);
-    const terbit = new Set(sesi.filter(x => x.status === 'published').map(x => String(x.topicCode || '').trim()).filter(Boolean));
+    const terbit = new Set(sesi.map(x => String(x.topic_code || '').trim()).filter(Boolean));
     const kuisMap = computeKuis(absRows, terbit, new Set(cutiRows.map(r => String(r.nrp || '').trim())));
     const byNik = new Map(list.map(p => [p.nik, p]));
     for (const [nik, kuis] of kuisMap) {
@@ -237,6 +237,6 @@ if (require.main === module) {
   assert.deepStrictEqual([...km.keys()], ['1']);
   assert.strictEqual(km.get('1')[0].status, 'Cuti');
   const em = buildEmail({ nik: '9', nama: 'EKA PUTRA', unmet: [], kuis: km.get('1') }, 'Oktober 2026', '31 Oktober 2026');
-  assert.ok(em.subject.startsWith('Kuis pengganti') && em.html.includes('quiz-she.vercel.app/?nik=9') && !em.html.includes('<th'));
+  assert.ok(em.subject.startsWith('Kuis pengganti') && em.html.includes('simantra-k3.vercel.app/kuis-st') && !em.html.includes('<th'));
   console.log('cron-sap-reminder self-check OK');
 }

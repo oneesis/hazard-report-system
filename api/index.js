@@ -1275,9 +1275,9 @@ const ST_WAJIB_KUIS = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_J
 const ST_LABEL = { CUTI: 'cuti', DINAS_LUAR: 'dinas luar', SHIFT_MALAM: 'shift malam', LIBUR: 'libur', SECURITY_JAGA: 'jaga' };
 
 async function _kuisStTerbit() {
-  const j = await (await fetch('https://quiz-she.vercel.app/api/data?action=sessions')).json();
-  const list = Array.isArray(j) ? j : (j.value || j.sessions || []);
-  return new Set(list.filter((s) => s.status === 'published').map((s) => String(s.topicCode || '').trim()).filter(Boolean));
+  // Tabel kuis bersama (SIMANTRA /kelola-kuis-st & quiz-she) — langsung dari DB.
+  const rows = await getSql()`SELECT DISTINCT topic_code FROM sesi WHERE status = 'published'`;
+  return new Set(rows.map((r) => String(r.topic_code || '').trim()).filter(Boolean));
 }
 
 async function kirimNotifKuisST(sheets, scheduleId = '') {
@@ -3181,24 +3181,14 @@ module.exports = async (req, res) => {
         if (String(row.quiz_done || '').toUpperCase() === 'YA')
           return res.status(200).json({ status: 'success', updated: false, reason: 'already' });
 
-        // Verifikasi ke quiz-she: sesi dengan topicCode === ID jadwal, lulus di salah satu
-        const QUIZ_URL = 'https://quiz-she.vercel.app/api/data';
-        let passed = null;
-        try {
-          const sesJ = await (await fetch(QUIZ_URL + '?action=sessions')).json();
-          const sesIds = (Array.isArray(sesJ) ? sesJ : (sesJ.value || []))
-            .filter(s => String(s.topicCode || '').trim() === schedId).map(s => s.id);
-          for (const sid of sesIds) {
-            const ex = await (await fetch(QUIZ_URL + '?action=existing&nik=' + encodeURIComponent(nik) + '&sessionId=' + encodeURIComponent(sid))).json();
-            if (ex && ex.certificateNo) { passed = ex; break; }
-          }
-        } catch (e) {
-          return res.status(502).json({ status: 'error', message: 'Tidak bisa verifikasi ke quiz-she: ' + e.message });
-        }
+        // Verifikasi langsung ke tabel hasil kuis bersama (partisipasi; ditulis quiz-she
+        // & SIMANTRA) — lulus di sesi mana pun untuk jadwal ini (2026-10-22, dulu HTTP).
+        const passed = (await sql`SELECT score, certificate_no FROM partisipasi
+          WHERE topic_code = ${schedId} AND nik = ${nik} AND passed ORDER BY score DESC LIMIT 1`)[0];
         if (!passed) return res.status(200).json({ status: 'success', updated: false, reason: 'not_passed' });
 
         await sql`UPDATE safety_talk_absensi SET quiz_done = 'YA' WHERE schedule_id = ${schedId} AND nik = ${nik}`;
-        return res.status(200).json({ status: 'success', updated: true, score: passed.score, certificateNo: passed.certificateNo });
+        return res.status(200).json({ status: 'success', updated: true, score: passed.score, certificateNo: passed.certificate_no });
       }
 
       // syncAllSafetyTalkQuiz (2026-09-16) — rekonsiliasi massal. Dipanggil saat
@@ -3209,43 +3199,15 @@ module.exports = async (req, res) => {
       // tidak butuh auth khusus karena hanya menandai kelulusan yang benar.
       if (action === 'syncAllSafetyTalkQuiz') {
         res.setHeader('Access-Control-Allow-Origin', '*');
-        const QUIZ_URL = 'https://quiz-she.vercel.app/api/data';
-        const sql = getSql();
         const WAJIB = ['CUTI', 'DINAS_LUAR', 'SHIFT_MALAM', 'LIBUR', 'SECURITY_JAGA'];
-        // Kandidat: wajib kuis & QUIZ_DONE belum YA
-        const cand = await sql`
-          SELECT schedule_id, nik FROM safety_talk_absensi
-          WHERE status_kehadiran = ANY(${WAJIB}) AND COALESCE(upper(quiz_done), '') <> 'YA'`;
-        if (!cand.length) return res.status(200).json({ status: 'success', updated: 0 });
-
-        let sessBySched = {};
-        try {
-          const sesJ = await (await fetch(QUIZ_URL + '?action=sessions')).json();
-          for (const s of (Array.isArray(sesJ) ? sesJ : (sesJ.value || []))) {
-            const tc = String(s.topicCode || '').trim();
-            if (!tc) continue;
-            (sessBySched[tc] = sessBySched[tc] || []).push(s.id);
-          }
-        } catch (e) {
-          return res.status(502).json({ status: 'error', message: 'quiz-she tak terjangkau: ' + e.message });
-        }
-        const toMark = [];
-        const BATCH = 8;
-        for (let i = 0; i < cand.length; i += BATCH) {
-          await Promise.all(cand.slice(i, i + BATCH).map(async c => {
-            const sids = sessBySched[String(c.schedule_id).trim()];
-            if (!sids || !sids.length) return;
-            for (const sid of sids) {
-              try {
-                const ex = await (await fetch(QUIZ_URL + '?action=existing&nik=' + encodeURIComponent(c.nik) + '&sessionId=' + encodeURIComponent(sid))).json();
-                if (ex && ex.certificateNo) { toMark.push(c); break; }
-              } catch { /* satu sesi gagal, lanjut */ }
-            }
-          }));
-        }
-        for (const c of toMark)
-          await sql`UPDATE safety_talk_absensi SET quiz_done = 'YA' WHERE schedule_id = ${c.schedule_id} AND nik = ${c.nik}`;
-        return res.status(200).json({ status: 'success', updated: toMark.length, checked: cand.length });
+        // Satu UPDATE di DB: wajib kuis, QUIZ_DONE belum YA, dan ada hasil lulus di
+        // tabel kuis bersama (2026-10-22; dulu puluhan request HTTP ke quiz-she).
+        const marked = await getSql()`
+          UPDATE safety_talk_absensi a SET quiz_done = 'YA'
+          WHERE a.status_kehadiran = ANY(${WAJIB}) AND COALESCE(upper(a.quiz_done), '') <> 'YA'
+            AND EXISTS (SELECT 1 FROM partisipasi p WHERE p.topic_code = a.schedule_id AND p.nik = a.nik AND p.passed)
+          RETURNING a.nik`;
+        return res.status(200).json({ status: 'success', updated: marked.length });
       }
 
       // Semua endpoint migrasi (sekali-pakai, sudah selesai) kini DIKUNCI token —
@@ -3619,6 +3581,22 @@ module.exports = async (req, res) => {
             stRows = stRows.filter(r => !r['PERUSAHAAN_TARGET'] || r['PERUSAHAAN_TARGET'] === co);
           }
           result = { status: 'success', data: stRows };
+          break;
+        }
+        case 'getKuisStTerbit': {
+          // Kode jadwal ST yang kuis penggantinya sudah terbit (tabel kuis bersama
+          // public.topik/sesi; dikelola SIMANTRA /kelola-kuis-st, dulu quiz-she).
+          const rows = await getSql()`SELECT DISTINCT topic_code FROM sesi WHERE status = 'published' AND topic_code LIKE 'ST-%'`;
+          result = { status: 'success', data: rows.map(r => r.topic_code) };
+          break;
+        }
+        case 'getKuisStHasil': {
+          // Hasil kuis lulus per NIK untuk satu jadwal (halaman absensi admin).
+          if (!isAdminOrAbove(auth.role)) throw Object.assign(new Error('Akses ditolak.'), { httpStatus: 403 });
+          const rows = await getSql()`
+            SELECT DISTINCT ON (nik) nik, score, certificate_no FROM partisipasi
+            WHERE topic_code = ${String(req.query.schedule_id || '')} AND passed ORDER BY nik, score DESC, waktu`;
+          result = { status: 'success', data: Object.fromEntries(rows.map(r => [r.nik, { passed: true, score: r.score, certificateNo: r.certificate_no }])) };
           break;
         }
         case 'getStScheduleCounts': {

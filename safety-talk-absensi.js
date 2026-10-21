@@ -1,6 +1,8 @@
 // Safety Talk — halaman kelola absensi per jadwal
 
-const QUIZ_URL = 'https://quiz-she.vercel.app';
+// Kuis pengganti dikelola di SIMANTRA (2026-10-22, pindahan quiz-she); status kuis
+// dibaca dari tabel kuis bersama lewat API ONE-SAP.
+const QUIZ_ADMIN_URL = 'https://simantra-k3.vercel.app/kelola-kuis-st';
 
 let _abSchedule  = null;
 let _abKaryawan  = [];   // list karyawan
@@ -76,8 +78,8 @@ async function initAbsensi() {
         warnEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>
           <span><b>Belum ada quiz untuk jadwal ini.</b> Karyawan berstatus Cuti / Dinas Luar / Shift Malam / Off / Security Jaga
           tidak bisa memenuhi capaian sampai quiz dibuat. Buat di
-          <a href="${QUIZ_URL}/admin.html" target="_blank" style="color:#b45309;font-weight:700;text-decoration:underline">quiz-she</a>
-          → Topik Baru → <b>Import dari Safety Talk</b> → pilih jadwal ini.</span>`;
+          <a href="${QUIZ_ADMIN_URL}/${encodeURIComponent(_getScheduleId())}" target="_blank" style="color:#b45309;font-weight:700;text-decoration:underline">SIMANTRA → Kuis Safety Talk</a>
+          (isi soal lalu simpan — langsung terbit).</span>`;
       }
     }
 
@@ -121,14 +123,9 @@ async function initAbsensi() {
 // untuk jadwal ini (ditetapkan quiz-she saat "Import dari Safety Talk").
 async function _resolveQuizSessions(schedId) {
   try {
-    const res  = await fetch(`${QUIZ_URL}/api/data?action=sessions`);
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.value || data.sessions || []);
-    const matched = list.filter(s =>
-      String(s.topicCode || '').trim() === schedId && s.status === 'published'
-    );
-    _quizSessionIds = matched.map(s => s.id);
-    _quizTopicLabel = matched.find(s => s.title)?.title || '';
+    const data = await (await fetch('/api?action=getKuisStTerbit')).json();
+    _quizSessionIds = (data.data || []).includes(schedId) ? [schedId] : [];
+    _quizTopicLabel = '';
   } catch {
     _quizSessionIds = [];
     _quizTopicLabel = '';
@@ -136,16 +133,21 @@ async function _resolveQuizSessions(schedId) {
 }
 
 // ── Fetch quiz statuses ─────────────────────────────────────────────────────
-// Lulus di SALAH SATU sesi tertaut sudah dihitung lulus.
-async function _checkOneNik(nik) {
-  const results = await Promise.all(_quizSessionIds.map(async sid => {
+// Hasil lulus per NIK untuk jadwal ini — satu request ke tabel kuis bersama
+// (2026-10-22; dulu satu request ke quiz-she per karyawan per sesi).
+let _quizHasilMap = null;
+async function _quizHasil(refresh) {
+  if (!_quizHasilMap || refresh) {
     try {
-      const res  = await fetch(`${QUIZ_URL}/api/data?action=existing&nik=${encodeURIComponent(nik)}&sessionId=${encodeURIComponent(sid)}`);
-      const json = await res.json();
-      return json.certificateNo ? { passed: true, score: json.score, certificateNo: json.certificateNo } : null;
-    } catch { return null; }
-  }));
-  return results.find(Boolean) || { passed: false };
+      const j = await (await fetch(`/api?action=getKuisStHasil&schedule_id=${encodeURIComponent(_getScheduleId())}`)).json();
+      _quizHasilMap = j.data || {};
+    } catch { _quizHasilMap = {}; }
+  }
+  return _quizHasilMap;
+}
+
+async function _checkOneNik(nik) {
+  return (await _quizHasil())[nik] || { passed: false };
 }
 
 async function _fetchQuizStatuses() {
@@ -153,15 +155,11 @@ async function _fetchQuizStatuses() {
     QUIZ_REQUIRED.has(_abStatus[String(k['NIK'] || '').trim()] || '')
   );
   if (!toCheck.length) return;
-
-  // Maks 10 karyawan bersamaan agar tidak membanjiri backend quiz-she
-  const BATCH = 10;
-  for (let i = 0; i < toCheck.length; i += BATCH) {
-    await Promise.all(toCheck.slice(i, i + BATCH).map(async k => {
-      const nik = String(k['NIK'] || '').trim();
-      _abQuizResult[nik] = await _checkOneNik(nik);
-      _updateQuizCell(nik);
-    }));
+  const hasil = await _quizHasil(true);
+  for (const k of toCheck) {
+    const nik = String(k['NIK'] || '').trim();
+    _abQuizResult[nik] = hasil[nik] || { passed: false };
+    _updateQuizCell(nik);
   }
   updateSummary();
 }

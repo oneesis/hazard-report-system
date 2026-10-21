@@ -366,9 +366,8 @@ function renderHazardDraft() {
   } catch { section.style.display = 'none'; }
 }
 
-// Kartu "Pengganti Safety Talk" — buka quiz-she dgn NRP karyawan (auto-login,
-// tanpa ketik NIK) untuk mengganti Safety Talk yang tak dihadiri (Cuti/Dinas/
-// Shift/Off) dengan kuis. Terhubung via data NRP.
+// Kartu "Pengganti Safety Talk" — buka kuis pengganti di SIMANTRA (/kuis-st, login
+// akun ONE-SAP; 2026-10-22 pindahan quiz-she) untuk Safety Talk yang tak dihadiri.
 // Panel Safety Talk di beranda: riwayat kehadiran sendiri (ringkas). Tidak
 // hadir (Cuti/Dinas/Shift/Off) → tanda kuis pengganti sudah/belum; Mangkir →
 // tak bisa diganti kuis. Tombol kuis hanya muncul bila ada yang belum.
@@ -378,7 +377,7 @@ async function renderPenggantiST() {
   const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   const nik = String(u?.nik || '').trim();
   if (!nik) { el.innerHTML = ''; return 0; }
-  const quizUrl = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
+  const quizUrl = 'https://simantra-k3.vercel.app/kuis-st';
   el.innerHTML = '<div class="st-empty">Memuat riwayat…</div>';
 
   let rows = [];
@@ -449,7 +448,7 @@ async function maybeShowOnsitePopup() {
 
 // Popup kuis pengganti Safety Talk saat buka app (diperbarui 2026-10-11).
 // Muncul bila ada sesi ST bulan ini dgn status wajib-kuis (Cuti/Dinas/Shift Malam/
-// Libur/Jaga) yang kuisnya belum lulus DAN kuisnya sudah terbit di quiz-she.
+// Libur/Jaga) yang kuisnya belum lulus DAN kuisnya sudah terbit (tabel kuis bersama).
 // Sekali per buka aplikasi (bisa ditunda "Nanti saja"); dari notifikasi PWA
 // (?kuis=1) selalu muncul. Tidak mengunci aplikasi — lapor bahaya tetap bisa.
 async function maybeShowStQuizPopup() {
@@ -473,16 +472,15 @@ async function maybeShowStQuizPopup() {
   if (!pending.length) return;
   // Hanya sesi yang kuisnya sudah terbit (jangan arahkan ke kuis yang belum ada).
   try {
-    const j = await (await fetch('https://quiz-she.vercel.app/api/data?action=sessions')).json();
-    const list = Array.isArray(j) ? j : (j.value || j.sessions || []);
-    const terbit = new Set(list.filter(x => x.status === 'published').map(x => String(x.topicCode || '').trim()));
+    const j = await (await fetch('/api?action=getKuisStTerbit')).json();
+    const terbit = new Set((j.data || []).map(x => String(x).trim()));
     pending = pending.filter(r => terbit.has(String(r.schedule_id || '').trim()));
   } catch { return; }
   if (!pending.length) return;
   try { sessionStorage.setItem('st_quiz_popup_shown', '1'); } catch {}
   if (dariNotif) history.replaceState(null, '', location.pathname);
 
-  const url = `https://quiz-she.vercel.app/?nik=${encodeURIComponent(nik)}`;
+  const url = 'https://simantra-k3.vercel.app/kuis-st';
   const akhir = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
   const fmt = v => { const d = new Date(String(v) + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); };
   const daftar = pending.map(r => `
