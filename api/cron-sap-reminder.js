@@ -1,4 +1,4 @@
-// Cron harian 08:00 WIB: reminder EMAIL H-3 sebelum akhir bulan ke karyawan
+// Cron harian 08:00 WIB: reminder EMAIL H-3 & H-1 (sejak 2026-10-29) sebelum akhir bulan ke karyawan
 // PT EBL yang capaian SAP-nya belum 100%.
 // - Modul: HR (pelapor), INS (pelapor), SBO (observer), PC (coach).
 // - Kuis pengganti Safety Talk (2026-10-11): peserta wajib-kuis (Cuti/Dinas/
@@ -15,7 +15,7 @@ const { targetBulan } = require('../lib/target-mulai');
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const APP_URL     = 'https://sap-ebl.vercel.app/index-home.html';
-const REMIND_DAYS = 3;
+const REMIND_DAYS = [3, 1]; // H-3 & H-1 sebelum akhir bulan
 const MONTHS_ID   = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const MODULES     = [
   { key: 'HR',  label: 'Hazard Report',              obj: 'OBJ HR'  },
@@ -106,7 +106,7 @@ function computeKuis(absRows, terbit, sedangCuti) {
   return out;
 }
 
-function buildEmail(p, bulanNama, deadlineStr) {
+function buildEmail(p, bulanNama, deadlineStr, sisa = 3) {
   const first = (p.nama.split(/\s+/)[0] || '').toLowerCase().replace(/^./, c => c.toUpperCase());
   const rows = p.unmet.map(u => `<tr>
       <td style="padding:8px 10px;border-bottom:1px solid #eef2f7">${esc(u.label)}</td>
@@ -117,7 +117,7 @@ function buildEmail(p, bulanNama, deadlineStr) {
   const quizLink = QUIZ_URL;
   const tglPendek = t => { const d = new Date(String(t) + 'T00:00:00'); return isNaN(d) ? String(t || '') : `${d.getDate()} ${MONTHS_ID[d.getMonth()].slice(0, 3)}`; };
   const text = `Halo ${first},\n\n`
-    + (p.unmet.length ? `Capaian SAP kamu bulan ${bulanNama} belum 100% dan tersisa ${REMIND_DAYS} hari (s/d ${deadlineStr}).\n\n`
+    + (p.unmet.length ? `Capaian SAP kamu bulan ${bulanNama} belum 100% dan tersisa ${sisa} hari (s/d ${deadlineStr}).\n\n`
       + p.unmet.map(u => `- ${u.label}: ${u.got}/${u.target} (kurang ${u.target - u.got})`).join('\n') + '\n\n' : '')
     + (kuis.length ? `Kuis pengganti Safety Talk yang belum kamu kerjakan (batas ${deadlineStr}):\n`
       + kuis.map(k => `- ${k.judul} (${tglPendek(k.tanggal)}, ${k.status})`).join('\n') + `\nKerjakan: ${quizLink}\n\n` : '')
@@ -126,7 +126,7 @@ function buildEmail(p, bulanNama, deadlineStr) {
     <h2 style="color:#00205B;margin:0 0 4px">ONE-SAP</h2>
     <p style="margin:0 0 16px;color:#64748b;font-size:13px">Pengingat Capaian SAP</p>
     <p>Halo ${esc(first)},</p>
-    ${p.unmet.length ? `<p>Capaian SAP kamu bulan <b>${esc(bulanNama)}</b> belum 100%. Tersisa <b>${REMIND_DAYS} hari</b> (s/d ${esc(deadlineStr)}).</p>
+    ${p.unmet.length ? `<p>Capaian SAP kamu bulan <b>${esc(bulanNama)}</b> belum 100%. Tersisa <b>${sisa} hari</b> (s/d ${esc(deadlineStr)}).</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0">
       <tr style="background:#f8fafc;color:#64748b;font-size:12px">
         <th style="padding:8px 10px;text-align:left">Modul</th><th style="padding:8px 10px">Capaian</th><th style="padding:8px 10px">Sisa</th>
@@ -139,8 +139,8 @@ function buildEmail(p, bulanNama, deadlineStr) {
     <p style="color:#94a3b8;font-size:12px">Email otomatis ONE-SAP — tidak perlu dibalas.</p>
   </div>`;
   const subject = p.unmet.length
-    ? `Capaian SAP ${bulanNama} kamu belum 100% — sisa ${REMIND_DAYS} hari`
-    : `Kuis pengganti Safety Talk belum dikerjakan — sisa ${REMIND_DAYS} hari`;
+    ? `Capaian SAP ${bulanNama} kamu belum 100% — sisa ${sisa} hari`
+    : `Kuis pengganti Safety Talk belum dikerjakan — sisa ${sisa} hari`;
   return { subject, text, html };
 }
 
@@ -153,8 +153,9 @@ module.exports = async (req, res) => {
   const dry = q.dry === '1', force = q.force === '1', only = String(q.only || '').trim();
   const today = todayWIB();
   const left = daysToMonthEnd(today);
-  if (!force && left !== REMIND_DAYS)
-    return res.json({ status: 'skip', reason: `bukan H-${REMIND_DAYS} (sisa ${left} hari)` });
+  if (!force && !REMIND_DAYS.includes(left))
+    return res.json({ status: 'skip', reason: `bukan H-${REMIND_DAYS.join('/H-')} (sisa ${left} hari)` });
+  const sisa = REMIND_DAYS.includes(left) ? left : REMIND_DAYS[0];
 
   const bulan = /^\d{4}-\d{2}$/.test(q.bulan || '') ? q.bulan
     : `${today.y}-${String(today.m + 1).padStart(2, '0')}`;
@@ -208,7 +209,7 @@ module.exports = async (req, res) => {
 
   let sent = 0; const failed = [];
   for (const p of withEmail) {
-    const m = buildEmail(p, bulanNama, deadlineStr);
+    const m = buildEmail(p, bulanNama, deadlineStr, sisa);
     try { await t.sendMail({ from: `ONE-SAP <${user}>`, to: p.email, ...m }); sent++; }
     catch (e) { failed.push({ nik: p.nik, error: e.message }); }
   }
@@ -249,6 +250,9 @@ if (require.main === module) {
   assert.deepStrictEqual([...km.keys()], ['1']);
   assert.strictEqual(km.get('1')[0].status, 'Cuti');
   const em = buildEmail({ nik: '9', nama: 'EKA PUTRA', unmet: [], kuis: km.get('1') }, 'Oktober 2026', '31 Oktober 2026');
+  const em1 = buildEmail({ nik: '9', nama: 'EKA PUTRA', unmet: [{ label: 'Hazard Report', got: 0, target: 1 }], kuis: [] }, 'Oktober 2026', '31 Oktober 2026', 1);
+  assert.ok(em1.subject.endsWith('sisa 1 hari') && em1.html.includes('Tersisa <b>1 hari</b>'));
+  assert.strictEqual(daysToMonthEnd({ y: 2026, m: 9, d: 30 }), 1);  // 30 Okt → H-1
   assert.ok(em.subject.startsWith('Kuis pengganti') && em.html.includes('simantra-k3.vercel.app/kuis-st') && !em.html.includes('<th'));
   console.log('cron-sap-reminder self-check OK');
 }
