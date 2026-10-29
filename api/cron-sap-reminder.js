@@ -37,10 +37,19 @@ function todayWIB(now = Date.now()) {
 function daysToMonthEnd({ y, m, d }) {
   return new Date(Date.UTC(y, m + 1, 0)).getUTCDate() - d;
 }
+// Bulan laporan menurut jam WITA (site Rantau, sama dgn HP pengguna & halaman Capaian SAP).
+// Server Vercel berjalan UTC: laporan 1 Okt 07.37 WITA = 30 Sep 23.37Z dulu terhitung September
+// (2026-10-29, email salah ke Yan Yan Riyana). Tanpa zona waktu = sudah jam lokal → apa adanya.
+function bulanWita(val) {
+  const s = String(val || '').trim();
+  if (/^\d{4}-\d{2}/.test(s) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) return s.slice(0, 7);
+  const dt = new Date(s);
+  if (isNaN(dt)) return '';
+  const w = new Date(dt.getTime() + 8 * 3600_000);
+  return `${w.getUTCFullYear()}-${String(w.getUTCMonth() + 1).padStart(2, '0')}`;
+}
 function inMonth(val, bulan) {
-  const dt = new Date(String(val || ''));
-  if (isNaN(dt)) return false;
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}` === bulan;
+  return bulanWita(val) === bulan;
 }
 
 // Inti (murni, mudah diuji): daftar karyawan EBL dgn modul yang belum tercapai.
@@ -213,6 +222,9 @@ if (require.main === module) {
   const assert = require('assert');
   assert.strictEqual(daysToMonthEnd({ y: 2026, m: 9, d: 28 }), 3);  // 28 Okt → H-3
   assert.strictEqual(daysToMonthEnd({ y: 2026, m: 1, d: 25 }), 3);  // 25 Feb 2026 (28 hr) → H-3
+  assert.ok(inMonth('2026-09-30T23:37:32.016Z', '2026-10'));   // 1 Okt 07.37 WITA → Oktober
+  assert.ok(inMonth('2026-10-31T15:59:00Z', '2026-10') && inMonth('2026-10-31T16:00:00Z', '2026-11'));
+  assert.ok(inMonth('2026-10-01', '2026-10') && inMonth('2026-10-31 23:00', '2026-10')); // tanpa zona = lokal
   const kar = [
     { email: 'a@x.com', data: { NIK: '1', NAMA: 'ANDI', PERUSAHAAN: 'PT EBL', 'OBJ HR': 2, 'OBJ INS': 0, 'OBJ SBO': 1, 'OBJ PC': 0 } },
     { email: 'b@x.com', data: { NIK: '2', NAMA: 'BUDI', PERUSAHAAN: 'PT EBL', 'OBJ HR': 1 } },

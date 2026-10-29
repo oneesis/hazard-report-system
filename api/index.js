@@ -1038,6 +1038,15 @@ function requireAuth(req) {
 
 // #2 — Cek apakah token sudah di-invalidasi via logout (LAST_LOGOUT_AT di sheet)
 async function checkTokenValid(sheets, auth) {
+  // NIK sesi sudah tak ada di roster (mis. NRP diganti di SISTER MINER, 2026-10-29) → tolak,
+  // supaya HP yang masih login dgn NIK lama tidak terus mengirim laporan atas NIK lama.
+  // Hanya bila DB menjawab "tidak ada"; DB gagal → perilaku lama (tidak mengunci semua orang).
+  const sql = getSql();
+  if (sql) {
+    const rows = await sql`SELECT 1 FROM karyawan WHERE nik = ${String(auth.nik || '').trim()}`.catch(() => null);
+    if (rows && !rows.length)
+      throw Object.assign(new Error('Akun ini sudah tidak terdaftar (NRP mungkin berubah). Silakan login ulang dengan NRP baru.'), { httpStatus: 401 });
+  }
   const user = await _karyawanByNik(sheets, auth.nik);
   if (!user) return;
   const lastLogout = Number(user['LAST_LOGOUT_AT'] || 0);
