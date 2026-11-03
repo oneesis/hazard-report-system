@@ -271,31 +271,38 @@ function renderMyReports(reports, query = '') {
   }
 
   const TYPE_META = {
-    HAZARD:     { label: 'HR',  color: MOD_COLORS.HAZARD },
-    INSPECTION: { label: 'INS', color: MOD_COLORS.INSPECTION },
-    SBO:        { label: 'SBO', color: MOD_COLORS.SBO },
-    PC:         { label: 'PC',  color: MOD_COLORS.PC },
-    ST:         { label: 'ST',  color: MOD_COLORS.ST },
+    HAZARD:     { label: 'Hazard',      color: MOD_COLORS.HAZARD },
+    INSPECTION: { label: 'Inspeksi',    color: MOD_COLORS.INSPECTION },
+    SBO:        { label: 'SBO',         color: MOD_COLORS.SBO },
+    PC:         { label: 'PC',          color: MOD_COLORS.PC },
+    ST:         { label: 'Safety Talk', color: MOD_COLORS.ST },
   };
 
   el.innerHTML = recent.map(r => {
     const type    = String(r.report_type || 'HAZARD').toUpperCase();
     const meta    = TYPE_META[type] || TYPE_META.HAZARD;
-    const id      = escapeHTML(getReportId(r) || '-');
-    const desc    = escapeHTML((descOf(r) || '-').substring(0, 60));
+    // Isi laporan jadi baris utama (2 baris); kode laporan tak ditampilkan — tetap ada di halaman detail.
+    let teks = String(descOf(r) || r.temuan_inspeksi || '').replace(/^Safety Talk:\s*/i, '').replace(/^\s*\d+\.\s*/, '').trim();
+    if (!/[\p{L}\p{N}]/u.test(teks)) { // kosong / hanya tanda baca ("-", ".")
+      const area = INSPECTION_AREAS.find(a => a.type === String(r.inspection_sheet || r.jenis_inspeksi || '').trim().toUpperCase())?.name;
+      teks = type === 'INSPECTION' ? `Inspeksi ${area || ''}`.trim() : 'Tanpa keterangan';
+    }
+    const desc    = escapeHTML(teks);
     const dateVal = r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || r.tgl_observasi || r.tgl_pc || r.timestamp || '';
     const date    = dateVal ? new Date(dateVal).toLocaleDateString('id-ID', { day:'2-digit', month:'short' }) : '';
 
     // ST tak punya siklus OPEN/CLOSED → pakai status kehadiran. Sisanya OPEN/CLOSED.
     let statusLabel, badgeCls, dotCls, isOverdue = false;
     if (type === 'ST') {
-      statusLabel = String(r.status_kehadiran || 'HADIR').toUpperCase();
-      const ok = statusLabel === 'HADIR';
-      badgeCls = ok ? 'badge-closed' : 'badge-open';
-      dotCls   = ok ? 'dot-closed' : 'dot-open';
+      const st = String(r.status_kehadiran || 'HADIR').toUpperCase();
+      const ok = st === 'HADIR' || String(r.quiz_done || '').toUpperCase() === 'YA';
+      statusLabel = ok && st !== 'HADIR' ? 'Kuis selesai'
+        : ({ HADIR: 'Hadir', MANGKIR: 'Mangkir', CUTI: 'Cuti', DINAS_LUAR: 'Dinas luar', SHIFT_MALAM: 'Shift malam', LIBUR: 'Libur', SECURITY_JAGA: 'Jaga' }[st] || st);
+      badgeCls = ok ? 'badge-closed' : st === 'MANGKIR' ? 'badge-overdue' : 'badge-open';
+      dotCls   = ok ? 'dot-closed' : st === 'MANGKIR' ? 'dot-overdue' : 'dot-open';
     } else {
       const status = (getReportStatus(r) || 'OPEN').toUpperCase();
-      statusLabel  = status;
+      statusLabel  = status.charAt(0) + status.slice(1).toLowerCase();
       const due     = r.batas_waktu || r.due_date || '';
       const dueDate = due ? new Date(due) : null;
       isOverdue = dueDate && !isNaN(dueDate) && status !== 'CLOSED' && dueDate < new Date();
@@ -309,14 +316,13 @@ function renderMyReports(reports, query = '') {
       : type === 'ST' ? 'capaian-sap.html'
       : `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
 
-    const typeChip = `<span style="display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.03em;color:#fff;background:${meta.color};padding:1px 6px;border-radius:5px;margin-right:6px;vertical-align:middle">${meta.label}</span>`;
+    const typeChip = `<span class="report-item-chip" style="background:${meta.color}">${meta.label}</span>`;
 
     return `<a class="report-item${isOverdue ? ' report-item--overdue' : ''}" href="${href}">
       <div class="report-item-dot ${dotCls}"></div>
       <div class="report-item-body">
-        <div class="report-item-id">${typeChip}${id}${isOverdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</div>
         <div class="report-item-desc">${desc}</div>
-        ${date ? `<div class="report-item-meta">${date}</div>` : ''}
+        <div class="report-item-meta">${typeChip}${date ? `<span>${date}</span>` : ''}${isOverdue ? '<span class="overdue-tag">Overdue</span>' : ''}</div>
       </div>
       <span class="report-item-badge ${badgeCls}">${statusLabel}</span>
     </a>`;
@@ -401,7 +407,7 @@ async function renderPenggantiST() {
     else if (st === 'MANGKIR') badge = '<span class="st-b st-bad">Mangkir</span>';
     else if (quizDone) badge = `<span class="st-b st-ok"><i class="fa-solid fa-check"></i> Kuis selesai</span>`;
     else { pending++; needQuiz = true; badge = '<span class="st-b st-warn">Kerjakan kuis <i class="fa-solid fa-arrow-right"></i></span>'; }
-    const sub = st === 'HADIR' || st === 'MANGKIR' ? '' : `<span class="st-why">${escapeHTML(st.charAt(0) + st.slice(1).toLowerCase())}</span>`;
+    const sub = st === 'HADIR' || st === 'MANGKIR' ? '' : `<span class="st-why">${escapeHTML(({ DINAS_LUAR: 'Dinas luar', SHIFT_MALAM: 'Shift malam', SECURITY_JAGA: 'Jaga' })[st] || st.charAt(0) + st.slice(1).toLowerCase())}</span>`;
     const inner = `<div class="st-main">
         <div class="st-topic">${escapeHTML(r.judul_materi || 'Safety Talk')}</div>
         <div class="st-date">${fmt(r.tanggal || r.bulan)} ${sub}</div>
@@ -568,15 +574,17 @@ function renderQuickStats(reports) {
   const open    = pool.filter(r => getReportStatus(r) === 'OPEN').length;
   const closed  = pool.filter(r => getReportStatus(r) === 'CLOSED').length;
   const overdue = pool.filter(r => {
-    const due = r.due_date || r.tanggal_due;
+    const due = r.batas_waktu || r.due_date || r.tanggal_due; // batas_waktu = kolom aslinya (dulu selalu 0)
     return due && getReportStatus(r) !== 'CLOSED' && new Date(due) < new Date();
   }).length;
 
   const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   set('qsTotal',  total);
   set('qsOpen',   open);
+  set('qsProgress', total - open - closed);
   set('qsClosed', closed);
   set('qsOverdue',overdue);
+  document.getElementById('qsOverdue')?.classList.toggle('qs-nol', overdue === 0); // 0 bukan peringatan → tak merah
 
   // Also fill mobile daily summary
   const sum = document.getElementById('dailySummary');
@@ -657,17 +665,17 @@ function renderActionBanner(reports) {
     const code  = String(r.inspection_sheet || r.jenis_inspeksi || '').trim().toUpperCase();
     let desc = String(r.deskripsi_bahaya || r.temuan_inspeksi || r.temuan || r.deskripsi_temuan || '')
       .replace(/^\s*\d+\.\s*/, '').trim(); // buang nomor butir checklist "15. "
-    if (!desc) desc = isIns ? `Temuan inspeksi ${insName(code)}`.trim() : 'Tanpa deskripsi';
+    if (!/[\p{L}\p{N}]/u.test(desc)) desc = isIns ? `Temuan inspeksi ${insName(code)}`.trim() : 'Tanpa deskripsi'; // kosong / hanya "." atau "-"
     const lokasi = r.lokasi_bahaya || r.lokasi_inspeksi || r.lokasi || insName(code);
     const href = `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
     const due  = dueInfo(r);
     const chip = isIns
-      ? `<span class="ab-chip" style="background:${MOD_COLORS.INSPECTION}">INS</span>`
-      : `<span class="ab-chip" style="background:${MOD_COLORS.HAZARD}">HR</span>`;
+      ? `<span class="ab-chip" style="background:${MOD_COLORS.INSPECTION}">Inspeksi</span>`
+      : `<span class="ab-chip" style="background:${MOD_COLORS.HAZARD}">Hazard</span>`;
     return `<a href="${href}" class="ab-row${due.days < 0 ? ' ab-row--over' : ''}">
       <div class="ab-row-main">
         <div class="ab-row-desc">${chip}${escapeHTML(desc)}</div>
-        <div class="ab-row-meta"><span class="ab-row-where">${lokasi ? `<i class="fa-solid fa-location-dot"></i> ${escapeHTML(lokasi)} · ` : ''}${escapeHTML(getReportId(r) || '-')}</span>${due.html}</div>
+        <div class="ab-row-meta"><span class="ab-row-where">${lokasi ? `<i class="fa-solid fa-location-dot"></i> ${escapeHTML(lokasi)}` : escapeHTML(getReportId(r) || '-')}</span>${due.html}</div>
       </div>
       <i class="fa-solid fa-chevron-right ab-row-go"></i>
     </a>`;
@@ -762,7 +770,7 @@ function renderSapAchievement(reports, obj, offset) {
   const doneN = rows.filter(r => r.count >= r.target).length;
 
   const canNext = _sapMonthOffset < 0;
-  const navBtn = 'width:26px;height:26px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-size:1rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
+  const navBtn = 'width:34px;height:34px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-size:1rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
   el.style.display = '';
   el.innerHTML = `
     <div class="sap-ach-card" id="sapAchCard">
@@ -778,7 +786,7 @@ function renderSapAchievement(reports, obj, offset) {
         <div class="sap-ring" style="--p:${tot};--c:${barColor(tot)}"><span>${tot}%</span></div>
         <div class="sap-ring-txt">
           <b>Capaian ${_sapMonthOffset === 0 ? 'bulan ini' : MONTHS_ID[m]}</b>
-          <small>${doneN} dari ${rows.length} target tercapai · Lihat detail <i class="fa-solid fa-arrow-right"></i></small>
+          <small>${doneN} dari ${rows.length} target tercapai · <span style="white-space:nowrap">Lihat detail <i class="fa-solid fa-arrow-right"></i></span></small>
         </div>
       </a>
       <div class="sap-ach-rows">
@@ -791,7 +799,7 @@ function renderSapAchievement(reports, obj, offset) {
             <div class="sap-obj-bar-wrap">
               <div class="sap-obj-bar" style="width:${p}%;background:${color}"></div>
             </div>
-            <div class="sap-obj-count" style="color:${color}">${r.count}<span class="sap-obj-sep">/</span>${r.target}</div>
+            <div class="sap-obj-count">${r.count}<span class="sap-obj-sep">/</span>${r.target}</div>
             ${done ? '<i class="fa-solid fa-circle-check sap-obj-done"></i>' : `<span class="sap-obj-pct">${p}%</span>`}
           </div>`;
         }).join('')}
@@ -834,18 +842,18 @@ async function renderBerandaDD() {
     const mm = (v) => (v >= 0.1 ? `${(+v).toFixed(1).replace('.', ',')} mm` : 'tanpa hujan');
     const kelas = (k) => 'k-' + String(k || '').toLowerCase().replace(/\s+/g, '-'); // warna ikon per kategori
     const cuaca = (j.cuaca || []).map((c) => `<div class="bdd-hari${c.tanggal === hariIni ? ' kini' : ''}">
-        <span class="bdd-lbl">${label(c.tanggal)}</span>
-        <span class="bdd-kat ${kelas(c.kategori)}"><i class="fa-solid ${escapeHTML(c.ikon)}"></i>${escapeHTML(c.kategori)}</span>
+        <span class="bdd-lbl ${kelas(c.kategori)}"><i class="fa-solid ${escapeHTML(c.ikon)}"></i>${label(c.tanggal)}</span>
+        <span class="bdd-kat">${escapeHTML(c.kategori)}</span>
         <small>${mm(c.hujan_mm)}</small></div>`).join('');
     const lebat = (j.cuaca || []).some((c) => c.hujan_mm >= 20);
     const f = j.fokus;
     const STATUS = { merah: 'Waspada tinggi', kuning: 'Perlu perhatian', hijau: 'Normal' };
     el.innerHTML = `<div class="bdd-kartu">
-        ${cuaca ? `<div class="bdd-judul"><span><i class="fa-solid fa-cloud-sun-rain"></i> Prakiraan cuaca</span><small>area tambang · kategori BMKG</small></div>
+        ${cuaca ? `<div class="bdd-judul"><span><i class="fa-solid fa-cloud-sun-rain"></i> Prakiraan Cuaca</span><small>area tambang · kategori BMKG</small></div>
         <div class="bdd-hari-row">${cuaca}</div>` : ''}
         ${lebat ? '<div class="bdd-awas"><i class="fa-solid fa-triangle-exclamation"></i> Hujan sedang/lebat — jalan licin & lereng rawan, lakukan inspeksi jalan.</div>' : ''}
         ${f ? `<div class="bdd-fokus ${escapeHTML(f.status)}">
-          <div class="bdd-judul"><span><i class="fa-solid fa-bullseye"></i> Fokus minggu ini</span><small class="bdd-st">${STATUS[f.status] || ''}</small></div>
+          <div class="bdd-judul"><span><i class="fa-solid fa-bullseye"></i> Fokus Minggu Ini</span><small class="bdd-st">${STATUS[f.status] || ''}</small></div>
           <div class="bdd-area"><i class="fa-solid fa-location-dot"></i> ${escapeHTML(f.lokasi)}</div>
           ${f.alasan?.length ? `<div class="bdd-alasan">${escapeHTML(f.alasan[0])}</div>` : ''}
           ${f.penyebab?.length ? `<div class="bdd-sub">Penyebab insiden terbanyak di sini — laporkan bila menemukannya:</div>

@@ -49,14 +49,17 @@
         <div class="greeting-user-badge" id="greetingBadge"></div>
       </div>
 
-      <!-- Deteksi dini (2026-10-15): cuaca & fokus minggu ini -->
-      <div id="berandaDD" class="beranda-dd" hidden></div>
+      <!-- Urutan menurut kegunaan (2026-11-04): yang harus dikerjakan → buat laporan → capaian;
+           kolom kanan (laptop) / bawah (HP): info cuaca & fokus, ringkasan, riwayat. -->
+      <div class="home-cols">
+      <div class="home-col">
 
       <!-- ACTION BANNER: tampil jika ada laporan yang butuh tindakan -->
       <div id="pushBanner" style="display:none"></div>
       <div id="actionBanner" style="display:none"></div>
 
       <!-- MODULE BAR: 5 modul sebagai ikon (klik → slide-down) -->
+      <h2 class="home-sec-title">Buat &amp; Lihat Laporan</h2>
       <div class="mod-bar" id="modBar">
         <button type="button" class="mod-btn" data-mod="hr" onclick="toggleModule('hr')" aria-expanded="false">
           <span class="mod-ic ic-hr"><i class="fa-solid fa-triangle-exclamation"></i></span>
@@ -129,12 +132,19 @@
       <!-- SAP ACHIEVEMENT (ringkas) -->
       <div id="sapAchievement" style="display:none"></div>
 
+      </div><!-- end kolom utama -->
+      <div class="home-col">
+
+      <!-- Deteksi dini (2026-10-15): cuaca & fokus minggu ini -->
+      <div id="berandaDD" class="beranda-dd" hidden></div>
+
       <!-- RINGKASAN LAPORAN (ringkas) -->
       <div class="sum-card">
-        <p class="quick-stats-label">RINGKASAN LAPORAN SAYA</p>
+        <h2 class="quick-stats-label">Ringkasan Laporan Saya</h2>
         <div class="quick-stats-grid" id="quickStatsGrid">
           <div class="quick-stat"><div class="quick-stat-num" id="qsTotal">-</div><div class="quick-stat-desc">Total</div></div>
           <div class="quick-stat"><div class="quick-stat-num qs-open" id="qsOpen">-</div><div class="quick-stat-desc">Open</div></div>
+          <div class="quick-stat"><div class="quick-stat-num qs-progress" id="qsProgress">-</div><div class="quick-stat-desc">Progress</div></div>
           <div class="quick-stat"><div class="quick-stat-num qs-closed" id="qsClosed">-</div><div class="quick-stat-desc">Closed</div></div>
           <div class="quick-stat"><div class="quick-stat-num qs-overdue" id="qsOverdue">-</div><div class="quick-stat-desc">Overdue</div></div>
         </div>
@@ -154,6 +164,9 @@
           Lihat Semua Riwayat <i class="fa-solid fa-arrow-right"></i>
         </a>
       </div>
+
+      </div><!-- end kolom samping -->
+      </div><!-- end home-cols -->
 
     </div><!-- end home-content -->
 

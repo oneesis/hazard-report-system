@@ -1611,7 +1611,7 @@ async function getSafetyTalkFeed(auth, milik) {
   const n = milik?.nik || '', m = milik?.nama || '';
   try {
     rows = await sql`
-      SELECT a.schedule_id, a.nik, a.nama, a.perusahaan, a.status_kehadiran, a.checked_at,
+      SELECT a.schedule_id, a.nik, a.nama, a.perusahaan, a.status_kehadiran, a.quiz_done, a.checked_at,
              s.tanggal AS s_tanggal, s.bulan AS s_bulan, s.judul_materi
       FROM safety_talk_absensi a
       LEFT JOIN safety_talk_schedule s ON s.id = a.schedule_id
@@ -1624,6 +1624,7 @@ async function getSafetyTalkFeed(auth, milik) {
     nama: r.nama || '',
     perusahaan: r.perusahaan || '',
     status_kehadiran: r.status_kehadiran || '',
+    quiz_done: r.quiz_done || '',
     timestamp: r.checked_at || r.s_tanggal || '',
     tanggal_laporan: r.s_tanggal || '',
     deskripsi: r.judul_materi ? `Safety Talk: ${r.judul_materi}` : `Safety Talk ${r.s_bulan || ''}`.trim(),
