@@ -7,6 +7,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Beranda - ONE-SAP</title>
+<meta name="theme-color" content="#00205B">
 <link rel="icon" href="assets/Logo EBL.png" type="image/png" />
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="layout.css">
@@ -36,7 +37,8 @@
     <!-- PAGE CONTENT -->
     <div class="home-content">
 
-      <!-- GREETING -->
+      <!-- HERO: salam + ringkasan singkat (capaian & cuaca hari ini, diisi home.js) -->
+      <section class="home-hero">
       <div class="home-greeting">
         <div class="home-greeting-text">
           <p class="greeting-day" id="greetingDay"></p>
@@ -48,6 +50,11 @@
         </div>
         <div class="greeting-user-badge" id="greetingBadge"></div>
       </div>
+      <div class="hero-chips">
+        <a class="hero-chip" id="heroCapaian" href="capaian-sap.html" hidden></a>
+        <div class="hero-chip" id="heroCuaca" hidden></div>
+      </div>
+      </section>
 
       <!-- Urutan menurut kegunaan (2026-11-04): yang harus dikerjakan → buat laporan → capaian;
            kolom kanan (laptop) / bawah (HP): info cuaca & fokus, ringkasan, riwayat. -->
@@ -141,6 +148,7 @@
       <!-- RINGKASAN LAPORAN (ringkas) -->
       <div class="sum-card">
         <h2 class="quick-stats-label">Ringkasan Laporan Saya</h2>
+        <div class="qs-bar" id="qsBar" aria-hidden="true"></div>
         <div class="quick-stats-grid" id="quickStatsGrid">
           <div class="quick-stat"><div class="quick-stat-num" id="qsTotal">-</div><div class="quick-stat-desc">Total</div></div>
           <div class="quick-stat"><div class="quick-stat-num qs-open" id="qsOpen">-</div><div class="quick-stat-desc">Open</div></div>

@@ -37,14 +37,14 @@ function renderSyncStatus() {
   if (!el) return;
   let icon, color, text;
   if (!navigator.onLine) {
-    icon = 'fa-cloud'; color = '#b45309';
+    icon = 'fa-cloud'; color = '#fbbf24';
     text = 'Offline · ' + (_pendingOffline ? `${_pendingOffline} laporan menunggu jaringan` : 'menampilkan data terakhir');
   } else if (_syncState === 'syncing') {
-    icon = 'fa-arrows-rotate fa-spin'; color = '#2563eb'; text = 'Mengirim laporan offline…';
+    icon = 'fa-arrows-rotate fa-spin'; color = '#93c5fd'; text = 'Mengirim laporan offline…';
   } else if (_pendingOffline) {
-    icon = 'fa-cloud-arrow-up'; color = '#b45309'; text = `${_pendingOffline} laporan offline menunggu dikirim`;
+    icon = 'fa-cloud-arrow-up'; color = '#fbbf24'; text = `${_pendingOffline} laporan offline menunggu dikirim`;
   } else {
-    icon = 'fa-circle-check'; color = '#22c55e';
+    icon = 'fa-circle-check'; color = '#4ade80';
     text = _lastUpdated ? 'Diperbarui ' + _lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 'Memuat data…';
   }
   el.innerHTML = `<i class="fa-solid ${icon}" style="color:${color};font-size:.7rem"></i> ${text}`;
@@ -159,7 +159,7 @@ function renderGreeting() {
   // Nama dari roster huruf besar semua ("ANDRE") → kapital awal ("Andre").
   const first = String(user?.nama || '').trim().split(/\s+/)[0] || '';
   const nice  = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-  if (nameEl) nameEl.textContent = nice ? `${greet}, ${nice}` : greet;
+  if (nameEl) nameEl.innerHTML = nice ? `${greet}, <span class="greeting-first">${escapeHTML(nice)}</span>` : greet;
 
   if (badge && user?.nama) {
     const initials = user.nama.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -271,11 +271,11 @@ function renderMyReports(reports, query = '') {
   }
 
   const TYPE_META = {
-    HAZARD:     { label: 'Hazard',      color: MOD_COLORS.HAZARD },
-    INSPECTION: { label: 'Inspeksi',    color: MOD_COLORS.INSPECTION },
-    SBO:        { label: 'SBO',         color: MOD_COLORS.SBO },
-    PC:         { label: 'PC',          color: MOD_COLORS.PC },
-    ST:         { label: 'Safety Talk', color: MOD_COLORS.ST },
+    HAZARD:     { label: 'Hazard',      color: MOD_COLORS.HAZARD,     icon: 'fa-triangle-exclamation' },
+    INSPECTION: { label: 'Inspeksi',    color: MOD_COLORS.INSPECTION, icon: 'fa-clipboard-check' },
+    SBO:        { label: 'SBO',         color: MOD_COLORS.SBO,        icon: 'fa-eye' },
+    PC:         { label: 'PC',          color: MOD_COLORS.PC,         icon: 'fa-comments' },
+    ST:         { label: 'Safety Talk', color: MOD_COLORS.ST,         icon: 'fa-bullhorn' },
   };
 
   el.innerHTML = recent.map(r => {
@@ -316,13 +316,11 @@ function renderMyReports(reports, query = '') {
       : type === 'ST' ? 'capaian-sap.html'
       : `laporan-detail.html?id=${encodeURIComponent(getReportId(r) || '')}`;
 
-    const typeChip = `<span class="report-item-chip" style="background:${meta.color}">${meta.label}</span>`;
-
     return `<a class="report-item${isOverdue ? ' report-item--overdue' : ''}" href="${href}">
-      <div class="report-item-dot ${dotCls}"></div>
+      <span class="report-item-ic" style="--c:${meta.color}"><i class="fa-solid ${meta.icon}"></i></span>
       <div class="report-item-body">
         <div class="report-item-desc">${desc}</div>
-        <div class="report-item-meta">${typeChip}${date ? `<span>${date}</span>` : ''}${isOverdue ? '<span class="overdue-tag">Overdue</span>' : ''}</div>
+        <div class="report-item-meta"><span class="report-item-jenis">${meta.label}</span>${date ? `<span>· ${date}</span>` : ''}${isOverdue ? '<span class="overdue-tag">Overdue</span>' : ''}</div>
       </div>
       <span class="report-item-badge ${badgeCls}">${statusLabel}</span>
     </a>`;
@@ -582,6 +580,9 @@ function renderQuickStats(reports) {
   set('qsTotal',  total);
   set('qsOpen',   open);
   set('qsProgress', total - open - closed);
+  const bar = document.getElementById('qsBar');
+  if (bar) bar.innerHTML = total ? [['open', open], ['progress', total - open - closed], ['closed', closed]]
+    .filter(([, n]) => n > 0).map(([k, n]) => `<span class="qs-seg-${k}" style="flex:${n}"></span>`).join('') : '';
   set('qsClosed', closed);
   set('qsOverdue',overdue);
   document.getElementById('qsOverdue')?.classList.toggle('qs-nol', overdue === 0); // 0 bukan peringatan → tak merah
@@ -746,12 +747,12 @@ function renderSapAchievement(reports, obj, offset) {
   // Karyawan baru: target bulan mulai kerja proporsional (lib/target-mulai.js).
   const tb = o => TargetMulai.targetBulan(o, obj.mulai, monthKey);
   const rows = [
-    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', count: cnt('HAZARD'),     target: tb(obj.hr)  },
-    { label: 'Inspeksi',      icon: 'fa-clipboard-check',       count: cnt('INSPECTION'), target: tb(obj.ins) },
-    { label: 'SBO',           icon: 'fa-eye',                   count: cnt('SBO'),        target: tb(obj.sbo) },
-    { label: 'Personal Contact', icon: 'fa-handshake',           count: cnt('PC'),         target: tb(obj.pc)  },
+    { label: 'Hazard Report', icon: 'fa-triangle-exclamation', color: MOD_COLORS.HAZARD, count: cnt('HAZARD'),     target: tb(obj.hr)  },
+    { label: 'Inspeksi',      icon: 'fa-clipboard-check', color: MOD_COLORS.INSPECTION, count: cnt('INSPECTION'), target: tb(obj.ins) },
+    { label: 'SBO',           icon: 'fa-eye', color: MOD_COLORS.SBO, count: cnt('SBO'),        target: tb(obj.sbo) },
+    { label: 'Personal Contact', icon: 'fa-handshake', color: MOD_COLORS.PC, count: cnt('PC'),         target: tb(obj.pc)  },
     // Safety Talk: terpenuhi = HADIR, atau tidak hadir (bukan mangkir) tapi kuis pengganti lulus.
-    { label: 'Safety Talk', icon: 'fa-bullhorn', target: tb(stObjForMonth(obj.st, monthKey, user?.perusahaan, _stCounts)),
+    { label: 'Safety Talk', icon: 'fa-bullhorn', color: MOD_COLORS.ST, target: tb(stObjForMonth(obj.st, monthKey, user?.perusahaan, _stCounts)),
       count: _stRows.filter(s => String(s.bulan || '').slice(0, 7) === monthKey).filter(s => {
         const st = String(s.status_kehadiran || 'HADIR').toUpperCase();
         return st === 'HADIR' || (st !== 'MANGKIR' && String(s.quiz_done || '').toUpperCase() === 'YA');
@@ -768,6 +769,11 @@ function renderSapAchievement(reports, obj, offset) {
   const sumC = rows.reduce((s, r) => s + Math.min(r.count, r.target), 0);
   const tot  = sumT ? Math.round(sumC / sumT * 100) : 0;
   const doneN = rows.filter(r => r.count >= r.target).length;
+  const hc = document.getElementById('heroCapaian');
+  if (hc && _sapMonthOffset === 0) {
+    hc.innerHTML = `<span class="hero-chip-ic"><i class="fa-solid fa-trophy"></i></span><span class="hero-chip-txt"><small>Capaian SAP</small><b>${tot}%</b></span>`;
+    hc.hidden = false;
+  }
 
   const canNext = _sapMonthOffset < 0;
   const navBtn = 'width:34px;height:34px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-size:1rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
@@ -795,7 +801,7 @@ function renderSapAchievement(reports, obj, offset) {
           const color = barColor(p);
           const done  = p >= 100;
           return `<div class="sap-obj-row">
-            <div class="sap-obj-label"><i class="fa-solid ${r.icon}"></i> ${r.label}</div>
+            <div class="sap-obj-label"><i class="fa-solid ${r.icon}" style="--c:${r.color}"></i> ${r.label}</div>
             <div class="sap-obj-bar-wrap">
               <div class="sap-obj-bar" style="width:${p}%;background:${color}"></div>
             </div>
@@ -846,16 +852,24 @@ async function renderBerandaDD() {
         <span class="bdd-kat">${escapeHTML(c.kategori)}</span>
         <small>${mm(c.hujan_mm)}</small></div>`).join('');
     const lebat = (j.cuaca || []).some((c) => c.hujan_mm >= 20);
+    const kini = (j.cuaca || []).find((c) => c.tanggal === hariIni);
+    const hw = document.getElementById('heroCuaca');
+    if (hw && kini) {
+      hw.innerHTML = `<span class="hero-chip-ic"><i class="fa-solid ${escapeHTML(kini.ikon)}"></i></span><span class="hero-chip-txt"><small>Cuaca hari ini</small><b>${escapeHTML(kini.kategori)}</b></span>`;
+      hw.hidden = false;
+    }
     const f = j.fokus;
     const STATUS = { merah: 'Waspada tinggi', kuning: 'Perlu perhatian', hijau: 'Normal' };
     el.innerHTML = `<div class="bdd-kartu">
-        ${cuaca ? `<div class="bdd-judul"><span><i class="fa-solid fa-cloud-sun-rain"></i> Prakiraan Cuaca</span><small>area tambang · kategori BMKG</small></div>
-        <div class="bdd-hari-row">${cuaca}</div>` : ''}
-        ${lebat ? '<div class="bdd-awas"><i class="fa-solid fa-triangle-exclamation"></i> Hujan sedang/lebat — jalan licin & lereng rawan, lakukan inspeksi jalan.</div>' : ''}
+        ${cuaca ? `<div class="bdd-cuaca"><div class="bdd-judul"><span><i class="fa-solid fa-cloud-sun-rain"></i> Prakiraan Cuaca</span><small>area tambang · kategori BMKG</small></div>
+        <div class="bdd-hari-row">${cuaca}</div>
+        ${lebat ? '<div class="bdd-awas"><i class="fa-solid fa-triangle-exclamation"></i> Hujan sedang/lebat — jalan licin & lereng rawan, lakukan inspeksi jalan.</div>' : ''}</div>` : ''}
         ${f ? `<div class="bdd-fokus ${escapeHTML(f.status)}">
           <div class="bdd-judul"><span><i class="fa-solid fa-bullseye"></i> Fokus Minggu Ini</span><small class="bdd-st">${STATUS[f.status] || ''}</small></div>
-          <div class="bdd-area"><i class="fa-solid fa-location-dot"></i> ${escapeHTML(f.lokasi)}</div>
-          ${f.alasan?.length ? `<div class="bdd-alasan">${escapeHTML(f.alasan[0])}</div>` : ''}
+          <div class="bdd-area-row"><span class="bdd-area-ic"><i class="fa-solid fa-location-dot"></i></span><div>
+            <div class="bdd-area">${escapeHTML(f.lokasi)}</div>
+            ${f.alasan?.length ? `<div class="bdd-alasan">${escapeHTML(f.alasan[0])}</div>` : ''}
+          </div></div>
           ${f.penyebab?.length ? `<div class="bdd-sub">Penyebab insiden terbanyak di sini — laporkan bila menemukannya:</div>
           <ol class="bdd-daftar">${f.penyebab.map((p) => `<li><span>${escapeHTML(p.nama)}</span><em>${p.jumlah} insiden</em></li>`).join('')}</ol>` : ''}
           <a class="bdd-aksi" href="index.html"><i class="fa-solid fa-plus"></i> Laporkan temuan</a>
