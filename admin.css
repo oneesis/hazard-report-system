@@ -50,7 +50,7 @@
   background: none;
   border: none;
   border-radius: 8px;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   font-size: .88rem;
   font-weight: 500;
@@ -86,7 +86,7 @@
   gap: 10px;
   padding: 9px 14px;
   border-radius: 8px;
-  color: #94a3b8;
+  color: #64748b;
   text-decoration: none;
   font-size: .85rem;
   font-weight: 500;
@@ -154,7 +154,7 @@
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: #f8fafc; }
 
-.um-loading { text-align: center; padding: 32px; color: #94a3b8; }
+.um-loading { text-align: center; padding: 32px; color: #64748b; }
 
 /* SHARED UM styles */
 .um-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
@@ -166,14 +166,14 @@
 .um-btn-delete { padding:5px 12px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.78rem; font-weight:600; }
 .um-page-btn { padding:6px 12px; border:1.5px solid #e2e8f0; background:#fff; border-radius:6px; cursor:pointer; font-size:.82rem; margin:2px; }
 .um-page-btn.active { background:#003087; color:#fff; border-color:#003087; }
-.um-empty { color:#94a3b8; font-size:.9rem; padding:16px; }
+.um-empty { color: #64748b; font-size:.9rem; padding:16px; }
 .um-modal-box { width: min(680px, 94vw); }
 .um-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
 .um-modal-grid .cp-field { margin-bottom:10px; }
 .um-modal-body { overflow-y:auto; max-height:calc(90vh - 140px); padding:20px; }
 .um-section-label {
   font-size: .75rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.07em; color:#94a3b8; margin:18px 0 10px;
+  letter-spacing:.07em; color: #64748b; margin:18px 0 10px;
 }
 .um-section-label:first-child { margin-top:0; }
 .um-section-divider { border:none; border-top:1px solid #f1f5f9; margin:4px 0 16px; }

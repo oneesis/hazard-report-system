@@ -24,7 +24,7 @@
 .km-aksi select, .km-aksi input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; font-size: .84rem; min-width: 0; }
 .km-aksi select { flex: 1 1 200px; }
 .km-aksi input { flex: 1 1 160px; }
-.km-atau { font-size: .78rem; color: #94a3b8; }
+.km-atau { font-size: .78rem; color: #64748b; }
 .km-rows { max-height: 420px; overflow-y: auto; }
 .km-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
 .km-row:last-child { border-bottom: 0; }

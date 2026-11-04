@@ -1357,13 +1357,6 @@ a.hero-chip:active { background: rgba(255, 255, 255, .18); }
 @media (max-width: 768px) {
   .home-content { padding: 16px; }
   .home-hero { margin: -16px -16px 18px; border-radius: 0 0 22px 22px; padding: 18px 18px 24px; }
-  .app-topbar:has(.topbar-brand) { background: var(--color-primary); border-bottom: 0; }
-  .app-topbar:has(.topbar-brand) .app-topbar-toggle,
-  .app-topbar:has(.topbar-brand) .topbar-brand,
-  .app-topbar:has(.topbar-brand) .topbar-help-btn,
-  .app-topbar:has(.topbar-brand) #notificationBell .notification-button { color: var(--color-on-primary) !important; }
-  .app-topbar:has(.topbar-brand) #notificationBell .notification-button:hover { background: rgba(255, 255, 255, .14); }
-  .app-topbar:has(.topbar-brand) .user-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, .5); }
 }
 
 /* Perlu Tindakan: kotak angka tegas */

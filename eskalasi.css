@@ -68,7 +68,7 @@
 .esk-sum--overdue .esk-sum-num { color: #dc2626; }
 .esk-sum--warning .esk-sum-num { color: #f59e0b; }
 .esk-sum--ok .esk-sum-num      { color: #16a34a; }
-.esk-sum--nodue .esk-sum-num   { color: #94a3b8; }
+.esk-sum--nodue .esk-sum-num   { color: #64748b; }
 
 .esk-sum-label {
   font-size: .75rem;
@@ -113,7 +113,7 @@
 }
 
 .esk-search { position: relative; margin: 0 0 16px; }
-.esk-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+.esk-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #64748b; }
 .esk-search input {
   width: 100%; box-sizing: border-box; padding: 12px 14px 12px 40px; min-height: 44px;
   border: 1.5px solid #e2e8f0; border-radius: 12px; font: inherit; font-size: .9rem; background: #fff;
@@ -128,7 +128,7 @@
 
 .esk-empty {
   font-size: .82rem;
-  color: #94a3b8;
+  color: #64748b;
   padding: 12px 4px;
 }
 
@@ -208,7 +208,7 @@
   gap: 4px;
 }
 
-.esk-meta-item i { font-size: .75rem; color: #94a3b8; }
+.esk-meta-item i { font-size: .75rem; color: #64748b; }
 
 .esk-card-footer {
   display: flex;
@@ -221,7 +221,7 @@
 
 .esk-due-label {
   font-size: .75rem;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .esk-due-date {

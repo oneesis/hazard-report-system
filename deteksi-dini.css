@@ -48,7 +48,7 @@
 .dd-tren-kol { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 4px; }
 .dd-tren-kol span { width: 100%; background: #1e3a8a; border-radius: 4px 4px 0 0; min-height: 2px; }
 .dd-tren-kol:last-child span { background: #dc2626; }
-.dd-tren-kol small { font-size: .62rem; color: #94a3b8; white-space: nowrap; }
+.dd-tren-kol small { font-size: .62rem; color: #64748b; white-space: nowrap; }
 @media (max-width: 600px) { .dd-tren-kol small { writing-mode: vertical-rl; transform: rotate(180deg); font-size: .58rem; } .dd-tren { gap: 3px; } }
 .dd-mayor { display: flex; flex-direction: column; gap: 1px; padding: 7px 0; border-bottom: 1px solid #f1f5f9; font-size: .76rem; color: #64748b; }
 .dd-mayor:last-child { border-bottom: 0; }
@@ -68,13 +68,13 @@
 .dd-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .dd-kpi > div { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
 .dd-kpi b { font-size: 1.6rem; font-weight: 800; color: #1e3a8a; }
-.dd-kpi span { font-size: .78rem; color: #334155; } .dd-kpi small { font-size: .72rem; color: #94a3b8; }
+.dd-kpi span { font-size: .78rem; color: #334155; } .dd-kpi small { font-size: .72rem; color: #64748b; }
 .dd-rasio { display: grid; grid-template-columns: 1fr 80px 90px 40px; gap: 6px; font-size: .78rem; padding: 5px 0; border-bottom: 1px solid #f1f5f9; color: #334155; }
 .dd-rasio b { text-align: right; color: #0f172a; } .dd-rasio b.kurang { color: #dc2626; }
 .dd-rasio.dd-eval { grid-template-columns: 1fr 130px 110px 150px; align-items: center; }
 .dd-eval small { display: block; color: #64748b; font-size: .7rem; }
 .dd-eval .dd-dot { display: inline-block; vertical-align: middle; }
-.dd-eval .dd-ya { color: #15803d; text-align: left; } .dd-eval .dd-tidak { color: #94a3b8; }
+.dd-eval .dd-ya { color: #15803d; text-align: left; } .dd-eval .dd-tidak { color: #64748b; }
 @media (max-width: 640px) { .dd-rasio.dd-eval { grid-template-columns: 1fr 1fr; } .dd-rasio.dd-eval span:nth-child(3) { display: inline; } }
 
 @media (max-width: 900px) {

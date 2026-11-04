@@ -1094,3 +1094,121 @@ body:has(.app-layout) {
     display: inline-flex; align-items: center; justify-content: center;
   }
 }
+
+/* ── Tampilan seragam dgn Beranda (2026-11-04): kepala halaman navy + garis rambu, bilah atas
+   navy di HP, kartu berbayang lembut. Hanya CSS — tanpa panggilan server tambahan. ── */
+.app-admin-strip { display: none !important; }
+@media (max-width: 768px) {
+  .app-topbar { background: var(--color-primary); border-bottom: 0; }
+  .app-topbar .app-topbar-toggle,
+  .app-topbar .app-topbar-title,
+  .app-topbar .topbar-brand,
+  .app-topbar .topbar-help-btn,
+  .app-topbar #notificationBell .notification-button { color: var(--color-on-primary) !important; }
+  .app-topbar #notificationBell .notification-button:hover { background: rgba(255, 255, 255, .14); }
+  .app-topbar .user-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, .5); }
+}
+.app-main .dashboard-header,
+.app-main .ins-page-header,
+.app-main .sbo-header,
+.app-main .pc-page-header,
+.app-main .dd-header,
+.app-main .esk-header,
+.app-main .km-header,
+.app-main .lm-header,
+.app-main .detail-hero,
+.app-main .halaman-band {
+  position: relative; overflow: hidden; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  text-align: left; color: var(--color-on-primary); border: 0; box-shadow: none;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(48, 127, 226, .45) 0%, transparent 55%),
+    linear-gradient(150deg, var(--color-primary) 0%, var(--color-primary-dark) 72%);
+  border-radius: 18px; padding: 18px 18px 24px; margin-bottom: 16px;
+}
+.app-main .dashboard-header::after,
+.app-main .ins-page-header::after,
+.app-main .sbo-header::after,
+.app-main .pc-page-header::after,
+.app-main .dd-header::after,
+.app-main .esk-header::after,
+.app-main .km-header::after,
+.app-main .lm-header::after,
+.app-main .detail-hero::after,
+.app-main .halaman-band::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+  background: repeating-linear-gradient(-45deg, var(--color-accent) 0 12px, var(--color-primary-dark) 12px 24px);
+}
+.app-main .dashboard-title,
+.app-main .ins-page-title,
+.app-main .sbo-title,
+.app-main .pc-page-title,
+.app-main .dd-title,
+.app-main .esk-title,
+.app-main .km-title,
+.app-main .lm-title,
+.app-main .detail-hero-id,
+.app-main .halaman-band h1 {
+  color: var(--color-on-primary) !important; font-size: 1.25rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; margin: 0 0 4px;
+  display: block; background: none; -webkit-text-fill-color: currentColor;
+}
+.app-main .dashboard-title i,
+.app-main .ins-page-title i,
+.app-main .sbo-title i,
+.app-main .pc-page-title i,
+.app-main .dd-title i,
+.app-main .esk-title i,
+.app-main .km-title i,
+.app-main .lm-title i,
+.app-main .detail-hero-id i,
+.app-main .halaman-band h1 i,
+.app-main .dashboard-title svg { color: var(--color-accent) !important; background: none !important; margin-right: 6px; }
+.app-main .dashboard-subtitle,
+.app-main .ins-page-sub,
+.app-main .sbo-sub,
+.app-main .dd-sub,
+.app-main .esk-subtitle,
+.app-main .km-subtitle,
+.app-main .lm-subtitle,
+.app-main .detail-hero-date,
+.app-main .halaman-band p { color: rgba(255, 255, 255, .84) !important; font-size: .85rem; line-height: 1.4; margin: 0; }
+.app-main .halaman-band--luar { margin: 16px 16px 12px; }
+.app-main .btn-sbo-new, .app-main .pc-new-btn { background: var(--color-accent) !important; color: var(--color-on-accent) !important; }
+.app-main .detail-hero .report-type-badge,
+.app-main .detail-hero .status-badge { background: rgba(255, 255, 255, .14); color: var(--color-on-primary); padding: 2px 10px; border-radius: 99px; font-size: .75rem; font-weight: 700; }
+.app-main .detail-hero .badge-overdue { background: var(--color-status-overdue); color: var(--color-on-primary); padding: 2px 10px; border-radius: 99px; font-size: .75rem; font-weight: 700; }
+.app-main .module-card,
+.app-main .chart-card,
+.app-main .table-card,
+.app-main .filter-bar,
+.app-main .inspector-card,
+.app-main .sbo-kpi-card,
+.app-main .pc-stat-card,
+.app-main .pc-card,
+.app-main .ach-kpi-cell,
+.app-main .admin-card,
+.app-main .detail-card,
+.app-main .lm-kpi,
+.app-main .lm-card,
+.app-main .esk-sum-item,
+.app-main .esk-card,
+.app-main .dd-kartu,
+.app-main .dd-tabel,
+.app-main .st-kpi,
+.app-main .st-chart-card,
+.app-main .st-card,
+.app-main .km-grup {
+  border-radius: 16px; box-shadow: 0 1px 2px rgba(0, 32, 91, .05), 0 6px 20px rgba(0, 32, 91, .06);
+}
+@media print {
+  .app-main .dashboard-header, .app-main .ins-page-header, .app-main .sbo-header, .app-main .pc-page-header, .app-main .dd-header, .app-main .esk-header, .app-main .km-header, .app-main .lm-header, .app-main .detail-hero, .app-main .halaman-band { background: none !important; color: #000 !important; padding: 0; }
+  .app-main .dashboard-header::after, .app-main .ins-page-header::after, .app-main .sbo-header::after, .app-main .pc-page-header::after, .app-main .dd-header::after, .app-main .esk-header::after, .app-main .km-header::after, .app-main .lm-header::after, .app-main .detail-hero::after, .app-main .halaman-band::after { display: none; }
+  .app-main .dashboard-title, .app-main .ins-page-title, .app-main .sbo-title, .app-main .pc-page-title, .app-main .dd-title, .app-main .esk-title, .app-main .km-title, .app-main .lm-title, .app-main .detail-hero-id, .app-main .halaman-band h1, .app-main .dashboard-subtitle, .app-main .ins-page-sub, .app-main .sbo-sub, .app-main .dd-sub, .app-main .esk-subtitle, .app-main .km-subtitle, .app-main .lm-subtitle, .app-main .detail-hero-date, .app-main .halaman-band p { color: #000 !important; }
+}
+.app-main .ins-page-header { flex-direction: column; align-items: flex-start; gap: 0; }
+.app-main .dashboard-title-wrap { text-align: left; }
+.app-main .dashboard-title span { background: none; box-shadow: none; display: inline; width: auto; height: auto; padding: 0; color: var(--color-accent); }
+.app-main .esk-header .btn-primary { width: auto; }
+.app-main .halaman-band > div { min-width: 0; }
+.app-main .halaman-band--luar { box-sizing: border-box; width: auto; max-width: calc(100% - 32px); }
+.app-main .dashboard-title i, .app-main .dashboard-title svg { display: inline; width: auto; height: auto; }
+.app-main .dashboard-header { margin-top: 12px; }
