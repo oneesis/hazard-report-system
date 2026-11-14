@@ -90,6 +90,16 @@ function getReportTypeLabel(report) {
   return getReportType(report) === "INSPECTION" ? "Inspeksi" : "Hazard";
 }
 
+// Laporan/baris ini milik orang tsb? Bila baris punya NIK, NIK yang menentukan; nama hanya cadangan
+// untuk data lama tanpa NIK. (2026-11-14: dua karyawan bernama MURJANI beda perusahaan — dulu
+// "NIK ATAU nama" membuat laporan yang satu ikut terhitung/terisi data orang yang lain.)
+function cocokOrang(rNik, rNama, nik, nama) {
+  const rn = String(rNik || '').trim().toLowerCase(), n = String(nik || '').trim().toLowerCase();
+  if (rn) return !!n && rn === n;
+  const rm = String(rNama || '').trim().toLowerCase(), m = String(nama || '').trim().toLowerCase();
+  return !!m && rm === m;
+}
+
 function getUserRelation(report) {
   const user = getCurrentUser();
   if (!user) return null;
@@ -103,8 +113,8 @@ function getUserRelation(report) {
   const picName      = normalizeString(getReportValue(report, ["nama_pic","pic","penanggung_jawab","pic_name","nama_pic_laporan"], ""));
   const picNik       = normalizeString(getReportValue(report, ["nik_pic","nip_pic","pic_nik","nikpic","nik_pic_pic"], ""));
 
-  const isPic      = (userNik && picNik && picNik === userNik) || (userName && picName && picName === userName);
-  const isReporter = (userNik && reporterNik && reporterNik === userNik) || (userName && reporterName && reporterName === userName);
+  const isPic      = cocokOrang(picNik, picName, userNik, userName);
+  const isReporter = cocokOrang(reporterNik, reporterName, userNik, userName);
 
   if (isPic)      return "pic";
   if (isReporter) return "reporter";
@@ -118,7 +128,7 @@ function getUserRelation(report) {
     const maybeNik = normalizeString(getReportValue(report, ["nik","nik_pic","nik_pic_pic"], ""));
     if (maybeNik && maybeNik === userNik) return "reporter";
   }
-  if (userName) {
+  if (userName && !reporterNik && !picNik) {
     const maybeName = normalizeString(getReportValue(report, ["nama","nama_pic"], ""));
     if (maybeName && maybeName === userName) return "reporter";
   }

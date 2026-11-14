@@ -243,7 +243,7 @@ function renderMyReports(reports, query = '') {
   const pool = (reports || []).filter(r => {
     const rNik  = String(r.nik_pelapor || r.nik || '').trim();
     const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
-    return (myNik && rNik === myNik) || (myNama && rNama === myNama);
+    return cocokOrang(rNik, rNama, myNik, myNama);
   });
 
   const getTs = r => {
@@ -565,7 +565,7 @@ function renderQuickStats(reports) {
   const pool   = (reports || []).filter(r => {
     const rNik  = String(r.nik_pelapor || r.nik || '').trim();
     const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
-    return (myNik && rNik === myNik) || (myNama && rNama === myNama);
+    return cocokOrang(rNik, rNama, myNik, myNama);
   });
 
   const total   = pool.length;
@@ -618,11 +618,11 @@ function computeActionItems(reports, user) {
     const nikPic  = String(r.nik_pic  || '').trim().toLowerCase();
     const namaPic = String(r.nama_pic || '').trim().toLowerCase();
     const waPic   = String(r.no_whatsapp_pic || '').replace(/\D/g, '');
-    const asPic   = (nik && nikPic === nik) || (wa && waPic && waPic === wa) || (nama && namaPic === nama);
+    const asPic   = cocokOrang(nikPic, namaPic, nik, nama) || (!nikPic && wa && waPic && waPic === wa);
 
     const nikRep  = String(r.nik  || r.nik_pelapor  || '').trim().toLowerCase();
     const namaRep = String(r.nama || r.nama_pelapor || '').trim().toLowerCase();
-    const asRep   = (nik && nikRep === nik) || (nama && namaRep === nama);
+    const asRep   = cocokOrang(nikRep, namaRep, nik, nama);
 
     if (asPic && planStatus === 'rejected')         rejected.push(r);
     if (asPic && status === 'OPEN' && !planStatus)  rencana.push(r);
@@ -736,7 +736,7 @@ function renderSapAchievement(reports, obj, offset) {
   const mine = (reports || []).filter(r => {
     const rNik  = String(r.nik_pelapor || r.nik || '').trim();
     const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
-    if (!((myNik && rNik === myNik) || (myNama && rNama === myNama))) return false;
+    if (!cocokOrang(rNik, rNama, myNik, myNama)) return false;
     const d = new Date(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi || '');
     return !isNaN(d) && d.getFullYear() === y && d.getMonth() === m;
   });

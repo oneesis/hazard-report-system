@@ -1438,12 +1438,12 @@ function fillReporterCard() {
   if (!user) return;
 
   // Cari record di master untuk ambil subcont & no_wa (fallback ke user object)
-  const rec = (masterKaryawan || []).find(item => {
-    const nik  = String(item["NIK"]  || "").trim().toUpperCase();
-    const nama = String(item["NAMA"] || "").trim().toUpperCase();
-    return (user.nik  && nik  === String(user.nik  || "").toUpperCase()) ||
-           (user.nama && nama === String(user.nama || "").toUpperCase());
-  }) || {};
+  // NIK dulu — nama hanya cadangan (2026-11-14: dua MURJANI beda perusahaan → laporan Murjani EBL
+  // tercatat PT CK karena record pertama yang namanya sama ikut terambil).
+  const uNik = String(user.nik || "").trim().toUpperCase(), uNama = String(user.nama || "").trim().toUpperCase();
+  const list = masterKaryawan || [];
+  const rec = (uNik && list.find(item => String(item["NIK"] || "").trim().toUpperCase() === uNik)) ||
+              (!uNik && uNama && list.find(item => String(item["NAMA"] || "").trim().toUpperCase() === uNama)) || {};
 
   const set = id => v => { const el = document.getElementById(id); if (el) el.value = v || ""; };
   set("perusahaan")(rec["PERUSAHAAN"]  || user.perusahaan || "");

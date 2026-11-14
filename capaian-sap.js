@@ -137,7 +137,7 @@ function computeAndRender() {
     const mine = monthStr ? allRep.filter(r => {
       const rNik  = String(r.nik || r.nik_pelapor || '').trim();
       const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
-      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+      return cocokOrang(rNik, rNama, nik, nama) &&
              _capSameMonth(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi, monthStr);
     }) : [];
 
@@ -145,7 +145,7 @@ function computeAndRender() {
     const mineSBO = monthStr ? _capSboReports.filter(r => {
       const rNik  = String(r.nik_observer || '').trim();
       const rNama = String(r.nama_observer || '').trim().toLowerCase();
-      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+      return cocokOrang(rNik, rNama, nik, nama) &&
              _capSameMonth(r.timestamp, monthStr);
     }) : [];
 
@@ -153,7 +153,7 @@ function computeAndRender() {
     const minePC = monthStr ? _capPcReports.filter(r => {
       const rNik  = String(r.nik_coach || '').trim();
       const rNama = String(r.nama_coach || '').trim().toLowerCase();
-      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+      return cocokOrang(rNik, rNama, nik, nama) &&
              _capSameMonth(r.timestamp, monthStr);
     }) : [];
 
@@ -162,7 +162,7 @@ function computeAndRender() {
       if (r.pic_dispute?.status === 'PENDING') return false; // PIC sedang dipersoalkan — jangan bebankan
       const rNikPic  = String(r.nik_pic || '').trim();
       const rNamaPic = String(r.nama_pic || r.pic || '').trim().toLowerCase();
-      return (nik && rNikPic === nik) || (nama && rNamaPic === nama);
+      return cocokOrang(rNikPic, rNamaPic, nik, nama);
     };
     const picAll   = allRep.filter(isPic);
     const picMonth = monthStr ? picAll.filter(r =>

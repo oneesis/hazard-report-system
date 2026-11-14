@@ -603,7 +603,7 @@ async function loadMyHistory() {
     const all = (result.data || []).filter(r => {
       const rNik  = String(r['PROPOSED_BY_NIK']  || '').trim().toLowerCase();
       const rNama = String(r['PROPOSED_BY_NAMA'] || '').trim().toLowerCase();
-      return (myNik && rNik === myNik) || (myNama && rNama === myNama);
+      return cocokOrang(rNik, rNama, myNik, myNama);
     });
     renderMyHistory(all);
   } catch (e) {
@@ -806,7 +806,7 @@ function computeAndRenderAchievement() {
     const mine = monthStr ? allRep.filter(r => {
       const rNik  = String(r.nik || r.nik_pelapor || '').trim();
       const rNama = String(r.nama || r.pelapor || '').trim().toLowerCase();
-      return ((nik && rNik === nik) || (nama && rNama === nama)) &&
+      return cocokOrang(rNik, rNama, nik, nama) &&
              _achSameMonth(r.timestamp || r.tanggal_laporan || r.tgl_laporan || r.tanggal_inspeksi, monthStr);
     }) : [];
 
