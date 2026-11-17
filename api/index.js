@@ -1100,7 +1100,7 @@ async function login(sheets, nik, password, ip) {
     const attempt = _loginAttempts.get(String(nik || '').trim().toLowerCase());
     if (attempt?.lockedUntil)
       _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', attempt.lockedUntil).catch(() => {});
-    return { status: 'error', message: 'NIK atau password salah.' };
+    return { status: 'error', message: 'NRP atau password salah.' };
   }
   clearFailedLogins(nik);
   _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', '').catch(() => {}); // clear persistent lock
