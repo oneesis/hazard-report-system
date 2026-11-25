@@ -247,6 +247,19 @@ async function _karyawanByNik(sheets, nik) {
   return (await _karyawanRows(sheets)).find((row) => String(row['NIK'] || '').trim() === n) || null;
 }
 
+// ID yang diketik di layar login (NRP atau SID) → NIK roster. NRP/NIK menang;
+// SID hanya dicari bila tak ada baris ber-NIK itu (spt SAFETY PATROL).
+async function _nikLogin(id) {
+  const n = String(id || '').trim();
+  const sql = getSql();
+  if (!n || !sql) return n;
+  try {
+    const [r] = await sql`SELECT nik FROM karyawan WHERE nik = ${n} OR trim(data->>'SID') = ${n}
+      ORDER BY (nik = ${n}) DESC LIMIT 1`;
+    return r ? r.nik : n;
+  } catch { return n; }
+}
+
 function normalizeHeader(h) {
   return String(h).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
 }
@@ -1082,6 +1095,7 @@ async function login(sheets, nik, password, ip) {
   const rateCheck = checkLoginRateLimit(nik);
   if (!rateCheck.ok) return { status: 'error', message: rateCheck.message };
 
+  nik = await _nikLogin(nik);
   const user = await _karyawanByNik(sheets, nik);
 
   // #1 — Persistent lockout check (survives cold start / multi-instance)
@@ -1100,7 +1114,7 @@ async function login(sheets, nik, password, ip) {
     const attempt = _loginAttempts.get(String(nik || '').trim().toLowerCase());
     if (attempt?.lockedUntil)
       _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', attempt.lockedUntil).catch(() => {});
-    return { status: 'error', message: 'NRP atau password salah.' };
+    return { status: 'error', message: 'NRP/SID atau password salah.' };
   }
   clearFailedLogins(nik);
   _updateKaryawanCol(sheets, nik, 'LOGIN_LOCKED_UNTIL', '').catch(() => {}); // clear persistent lock
@@ -3921,10 +3935,11 @@ module.exports = async (req, res) => {
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         const sql = getSql();
         if (!sql) return res.status(503).json({ status: 'error', message: 'Database belum dikonfigurasi.' });
-        const nik = String(data?.nik || '').trim();
+        let nik = String(data?.nik || '').trim();
         if (!nik) return res.status(400).json({ status: 'error', message: 'NIK wajib diisi.' });
 
         if (action === 'requestPasswordReset') {
+          nik = await _nikLogin(nik);
           const kar = await _findKaryawanEmail(sheets, nik);
           if (!kar) return res.status(404).json({ status: 'error', message: 'NIK tidak terdaftar.' });
           if (!kar.email || !EMAIL_RE.test(kar.email)) {

@@ -31,7 +31,7 @@ if (forgotLink) {
     errorMessage.textContent = "";
     if (!nik) {
       errorMessage.style.color = "#b45309";
-      errorMessage.textContent = "Isi NRP dulu di kolom di atas, lalu klik Lupa Password lagi.";
+      errorMessage.textContent = "Isi NRP/SID dulu di kolom di atas, lalu klik Lupa Password lagi.";
       document.getElementById("nik").focus();
       return;
     }
@@ -79,7 +79,7 @@ if (loginForm) {
 
     try {
       if (!nik || !password) {
-        throw new Error("Mohon lengkapi NRP dan password.");
+        throw new Error("Mohon lengkapi NRP/SID dan password.");
       }
 
       // Kredensial dikirim via POST body — tidak pernah muncul di URL/log
